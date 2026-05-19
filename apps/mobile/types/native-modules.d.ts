@@ -219,6 +219,7 @@ declare module 'expo-calendar' {
   export function createEventAsync(calendarId: string, eventData?: Partial<Omit<Event, 'id'>>): Promise<string>;
   export function updateEventAsync(id: string, details?: Partial<Omit<Event, 'id'>>): Promise<string>;
   export function deleteEventAsync(id: string): Promise<void>;
+  export function deleteReminderAsync(id: string): Promise<void>;
   export function editEventInCalendarAsync(params: CalendarDialogParams, options?: PresentationOptions): Promise<DialogEventResult>;
   export function openEventInCalendarAsync(params: CalendarDialogParams, options?: OpenEventPresentationOptions): Promise<OpenEventDialogResult>;
 }
