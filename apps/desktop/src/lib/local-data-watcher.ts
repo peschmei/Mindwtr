@@ -194,11 +194,11 @@ async function mergeExternalData(externalData: PendingExternalData): Promise<voi
     }
 }
 
-async function handleExternalChange(): Promise<void> {
+async function handleExternalChange(options: { immediate?: boolean; ignoreSelfWindow?: boolean } = {}): Promise<void> {
     const now = localDataWatcherDependencies.now();
     pruneExpiredSelfWrites(now);
 
-    if (now < ignoreUntil) {
+    if (!options.ignoreSelfWindow && now < ignoreUntil) {
         hasPendingChangeDuringIgnore = true;
         scheduleIgnoreDrain();
         return;
@@ -218,8 +218,29 @@ async function handleExternalChange(): Promise<void> {
 
         const hash = await localDataWatcherDependencies.hashPayload(payload);
 
-        if (hash === lastKnownHash) return;
+        if (hash === lastKnownHash) {
+            if (options.immediate && pendingExternalData?.hash === hash) {
+                if (debounceTimer) {
+                    localDataWatcherDependencies.cancelSchedule(debounceTimer);
+                    debounceTimer = null;
+                }
+                const externalData = pendingExternalData;
+                pendingExternalData = null;
+                await mergeExternalData(externalData);
+            }
+            return;
+        }
         lastKnownHash = hash;
+
+        if (options.immediate) {
+            if (debounceTimer) {
+                localDataWatcherDependencies.cancelSchedule(debounceTimer);
+                debounceTimer = null;
+            }
+            pendingExternalData = null;
+            await mergeExternalData({ data: normalized, hash });
+            return;
+        }
 
         if (debounceTimer) {
             localDataWatcherDependencies.cancelSchedule(debounceTimer);
@@ -234,6 +255,10 @@ async function handleExternalChange(): Promise<void> {
     } catch (error) {
         localDataWatcherDependencies.logWarn('[local-data-watcher] Failed to read external change: ' + String(error));
     }
+}
+
+export async function refreshFromDiskNow(): Promise<void> {
+    await handleExternalChange({ immediate: true, ignoreSelfWindow: true });
 }
 
 export function markLocalWrite(data?: AppData): void {
@@ -312,6 +337,9 @@ export const __localDataWatcherTestUtils = {
     },
     async triggerChangeForTests() {
         await handleExternalChange();
+    },
+    async refreshFromDiskNowForTests() {
+        await refreshFromDiskNow();
     },
     resetForTests() {
         stop();

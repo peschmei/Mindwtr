@@ -43,6 +43,7 @@ import {
 } from './lib/text-size';
 import { saveStoredFullscreen } from './lib/window-state';
 import { subscribeNavigateEvent } from './lib/navigation-events';
+import { QUICK_ADD_SAVED_EVENT } from './lib/quick-add-saved-event';
 import { useUiStore } from './store/ui-store';
 import { useObsidianStore } from './store/obsidian-store';
 
@@ -359,6 +360,29 @@ function App() {
             unsubscribeExternalSync();
         };
     }, [fetchData, setError, showToast]);
+
+    useEffect(() => {
+        if (!isTauriRuntime()) return;
+        let unlisten: (() => void) | undefined;
+        const reportQuickAddRefreshError = (error: unknown) => {
+            const message = error instanceof Error ? error.message : String(error);
+            setError(`Quick add refresh failed: ${message}`);
+            void logError(error, { scope: 'quick-add', step: 'refreshAfterStandaloneSave' });
+        };
+
+        const setup = async () => {
+            const { listen } = await import('@tauri-apps/api/event');
+            unlisten = await listen(QUICK_ADD_SAVED_EVENT, async () => {
+                await LocalDataWatcher.refreshFromDiskNow().catch(reportQuickAddRefreshError);
+            });
+        };
+
+        setup().catch(reportQuickAddRefreshError);
+
+        return () => {
+            if (unlisten) unlisten();
+        };
+    }, [setError]);
 
     useEffect(() => {
         if (!isTauriRuntime()) return;

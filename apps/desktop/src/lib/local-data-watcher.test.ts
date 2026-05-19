@@ -238,6 +238,30 @@ describe('local-data-watcher', () => {
         expect(saveCalls[0]?.tasks.some((task) => task.id === 'ext-1')).toBe(true);
     });
 
+    it('can merge an explicit cross-window refresh without waiting for the watcher debounce', async () => {
+        externalData = {
+            ...emptyData(),
+            tasks: [
+                {
+                    id: 'quick-add-1',
+                    title: 'From quick add window',
+                    status: 'inbox',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            ],
+        } as AppData;
+
+        markLocalWrite();
+
+        nowMs = 1000;
+        await __localDataWatcherTestUtils.refreshFromDiskNowForTests();
+
+        expect(saveCalls).toHaveLength(1);
+        expect(saveCalls[0]?.tasks.some((task) => task.id === 'quick-add-1')).toBe(true);
+        expect(scheduledTimers.size).toBe(0);
+    });
+
     it('persists merged changes through store save queue (without direct tauri save_data calls)', async () => {
         externalData = {
             ...emptyData(),

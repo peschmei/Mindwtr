@@ -29,6 +29,7 @@ import {
     QUICK_ADD_NATIVE_TARGET_WINDOW,
     shouldHandleQuickAddNativeEvent,
 } from '../lib/quick-add-native-event';
+import { QUICK_ADD_MAIN_WINDOW_LABEL, QUICK_ADD_SAVED_EVENT } from '../lib/quick-add-saved-event';
 import { TaskInput } from './Task/TaskInput';
 import { AreaSelector } from './ui/AreaSelector';
 import { AREA_FILTER_ALL, AREA_FILTER_NONE, resolveAreaFilter } from '../lib/area-filter';
@@ -250,6 +251,16 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             .catch((error) => reportError('Failed to hide quick add window', error));
     }, [standaloneWindow]);
 
+    const notifyStandaloneTaskSaved = useCallback(async () => {
+        if (!standaloneWindow || !isTauriRuntime()) return;
+        try {
+            const { emitTo } = await import('@tauri-apps/api/event');
+            await emitTo(QUICK_ADD_MAIN_WINDOW_LABEL, QUICK_ADD_SAVED_EVENT, { savedAt: new Date().toISOString() });
+        } catch (error) {
+            reportError('Failed to notify main window after quick add save', error);
+        }
+    }, [standaloneWindow]);
+
     const close = useCallback(() => {
         isOpenRef.current = false;
         openRequestInFlightRef.current = false;
@@ -463,6 +474,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             const addTaskResult = await addTask(displayTitle, props);
             if (addTaskResult.success && standaloneWindow) {
                 await flushPendingSave().catch((error) => reportError('Failed to save quick add task', error));
+                await notifyStandaloneTaskSaved();
             }
             close();
 
@@ -554,6 +566,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         recordingBusy,
         recordingBackend,
         refreshStandaloneData,
+        notifyStandaloneTaskSaved,
         standaloneWindow,
         settings.ai?.model,
         settings.ai?.provider,
@@ -618,6 +631,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         if (!addTaskResult.success) return;
         if (standaloneWindow) {
             await flushPendingSave().catch((error) => reportError('Failed to save quick add task', error));
+            await notifyStandaloneTaskSaved();
         }
         close();
     };

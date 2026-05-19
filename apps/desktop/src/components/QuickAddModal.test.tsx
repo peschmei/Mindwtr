@@ -1,10 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useTaskStore } from '@mindwtr/core';
 import type { ComponentProps } from 'react';
 
 import { LanguageProvider } from '../contexts/language-context';
 import { QuickAddModal } from './QuickAddModal';
+import { QUICK_ADD_MAIN_WINDOW_LABEL, QUICK_ADD_SAVED_EVENT } from '../lib/quick-add-saved-event';
+
+const tauriMocks = vi.hoisted(() => ({
+    emitTo: vi.fn(async () => undefined),
+    hide: vi.fn(async () => undefined),
+    invoke: vi.fn(async () => false),
+    listen: vi.fn(async () => () => undefined),
+}));
+
+vi.mock('@tauri-apps/api/core', () => ({
+    invoke: tauriMocks.invoke,
+}));
+
+vi.mock('@tauri-apps/api/event', () => ({
+    emitTo: tauriMocks.emitTo,
+    listen: tauriMocks.listen,
+}));
+
+vi.mock('@tauri-apps/api/window', () => ({
+    getCurrentWindow: () => ({
+        hide: tauriMocks.hide,
+    }),
+}));
 
 const initialTaskState = useTaskStore.getState();
 
@@ -23,6 +46,8 @@ const createDeferred = () => {
 };
 
 beforeEach(() => {
+    delete (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+    vi.clearAllMocks();
     act(() => {
         useTaskStore.setState(initialTaskState, true);
         useTaskStore.setState((state) => ({
@@ -89,5 +114,38 @@ describe('QuickAddModal', () => {
             deferred.resolve();
             await deferred.promise;
         });
+    });
+
+    it('notifies the main window after a standalone text quick add is saved', async () => {
+        (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
+        const addTask = vi.fn(async () => ({ success: true, id: 'task-id' }));
+        const fetchData = vi.fn(async () => undefined) as unknown as typeof initialTaskState.fetchData;
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                addTask,
+                fetchData,
+            }));
+        });
+
+        renderQuickAddModal({ standaloneWindow: true });
+
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent('mindwtr:quick-add', {
+                detail: { initialValue: 'Fast capture' },
+            }));
+            await Promise.resolve();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(tauriMocks.emitTo).toHaveBeenCalledWith(
+                QUICK_ADD_MAIN_WINDOW_LABEL,
+                QUICK_ADD_SAVED_EVENT,
+                expect.objectContaining({ savedAt: expect.any(String) }),
+            );
+        });
+        expect(addTask).toHaveBeenCalledWith('Fast capture', expect.objectContaining({ status: 'inbox' }));
     });
 });
