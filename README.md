@@ -42,10 +42,10 @@ _New to GTD? Read [GTD in 15 minutes](https://hamberg.no/gtd) for a quick introd
          style="height: 50px"
          height="50" />
   </a>
-  <a href="https://apt.izzysoft.de/fdroid/index/apk/tech.dongdongbh.mindwtr" target="_blank">
-    <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidButtonGreyBorder_nofont.png"
+  <a href="https://f-droid.org/en/packages/tech.dongdongbh.mindwtr/" target="_blank">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
          align="center"
-         alt="Get it on IzzyOnDroid"
+         alt="Get it on F-Droid"
          style="height: 50px"
          height="50" />
   </a>
@@ -263,6 +263,15 @@ flatpak install flathub tech.dongdongbh.mindwtr
 winget install dongdongbh.Mindwtr
 ```
 
+**Chocolatey:**
+<a href="https://community.chocolatey.org/packages/mindwtr">
+<img src="https://img.shields.io/chocolatey/v/mindwtr?label=Chocolatey&logo=chocolatey&logoColor=white&color=80B5E3" alt="Chocolatey Version">
+</a>
+
+```powershell
+choco install mindwtr
+```
+
 **Scoop:**
 <a href="https://github.com/dongdongbh/homebrew-mindwtr">
 <img src="https://img.shields.io/scoop/v/mindwtr?bucket=https://github.com/dongdongbh/homebrew-mindwtr&label=Scoop&logo=scoop&logoColor=white&color=E6E6E6" alt="Scoop Version">
@@ -308,11 +317,19 @@ brew install --cask mindwtr
 <a href="https://play.google.com/store/apps/details?id=tech.dongdongbh.mindwtr">
 <img src="https://img.shields.io/badge/Google_Play-Install-414141?logo=googleplay&logoColor=white" alt="Get it on Google Play">
 </a>
+<a href="https://f-droid.org/en/packages/tech.dongdongbh.mindwtr/">
+<img src="https://img.shields.io/f-droid/v/tech.dongdongbh.mindwtr?label=F-Droid&logo=fdroid&logoColor=white&color=1976D2" alt="F-Droid Version">
+</a>
 <a href="https://apt.izzysoft.de/fdroid/index/apk/tech.dongdongbh.mindwtr">
 <img src="https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/tech.dongdongbh.mindwtr&label=IzzyOnDroid" alt="IzzyOnDroid">
 </a>
 
-Install with IzzyOnDroid:
+Install with F-Droid:
+
+1. Install the F-Droid client.
+2. Open [Mindwtr on F-Droid](https://f-droid.org/en/packages/tech.dongdongbh.mindwtr/) and install.
+
+Install with IzzyOnDroid (alternative F-Droid-compatible repo):
 
 1. Install an F-Droid-compatible client (Droid-ify, Neo Store, or F-Droid).
 2. Add the IzzyOnDroid repository: `https://apt.izzysoft.de/fdroid/repo`.
@@ -362,7 +379,6 @@ You can help in several ways:
 
 ## Roadmap
 
-- 🤖 Add to F-Droid ([#219](https://github.com/dongdongbh/Mindwtr/issues/219))
 - 🗣️ Direct Siri capture -> Mindwtr Inbox ([#388](https://github.com/dongdongbh/Mindwtr/issues/388))
 - 📥 Apple Reminders -> Mindwtr Inbox import ([#387](https://github.com/dongdongbh/Mindwtr/issues/387))
 - ✉️ Email to Inbox ([#35](https://github.com/dongdongbh/Mindwtr/issues/35))

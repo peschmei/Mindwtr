@@ -42,10 +42,10 @@
          style="height: 50px"
          height="50" />
   </a>
-  <a href="https://apt.izzysoft.de/fdroid/index/apk/tech.dongdongbh.mindwtr" target="_blank">
-    <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidButtonGreyBorder_nofont.png"
+  <a href="https://f-droid.org/en/packages/tech.dongdongbh.mindwtr/" target="_blank">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
          align="center"
-         alt="Get it on IzzyOnDroid"
+         alt="Get it on F-Droid"
          style="height: 50px"
          height="50" />
   </a>
@@ -251,6 +251,14 @@ flatpak install flathub tech.dongdongbh.mindwtr
 winget install dongdongbh.Mindwtr
 ```
 
+**Chocolatey：**
+<a href="https://community.chocolatey.org/packages/mindwtr">
+  <img src="https://img.shields.io/chocolatey/v/mindwtr?label=Chocolatey&logo=chocolatey&logoColor=white&color=80B5E3" alt="Chocolatey Version">
+</a>
+```powershell
+choco install mindwtr
+```
+
 **Scoop：**
 <a href="https://github.com/dongdongbh/homebrew-mindwtr">
   <img src="https://img.shields.io/scoop/v/mindwtr?bucket=https://github.com/dongdongbh/homebrew-mindwtr&label=Scoop&logo=scoop&logoColor=white&color=E6E6E6" alt="Scoop Version">
@@ -294,11 +302,18 @@ brew install --cask mindwtr
 <a href="https://play.google.com/store/apps/details?id=tech.dongdongbh.mindwtr">
   <img src="https://img.shields.io/badge/Google_Play-Install-414141?logo=googleplay&logoColor=white" alt="Get it on Google Play">
 </a>
+<a href="https://f-droid.org/en/packages/tech.dongdongbh.mindwtr/">
+  <img src="https://img.shields.io/f-droid/v/tech.dongdongbh.mindwtr?label=F-Droid&logo=fdroid&logoColor=white&color=1976D2" alt="F-Droid Version">
+</a>
 <a href="https://apt.izzysoft.de/fdroid/index/apk/tech.dongdongbh.mindwtr">
   <img src="https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/tech.dongdongbh.mindwtr&label=IzzyOnDroid" alt="IzzyOnDroid">
 </a>
 
-通过 IzzyOnDroid 安装：
+通过 F-Droid 安装：
+1. 安装 F-Droid 客户端。
+2. 打开 [Mindwtr（F-Droid）](https://f-droid.org/en/packages/tech.dongdongbh.mindwtr/) 并安装。
+
+通过 IzzyOnDroid 安装（备用 F-Droid 兼容仓库）：
 1. 安装兼容 F-Droid 的客户端（Droid-ify、Neo Store 或 F-Droid）。
 2. 添加 IzzyOnDroid 仓库：`https://apt.izzysoft.de/fdroid/repo`。
 3. 打开 [Mindwtr（IzzyOnDroid）](https://apt.izzysoft.de/fdroid/index/apk/tech.dongdongbh.mindwtr) 并安装。
@@ -346,7 +361,6 @@ Mindwtr 的发展离不开用户与贡献者的支持，感谢大家一起把它
 
 ## 路线图
 
-- 🤖 上架 F-Droid（[#219](https://github.com/dongdongbh/Mindwtr/issues/219)）
 - 🗣️ Siri 直接收集到 Mindwtr 收件箱（[#388](https://github.com/dongdongbh/Mindwtr/issues/388)）
 - 📥 Apple 提醒事项导入到 Mindwtr 收件箱（[#387](https://github.com/dongdongbh/Mindwtr/issues/387)）
 - ✉️ 邮件添加到收件箱（[#35](https://github.com/dongdongbh/Mindwtr/issues/35)）
