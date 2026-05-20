@@ -230,7 +230,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl animate-in fade-in overflow-hidden">
+        <div className="bg-card border border-border rounded-xl animate-in fade-in overflow-visible">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-2.5">

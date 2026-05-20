@@ -178,7 +178,7 @@ export function InboxProcessingQuickPanel({
     const laterHint = tFallback(t, 'process.laterHint', 'Set a start date and move this to Next.');
 
     return (
-        <div className="bg-card border border-border rounded-xl animate-in fade-in overflow-hidden">
+        <div className="bg-card border border-border rounded-xl animate-in fade-in overflow-visible">
             <div className="flex items-center justify-between gap-3 px-5 py-3.5">
                 <div className="flex items-center gap-2.5 min-w-0">
                     <h3 className="font-semibold text-[15px] truncate inline-flex items-center gap-2">

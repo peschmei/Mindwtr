@@ -119,6 +119,22 @@ describe('InboxProcessor', () => {
         expect(queryByText('process.refineDesc')).toBeNull();
     });
 
+    it('keeps processing cards from clipping project dropdowns', () => {
+        const { getByRole, getByText } = renderInboxProcessor({
+            gtd: {
+                inboxProcessing: {
+                    defaultMode: 'quick',
+                },
+            },
+        });
+
+        fireEvent.click(getByRole('button', { name: /process\.btn/i }));
+        expect(getByText('process.quickDesc').closest('.rounded-xl')).toHaveClass('overflow-visible');
+
+        fireEvent.click(getByRole('button', { name: 'process.modeGuided' }));
+        expect(getByText('process.refineDesc').closest('.rounded-xl')).toHaveClass('overflow-visible');
+    });
+
     it('routes actionable multi-step tasks directly to project conversion', async () => {
         const { getByRole, getByText, addProject, updateTask } = renderInboxProcessor();
 

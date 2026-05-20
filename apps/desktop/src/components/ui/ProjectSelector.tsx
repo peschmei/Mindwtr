@@ -170,7 +170,7 @@ export function ProjectSelector({
             {open && (
                 <div
                     ref={dropdownRef}
-                    className={cn('absolute z-20 w-full rounded-md border border-border bg-popover shadow-lg p-1 text-xs', dropdownClassName)}
+                    className={cn('absolute z-50 w-full rounded-md border border-border bg-popover shadow-lg p-1 text-xs', dropdownClassName)}
                     onKeyDown={handleDropdownKeyDown}
                 >
                     <input

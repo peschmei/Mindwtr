@@ -56,6 +56,22 @@ describe('ProjectSelector', () => {
         expect(queryByRole('option', { name: 'Completed Project' })).not.toBeInTheDocument();
     });
 
+    it('renders the dropdown above nearby panels', () => {
+        const { getByRole } = render(
+            <ProjectSelector
+                projects={projects}
+                value=""
+                onChange={vi.fn()}
+                placeholder="Select project"
+                searchPlaceholder="Search projects"
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: 'Select project' }));
+
+        expect(getByRole('listbox', { name: 'Select project' }).closest('.absolute')).toHaveClass('z-50');
+    });
+
     it('suppresses create when an exact match exists outside the filtered list', () => {
         const { getByRole, getByLabelText, queryByText } = render(
             <ProjectSelector
