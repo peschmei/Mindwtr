@@ -3,6 +3,7 @@ import {
     AI_PROVIDER_VALUE_SET,
     AI_REASONING_EFFORT_VALUE_SET,
     SETTINGS_DENSITY_VALUE_SET,
+    SETTINGS_FOCUS_GROUP_BY_VALUE_SET,
     SETTINGS_KEYBINDING_STYLE_VALUE_SET,
     SETTINGS_LANGUAGE_VALUE_SET,
     SETTINGS_MOBILE_QUICK_ACCESS_VIEW_VALUE_SET,
@@ -379,21 +380,33 @@ export const sanitizeMergedSettingsForSync = (
 
     if (next.gtd !== undefined && !isObjectRecord(next.gtd)) {
         next.gtd = localSettings.gtd ? cloneSettingValue(localSettings.gtd) : undefined;
-    } else if (next.gtd?.focusTaskLimit !== undefined) {
-        const rawLimit = next.gtd.focusTaskLimit;
-        if (typeof rawLimit !== 'number' || !Number.isFinite(rawLimit) || rawLimit < MIN_FOCUS_TASK_LIMIT || rawLimit > MAX_FOCUS_TASK_LIMIT) {
-            next.gtd = {
-                ...next.gtd,
-                focusTaskLimit: localSettings.gtd?.focusTaskLimit,
-            };
-            if (next.gtd.focusTaskLimit === undefined) {
-                delete next.gtd.focusTaskLimit;
+    } else if (next.gtd) {
+        if (next.gtd.focusTaskLimit !== undefined) {
+            const rawLimit = next.gtd.focusTaskLimit;
+            if (typeof rawLimit !== 'number' || !Number.isFinite(rawLimit) || rawLimit < MIN_FOCUS_TASK_LIMIT || rawLimit > MAX_FOCUS_TASK_LIMIT) {
+                next.gtd = {
+                    ...next.gtd,
+                    focusTaskLimit: localSettings.gtd?.focusTaskLimit,
+                };
+                if (next.gtd.focusTaskLimit === undefined) {
+                    delete next.gtd.focusTaskLimit;
+                }
+            } else {
+                next.gtd = {
+                    ...next.gtd,
+                    focusTaskLimit: normalizeFocusTaskLimit(rawLimit),
+                };
             }
-        } else {
+        }
+
+        if (next.gtd.focusGroupBy !== undefined && !setContainsValue(SETTINGS_FOCUS_GROUP_BY_VALUE_SET, next.gtd.focusGroupBy)) {
             next.gtd = {
                 ...next.gtd,
-                focusTaskLimit: normalizeFocusTaskLimit(rawLimit),
+                focusGroupBy: localSettings.gtd?.focusGroupBy,
             };
+            if (next.gtd.focusGroupBy === undefined) {
+                delete next.gtd.focusGroupBy;
+            }
         }
     }
 
@@ -520,10 +533,12 @@ export const mergeSettingsForSync = (
         {
             defaultScheduleTime: localSettings.gtd?.defaultScheduleTime,
             focusTaskLimit: localSettings.gtd?.focusTaskLimit,
+            focusGroupBy: localSettings.gtd?.focusGroupBy,
         },
         {
             defaultScheduleTime: incomingSettings.gtd?.defaultScheduleTime,
             focusTaskLimit: incomingSettings.gtd?.focusTaskLimit,
+            focusGroupBy: incomingSettings.gtd?.focusGroupBy,
         },
         (value) => {
             const nextGtd = { ...(merged.gtd ?? {}) };
@@ -536,6 +551,11 @@ export const mergeSettingsForSync = (
                 delete nextGtd.focusTaskLimit;
             } else {
                 nextGtd.focusTaskLimit = value.focusTaskLimit;
+            }
+            if (value.focusGroupBy === undefined) {
+                delete nextGtd.focusGroupBy;
+            } else {
+                nextGtd.focusGroupBy = value.focusGroupBy;
             }
             if (Object.keys(nextGtd).length === 0) {
                 if (merged.gtd) {

@@ -1,6 +1,6 @@
 import { SUPPORTED_LANGUAGES } from './i18n/i18n-constants';
 import type { AIProviderId, AIReasoningEffort } from './ai/types';
-import type { AiSettings, AppearanceSettings, AppData } from './types';
+import type { AiSettings, AppearanceSettings, AppData, GtdSettings } from './types';
 
 type ThemeValue = NonNullable<AppData['settings']['theme']>;
 type LanguageValue = NonNullable<AppData['settings']['language']>;
@@ -10,6 +10,7 @@ type KeybindingStyleValue = NonNullable<AppData['settings']['keybindingStyle']>;
 type DensityValue = NonNullable<AppearanceSettings['density']>;
 type TextSizeValue = NonNullable<AppearanceSettings['textSize']>;
 type MobileQuickAccessViewValue = NonNullable<AppearanceSettings['mobileQuickAccessView']>;
+type FocusGroupByValue = NonNullable<GtdSettings['focusGroupBy']>;
 type SpeechToTextSettings = NonNullable<AiSettings['speechToText']>;
 type SpeechToTextProviderValue = NonNullable<SpeechToTextSettings['provider']>;
 type SpeechToTextModeValue = NonNullable<SpeechToTextSettings['mode']>;
@@ -60,6 +61,15 @@ const MOBILE_QUICK_ACCESS_VIEW_VALUE_FLAGS: Record<MobileQuickAccessViewValue, t
     projects: true,
     calendar: true,
     contexts: true,
+};
+
+const FOCUS_GROUP_BY_VALUE_FLAGS: Record<FocusGroupByValue, true> = {
+    none: true,
+    context: true,
+    project: true,
+    area: true,
+    energy: true,
+    priority: true,
 };
 
 const AI_PROVIDER_VALUE_FLAGS: Record<AIProviderId, true> = {
@@ -114,6 +124,9 @@ export const SETTINGS_TEXT_SIZE_VALUE_SET = new Set<TextSizeValue>(SETTINGS_TEXT
 
 export const SETTINGS_MOBILE_QUICK_ACCESS_VIEW_VALUES = Object.keys(MOBILE_QUICK_ACCESS_VIEW_VALUE_FLAGS) as MobileQuickAccessViewValue[];
 export const SETTINGS_MOBILE_QUICK_ACCESS_VIEW_VALUE_SET = new Set<MobileQuickAccessViewValue>(SETTINGS_MOBILE_QUICK_ACCESS_VIEW_VALUES);
+
+export const SETTINGS_FOCUS_GROUP_BY_VALUES = Object.keys(FOCUS_GROUP_BY_VALUE_FLAGS) as FocusGroupByValue[];
+export const SETTINGS_FOCUS_GROUP_BY_VALUE_SET = new Set<FocusGroupByValue>(SETTINGS_FOCUS_GROUP_BY_VALUES);
 
 export const AI_PROVIDER_VALUES = Object.keys(AI_PROVIDER_VALUE_FLAGS) as AIProviderId[];
 export const AI_PROVIDER_VALUE_SET = new Set<AIProviderId>(AI_PROVIDER_VALUES);

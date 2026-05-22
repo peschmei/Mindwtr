@@ -11,6 +11,8 @@ export type TaskSortBy = 'default' | 'due' | 'start' | 'review' | 'title' | 'cre
 
 export type TaskMode = 'task' | 'list';
 
+export type FocusGroupBy = 'none' | 'context' | 'project' | 'area' | 'energy' | 'priority';
+
 export type RecurrenceRule = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export type RecurrenceStrategy = 'strict' | 'fluid';
@@ -267,6 +269,7 @@ export interface GtdSettings {
     autoArchiveDays?: number;
     defaultCaptureMethod?: 'text' | 'audio';
     focusTaskLimit?: number;
+    focusGroupBy?: FocusGroupBy;
     defaultScheduleTime?: string; // HH:mm, used to prefill manual scheduling fields.
     saveAudioAttachments?: boolean;
     inboxProcessing?: {

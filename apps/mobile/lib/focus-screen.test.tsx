@@ -296,7 +296,35 @@ describe('FocusScreen', () => {
     expect(() => tree.root.findByProps({ children: 'All clear' })).toThrow();
   });
 
-  it('groups mobile Next Actions under context headers', () => {
+  it('renders mobile Next Actions flat by default', () => {
+    storeState.tasks = [
+      makeTask('work-next', { title: 'Work next', contexts: ['@work'] }),
+      makeTask('no-context-next', { title: 'No context next' }),
+      makeTask('home-next', { title: 'Home next', contexts: ['@home'] }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    expect(
+      tree.root.findAllByType(View)
+        .filter((node) => node.props.accessibilityRole === 'header')
+        .map((node) => node.props.accessibilityLabel),
+    ).toEqual([]);
+    expect(
+      tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
+    ).toEqual(['home-next', 'no-context-next', 'work-next']);
+  });
+
+  it('groups mobile Next Actions under context headers when selected', () => {
+    storeState.settings = {
+      appearance: {},
+      features: {},
+      gtd: { focusGroupBy: 'context' },
+    } as any;
     storeState.tasks = [
       makeTask('work-next', { title: 'Work next', contexts: ['@work'] }),
       makeTask('no-context-next', { title: 'No context next' }),
@@ -317,6 +345,27 @@ describe('FocusScreen', () => {
     expect(
       tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
     ).toEqual(['no-context-next', 'home-next', 'work-next']);
+  });
+
+  it('saves the Focus group-by preference from the filter sheet', async () => {
+    storeState.updateSettings.mockResolvedValue(undefined);
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    act(() => {
+      findButtonByLabel(tree, 'Filters').props.onPress();
+    });
+    await act(async () => {
+      findButtonByText(tree, 'Project').props.onPress();
+    });
+
+    expect(storeState.updateSettings).toHaveBeenCalledWith({
+      gtd: { focusGroupBy: 'project' },
+    });
   });
 
   it('renders review-due tasks in a dedicated Review Due section and allows collapsing it', () => {

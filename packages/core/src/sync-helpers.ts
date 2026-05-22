@@ -159,10 +159,15 @@ export const sanitizeAppDataForRemote = (data: AppData): AppData => {
         }
 
         if (prefs.gtd === true) {
-            if (settings.gtd?.defaultScheduleTime !== undefined || settings.gtd?.focusTaskLimit !== undefined) {
+            if (
+                settings.gtd?.defaultScheduleTime !== undefined
+                || settings.gtd?.focusTaskLimit !== undefined
+                || settings.gtd?.focusGroupBy !== undefined
+            ) {
                 next.gtd = {
                     ...(settings.gtd.defaultScheduleTime !== undefined ? { defaultScheduleTime: settings.gtd.defaultScheduleTime } : {}),
                     ...(settings.gtd.focusTaskLimit !== undefined ? { focusTaskLimit: settings.gtd.focusTaskLimit } : {}),
+                    ...(settings.gtd.focusGroupBy !== undefined ? { focusGroupBy: settings.gtd.focusGroupBy } : {}),
                 };
             }
         }

@@ -745,12 +745,15 @@ export const createSettingsActions = ({
             const focusTaskLimitUpdate = updates.gtd
                 ? Object.prototype.hasOwnProperty.call(updates.gtd, 'focusTaskLimit')
                 : false;
+            const focusGroupByUpdate = updates.gtd
+                ? Object.prototype.hasOwnProperty.call(updates.gtd, 'focusGroupBy')
+                : false;
 
             if ('language' in updates || 'weekStart' in updates || 'dateFormat' in updates || 'timeFormat' in updates) {
                 markSyncUpdated('language');
             }
 
-            if (defaultScheduleTimeUpdate || focusTaskLimitUpdate) {
+            if (defaultScheduleTimeUpdate || focusTaskLimitUpdate || focusGroupByUpdate) {
                 markSyncUpdated('gtd');
             }
 

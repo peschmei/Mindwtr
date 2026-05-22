@@ -231,6 +231,7 @@ describe('sync-helpers sanitizeAppDataForRemote', () => {
             gtd: {
                 defaultScheduleTime: '09:30',
                 focusTaskLimit: 5,
+                focusGroupBy: 'project',
                 inboxProcessing: { scheduleEnabled: true },
             },
             language: 'en',
@@ -239,7 +240,7 @@ describe('sync-helpers sanitizeAppDataForRemote', () => {
 
         const sanitized = sanitizeAppDataForRemote(data);
 
-        expect(sanitized.settings.gtd).toEqual({ defaultScheduleTime: '09:30', focusTaskLimit: 5 });
+        expect(sanitized.settings.gtd).toEqual({ defaultScheduleTime: '09:30', focusTaskLimit: 5, focusGroupBy: 'project' });
         expect(sanitized.settings.language).toBe('en');
         expect(sanitized.settings.timeFormat).toBe('24h');
     });

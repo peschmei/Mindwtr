@@ -11,6 +11,7 @@ export type {
     ChecklistItem,
     DiagnosticsSettings,
     FeatureSettings,
+    FocusGroupBy,
     InboxProcessingMode,
     FilterSettings,
     PendingRemoteAttachmentDelete,

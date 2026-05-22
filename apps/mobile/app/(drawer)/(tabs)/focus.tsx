@@ -38,6 +38,7 @@ import {
   type TaskPriority,
   type TaskEnergyLevel,
   type TimeEstimate,
+  type FocusGroupBy,
   type FilterCriteria,
   type SavedFilter,
 } from '@mindwtr/core';
@@ -61,6 +62,7 @@ const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
 const ENERGY_LEVEL_OPTIONS: TaskEnergyLevel[] = ['low', 'medium', 'high'];
 const ALL_TIME_ESTIMATE_OPTIONS: TimeEstimate[] = ['5min', '10min', '15min', '30min', '1hr', '2hr', '3hr', '4hr', '4hr+'];
 const DEFAULT_TIME_ESTIMATE_PRESETS: TimeEstimate[] = ['10min', '30min', '1hr', '2hr', '3hr', '4hr', '4hr+'];
+const FOCUS_GROUP_BY_OPTIONS: FocusGroupBy[] = ['none', 'context', 'project', 'area', 'energy', 'priority'];
 const NO_PROJECT_FILTER_ID = SAVED_FILTER_NO_PROJECT_ID;
 const FOCUS_LIST_INITIAL_RENDER_COUNT = 12;
 const FOCUS_LIST_BATCH_RENDER_COUNT = 12;
@@ -75,9 +77,17 @@ type FocusFilterChip = {
 
 type FocusSectionType = 'focus' | 'schedule' | 'next' | 'reviewDue';
 
+type FocusTaskGroup = {
+  id: string;
+  title: string;
+  tasks: Task[];
+  muted?: boolean;
+  sortOrder?: number;
+};
+
 type FocusListItem =
   | { type: 'task'; task: Task; grouped?: boolean }
-  | { type: 'contextHeader'; id: string; title: string; count: number; muted?: boolean };
+  | { type: 'groupHeader'; id: string; title: string; count: number; muted?: boolean };
 
 type FocusSection = {
   title: string;
@@ -136,6 +146,33 @@ function countFilterCriteria(criteria: FilterCriteria): number {
   );
 }
 
+function normalizeFocusGroupBy(value: unknown): FocusGroupBy {
+  return FOCUS_GROUP_BY_OPTIONS.includes(value as FocusGroupBy) ? value as FocusGroupBy : 'none';
+}
+
+function buildFocusTaskGroups(
+  tasks: Task[],
+  resolveGroup: (task: Task) => Omit<FocusTaskGroup, 'tasks'>,
+): FocusTaskGroup[] {
+  const groups = new Map<string, FocusTaskGroup>();
+  tasks.forEach((task) => {
+    const descriptor = resolveGroup(task);
+    const group = groups.get(descriptor.id);
+    if (group) {
+      group.tasks.push(task);
+      return;
+    }
+    groups.set(descriptor.id, { ...descriptor, tasks: [task] });
+  });
+
+  return Array.from(groups.values()).sort((left, right) => {
+    const leftOrder = Number.isFinite(left.sortOrder) ? left.sortOrder as number : Number.POSITIVE_INFINITY;
+    const rightOrder = Number.isFinite(right.sortOrder) ? right.sortOrder as number : Number.POSITIVE_INFINITY;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
+  });
+}
+
 export default function FocusScreen() {
   const { taskId, openToken } = useLocalSearchParams<{ taskId?: string; openToken?: string }>();
   const { tasks, projects, settings, updateTask, deleteTask, updateSettings, highlightTaskId, setHighlightTask } = useTaskStore();
@@ -166,6 +203,7 @@ export default function FocusScreen() {
   const prioritiesEnabled = settings?.features?.priorities !== false;
   const timeEstimatesEnabled = settings?.features?.timeEstimates !== false;
   const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
+  const focusGroupBy = normalizeFocusGroupBy(settings?.gtd?.focusGroupBy);
   const { areaById, resolvedAreaFilter } = useMobileAreaFilter();
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
   const visibleProjects = useMemo(() => (
@@ -251,6 +289,32 @@ export default function FocusScreen() {
   const resolveText = useCallback((key: string, fallback: string) => {
     return translateWithFallback(t, key, fallback);
   }, [t]);
+  const getFocusGroupByLabel = useCallback((groupBy: FocusGroupBy) => {
+    switch (groupBy) {
+      case 'context':
+        return resolveText('focus.group.context', 'Context');
+      case 'project':
+        return resolveText('focus.group.project', 'Project');
+      case 'area':
+        return resolveText('focus.group.area', 'Area');
+      case 'energy':
+        return resolveText('focus.group.energy', 'Energy');
+      case 'priority':
+        return resolveText('focus.group.priority', 'Priority');
+      case 'none':
+      default:
+        return resolveText('focus.group.none', 'None');
+    }
+  }, [resolveText]);
+  const updateFocusGroupBy = useCallback((nextGroupBy: FocusGroupBy) => {
+    if (nextGroupBy === focusGroupBy) return;
+    void updateSettings({
+      gtd: {
+        ...(settings?.gtd ?? {}),
+        focusGroupBy: nextGroupBy === 'none' ? undefined : nextGroupBy,
+      },
+    }).catch(() => undefined);
+  }, [focusGroupBy, settings?.gtd, updateSettings]);
   const toggleFutureStarts = useCallback(() => {
     void updateSettings({
       appearance: {
@@ -511,12 +575,83 @@ export default function FocusScreen() {
     const buildTaskItems = (items: Task[], grouped = false): FocusListItem[] => (
       items.map((task) => ({ type: 'task' as const, task, grouped }))
     );
+    const getEnergySortOrder = (energyLevel: TaskEnergyLevel | undefined): number => {
+      if (energyLevel === 'high') return 0;
+      if (energyLevel === 'medium') return 1;
+      if (energyLevel === 'low') return 2;
+      return 3;
+    };
+    const getPrioritySortOrder = (priority: TaskPriority | undefined): number => {
+      if (priority === 'urgent') return 0;
+      if (priority === 'high') return 1;
+      if (priority === 'medium') return 2;
+      if (priority === 'low') return 3;
+      return 4;
+    };
+    const buildNextActionGroups = (): FocusTaskGroup[] => {
+      switch (focusGroupBy) {
+        case 'context':
+          return groupFocusTasksByContext(nextActions, resolveText('contexts.none', 'No context'));
+        case 'project':
+          return buildFocusTaskGroups(nextActions, (task) => {
+            const project = task.projectId ? projectById.get(task.projectId) : undefined;
+            const order = project && Number.isFinite(project.order) ? project.order : Number.POSITIVE_INFINITY;
+            return project
+              ? { id: `project:${project.id}`, title: project.title, sortOrder: order }
+              : { id: 'project:none', title: resolveText('taskEdit.noProjectOption', 'No project'), muted: true, sortOrder: -1 };
+          });
+        case 'area':
+          return buildFocusTaskGroups(nextActions, (task) => {
+            const project = task.projectId ? projectById.get(task.projectId) : undefined;
+            const areaId = project?.areaId ?? task.areaId;
+            const area = areaId ? areaById.get(areaId) : undefined;
+            const order = area && Number.isFinite(area.order) ? area.order : Number.POSITIVE_INFINITY;
+            return areaId
+              ? {
+                id: `area:${areaId}`,
+                title: area?.name ?? project?.areaTitle ?? resolveText('taskEdit.noAreaOption', 'No area'),
+                sortOrder: order,
+              }
+              : { id: 'area:none', title: resolveText('taskEdit.noAreaOption', 'No area'), muted: true, sortOrder: -1 };
+          });
+        case 'energy':
+          return buildFocusTaskGroups(nextActions, (task) => (
+            task.energyLevel
+              ? {
+                id: `energy:${task.energyLevel}`,
+                title: t(`energyLevel.${task.energyLevel}`),
+                sortOrder: getEnergySortOrder(task.energyLevel),
+              }
+              : { id: 'energy:none', title: resolveText('focus.group.noEnergy', 'No energy'), muted: true, sortOrder: getEnergySortOrder(undefined) }
+          ));
+        case 'priority':
+          return buildFocusTaskGroups(nextActions, (task) => (
+            task.priority
+              ? {
+                id: `priority:${task.priority}`,
+                title: t(`priority.${task.priority}`),
+                sortOrder: getPrioritySortOrder(task.priority),
+              }
+              : { id: 'priority:none', title: resolveText('focus.group.noPriority', 'No priority'), muted: true, sortOrder: getPrioritySortOrder(undefined) }
+          ));
+        case 'none':
+        default:
+          return [];
+      }
+    };
     const buildGroupedNextItems = (): FocusListItem[] => {
       if (!expandedSections.next) return [];
-      return groupFocusTasksByContext(nextActions, resolveText('contexts.none', 'No context'))
+      if (focusGroupBy === 'none') {
+        return buildTaskItems(nextActions);
+      }
+      const groups = buildNextActionGroups();
+      if (groups.length <= 1) {
+        return buildTaskItems(nextActions);
+      }
+      return groups
         .flatMap((group) => [
           {
-            type: 'contextHeader' as const,
+            type: 'groupHeader' as const,
             id: group.id,
             title: group.title,
             count: group.tasks.length,
@@ -562,7 +697,21 @@ export default function FocusScreen() {
     );
 
     return nextSections;
-  }, [expandedSections.focus, expandedSections.next, expandedSections.reviewDue, expandedSections.schedule, focusedTasks, schedule, nextActions, reviewDue, resolveText, t]);
+  }, [
+    areaById,
+    expandedSections.focus,
+    expandedSections.next,
+    expandedSections.reviewDue,
+    expandedSections.schedule,
+    focusGroupBy,
+    focusedTasks,
+    nextActions,
+    projectById,
+    resolveText,
+    reviewDue,
+    schedule,
+    t,
+  ]);
   const hasTasks = focusedTasks.length > 0 || schedule.length > 0 || nextActions.length > 0 || reviewDue.length > 0;
   const activeFilterCount = countFilterCriteria(effectiveFilterCriteria);
   const advancedFilterChips = useMemo<FocusFilterChip[]>(() => {
@@ -730,7 +879,7 @@ export default function FocusScreen() {
   }, [resolveText, tc.border, tc.filterBg, tc.onTint, tc.text, tc.tint]);
 
   const renderItem = ({ item }: { item: FocusListItem }) => {
-    if (item.type === 'contextHeader') {
+    if (item.type === 'groupHeader') {
       return (
         <View
           accessible
@@ -1012,6 +1161,18 @@ export default function FocusScreen() {
               contentContainerStyle={styles.sheetContent}
               showsVerticalScrollIndicator={false}
             >
+              <Text style={[styles.sheetSectionLabel, { color: tc.secondaryText }]}>
+                {resolveText('focus.groupBy', 'Group by')}
+              </Text>
+              <View style={styles.sheetChipRow}>
+                {FOCUS_GROUP_BY_OPTIONS.map((groupBy) => renderFilterChip(
+                  getFocusGroupByLabel(groupBy),
+                  focusGroupBy === groupBy,
+                  () => updateFocusGroupBy(groupBy),
+                  `group:${groupBy}`,
+                ))}
+              </View>
+
               {activeFilterChips.length > 0 ? (
                 <>
                   <Text style={[styles.sheetSectionLabel, { color: tc.secondaryText }]}>
