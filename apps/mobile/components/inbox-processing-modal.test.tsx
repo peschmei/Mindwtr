@@ -410,6 +410,64 @@ describe('InboxProcessingModal', () => {
     );
   });
 
+  it('converts an inbox item into a project next action on mobile', async () => {
+    storeState.areas = [workArea, homeArea];
+    storeState.projects = [];
+    addProject.mockResolvedValueOnce({
+      id: 'project-created',
+      title: 'Plan Launch',
+      color: '#3b82f6',
+      status: 'active',
+      order: 0,
+      tagIds: [],
+      areaId: workArea.id,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    });
+    const onClose = vi.fn();
+    let tree: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<InboxProcessingModal visible onClose={onClose} />);
+    });
+
+    const root = tree!.root;
+
+    act(() => {
+      findPressableWithText(root, 'process.moreThanOneStepYes').props.onPress();
+    });
+
+    const projectTitleInput = root.findByProps({ accessibilityLabel: 'projects.title' });
+    const nextActionInput = root.findByProps({ accessibilityLabel: 'process.nextAction' });
+
+    act(() => {
+      findPressableWithText(root, 'Work').props.onPress();
+      projectTitleInput.props.onChangeText('Plan Launch');
+      nextActionInput.props.onChangeText('Draft launch brief');
+    });
+
+    await act(async () => {
+      findPressableWithText(root, 'process.createProject').props.onPress();
+    });
+
+    expect(addProject).toHaveBeenCalledWith(
+      'Plan Launch',
+      '#3b82f6',
+      { areaId: workArea.id },
+    );
+    expect(updateTask).toHaveBeenCalledWith(
+      'inbox-1',
+      expect.objectContaining({
+        title: 'Draft launch brief',
+        status: 'next',
+        projectId: 'project-created',
+        areaId: undefined,
+        contexts: ['@home'],
+      })
+    );
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('suggests existing contexts and tags while typing without a prefix', () => {
     mockSettings.gtd.taskEditor = { hidden: [] };
     storeState.tasks = [

@@ -20,10 +20,18 @@ type Props = {
   setSelectedAreaId: (v: string | null) => void;
   projectSearch: string;
   setProjectSearch: (v: string) => void;
+  convertToProject: boolean;
+  projectTitleDraft: string;
+  setProjectTitleDraft: (v: string) => void;
+  nextActionDraft: string;
+  setNextActionDraft: (v: string) => void;
   filteredProjects: Project[];
   areaById: Map<string, Area>;
   hasExactProjectMatch: boolean;
   handleCreateProjectEarly: () => void;
+  handleConvertToProject: () => void;
+  handleProjectConversionCancel: () => void;
+  handleProjectConversionStart: () => void;
   selectProjectEarly: (id: string | null) => void;
 };
 
@@ -40,38 +48,37 @@ export function InboxProjectSection({
   setSelectedAreaId,
   projectSearch,
   setProjectSearch,
+  convertToProject,
+  projectTitleDraft,
+  setProjectTitleDraft,
+  nextActionDraft,
+  setNextActionDraft,
   filteredProjects,
   areaById,
   hasExactProjectMatch,
   handleCreateProjectEarly,
+  handleConvertToProject,
+  handleProjectConversionCancel,
+  handleProjectConversionStart,
   selectProjectEarly,
 }: Props) {
   if (!show) return null;
 
   const areaOptions = Array.from(areaById.values());
 
-  return (
-    <View style={[styles.singleSection, { borderBottomColor: tc.border }]}>
-      <Text style={[styles.stepQuestion, { color: tc.text }]}>
-        📁 {t('inbox.assignProjectQuestion')}
-      </Text>
-      {showProjectField && currentProject && (
-        <TouchableOpacity
-          style={[styles.projectChip, { backgroundColor: tc.tint }]}
-          onPress={() => selectProjectEarly(currentProject.id)}
-        >
-          <Text style={styles.projectChipText}>✓ {currentProject.title}</Text>
-        </TouchableOpacity>
-      )}
-      {showAreaField && !selectedProjectId && currentArea && (
-        <TouchableOpacity
-          style={[styles.projectChip, { backgroundColor: currentArea.color || tc.tint }]}
-          onPress={() => setSelectedAreaId(currentArea.id)}
-        >
-          <Text style={styles.projectChipText}>✓ {currentArea.name}</Text>
-        </TouchableOpacity>
-      )}
-      {showAreaField && !selectedProjectId && (
+  const renderAreaPicker = () => {
+    if (!showAreaField || selectedProjectId) return null;
+
+    return (
+      <>
+        {currentArea && (
+          <TouchableOpacity
+            style={[styles.projectChip, { backgroundColor: currentArea.color || tc.tint }]}
+            onPress={() => setSelectedAreaId(currentArea.id)}
+          >
+            <Text style={styles.projectChipText}>✓ {currentArea.name}</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.projectListContainer}>
           <TouchableOpacity
             style={[styles.projectChip, { backgroundColor: tc.filterBg, borderWidth: 1, borderColor: tc.border }]}
@@ -98,7 +105,21 @@ export function InboxProjectSection({
             );
           })}
         </View>
+      </>
+    );
+  };
+
+  const renderProjectPicker = () => (
+    <>
+      {showProjectField && currentProject && (
+        <TouchableOpacity
+          style={[styles.projectChip, { backgroundColor: tc.tint }]}
+          onPress={() => selectProjectEarly(currentProject.id)}
+        >
+          <Text style={styles.projectChipText}>✓ {currentProject.title}</Text>
+        </TouchableOpacity>
       )}
+      {renderAreaPicker()}
       {showProjectField && (
         <>
           <View style={styles.projectSearchRow}>
@@ -149,6 +170,103 @@ export function InboxProjectSection({
           </View>
         </>
       )}
+    </>
+  );
+
+  const renderProjectConversion = () => (
+    <>
+      {renderAreaPicker()}
+      <View style={styles.projectConversionCard}>
+        <View style={styles.projectFieldGroup}>
+          <Text style={[styles.projectFieldLabel, { color: tc.secondaryText }]}>
+            {t('projects.title')}
+          </Text>
+          <TextInput
+            value={projectTitleDraft}
+            onChangeText={setProjectTitleDraft}
+            placeholder={t('projects.title')}
+            placeholderTextColor={tc.secondaryText}
+            accessibilityLabel={t('projects.title')}
+            style={[styles.projectSearchInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+            returnKeyType="next"
+          />
+        </View>
+        <View style={styles.projectFieldGroup}>
+          <Text style={[styles.projectFieldLabel, { color: tc.secondaryText }]}>
+            {t('process.nextAction')}
+          </Text>
+          <TextInput
+            value={nextActionDraft}
+            onChangeText={setNextActionDraft}
+            placeholder={t('taskEdit.titleLabel')}
+            placeholderTextColor={tc.secondaryText}
+            accessibilityLabel={t('process.nextAction')}
+            style={[styles.projectSearchInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+            onSubmitEditing={handleConvertToProject}
+            returnKeyType="done"
+          />
+        </View>
+        <TouchableOpacity
+          style={[styles.createProjectButton, styles.projectConversionSubmit, { backgroundColor: tc.tint }]}
+          onPress={handleConvertToProject}
+        >
+          <Text style={styles.createProjectButtonText}>{t('process.createProject')}</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  return (
+    <View style={[styles.singleSection, { borderBottomColor: tc.border }]}>
+      <Text style={[styles.stepQuestion, { color: tc.text }]}>
+        📁 {showProjectField ? t('process.moreThanOneStep') : t('inbox.assignProjectQuestion')}
+      </Text>
+      {showProjectField && (
+        <>
+          <Text style={[styles.stepHint, { color: tc.secondaryText }]}>
+            {t('process.moreThanOneStepDesc')}
+          </Text>
+          <View style={styles.projectDecisionRow}>
+            <TouchableOpacity
+              style={[
+                styles.projectDecisionButton,
+                convertToProject
+                  ? { backgroundColor: tc.tint, borderColor: tc.tint }
+                  : { backgroundColor: tc.cardBg, borderColor: tc.border },
+              ]}
+              onPress={handleProjectConversionStart}
+            >
+              <Text
+                style={[
+                  styles.projectDecisionText,
+                  { color: convertToProject ? tc.onTint : tc.text },
+                ]}
+              >
+                {t('process.moreThanOneStepYes')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.projectDecisionButton,
+                !convertToProject
+                  ? { backgroundColor: tc.filterBg, borderColor: tc.tint }
+                  : { backgroundColor: tc.cardBg, borderColor: tc.border },
+              ]}
+              onPress={handleProjectConversionCancel}
+            >
+              <Text
+                style={[
+                  styles.projectDecisionText,
+                  { color: !convertToProject ? tc.text : tc.secondaryText },
+                ]}
+              >
+                {t('process.moreThanOneStepNo')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+      {showProjectField && convertToProject ? renderProjectConversion() : renderProjectPicker()}
     </View>
   );
 }

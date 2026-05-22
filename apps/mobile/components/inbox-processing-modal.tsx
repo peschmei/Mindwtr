@@ -32,6 +32,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
     assignedToSuggestions,
     closeAIModal,
     contextCopilotSuggestions,
+    convertToProject,
     currentArea,
     currentProject,
     currentTask,
@@ -45,8 +46,11 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
     formatProgressLabel,
     handleAIClarifyInbox,
     handleClose,
+    handleConvertToProject,
     handleCreateProjectEarly,
     handleNextTask,
+    handleProjectConversionCancel,
+    handleProjectConversionStart,
     handleSendDelegateRequest,
     handleSkipTask,
     hasExactProjectMatch,
@@ -55,6 +59,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
     isAIWorking,
     isDelegateConfirmationDisabled,
     newContext,
+    nextActionDraft,
     pendingDueDate,
     pendingDueDateOnly,
     pendingReviewDate,
@@ -67,6 +72,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
     processingTitleFocused,
     projectFirst,
     projectSearch,
+    projectTitleDraft,
     referenceEnabled,
     selectedAreaId,
     selectedAssignedTo,
@@ -93,6 +99,8 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
     setProcessingDescription,
     setProcessingTitle,
     setProcessingTitleFocused,
+    setProjectTitleDraft,
+    setNextActionDraft,
     setSelectedEnergyLevel,
     setProjectSearch,
     setSelectedPriority,
@@ -375,10 +383,18 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                           setSelectedAreaId={setSelectedAreaId}
                           projectSearch={projectSearch}
                           setProjectSearch={setProjectSearch}
+                          convertToProject={convertToProject}
+                          projectTitleDraft={projectTitleDraft}
+                          setProjectTitleDraft={setProjectTitleDraft}
+                          nextActionDraft={nextActionDraft}
+                          setNextActionDraft={setNextActionDraft}
                           filteredProjects={filteredProjects}
                           areaById={areaById}
                           hasExactProjectMatch={hasExactProjectMatch}
                           handleCreateProjectEarly={handleCreateProjectEarly}
+                          handleConvertToProject={handleConvertToProject}
+                          handleProjectConversionCancel={handleProjectConversionCancel}
+                          handleProjectConversionStart={handleProjectConversionStart}
                           selectProjectEarly={selectProjectEarly}
                         />
                         <InboxContextSection
@@ -430,10 +446,18 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                           setSelectedAreaId={setSelectedAreaId}
                           projectSearch={projectSearch}
                           setProjectSearch={setProjectSearch}
+                          convertToProject={convertToProject}
+                          projectTitleDraft={projectTitleDraft}
+                          setProjectTitleDraft={setProjectTitleDraft}
+                          nextActionDraft={nextActionDraft}
+                          setNextActionDraft={setNextActionDraft}
                           filteredProjects={filteredProjects}
                           areaById={areaById}
                           hasExactProjectMatch={hasExactProjectMatch}
                           handleCreateProjectEarly={handleCreateProjectEarly}
+                          handleConvertToProject={handleConvertToProject}
+                          handleProjectConversionCancel={handleProjectConversionCancel}
+                          handleProjectConversionStart={handleProjectConversionStart}
                           selectProjectEarly={selectProjectEarly}
                         />
                       </>

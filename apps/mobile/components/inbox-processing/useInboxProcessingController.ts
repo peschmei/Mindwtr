@@ -75,6 +75,9 @@ export function useInboxProcessingController({
   const [delegateFollowUpDateOnly, setDelegateFollowUpDateOnly] = useState(false);
   const [showDelegateDatePicker, setShowDelegateDatePicker] = useState(false);
   const [projectSearch, setProjectSearch] = useState('');
+  const [convertToProject, setConvertToProject] = useState(false);
+  const [projectTitleDraft, setProjectTitleDraft] = useState('');
+  const [nextActionDraft, setNextActionDraft] = useState('');
   const [processingTitle, setProcessingTitle] = useState('');
   const [processingDescription, setProcessingDescription] = useState('');
   const [processingTitleFocused, setProcessingTitleFocused] = useState(false);
@@ -347,6 +350,9 @@ export function useInboxProcessingController({
     setDelegateFollowUpDate(null);
     setDelegateFollowUpDateOnly(false);
     setShowDelegateDatePicker(false);
+    setConvertToProject(false);
+    setProjectTitleDraft('');
+    setNextActionDraft('');
     setSelectedContexts(task?.contexts ?? []);
     setSelectedTags(task?.tags ?? []);
     setSelectedPriority(task?.priority);
@@ -436,15 +442,17 @@ export function useInboxProcessingController({
     primeTaskState(nextTask);
   }, [currentIndex, handleClose, primeTaskState, processingQueue, scrollProcessingToTop]);
 
-  const applyProcessingEdits = useCallback((updates?: Partial<Task>) => {
-    if (!currentTask) return;
-    const title = processingTitle.trim() || currentTask.title;
+  const applyProcessingEdits = useCallback((updates?: Partial<Task>, titleOverride?: string, fallbackTitle?: string) => {
+    if (!currentTask) return false;
+    const titleSource = titleOverride ?? processingTitle;
+    const title = titleSource.trim() || fallbackTitle?.trim() || currentTask.title;
     const description = processingDescription.trim();
     updateTask(currentTask.id, {
       title,
       description: description.length > 0 ? description : undefined,
       ...(updates ?? {}),
     });
+    return true;
   }, [currentTask, processingDescription, processingTitle, updateTask]);
 
   const handleNotActionable = useCallback((action: 'trash' | 'someday' | 'reference') => {
@@ -641,6 +649,7 @@ export function useInboxProcessingController({
   }, [selectedContexts, selectedTags, showContextsField, showTagsField]);
 
   const selectProjectEarly = useCallback((projectId: string | null) => {
+    setConvertToProject(false);
     setSelectedProjectId(projectId);
     if (projectId) {
       setSelectedAreaId(null);
@@ -664,6 +673,21 @@ export function useInboxProcessingController({
     if (!created) return;
     selectProjectEarly(created.id);
   }, [addProject, areaFilteredProjects, projectFilterAreaId, projectSearch, selectProjectEarly]);
+
+  const handleProjectConversionStart = useCallback(() => {
+    const baseTitle = processingTitle.trim() || currentTask?.title || '';
+    setConvertToProject(true);
+    setProjectTitleDraft((prev) => prev.trim() || baseTitle);
+    setNextActionDraft((prev) => prev.trim() || baseTitle);
+    setSelectedProjectId(null);
+    setProjectSearch('');
+  }, [currentTask?.title, processingTitle]);
+
+  const handleProjectConversionCancel = useCallback(() => {
+    setConvertToProject(false);
+    setProjectTitleDraft('');
+    setNextActionDraft('');
+  }, []);
 
   const finalizeNextAction = useCallback((projectId: string | null) => {
     applyProcessingEdits({
@@ -703,7 +727,88 @@ export function useInboxProcessingController({
     showTimeEstimateField,
   ]);
 
-  const handleNextTask = useCallback(() => {
+  const handleConvertToProject = useCallback(async () => {
+    if (!currentTask) return;
+    const projectTitle = projectTitleDraft.trim() || processingTitle.trim() || currentTask.title;
+    const nextAction = nextActionDraft.trim();
+    if (!projectTitle) return;
+    if (!nextAction) {
+      showToast({
+        title: t('common.notice'),
+        message: tFallback(t, 'process.nextActionRequired', 'Add a next action before creating the project.'),
+        tone: 'warning',
+      });
+      return;
+    }
+
+    try {
+      const existing = projects.find((project) => project.title.toLowerCase() === projectTitle.toLowerCase());
+      const project = existing ?? await addProject(
+        projectTitle,
+        DEFAULT_PROJECT_COLOR,
+        showAreaField && selectedAreaId ? { areaId: selectedAreaId } : undefined,
+      );
+      if (!project) return;
+
+      const applied = applyProcessingEdits({
+        status: 'next',
+        projectId: project.id,
+        ...(showAreaField ? { areaId: undefined } : {}),
+        ...(showContextsField ? { contexts: selectedContexts } : {}),
+        ...(showTagsField ? { tags: selectedTags } : {}),
+        ...(showPriorityField ? { priority: selectedPriority ?? undefined } : {}),
+        ...(showEnergyLevelField ? { energyLevel: selectedEnergyLevel ?? undefined } : {}),
+        ...(showAssignedToField ? { assignedTo: selectedAssignedTo.trim() || undefined } : {}),
+        ...(showTimeEstimateField ? { timeEstimate: selectedTimeEstimate ?? undefined } : {}),
+        ...buildScheduleUpdates(),
+      }, nextAction, currentTask.title);
+      if (!applied) return;
+
+      setPendingStartDate(null);
+      setPendingDueDate(null);
+      setPendingReviewDate(null);
+      setConvertToProject(false);
+      moveToNext();
+    } catch (error) {
+      void logWarn('Failed to create project from mobile inbox processing', {
+        scope: 'inbox',
+        extra: { error: error instanceof Error ? error.message : String(error) },
+      });
+      showToast({
+        title: t('common.notice'),
+        message: tFallback(t, 'projects.createFailed', 'Failed to create project.'),
+        tone: 'error',
+      });
+    }
+  }, [
+    addProject,
+    applyProcessingEdits,
+    buildScheduleUpdates,
+    currentTask,
+    moveToNext,
+    nextActionDraft,
+    processingTitle,
+    projectTitleDraft,
+    projects,
+    selectedAreaId,
+    selectedAssignedTo,
+    selectedContexts,
+    selectedEnergyLevel,
+    selectedPriority,
+    selectedTags,
+    selectedTimeEstimate,
+    showAreaField,
+    showAssignedToField,
+    showContextsField,
+    showEnergyLevelField,
+    showPriorityField,
+    showTagsField,
+    showTimeEstimateField,
+    showToast,
+    t,
+  ]);
+
+  const handleNextTask = useCallback(async () => {
     if (!currentTask) return;
     if (actionabilityChoice === 'later') {
       handleLaterMobile();
@@ -721,13 +826,19 @@ export function useInboxProcessingController({
       handleConfirmWaitingMobile();
       return;
     }
+    if (convertToProject) {
+      await handleConvertToProject();
+      return;
+    }
     finalizeNextAction(selectedProjectId);
   }, [
     actionabilityChoice,
+    convertToProject,
     currentTask,
     executionChoice,
     finalizeNextAction,
     handleConfirmWaitingMobile,
+    handleConvertToProject,
     handleLaterMobile,
     handleNotActionable,
     handleTwoMinYes,
@@ -885,6 +996,7 @@ export function useInboxProcessingController({
     assignedToSuggestions,
     closeAIModal,
     contextCopilotSuggestions,
+    convertToProject,
     currentArea,
     currentProject,
     currentTask,
@@ -900,8 +1012,11 @@ export function useInboxProcessingController({
     formatProgressLabel,
     handleAIClarifyInbox,
     handleClose,
+    handleConvertToProject,
     handleCreateProjectEarly,
     handleNextTask,
+    handleProjectConversionCancel,
+    handleProjectConversionStart,
     handleSendDelegateRequest,
     handleSkipTask,
     hasExactProjectMatch,
@@ -911,6 +1026,7 @@ export function useInboxProcessingController({
     isDark,
     isDelegateConfirmationDisabled,
     newContext,
+    nextActionDraft,
     pendingDueDate,
     pendingDueDateOnly,
     pendingReviewDate,
@@ -923,6 +1039,7 @@ export function useInboxProcessingController({
     processingTitleFocused,
     projectFirst,
     projectSearch,
+    projectTitleDraft,
     projectTitle,
     referenceEnabled,
     selectedAreaId,
@@ -951,6 +1068,8 @@ export function useInboxProcessingController({
     setProcessingDescription,
     setProcessingTitle,
     setProcessingTitleFocused,
+    setProjectTitleDraft,
+    setNextActionDraft,
     setSelectedEnergyLevel,
     setSelectedPriority,
     setSelectedTimeEstimate,
