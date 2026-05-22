@@ -13,7 +13,7 @@
     "core:window:allow-set-decorations",
     "core:window:allow-set-skip-taskbar",
     "core:window:allow-hide",
-    "webview:allow-set-webview-zoom",
+    "core:webview:allow-set-webview-zoom",
     "dialog:default",
     "fs:default",
     "fs:allow-mkdir",
