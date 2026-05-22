@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { BookmarkPlus, Plus, SlidersHorizontal, X } from 'lucide-react-native';
+import { BookmarkPlus, SlidersHorizontal, X } from 'lucide-react-native';
 
 import {
   applyFilter,
@@ -833,83 +833,71 @@ export default function FocusScreen() {
                 </Pressable>
               </View>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.savedFiltersRow}
-              style={styles.savedFiltersScroller}
-            >
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityState={{ selected: !hasFilters }}
-                onPress={clearFilters}
-                style={[
-                  styles.savedFilterChip,
-                  {
-                    borderColor: !hasFilters ? tc.tint : tc.border,
-                    backgroundColor: !hasFilters ? tc.tint : tc.filterBg,
-                  },
-                ]}
+            {savedFocusFilters.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.savedFiltersRow}
+                style={styles.savedFiltersScroller}
               >
-                <Text style={[styles.savedFilterChipText, { color: !hasFilters ? tc.onTint : tc.text }]}>
-                  {resolveText('common.all', 'All')}
-                </Text>
-              </TouchableOpacity>
-              {savedFocusFilters.map((filter) => {
-                const selected = activeSavedFilterId === filter.id;
-                return (
-                  <View key={filter.id} style={styles.savedFilterChipGroup}>
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      onPress={() => applySavedFocusFilter(filter)}
-                      style={[
-                        styles.savedFilterChip,
-                        selected ? styles.savedFilterChipAttached : null,
-                        {
-                          borderColor: selected ? tc.tint : tc.border,
-                          backgroundColor: selected ? tc.tint : tc.filterBg,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.savedFilterChipText, { color: selected ? tc.onTint : tc.text }]}
-                        numberOfLines={1}
-                      >
-                        {filter.icon ? `${filter.icon} ` : ''}{filter.name}
-                      </Text>
-                    </TouchableOpacity>
-                    {selected ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: !hasFilters }}
+                  onPress={clearFilters}
+                  style={[
+                    styles.savedFilterChip,
+                    {
+                      borderColor: !hasFilters ? tc.tint : tc.border,
+                      backgroundColor: !hasFilters ? tc.tint : tc.filterBg,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.savedFilterChipText, { color: !hasFilters ? tc.onTint : tc.text }]}>
+                    {resolveText('common.all', 'All')}
+                  </Text>
+                </TouchableOpacity>
+                {savedFocusFilters.map((filter) => {
+                  const selected = activeSavedFilterId === filter.id;
+                  return (
+                    <View key={filter.id} style={styles.savedFilterChipGroup}>
                       <TouchableOpacity
                         accessibilityRole="button"
-                        accessibilityLabel={`${resolveText('common.delete', 'Delete')} ${resolveText('savedFilters.label', 'saved filter')} ${filter.name}`}
-                        onPress={() => confirmDeleteSavedFilter(filter)}
+                        accessibilityState={{ selected }}
+                        onPress={() => applySavedFocusFilter(filter)}
                         style={[
-                          styles.savedFilterDeleteChip,
-                          { borderColor: tc.tint, backgroundColor: tc.tint },
+                          styles.savedFilterChip,
+                          selected ? styles.savedFilterChipAttached : null,
+                          {
+                            borderColor: selected ? tc.tint : tc.border,
+                            backgroundColor: selected ? tc.tint : tc.filterBg,
+                          },
                         ]}
                       >
-                        <X size={14} color={tc.onTint} />
+                        <Text
+                          style={[styles.savedFilterChipText, { color: selected ? tc.onTint : tc.text }]}
+                          numberOfLines={1}
+                        >
+                          {filter.icon ? `${filter.icon} ` : ''}{filter.name}
+                        </Text>
                       </TouchableOpacity>
-                    ) : null}
-                  </View>
-                );
-              })}
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel={resolveText('savedFilters.new', 'New saved filter')}
-                onPress={() => {
-                  setActiveSavedFilterId(null);
-                  setFiltersVisible(true);
-                }}
-                style={[
-                  styles.savedFilterAddChip,
-                  { borderColor: tc.border, backgroundColor: tc.filterBg },
-                ]}
-              >
-                <Plus size={16} color={tc.secondaryText} />
-              </TouchableOpacity>
-            </ScrollView>
+                      {selected ? (
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={`${resolveText('common.delete', 'Delete')} ${resolveText('savedFilters.label', 'saved filter')} ${filter.name}`}
+                          onPress={() => confirmDeleteSavedFilter(filter)}
+                          style={[
+                            styles.savedFilterDeleteChip,
+                            { borderColor: tc.tint, backgroundColor: tc.tint },
+                          ]}
+                        >
+                          <X size={14} color={tc.onTint} />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
             {hasFilters ? (
               <ScrollView
                 horizontal
@@ -1234,14 +1222,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     borderTopRightRadius: 22,
     borderBottomRightRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  savedFilterAddChip: {
-    width: 44,
-    height: 44,
-    borderWidth: 1,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

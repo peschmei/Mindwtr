@@ -1,8 +1,9 @@
-import React from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { type Area, type Project, type Task } from '@mindwtr/core';
 import * as Haptics from 'expo-haptics';
 import { Copy, Trash2, Star, AlertTriangle } from 'lucide-react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
 import { projectsScreenStyles as styles } from '@/components/projects-screen/projects-screen.styles';
 
@@ -60,8 +61,61 @@ export function ProjectRow({
     const nextAction = projectTasks.find((task) => task.status === 'next');
     const showFocusedWarning = project.isFocused && !nextAction && projectTasks.length > 0;
     const projectColor = project.areaId ? areaById.get(project.areaId)?.color : undefined;
+    const swipeableRef = useRef<Swipeable>(null);
 
-    return (
+    const handleDuplicate = () => {
+        swipeableRef.current?.close();
+        void Haptics.selectionAsync().catch(() => {});
+        onDuplicateProject(project.id);
+    };
+
+    const confirmDelete = () => {
+        swipeableRef.current?.close();
+        void Haptics.selectionAsync().catch(() => {});
+        Alert.alert(
+            t('projects.title'),
+            t('projects.deleteConfirm'),
+            [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                    text: t('common.delete'),
+                    style: 'destructive',
+                    onPress: () => {
+                        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+                        onDeleteProject(project.id);
+                    },
+                },
+            ],
+        );
+    };
+
+    const renderLeftActions = () => (
+        <Pressable
+            testID={`project-row-duplicate-${project.id}`}
+            onPress={handleDuplicate}
+            style={[styles.projectSwipeAction, styles.projectSwipeDuplicateAction]}
+            accessibilityRole="button"
+            accessibilityLabel={t('projects.duplicate')}
+        >
+            <Copy size={20} color="#FFFFFF" />
+            <Text style={styles.projectSwipeActionText}>{t('projects.duplicate')}</Text>
+        </Pressable>
+    );
+
+    const renderRightActions = () => (
+        <Pressable
+            testID={`project-row-delete-${project.id}`}
+            onPress={confirmDelete}
+            style={[styles.projectSwipeAction, styles.projectSwipeDeleteAction]}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.delete')}
+        >
+            <Trash2 size={20} color="#FFFFFF" />
+            <Text style={styles.projectSwipeActionText}>{t('common.delete')}</Text>
+        </Pressable>
+    );
+
+    const rowContent = (
         <View
             style={[
                 styles.projectItem,
@@ -130,44 +184,18 @@ export function ProjectRow({
                     )}
                 </View>
             </TouchableOpacity>
-            <TouchableOpacity
-                testID={`project-row-duplicate-${project.id}`}
-                onPress={() => {
-                    void Haptics.selectionAsync().catch(() => {});
-                    onDuplicateProject(project.id);
-                }}
-                style={styles.deleteButton}
-                hitSlop={ROW_ACTION_HIT_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel={t('projects.duplicate')}
-            >
-                <Copy size={18} color={tc.secondaryText} />
-            </TouchableOpacity>
-            <TouchableOpacity
-                testID={`project-row-delete-${project.id}`}
-                onPress={() => {
-                    void Haptics.selectionAsync().catch(() => {});
-                    Alert.alert(
-                        t('projects.title'),
-                        t('projects.deleteConfirm'),
-                        [
-                            { text: t('common.cancel'), style: 'cancel' },
-                            {
-                                text: t('common.delete'),
-                                style: 'destructive',
-                                onPress: () => {
-                                    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-                                    onDeleteProject(project.id);
-                                },
-                            },
-                        ],
-                    );
-                }}
-                style={styles.deleteButton}
-                hitSlop={ROW_ACTION_HIT_SLOP}
-            >
-                <Trash2 size={18} color={tc.secondaryText} />
-            </TouchableOpacity>
         </View>
+    );
+
+    return (
+        <Swipeable
+            ref={swipeableRef}
+            renderLeftActions={renderLeftActions}
+            renderRightActions={renderRightActions}
+            overshootLeft={false}
+            overshootRight={false}
+        >
+            {rowContent}
+        </Swipeable>
     );
 }

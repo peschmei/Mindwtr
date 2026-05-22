@@ -25,6 +25,19 @@ vi.mock('lucide-react-native', () => ({
   Trash2: (props: any) => React.createElement('Trash2', props),
 }));
 
+vi.mock('react-native-gesture-handler', () => ({
+  Swipeable: React.forwardRef(({ children, renderLeftActions, renderRightActions, ...props }: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({ close: () => undefined }));
+    return React.createElement(
+      'Swipeable',
+      props,
+      renderLeftActions ? renderLeftActions() : null,
+      children,
+      renderRightActions ? renderRightActions() : null,
+    );
+  }),
+}));
+
 const project = {
   id: 'project-1',
   title: 'Redesign Client Website',
@@ -87,7 +100,7 @@ describe('ProjectRow', () => {
     expect(onToggleProjectFocus).toHaveBeenCalledWith('project-1');
   });
 
-  it('uses warning haptics for confirmed project deletion', () => {
+  it('uses warning haptics for confirmed project deletion from the swipe action', () => {
     const alertSpy = vi.spyOn(Alert, 'alert');
     const onDeleteProject = vi.fn();
 
@@ -119,8 +132,6 @@ describe('ProjectRow', () => {
     });
 
     const deleteButton = tree.root.find((node) => node.props.testID === 'project-row-delete-project-1');
-
-    expect(deleteButton.props.hitSlop).toEqual({ top: 12, bottom: 12, left: 12, right: 12 });
 
     renderer.act(() => {
       deleteButton.props.onPress();
@@ -172,7 +183,6 @@ describe('ProjectRow', () => {
     const duplicateButton = tree.root.find((node) => node.props.testID === 'project-row-duplicate-project-1');
 
     expect(duplicateButton.props.accessibilityLabel).toBe('Duplicate');
-    expect(duplicateButton.props.hitSlop).toEqual({ top: 12, bottom: 12, left: 12, right: 12 });
 
     renderer.act(() => {
       duplicateButton.props.onPress();

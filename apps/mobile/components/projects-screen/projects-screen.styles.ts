@@ -174,11 +174,24 @@ export const projectsScreenStyles = StyleSheet.create({
         fontSize: 12,
         color: '#666',
     },
-    deleteButton: {
-        width: 32,
-        height: 32,
-        justifyContent: 'center',
+    projectSwipeAction: {
+        width: 96,
+        marginBottom: 8,
+        borderRadius: 8,
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+    },
+    projectSwipeDuplicateAction: {
+        backgroundColor: '#3B82F6',
+    },
+    projectSwipeDeleteAction: {
+        backgroundColor: '#EF4444',
+    },
+    projectSwipeActionText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
     },
     emptyContainer: {
         padding: 48,
