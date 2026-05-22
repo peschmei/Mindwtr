@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { safeParseDate, tFallback, type Project } from '@mindwtr/core';
 import { Archive as ArchiveIcon, Calendar, CalendarClock, ChevronDown, ChevronRight, Copy, FolderOpenDot, ListOrdered, Loader2, RotateCcw, Signal, Trash2 } from 'lucide-react';
+import { useLayoutEffect, useRef } from 'react';
 
 type ProjectProgress = {
     total: number;
@@ -52,6 +53,7 @@ export function ProjectDetailsHeader({
     projectProgress,
     t,
 }: ProjectDetailsHeaderProps) {
+    const titleInputRef = useRef<HTMLTextAreaElement | null>(null);
     const completedRatio = projectProgress && projectProgress.total > 0
         ? projectProgress.isArchived
             ? 100
@@ -96,6 +98,12 @@ export function ProjectDetailsHeader({
             label: `${reviewLabelPrefix}: ${format(reviewDate, 'MMM d')}`,
         }] : []),
     ];
+    useLayoutEffect(() => {
+        const element = titleInputRef.current;
+        if (!element) return;
+        element.style.height = 'auto';
+        element.style.height = `${element.scrollHeight}px`;
+    }, [editTitle]);
 
     return (
         <header className="project-details-header pb-5 border-b border-border/50">
@@ -107,20 +115,23 @@ export function ProjectDetailsHeader({
                         aria-hidden="true"
                     />
                     <div className="flex flex-col min-w-0 flex-1 gap-2">
-                        <input
+                        <textarea
+                            ref={titleInputRef}
                             value={editTitle}
-                            onChange={(e) => onEditTitleChange(e.target.value)}
+                            onChange={(e) => onEditTitleChange(e.target.value.replace(/\s*\n+\s*/g, ' '))}
                             onBlur={onCommitTitle}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                    (e.currentTarget as HTMLInputElement).blur();
+                                    e.preventDefault();
+                                    e.currentTarget.blur();
                                 } else if (e.key === 'Escape') {
                                     onResetTitle();
-                                    (e.currentTarget as HTMLInputElement).blur();
+                                    e.currentTarget.blur();
                                 }
                             }}
                             title={editTitle || project.title}
-                            className="project-details-header__titleInput min-w-0 w-full truncate bg-transparent border-b border-transparent text-2xl font-bold focus:border-border focus:outline-none"
+                            rows={1}
+                            className="project-details-header__titleInput min-w-0 w-full resize-none overflow-hidden break-words bg-transparent border-b border-transparent text-2xl font-bold leading-tight focus:border-border focus:outline-none"
                             aria-label={t('projects.title')}
                         />
                         {projectProgress ? (

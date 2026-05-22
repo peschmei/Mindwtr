@@ -74,6 +74,7 @@ describe('ProjectDetailsHeader', () => {
 
         expect(screen.getByRole('button', { name: /details/i })).toHaveAttribute('aria-expanded', 'false');
         expect(screen.getByDisplayValue('Launch site')).toHaveAttribute('title', 'Launch site');
+        expect(screen.getByDisplayValue('Launch site').tagName).toBe('TEXTAREA');
         screen.getByText('Waiting');
         screen.getByText('Ops');
         screen.getByText('Sequential');
@@ -144,6 +145,8 @@ describe('ProjectDetailsHeader', () => {
         expect(header).not.toBeNull();
         expect(header).toHaveClass('project-details-header');
         expect(title).toHaveClass('project-details-header__titleInput');
+        expect(title).toHaveClass('break-words');
+        expect(title).not.toHaveClass('truncate');
         expect(actions).not.toBeNull();
     });
 });

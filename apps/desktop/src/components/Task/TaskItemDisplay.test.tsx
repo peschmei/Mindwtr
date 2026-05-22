@@ -94,6 +94,42 @@ describe('TaskItemDisplay', () => {
         expect(queryByText('2周前')).not.toBeInTheDocument();
     });
 
+    it('wraps long task titles instead of truncating them', () => {
+        const longTitle = 'This is a task for a project in a narrow split-screen workspace';
+
+        const { getByText } = render(
+            <LanguageProvider>
+                <TaskItemDisplay
+                    task={{ ...baseTask, title: longTitle }}
+                    language="en"
+                    selectionMode={false}
+                    isViewOpen={false}
+                    actions={{
+                        onToggleView: vi.fn(),
+                        onEdit: vi.fn(),
+                        onDelete: vi.fn(),
+                        onDuplicate: vi.fn(),
+                        onStatusChange: vi.fn(),
+                        openAttachment: vi.fn(),
+                    }}
+                    visibleAttachments={[]}
+                    recurrenceRule=""
+                    recurrenceStrategy="strict"
+                    prioritiesEnabled={false}
+                    timeEstimatesEnabled={false}
+                    isStagnant={false}
+                    showQuickDone={false}
+                    readOnly={false}
+                    t={(key: string) => key}
+                />
+            </LanguageProvider>
+        );
+
+        expect(getByText(longTitle)).toHaveClass('task-item-display__title');
+        expect(getByText(longTitle)).toHaveClass('break-words');
+        expect(getByText(longTitle)).not.toHaveClass('truncate');
+    });
+
     it('shows the completion date and time for completed tasks when compact details are off', () => {
         const completedTask: Task = {
             ...baseTask,

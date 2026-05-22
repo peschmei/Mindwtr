@@ -460,7 +460,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     const showActionTags = !actionsOverlay && !isViewOpen && task.tags.length > 0;
 
     return (
-        <div className={cn("flex-1 min-w-0 flex items-start gap-3", actionsOverlay && "relative")}>
+        <div className={cn("task-item-display flex-1 min-w-0 flex items-start gap-3", actionsOverlay && "relative")}>
             {overlayDragHandle && (
                 <div
                     className="absolute left-0 top-2 flex items-center -translate-x-2 z-10"
@@ -487,7 +487,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                     </button>
                 </div>
             )}
-            <div className={cn("flex min-w-0 flex-1 items-start gap-2")}>
+            <div className={cn("task-item-display__main flex min-w-0 flex-1 items-start gap-2")}>
                 {inlineLeftControls && (
                     <div
                         className={cn(
@@ -541,7 +541,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                     >
                         <div
                             className={cn(
-                                "font-semibold truncate text-foreground group-hover/content:text-primary transition-colors",
+                                "task-item-display__title font-semibold whitespace-normal break-words text-foreground group-hover/content:text-primary transition-colors",
                                 dense ? "text-sm" : "text-base",
                                 task.status === 'done' && "line-through text-muted-foreground",
                                 actionsOverlay && "pr-20",
@@ -692,7 +692,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
             {!selectionMode && (
                 <div
                     className={cn(
-                        "relative flex items-center gap-2",
+                        "task-item-display__actions relative flex items-center gap-2",
                         actionsOverlay && "absolute top-1 right-1 z-10"
                     )}
                     onPointerDown={(e) => e.stopPropagation()}

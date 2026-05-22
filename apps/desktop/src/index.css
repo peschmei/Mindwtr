@@ -436,6 +436,39 @@
     container-type: inline-size;
   }
 
+  .task-item-display {
+    container-type: inline-size;
+    position: relative;
+  }
+
+  @container (max-width: 560px) {
+    .task-item-display__main {
+      width: 100%;
+    }
+
+    .task-item-display__actions {
+      max-width: calc(100% - 0.5rem);
+      position: absolute;
+      right: 0.25rem;
+      top: 0.25rem;
+      z-index: 10;
+      justify-content: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+
+    .task-item-display__title {
+      padding-right: 0.125rem !important;
+    }
+
+    .task-item-display:hover .task-item-display__actions,
+    .task-item-display__actions:focus-within {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
   @container (max-width: 720px) {
     .project-details-header__content {
       align-items: stretch;
