@@ -792,6 +792,13 @@ export function useDesktopCalendarController() {
             setCurrentMonth(date);
         }
     };
+    const openDayViewForDate = (date: Date) => {
+        setSelectedDate(date);
+        setCurrentMonth(date);
+        setViewMode('day');
+        resetSelectedDayState();
+        setIsMonthPickerOpen(false);
+    };
     const handleMonthChange = (monthIndex: number) => {
         setSelectedDate(null);
         resetSelectedDayState();
@@ -1078,6 +1085,7 @@ export function useDesktopCalendarController() {
         monthNames,
         normalizeDurationMinutes,
         openProject,
+        openDayViewForDate,
         openQuickAddForDate,
         openQuickAddForStart,
         openTask,

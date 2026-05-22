@@ -207,6 +207,27 @@ describe('CalendarView', () => {
         expect(screen.getByText(/Failed to load "Work": HTTP 504/)).toBeInTheDocument();
     });
 
+    it('opens the day view when month overflow is clicked', async () => {
+        storeMocks.taskStoreState.tasks = Array.from({ length: 5 }, (_, index) => makeTask({
+            id: `overflow-task-${index}`,
+            title: `Overflow task ${index + 1}`,
+            dueDate: '2026-04-04T12:00:00',
+        }));
+
+        renderCalendar();
+        await flushCalendarEffects();
+
+        const overflowButton = screen.getByRole('button', { name: /open day view: apr 4, 2026/i });
+        await act(async () => {
+            fireEvent.click(overflowButton);
+            await Promise.resolve();
+        });
+
+        expect(window.location.search).toContain('calendarView=day');
+        expect(window.location.search).toContain('calendarDate=2026-04-04');
+        expect(screen.queryByText('+2 more')).not.toBeInTheDocument();
+    });
+
     it('rejects composer submissions when the end time is before the start time', async () => {
         renderCalendar();
         await flushCalendarEffects();

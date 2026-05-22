@@ -41,6 +41,7 @@ export function CalendarView() {
         isMonthPickerOpen,
         layoutTimedItems,
         monthNames,
+        openDayViewForDate,
         openQuickAddForStart,
         openTaskFromCalendar,
         resolveText,
@@ -265,11 +266,12 @@ export function CalendarView() {
                             <div
                                 key={day.toString()}
                                 className={cn(
-                                    "group bg-card min-h-[128px] p-2 transition-colors hover:bg-accent/50 relative",
+                                    "group bg-card min-h-[128px] cursor-pointer p-2 transition-colors hover:bg-accent/50 relative",
                                     !isSameMonth(day, currentMonth) && "bg-muted/50 text-muted-foreground",
                                     isSelected && "ring-2 ring-primary"
                                 )}
-                                onClick={() => selectCalendarDate(day)}
+                                onClick={() => openDayViewForDate(day)}
+                                title={resolveText('calendar.openDayView', 'Open day view')}
                             >
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <div className="flex min-w-0 items-center gap-1.5">
@@ -338,9 +340,17 @@ export function CalendarView() {
                                         );
                                     })}
                                     {overflowCount > 0 && (
-                                        <div className="px-1.5 pt-0.5 text-[11px] font-medium text-muted-foreground">
+                                        <button
+                                            type="button"
+                                            className="w-full rounded px-1.5 pt-0.5 text-left text-[11px] font-medium text-muted-foreground hover:bg-muted/70 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                openDayViewForDate(day);
+                                            }}
+                                            aria-label={`${resolveText('calendar.openDayView', 'Open day view')}: ${format(day, 'PP')}`}
+                                        >
                                             +{overflowCount} {resolveText('calendar.more', 'more')}
-                                        </div>
+                                        </button>
                                     )}
                                 </div>
                             </div>
