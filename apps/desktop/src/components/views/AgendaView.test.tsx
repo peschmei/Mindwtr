@@ -169,6 +169,13 @@ describe('AgendaView', () => {
         expect(queryByText('Inbox only task')).not.toBeInTheDocument();
     });
 
+    it('does not show the saved-filter chip row when no Focus filters exist', () => {
+        const { queryByRole } = renderAgenda();
+
+        expect(queryByRole('button', { name: 'All' })).not.toBeInTheDocument();
+        expect(queryByRole('button', { name: 'New saved filter' })).not.toBeInTheDocument();
+    });
+
     it('does not let earlier non-Focus tasks hide the next task in a sequential project', () => {
         const project = {
             id: 'project-1',

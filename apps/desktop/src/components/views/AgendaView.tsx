@@ -6,7 +6,7 @@ import type { FilterCriteria, SavedFilter, Task, TaskEnergyLevel } from '@mindwt
 import { useLanguage } from '../../contexts/language-context';
 import { cn } from '../../lib/utils';
 import { useUiStore } from '../../store/ui-store';
-import { AlertCircle, Clock, Star, ArrowRight, Folder, CheckCircle2, Plus, X } from 'lucide-react';
+import { AlertCircle, Clock, Star, ArrowRight, Folder, CheckCircle2, X } from 'lucide-react';
 import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
 import { checkBudget } from '../../config/performanceBudgets';
 import { projectMatchesAreaFilter, resolveAreaFilter, taskMatchesAreaFilter } from '../../lib/area-filter';
@@ -797,66 +797,56 @@ export function AgendaView() {
                 top3Only={top3Only}
             />
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                <button
-                    type="button"
-                    onClick={clearAllFilters}
-                    aria-pressed={!hasTaskFilters}
-                    className={cn(
-                        'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                        !hasTaskFilters
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                >
-                    {resolveText('common.all', 'All')}
-                </button>
-                {savedFocusFilters.map((filter) => {
-                    const isActive = activeSavedFilterId === filter.id;
-                    return (
-                        <div key={filter.id} className="inline-flex shrink-0 items-center">
-                            <button
-                                type="button"
-                                onClick={() => applySavedFocusFilter(filter)}
-                                aria-pressed={isActive}
-                                className={cn(
-                                    'inline-flex max-w-[220px] shrink-0 items-center gap-1.5 border px-3 py-1.5 text-xs font-medium transition-colors',
-                                    isActive ? 'rounded-l-full rounded-r-none' : 'rounded-full',
-                                    isActive
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
-                                )}
-                            >
-                                {filter.icon && <span aria-hidden="true">{filter.icon}</span>}
-                                <span className="truncate">{filter.name}</span>
-                            </button>
-                            {isActive && (
+            {savedFocusFilters.length > 0 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    <button
+                        type="button"
+                        onClick={clearAllFilters}
+                        aria-pressed={!hasTaskFilters}
+                        className={cn(
+                            'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                            !hasTaskFilters
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                    >
+                        {resolveText('common.all', 'All')}
+                    </button>
+                    {savedFocusFilters.map((filter) => {
+                        const isActive = activeSavedFilterId === filter.id;
+                        return (
+                            <div key={filter.id} className="inline-flex shrink-0 items-center">
                                 <button
                                     type="button"
-                                    onClick={() => setFilterPendingDelete(filter)}
-                                    aria-label={`${resolveText('common.delete', 'Delete')} ${resolveText('savedFilters.label', 'saved filter')} ${filter.name}`}
-                                    title={`${resolveText('common.delete', 'Delete')} ${filter.name}`}
-                                    className="inline-flex h-[30px] w-7 shrink-0 items-center justify-center rounded-l-none rounded-r-full border border-l-0 border-primary bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+                                    onClick={() => applySavedFocusFilter(filter)}
+                                    aria-pressed={isActive}
+                                    className={cn(
+                                        'inline-flex max-w-[220px] shrink-0 items-center gap-1.5 border px-3 py-1.5 text-xs font-medium transition-colors',
+                                        isActive ? 'rounded-l-full rounded-r-none' : 'rounded-full',
+                                        isActive
+                                            ? 'border-primary bg-primary text-primary-foreground'
+                                            : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
+                                    )}
                                 >
-                                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                                    {filter.icon && <span aria-hidden="true">{filter.icon}</span>}
+                                    <span className="truncate">{filter.name}</span>
                                 </button>
-                            )}
-                        </div>
-                    );
-                })}
-                <button
-                    type="button"
-                    onClick={() => {
-                        setActiveSavedFilterId(null);
-                        setFiltersOpen(true);
-                    }}
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    aria-label={resolveText('savedFilters.new', 'New saved filter')}
-                    title={resolveText('savedFilters.new', 'New saved filter')}
-                >
-                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-            </div>
+                                {isActive && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterPendingDelete(filter)}
+                                        aria-label={`${resolveText('common.delete', 'Delete')} ${resolveText('savedFilters.label', 'saved filter')} ${filter.name}`}
+                                        title={`${resolveText('common.delete', 'Delete')} ${filter.name}`}
+                                        className="inline-flex h-[30px] w-7 shrink-0 items-center justify-center rounded-l-none rounded-r-full border border-l-0 border-primary bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+                                    >
+                                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {pomodoroEnabled && <PomodoroPanel tasks={pomodoroTasks} />}
 
