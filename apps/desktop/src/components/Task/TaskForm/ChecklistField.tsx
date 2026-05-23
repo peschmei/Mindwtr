@@ -81,7 +81,7 @@ export function ChecklistField({
             ? window.requestAnimationFrame.bind(window)
             : (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0);
         scheduleFocus(() => {
-            checklistInputRefs.current[index]?.focus();
+            checklistInputRefs.current[index]?.focus({ preventScroll: true });
         });
     }, []);
 

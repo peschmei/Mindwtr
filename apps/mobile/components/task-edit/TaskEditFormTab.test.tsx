@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -171,5 +171,33 @@ describe('TaskEditFormTab keyboard handling', () => {
     expect(listeners.has('keyboardDidShow')).toBe(true);
     expect(listeners.has('keyboardDidChangeFrame')).toBe(true);
     expect(listeners.has('keyboardDidHide')).toBe(true);
+  });
+
+  it('tracks title focus without forcing fallback scrolling when no native handle is reported', () => {
+    const onTitleInputFocusChange = vi.fn();
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditFormTab
+          {...baseProps}
+          onTitleInputFocusChange={onTitleInputFocusChange}
+        />
+      );
+    });
+
+    const titleInput = tree.root.findAllByType(TextInput)[0];
+
+    act(() => {
+      titleInput.props.onFocus({ nativeEvent: {} });
+    });
+
+    expect(onTitleInputFocusChange).toHaveBeenCalledWith(true);
+
+    act(() => {
+      titleInput.props.onBlur();
+    });
+
+    expect(onTitleInputFocusChange).toHaveBeenCalledWith(false);
   });
 });

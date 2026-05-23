@@ -53,6 +53,7 @@ type TaskEditFormTabProps = {
     textDirectionStyle: Record<string, any>;
     titleDraft: string;
     onTitleDraftChange: (text: string) => void;
+    onTitleInputFocusChange?: (focused: boolean) => void;
     registerScrollToEnd?: (handler: ((targetInput?: number | string) => void) | null) => void;
     formResetKey?: string;
     suspendKeyboardHandling?: boolean;
@@ -93,6 +94,7 @@ export function TaskEditFormTab({
     textDirectionStyle,
     titleDraft,
     onTitleDraftChange,
+    onTitleInputFocusChange,
     registerScrollToEnd,
     formResetKey,
     suspendKeyboardHandling = false,
@@ -104,6 +106,18 @@ export function TaskEditFormTab({
     const [keyboardBottomInset, setKeyboardBottomInset] = React.useState(0);
     const aiWorkingLabel = t('ai.working');
     const aiWorkingText = aiWorkingLabel === 'ai.working' ? 'Working...' : aiWorkingLabel;
+
+    React.useEffect(() => {
+        formScrollOffsetRef.current = 0;
+        const resetScroll = () => {
+            formScrollRef.current?.scrollTo({ y: 0, animated: false });
+        };
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(resetScroll);
+        } else {
+            setTimeout(resetScroll, 0);
+        }
+    }, [formResetKey]);
 
     React.useEffect(() => {
         if (suspendKeyboardHandling) {
@@ -281,9 +295,15 @@ export function TaskEditFormTab({
                             placeholderTextColor={tc.secondaryText}
                             onFocus={(event) => {
                                 setTitleFocused(true);
-                                ensureInputVisible(event.nativeEvent.target);
+                                onTitleInputFocusChange?.(true);
+                                if (event.nativeEvent.target) {
+                                    ensureInputVisible(event.nativeEvent.target);
+                                }
                             }}
-                            onBlur={() => setTitleFocused(false)}
+                            onBlur={() => {
+                                setTitleFocused(false);
+                                onTitleInputFocusChange?.(false);
+                            }}
                             selection={titleFocused ? undefined : { start: 0, end: 0 }}
                         />
                     </View>

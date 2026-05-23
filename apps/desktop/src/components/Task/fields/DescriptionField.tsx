@@ -140,7 +140,6 @@ export function DescriptionField({
                         }}
                         onKeyDown={onKeyDown}
                         minHeight={112}
-                        focusedMinHeight={208}
                         maxHeight={480}
                         className={cn(
                             'w-full text-sm leading-6 bg-muted/50 border border-border rounded px-3 py-2 resize-none transition-[border-color,box-shadow] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40',

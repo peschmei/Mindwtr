@@ -363,6 +363,7 @@ function TaskEditModalInner({
     const [customOrdinal, setCustomOrdinal] = useState<'1' | '2' | '3' | '4' | '-1'>('1');
     const [customWeekday, setCustomWeekday] = useState<RecurrenceWeekday>(monthlyWeekdayCode);
     const [customMonthDay, setCustomMonthDay] = useState<number>(monthlyAnchorDate.getDate());
+    const [isTitleInputFocused, setIsTitleInputFocused] = useState(false);
 
     const openCustomRecurrence = useCallback(() => {
         const parsed = parseRRuleString(recurrenceRRuleValue);
@@ -438,6 +439,7 @@ function TaskEditModalInner({
     useEffect(() => {
         if (!visible) {
             setIsMarkdownOverlayOpen(false);
+            setIsTitleInputFocused(false);
         }
     }, [visible]);
 
@@ -650,6 +652,10 @@ function TaskEditModalInner({
     const renderField = (fieldId: TaskEditorFieldId) => (
         <TaskEditFieldRenderer fieldId={fieldId} {...fieldRendererProps} />
     );
+    const isTaskFormTextInputFocused = isTitleInputFocused
+        || descriptionEditor.isDescriptionInputFocused
+        || isContextInputFocused
+        || isTagInputFocused;
 
     if (!task) return null;
 
@@ -692,7 +698,7 @@ function TaskEditModalInner({
                             ref={scrollRef}
                             horizontal
                             pagingEnabled
-                            scrollEnabled={!isMarkdownOverlayOpen}
+                            scrollEnabled={!isMarkdownOverlayOpen && !isTaskFormTextInputFocused}
                             scrollEventThrottle={16}
                             showsHorizontalScrollIndicator={false}
                             directionalLockEnabled
@@ -735,6 +741,7 @@ function TaskEditModalInner({
                                 textDirectionStyle={textDirectionStyle}
                                 titleDraft={titleDraft}
                                 onTitleDraftChange={handleTitleDraftChange}
+                                onTitleInputFocusChange={setIsTitleInputFocused}
                                 registerScrollToEnd={registerScrollTaskFormToEnd}
                                 formResetKey={`${task.id}:${visible ? 'open' : 'closed'}`}
                                 suspendKeyboardHandling={isMarkdownOverlayOpen}

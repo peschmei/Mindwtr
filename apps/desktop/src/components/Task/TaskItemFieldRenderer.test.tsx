@@ -420,6 +420,19 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         });
     });
 
+    it('keeps the description textarea height stable when focused', () => {
+        const { getByRole } = render(<DescriptionHarness />);
+        const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
+        Object.defineProperty(textarea, 'scrollHeight', {
+            configurable: true,
+            value: 80,
+        });
+
+        fireEvent.focus(textarea);
+
+        expect(textarea.style.height).toBe('112px');
+    });
+
     it('switches the description preview back to focused editing when clicked', async () => {
         const { getByRole, queryByRole } = render(<DescriptionPreviewHarness />);
 

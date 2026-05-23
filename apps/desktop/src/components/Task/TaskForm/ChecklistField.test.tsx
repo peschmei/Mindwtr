@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createEvent, fireEvent, render, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import type { Task } from '@mindwtr/core';
@@ -47,5 +47,20 @@ describe('ChecklistField', () => {
         });
         fireEvent(getAllByRole('textbox')[3], shiftTabEvent);
         expect(shiftTabEvent.defaultPrevented).toBe(true);
+    });
+
+    it('focuses inserted checklist items without scrolling the editor container', async () => {
+        const focusSpy = vi.spyOn(HTMLInputElement.prototype, 'focus').mockImplementation(() => {});
+        try {
+            const { getByRole } = render(<ChecklistHarness />);
+
+            fireEvent.click(getByRole('button', { name: /taskEdit.addItem/i }));
+
+            await waitFor(() => {
+                expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+            }, { timeout: 500 });
+        } finally {
+            focusSpy.mockRestore();
+        }
     });
 });

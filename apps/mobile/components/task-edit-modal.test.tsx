@@ -437,6 +437,55 @@ describe('TaskEditModal', () => {
     ).toBe(true);
   });
 
+  it('disables horizontal pager gestures while the description editor is focused', async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    let tree: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'inbox',
+            description: 'Long description',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={onClose}
+          onSave={onSave}
+        />
+      );
+    });
+
+    const findPager = () => tree!.root.find((node) =>
+      node.props.horizontal === true
+      && node.props.pagingEnabled === true
+      && typeof node.props.scrollEnabled === 'boolean'
+    );
+    const formTab = tree!.root.findAll((node) => typeof node.props.renderField === 'function')[0];
+
+    expect(findPager().props.scrollEnabled).toBe(true);
+
+    await act(async () => {
+      const descriptionField = formTab.props.renderField('description');
+      descriptionField.props.setIsDescriptionInputFocused(true);
+    });
+
+    expect(findPager().props.scrollEnabled).toBe(false);
+
+    await act(async () => {
+      const descriptionField = formTab.props.renderField('description');
+      descriptionField.props.setIsDescriptionInputFocused(false);
+    });
+
+    expect(findPager().props.scrollEnabled).toBe(true);
+  });
+
   it('closes and delegates preview navigation actions', () => {
     const onClose = vi.fn();
     const onProjectNavigate = vi.fn();
