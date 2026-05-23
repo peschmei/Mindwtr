@@ -31,7 +31,7 @@ import {
   validateAttachmentHash,
   writeBytesSafely,
 } from './attachment-sync-utils';
-import { getMobileWebDavRequestOptions } from './webdav-request-options';
+import { getMobileCloudRequestOptions, getMobileWebDavRequestOptions } from './webdav-request-options';
 
 const downloadLocks = new Map<string, Promise<Attachment | null>>();
 
@@ -136,6 +136,7 @@ const ensureAttachmentAvailableInternal = async (attachment: Attachment): Promis
     try {
       const data = await withRetry(() =>
         cloudGetFile(`${baseSyncUrl}/${attachment.cloudKey}`, {
+          ...getMobileCloudRequestOptions(config.allowInsecureHttp),
           token: config.token,
           onProgress: (loaded, total) => reportProgress(attachment.id, 'download', loaded, total, 'active'),
         })

@@ -408,6 +408,7 @@ type SyncExecutionHelpers = {
     ensureNetworkStillAvailable: () => void;
     ensureLocalSnapshotFresh: () => void;
     persistLocalDataWithTracking: (data: AppData) => Promise<void>;
+    requestFollowUp: () => void;
     resolveDropboxAccessToken: (forceRefresh?: boolean) => Promise<string>;
     runDropboxWithRetry: <T>(operation: (token: string) => Promise<T>) => Promise<T>;
 };
@@ -1382,7 +1383,8 @@ export class SyncService {
                 return;
             } catch (error) {
                 if (error instanceof DropboxConflictError) {
-                    throw new Error('Dropbox changed during sync. Please run Sync again.');
+                    helpers.requestFollowUp();
+                    throw new LocalSyncAbort();
                 }
                 throw error;
             }
@@ -1822,6 +1824,7 @@ export class SyncService {
             ensureNetworkStillAvailable,
             ensureLocalSnapshotFresh,
             persistLocalDataWithTracking,
+            requestFollowUp: () => SyncService.requestQueuedSyncRun(options, false),
             resolveDropboxAccessToken,
             runDropboxWithRetry: <T>(operation: (token: string) => Promise<T>) =>
                 SyncService.runDropboxWithRetry(resolveDropboxAccessToken, operation),

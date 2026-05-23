@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { AppData, Attachment, MergeStats, createSyncOrchestrator, runPreSyncAttachmentPhase, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, findOrphanedAttachments, removeOrphanedAttachmentsFromData, removeAttachmentsByIdFromData, webdavDeleteFile, cloudDeleteFile, CLOCK_SKEW_THRESHOLD_MS, appendSyncHistory, withRetry, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, sanitizeAppDataForRemote, computeStableValueFingerprint, computeSyncPayloadFingerprint, areSyncPayloadsEqual, assertNoPendingAttachmentUploads, findPendingAttachmentUploads, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, mergeAppData, cloneAppData, LocalSyncAbort, getInMemoryAppDataSnapshot, shouldRunAttachmentCleanup, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type CloudProvider } from '@mindwtr/core';
+import { AppData, Attachment, MergeStats, createSyncOrchestrator, runPreSyncAttachmentPhase, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, findOrphanedAttachments, removeOrphanedAttachmentsFromData, removeAttachmentsByIdFromData, webdavDeleteFile, cloudDeleteFile, CLOCK_SKEW_THRESHOLD_MS, appendSyncHistory, withRetry, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, sanitizeAppDataForRemote, computeStableValueFingerprint, computeSyncPayloadFingerprint, areSyncPayloadsEqual, assertNoPendingAttachmentUploads, findPendingAttachmentUploads, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, mergeAppData, cloneAppData, LocalSyncAbort, getInMemoryAppDataSnapshot, shouldRunAttachmentCleanup, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, getErrorStatus, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type CloudProvider, type PendingRemoteAttachmentDelete } from '@mindwtr/core';
 import { mobileStorage } from './storage-adapter';
 import { logInfo, logSyncError, logWarn, sanitizeLogMessage } from './app-log';
 import { readSyncFile, resolveSyncFileUri, writeSyncFile } from './storage-file';
@@ -11,6 +11,7 @@ import { getExternalCalendars, saveExternalCalendars } from './external-calendar
 import { forceRefreshDropboxAccessToken, getValidDropboxAccessToken, isDropboxConnected } from './dropbox-auth';
 import {
   DropboxConflictError,
+  DropboxFileNotFoundError,
   DropboxUnauthorizedError,
   deleteDropboxFile,
   downloadDropboxAppData,
@@ -1141,7 +1142,8 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         const cleanupTargets = new Map<string, Attachment>();
         for (const attachment of orphaned) cleanupTargets.set(attachment.id, attachment);
         for (const attachment of deletedAttachments) cleanupTargets.set(attachment.id, attachment);
-        if (cleanupTargets.size > 0) {
+        const previousPendingRemoteDeletes = mergedData.settings.attachments?.pendingRemoteDeletes ?? [];
+        if (cleanupTargets.size > 0 || previousPendingRemoteDeletes.length > 0) {
           const isFileBackend = backend === 'file';
           const isWebdavBackend = backend === 'webdav' && webdavConfigValue?.url;
           const isCloudBackend = backend === 'cloud'
@@ -1156,6 +1158,18 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
           const reachedBatchLimit = cleanupTargets.size > ATTACHMENT_CLEANUP_BATCH_LIMIT;
           const orphanedIds = new Set(orphaned.map((attachment) => attachment.id));
           const processedOrphanedIds = new Set<string>();
+          const previousPendingByCloudKey = new Map(
+            previousPendingRemoteDeletes.map((entry) => [entry.cloudKey, entry])
+          );
+          const remoteCleanupTargets = new Map<string, { cloudKey: string; title: string }>();
+          const nextPendingRemoteDeletes = new Map<string, PendingRemoteAttachmentDelete>();
+
+          for (const pending of previousPendingRemoteDeletes) {
+            remoteCleanupTargets.set(pending.cloudKey, {
+              cloudKey: pending.cloudKey,
+              title: pending.title || pending.cloudKey,
+            });
+          }
 
           for (const attachment of cleanupTargets.values()) {
             if (processedCount >= ATTACHMENT_CLEANUP_BATCH_LIMIT) {
@@ -1168,35 +1182,70 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
             ensureLocalSnapshotFresh();
             await deleteAttachmentFile(attachment.uri);
             if (attachment.cloudKey) {
-              try {
-                if (isWebdavBackend && webdavConfigValue) {
-                  const baseSyncUrl = getBaseSyncUrl(webdavConfigValue.url);
-                  await webdavDeleteFile(`${baseSyncUrl}/${attachment.cloudKey}`, {
-                    ...getMobileWebDavRequestOptions(webdavConfigValue.allowInsecureHttp),
-                    username: webdavConfigValue.username,
-                    password: webdavConfigValue.password,
-                    timeoutMs: DEFAULT_SYNC_TIMEOUT_MS,
-                    fetcher: fetchWithAbort,
-                  });
-                } else if (isCloudBackend && cloudConfigValue) {
-                  const baseSyncUrl = getCloudBaseUrl(cloudConfigValue.url);
-                  await cloudDeleteFile(`${baseSyncUrl}/${attachment.cloudKey}`, {
-                    ...getMobileCloudRequestOptions(cloudConfigValue.allowInsecureHttp),
-                    token: cloudConfigValue.token,
-                    timeoutMs: DEFAULT_SYNC_TIMEOUT_MS,
-                    fetcher: fetchWithAbort,
-                  });
-                } else if (isDropboxBackend) {
-                  await runDropboxOperation((accessToken) =>
-                    deleteDropboxFile(accessToken, attachment.cloudKey as string, fetchWithAbort)
-                  );
-                } else if (fileBaseDir) {
-                  const targetPath = `${fileBaseDir}/${attachment.cloudKey}`;
-                  await FileSystem.deleteAsync(targetPath, { idempotent: true });
-                }
-              } catch (error) {
-                logSyncWarning('Failed to delete remote attachment', error);
+              remoteCleanupTargets.set(attachment.cloudKey, {
+                cloudKey: attachment.cloudKey,
+                title: attachment.title || attachment.cloudKey,
+              });
+            }
+          }
+          const canAttemptRemoteDelete = Boolean(
+            (isWebdavBackend && webdavConfigValue)
+            || (isCloudBackend && cloudConfigValue)
+            || isDropboxBackend
+            || fileBaseDir
+          );
+          for (const target of remoteCleanupTargets.values()) {
+            const previous = previousPendingByCloudKey.get(target.cloudKey);
+            if (!canAttemptRemoteDelete) {
+              nextPendingRemoteDeletes.set(target.cloudKey, {
+                cloudKey: target.cloudKey,
+                title: target.title,
+                attempts: previous?.attempts ?? 0,
+                lastErrorAt: previous?.lastErrorAt,
+              });
+              continue;
+            }
+            try {
+              if (isWebdavBackend && webdavConfigValue) {
+                const baseSyncUrl = getBaseSyncUrl(webdavConfigValue.url);
+                await webdavDeleteFile(`${baseSyncUrl}/${target.cloudKey}`, {
+                  ...getMobileWebDavRequestOptions(webdavConfigValue.allowInsecureHttp),
+                  username: webdavConfigValue.username,
+                  password: webdavConfigValue.password,
+                  timeoutMs: DEFAULT_SYNC_TIMEOUT_MS,
+                  fetcher: fetchWithAbort,
+                });
+              } else if (isCloudBackend && cloudConfigValue) {
+                const baseSyncUrl = getCloudBaseUrl(cloudConfigValue.url);
+                await cloudDeleteFile(`${baseSyncUrl}/${target.cloudKey}`, {
+                  ...getMobileCloudRequestOptions(cloudConfigValue.allowInsecureHttp),
+                  token: cloudConfigValue.token,
+                  timeoutMs: DEFAULT_SYNC_TIMEOUT_MS,
+                  fetcher: fetchWithAbort,
+                });
+              } else if (isDropboxBackend) {
+                await runDropboxOperation((accessToken) =>
+                  deleteDropboxFile(accessToken, target.cloudKey, fetchWithAbort)
+                );
+              } else if (fileBaseDir) {
+                const targetPath = `${fileBaseDir}/${target.cloudKey}`;
+                await FileSystem.deleteAsync(targetPath, { idempotent: true });
               }
+            } catch (error) {
+              const status = getErrorStatus(error);
+              if (status === 404 || error instanceof DropboxFileNotFoundError) {
+                logSyncInfo('Remote attachment already missing during cleanup', {
+                  cloudKey: target.cloudKey,
+                });
+                continue;
+              }
+              logSyncWarning('Failed to delete remote attachment', error);
+              nextPendingRemoteDeletes.set(target.cloudKey, {
+                cloudKey: target.cloudKey,
+                title: target.title,
+                attempts: (previous?.attempts ?? 0) + 1,
+                lastErrorAt: new Date().toISOString(),
+              });
             }
           }
           if (reachedBatchLimit) {
@@ -1210,6 +1259,12 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
           } else if (orphaned.length > 0) {
             mergedData = removeOrphanedAttachmentsFromData(mergedData);
           }
+          mergedData.settings.attachments = {
+            ...mergedData.settings.attachments,
+            pendingRemoteDeletes: nextPendingRemoteDeletes.size > 0
+              ? Array.from(nextPendingRemoteDeletes.values())
+              : undefined,
+          };
         }
         mergedData.settings.attachments = {
           ...mergedData.settings.attachments,
