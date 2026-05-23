@@ -6,6 +6,7 @@ This file intentionally stays as a short index so it does not drift from the per
 
 ## Latest Releases
 
+- [v0.9.4](docs/release-notes/0.9.4.md)
 - [v0.9.3](docs/release-notes/0.9.3.md)
 - [v0.9.2](docs/release-notes/0.9.2.md)
 - [v0.9.1](docs/release-notes/0.9.1.md)

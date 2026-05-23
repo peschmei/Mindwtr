@@ -71,6 +71,19 @@
   <url type="bugtracker">https://github.com/dongdongbh/Mindwtr/issues</url>
   <url type="vcs-browser">https://github.com/dongdongbh/Mindwtr</url>
   <releases>
+    <release version="0.9.4" date="2026-05-23">
+      <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.4</url>
+      <description translate="no">
+        <p>Mindwtr 0.9.4 expands desktop planning, local automation, project navigation, and Linux desktop reliability.</p>
+        <ul>
+          <li>Added drag-to-calendar planning, local ICS calendar file support, and task description previews.</li>
+          <li>Added a local API server toggle with bearer-token protection for desktop automation.</li>
+          <li>Improved keyboard task selectors, global search reveal behavior, project split sizing, and task metadata wrapping.</li>
+          <li>Preserved WebView zoom, followed the system theme by default, and clarified the Flatpak quick-add shortcut fallback.</li>
+          <li>Improved sync warning cleanup, file lock contention handling, and desktop calendar accessibility.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.3" date="2026-05-13">
       <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.3</url>
       <description translate="no">

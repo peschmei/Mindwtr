@@ -30,7 +30,7 @@
           "完全离线可用，无需互联网连接",
           "完全开源，安全透明"
         ],
-        "ReleaseNotes": "• 桌面任务编辑更快，支持属性胶囊控件、常用日期快捷选项和更清晰的快捷操作。\n• 日程视图、归档任务详情、年度日历重复规则和项目取消归档更加可靠。\n• 同步诊断会更清楚地显示时间戳校正情况。",
+        "ReleaseNotes": "• 桌面日历拖放规划、任务描述预览和键盘任务选择更好用。\n• 新增本地 API 服务器设置，并通过 bearer token 保护访问。\n• 全局搜索、项目布局、WebView 缩放和同步提示更加稳定。",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",
@@ -82,7 +82,7 @@
           "No internet connection required to function",
           "Open source and transparent"
         ],
-        "ReleaseNotes": "• Desktop task editing is faster with attribute pills, quick date shortcuts, and clearer quick actions.\n• Agenda, archived task details, yearly calendar recurrences, and project unarchive behavior are more reliable.\n• Sync diagnostics now surface timestamp clamps more clearly.",
+        "ReleaseNotes": "• Desktop calendar drag planning, task description previews, and keyboard task selectors are more capable.\n• Local API server settings now include bearer-token protection for automation.\n• Global search, project layouts, WebView zoom, and sync warning cleanup are more reliable.",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",
@@ -115,6 +115,36 @@
       },
       "PlatformOverrides": {}
     },
+    "de": {
+      "BaseListing": {
+        "Keywords": [
+          "GTD Aufgabenverwaltung",
+          "lokaler Aufgabenmanager",
+          "Produktivitaet",
+          "Datenschutz Aufgaben App"
+        ],
+        "Description": "Mindwtr ist ein datenschutzorientierter, lokaler GTD (Getting Things Done) Aufgabenmanager, der dir hilft, dein Leben zu organisieren, ohne deine Daten zu gefaehrden.\n\nIm Unterschied zu Aufgabenmanagern, die dein Leben auf einem Cloud-Server speichern, behaelt Mindwtr alles auf deinem Geraet. Deine Aufgaben, Projekte und Notizen gehoeren dir.\n\nHauptfunktionen:\n- Lokal zuerst: Deine Daten verlassen dein Geraet nur, wenn du sie ausdruecklich exportierst oder synchronisierst.\n- GTD-Workflow: Entwickelt fuer Getting Things Done mit Inbox, Projekten und Kontexten.\n- Schnell und leicht: Gebaut mit Rust und Tauri fuer starke Leistung.\n- Ablenkungsarm: Eine klare, minimalistische Oberflaeche hilft dir, dich auf Wichtiges zu konzentrieren.\n- Open Source: Transparenter Code, der geprueft werden kann.\n\nBehalte die Kontrolle ueber deine Aufgaben und deine Daten.",
+        "Features": [
+          "Lokale Datenspeicherung fuer mehr Privatsphaere",
+          "Klare GTD (Getting Things Done) Oberflaeche",
+          "Schnelle Leistung mit Rust und Tauri",
+          "Offline nutzbar ohne staendige Internetverbindung",
+          "Open Source und transparent"
+        ],
+        "ReleaseNotes": "• Desktop-Kalenderplanung per Drag, Task-Beschreibungsvorschau und Tastaturauswahl wurden verbessert.\n• Lokale API-Servereinstellungen schuetzen Automatisierung jetzt mit bearer token.\n• Globale Suche, Projektlayouts, WebView-Zoom und Sync-Warnungen sind zuverlaessiger.",
+        "Images": [],
+        "RecommendedHardware": [],
+        "MinimumHardware": [],
+        "Title": "Mindwtr",
+        "LicenseTerms": "AGPL-3.0 license",
+        "CopyrightAndTrademarkInfo": "AGPL-3.0 license",
+        "ShortDescription": null,
+        "ShortTitle": null,
+        "VoiceTitle": null,
+        "DevStudio": "Dongda Li"
+      },
+      "PlatformOverrides": {}
+    },
     "es": {
       "BaseListing": {
         "Keywords": [
@@ -130,7 +160,7 @@
           "No requiere conexión a internet para funcionar",
           "Código abierto y transparente"
         ],
-        "ReleaseNotes": "• La edicion de tareas de escritorio es mas rapida con controles tipo pildora, atajos de fecha y acciones mas claras.\n• Agenda, detalles archivados, recurrencias anuales y desarchivado de proyectos son mas fiables.\n• Los diagnosticos de sync muestran mejor los ajustes de marca temporal.",
+        "ReleaseNotes": "• La planificacion de calendario con arrastre, las vistas previas de descripcion y los selectores por teclado son mas capaces.\n• Los ajustes del servidor local API ahora protegen automatizaciones con bearer token.\n• Busqueda global, layouts de proyectos, zoom WebView y avisos de sync son mas fiables.",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",

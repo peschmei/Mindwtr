@@ -95,6 +95,7 @@ map_metadata() {
 }
 
 map_metadata "en-US" "en-US"
+map_metadata "de-DE" "de-DE"
 map_metadata "es-ES" "es-ES"
 map_metadata "zh-CN" "zh-Hans"
 

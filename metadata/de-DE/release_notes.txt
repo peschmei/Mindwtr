@@ -1,0 +1,3 @@
+- Siri-Inbox-Erfassung und ein konfigurierbarer Schnellzugriff-Tab wurden hinzugefuegt.
+- Nach dem Import gibt es eine Aufraeumoption fuer Apple Reminders.
+- Task-Editor, Erinnerungsstart, Datumschips und Focus-Gruppierung wurden verbessert.

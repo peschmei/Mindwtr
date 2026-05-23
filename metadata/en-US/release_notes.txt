@@ -1,3 +1,3 @@
-- Added Apple Reminders import for incomplete reminders.
-- Task editing is faster with clearer controls and quick date shortcuts.
-- Archived task details, Focus lists, calendar recurrences, and project unarchive behavior are more reliable.
+- Added Siri inbox capture and a configurable quick access tab.
+- Added an Apple Reminders cleanup option after import.
+- Improved task editor keyboard handling, reminder reopening, quick date chips, and Focus grouping.
