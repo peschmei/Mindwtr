@@ -5,6 +5,7 @@
   <project_license>AGPL-3.0-only</project_license>
   <name>Mindwtr</name>
   <summary>Plan tasks and projects</summary>
+  <summary xml:lang="de">Aufgaben und Projekte planen</summary>
   <developer id="tech.dongdongbh">
     <name>Dongda Li</name>
   </developer>
@@ -14,47 +15,63 @@
   </provides>
   <description>
     <p>Capture tasks, organize projects, and keep work moving with a simple personal system that keeps your data on your device.</p>
+    <p xml:lang="de">Erfasse Aufgaben, organisiere Projekte und halte Arbeit mit einem einfachen persoenlichen System in Bewegung, das deine Daten auf deinem Geraet laesst.</p>
     <p>Mindwtr helps you sort inbox items, review commitments, and plan next actions without requiring an account or locking you into a proprietary service.</p>
+    <p xml:lang="de">Mindwtr hilft dir, Inbox-Eintraege zu sortieren, Verpflichtungen zu pruefen und naechste Aktionen zu planen, ohne ein Konto zu verlangen oder dich an einen proprietaeren Dienst zu binden.</p>
     <ul>
       <li>Capture tasks, notes, and ideas quickly</li>
+      <li xml:lang="de">Aufgaben, Notizen und Ideen schnell erfassen</li>
       <li>Organize work with projects, areas, sections, tags, and contexts</li>
+      <li xml:lang="de">Arbeit mit Projekten, Bereichen, Abschnitten, Tags und Kontexten organisieren</li>
       <li>Review your lists daily or weekly to stay current</li>
+      <li xml:lang="de">Listen taeglich oder woechentlich pruefen, um aktuell zu bleiben</li>
       <li>Plan with list, board, and calendar views</li>
+      <li xml:lang="de">Mit Listen-, Board- und Kalenderansichten planen</li>
       <li>Add notes, reminders, and attachments to your work</li>
+      <li xml:lang="de">Notizen, Erinnerungen und Anhaenge zu deiner Arbeit hinzufuegen</li>
       <li>Sync through local folders, WebDAV, Dropbox, or a self-hosted cloud</li>
+      <li xml:lang="de">Ueber lokale Ordner, WebDAV, Dropbox oder eine selbst gehostete Cloud synchronisieren</li>
     </ul>
   </description>
   <screenshots>
-    <screenshot type="default" xml:lang="en">
+    <screenshot type="default">
       <caption>Capture and triage tasks in Inbox</caption>
+      <caption xml:lang="de">Aufgaben in der Inbox erfassen und klaeren</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/inbox_light.png</image>
     </screenshot>
-    <screenshot xml:lang="en">
+    <screenshot>
       <caption>Focus on your next actions for today</caption>
+      <caption xml:lang="de">Naechste Aktionen fuer heute fokussieren</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/focus_light.png</image>
     </screenshot>
-    <screenshot xml:lang="en">
+    <screenshot>
       <caption>Organize work in the projects workspace</caption>
+      <caption xml:lang="de">Arbeit im Projektbereich organisieren</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/projects_workspace_light.png</image>
     </screenshot>
-    <screenshot xml:lang="en">
+    <screenshot>
       <caption>Plan visually with board view</caption>
+      <caption xml:lang="de">Visuell mit der Board-Ansicht planen</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/board_view_light.png</image>
     </screenshot>
-    <screenshot xml:lang="en">
+    <screenshot>
       <caption>Adjust appearance and workflow settings</caption>
+      <caption xml:lang="de">Darstellung und Workflow-Einstellungen anpassen</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/settings_light.png</image>
     </screenshot>
-    <screenshot xml:lang="en">
+    <screenshot>
       <caption>Keep supporting material in Reference</caption>
+      <caption xml:lang="de">Begleitmaterial in Referenz aufbewahren</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/reference_light.png</image>
     </screenshot>
-    <screenshot xml:lang="en">
+    <screenshot>
       <caption>Review due dates in calendar view</caption>
+      <caption xml:lang="de">Faelligkeiten in der Kalenderansicht pruefen</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/calendar_light.png</image>
     </screenshot>
-    <screenshot xml:lang="en">
+    <screenshot>
       <caption>Group and filter work by context</caption>
+      <caption xml:lang="de">Arbeit nach Kontext gruppieren und filtern</caption>
       <image>https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/desktop/screenshots/flathub/contexts_light.png</image>
     </screenshot>
   </screenshots>
@@ -73,14 +90,20 @@
   <releases>
     <release version="0.9.4" date="2026-05-23">
       <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.4</url>
-      <description translate="no">
+      <description>
         <p>Mindwtr 0.9.4 expands desktop planning, local automation, project navigation, and Linux desktop reliability.</p>
+        <p xml:lang="de">Mindwtr 0.9.4 erweitert Desktop-Planung, lokale Automatisierung, Projektnavigation und die Zuverlaessigkeit des Linux-Desktops.</p>
         <ul>
           <li>Added drag-to-calendar planning, local ICS calendar file support, and task description previews.</li>
+          <li xml:lang="de">Kalenderplanung per Drag-and-drop, lokale ICS-Kalenderdateien und Vorschauen fuer Aufgabenbeschreibungen hinzugefuegt.</li>
           <li>Added a local API server toggle with bearer-token protection for desktop automation.</li>
+          <li xml:lang="de">Einen Schalter fuer einen lokalen API-Server mit Bearer-Token-Schutz fuer Desktop-Automatisierung hinzugefuegt.</li>
           <li>Improved keyboard task selectors, global search reveal behavior, project split sizing, and task metadata wrapping.</li>
+          <li xml:lang="de">Tastaturbasierte Aufgabenauswahl, Anzeige globaler Suchergebnisse, Projektaufteilungsgroessen und Umbrueche fuer Aufgabenmetadaten verbessert.</li>
           <li>Preserved WebView zoom, followed the system theme by default, and clarified the Flatpak quick-add shortcut fallback.</li>
+          <li xml:lang="de">WebView-Zoom beibehalten, standardmaessig dem Systemdesign gefolgt und den Flatpak-Fallback fuer Schnellhinzufuegen-Kuerzel klaerer gemacht.</li>
           <li>Improved sync warning cleanup, file lock contention handling, and desktop calendar accessibility.</li>
+          <li xml:lang="de">Aufraeumen von Sync-Warnungen, Umgang mit Dateisperren und Barrierefreiheit des Desktop-Kalenders verbessert.</li>
         </ul>
       </description>
     </release>
