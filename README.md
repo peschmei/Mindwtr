@@ -165,11 +165,11 @@ _Don't show me a cockpit when I just want to ride a bike._
 ### Automation
 
 - 🔌 **CLI** - Add, list, complete, search from terminal by running the repo helper
-- 🌐 **REST API** - Optional desktop localhost API server for scripting
+- 🌐 **REST API** - Optional desktop localhost API server for token-authenticated scripting
 - 🌍 **Web App (PWA)** - Browser access with offline support
 - 🧠 **MCP Server** - Optional local stdio Model Context Protocol server for LLM automation
 
-Desktop builds can start the local REST API from **Settings -> Advanced** on `127.0.0.1` with default port `3456`. The CLI and stdio MCP server remain separate repo helpers for now.
+Desktop builds can start the local REST API from **Settings -> Advanced** on `127.0.0.1` with default port `3456` and a generated bearer token. The CLI and stdio MCP server remain separate repo helpers for now.
 
 ### Cross-Platform
 
@@ -379,8 +379,6 @@ You can help in several ways:
 
 ## Roadmap
 
-- 🗣️ Direct Siri capture -> Mindwtr Inbox ([#388](https://github.com/dongdongbh/Mindwtr/issues/388))
-- 📥 Apple Reminders -> Mindwtr Inbox import ([#387](https://github.com/dongdongbh/Mindwtr/issues/387))
 - ✉️ Email to Inbox ([#35](https://github.com/dongdongbh/Mindwtr/issues/35))
 - 🗓️ Expand one-way Mindwtr -> local system calendar sync beyond the shipped mobile implementation ([#361](https://github.com/dongdongbh/Mindwtr/issues/361))
 

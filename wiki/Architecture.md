@@ -197,12 +197,25 @@ apps/mobile/
 ├── app/                   # Expo Router pages
 │   ├── (drawer)/         # Drawer navigation
 │   │   ├── (tabs)/       # Tab navigation
+│   │   │   ├── calendar-tab.tsx
+│   │   │   ├── capture-quick.tsx
 │   │   │   ├── inbox.tsx
 │   │   │   ├── focus.tsx
 │   │   │   ├── capture.tsx
+│   │   │   ├── contexts-tab.tsx
 │   │   │   ├── projects.tsx
 │   │   │   ├── review-tab.tsx
 │   │   │   └── menu.tsx
+│   │   ├── calendar.tsx
+│   │   ├── contexts.tsx
+│   │   ├── saved-search/[id].tsx
+│   │   ├── board.tsx
+│   │   ├── waiting.tsx
+│   │   ├── someday.tsx
+│   │   ├── done.tsx
+│   │   ├── trash.tsx
+│   │   ├── archived.tsx
+│   │   ├── reference.tsx
 │   │   ├── projects-screen.tsx
 │   │   └── settings.tsx
 │   └── _layout.tsx       # Root layout

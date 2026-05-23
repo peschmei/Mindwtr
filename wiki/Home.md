@@ -89,7 +89,7 @@ Mindwtr is **simple by default and powerful when needed**. We focus on reducing 
 | 🧭 **Areas of Focus**  | Group projects by higher-level areas               |
 | 🏷️ **Contexts & Tags** | @home, @work, #focused, #lowenergy                 |
 | 📋 **Board View**      | Kanban-style drag-and-drop                         |
-| 📅 **Calendar**        | Time-based planning + external calendars (ICS)     |
+| 📅 **Calendar**        | Time-based planning + external calendars           |
 | 📋 **Weekly Review**   | Guided GTD review wizard                           |
 | 🔁 **Recurring Tasks** | Daily/weekly/monthly + completion-based            |
 | 📎 **Attachments**     | Files, links, and audio notes                      |
@@ -97,7 +97,7 @@ Mindwtr is **simple by default and powerful when needed**. We focus on reducing 
 | 🤖 **AI Assistant**    | Clarify, break down, review (optional)             |
 | 🧩 **Copilot**         | Context/tag/time suggestions while typing          |
 | ♻️ **Reusable Lists**  | Duplicate projects or reset checklists             |
-| 🔄 **Sync Options**    | iCloud (Apple), File, WebDAV, Cloud, Local API     |
+| 🔄 **Sync Options**    | iCloud (Apple), File, WebDAV, Cloud                |
 | 📲 **Android Widget**  | Home screen focus/next widget                      |
 | 🌐 **Web App (PWA)**   | Offline-capable browser version                    |
 | 🌍 **i18n**            | EN, 中文, ES, HI, AR, DE, RU, JA, FR, PT, PL, KO, IT, TR, NL |
@@ -125,7 +125,7 @@ Mindwtr is **simple by default and powerful when needed**. We focus on reducing 
 | **Keyboard Shortcuts** | ✅ (Vim/Emacs) | ❌ |
 | **File Sync** | ✅ | ✅ |
 | **WebDAV Sync** | ✅ | ✅ |
-| **External Calendars (ICS)** | ✅ | ✅ |
+| **External Calendars** | ✅ (ICS) | ✅ (System calendars) |
 | **Audio Capture** | ✅ (Whisper/Cloud) | ✅ |
 | **AI Assistant** | ✅ | ✅ |
 
