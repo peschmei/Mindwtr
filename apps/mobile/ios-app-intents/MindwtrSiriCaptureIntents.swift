@@ -38,6 +38,7 @@ struct MindwtrSiriCaptureIntent: AppIntent {
     static var description = IntentDescription("Captures a task into the Mindwtr Inbox for later processing.")
 
 #if compiler(>=6.0)
+    @available(iOS 26.0, *)
     static var supportedModes: IntentModes {
         .foreground(.immediate)
     }

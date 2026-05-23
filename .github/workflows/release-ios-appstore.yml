@@ -133,6 +133,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Validate iOS App Intents availability
+        run: node scripts/ci/validate-ios-app-intents-availability.js
+
       - name: Validate required secrets
         env:
           IOS_DISTRIBUTION_CERT: ${{ secrets.IOS_DISTRIBUTION_CERT }}
