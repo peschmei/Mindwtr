@@ -451,6 +451,9 @@ export {
 
 export {
     applyMarkdownToolbarAction,
+    applyMarkdownKeyboardShortcut,
+    applyMarkdownPairInsertion,
+    applyMarkdownUrlPaste,
     continueMarkdownOnEnter,
     continueMarkdownOnTextChange,
     extractChecklistFromMarkdown,
@@ -477,6 +480,7 @@ export type {
     MarkdownReferenceSearchResult,
     MarkdownReferenceTarget,
     MarkdownSelection,
+    MarkdownKeyboardShortcut,
     MarkdownToolbarAction,
     MarkdownToolbarActionId,
     MarkdownToolbarResult,

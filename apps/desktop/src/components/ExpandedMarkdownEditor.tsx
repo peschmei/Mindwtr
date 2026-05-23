@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -26,6 +26,7 @@ type ExpandedMarkdownEditorProps = {
     onApplyAction: (actionId: MarkdownToolbarActionId, selection: MarkdownSelection) => MarkdownToolbarResult | void;
     onSelectionChange: (selection: MarkdownSelection) => void;
     onEditorKeyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+    onEditorPaste?: (event: ClipboardEvent<HTMLTextAreaElement>) => void;
     currentTaskId?: string;
 };
 
@@ -47,6 +48,7 @@ export function ExpandedMarkdownEditor({
     onApplyAction,
     onSelectionChange,
     onEditorKeyDown,
+    onEditorPaste,
     currentTaskId,
 }: ExpandedMarkdownEditorProps) {
     const [mode, setMode] = useState<'edit' | 'preview'>(initialMode);
@@ -128,6 +130,7 @@ export function ExpandedMarkdownEditor({
                 onMouseDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => {
+                    if (event.defaultPrevented) return;
                     if (event.key === 'Escape') {
                         event.preventDefault();
                         handleClose();
@@ -217,6 +220,7 @@ export function ExpandedMarkdownEditor({
                                         }
                                         onEditorKeyDown?.(event);
                                     }}
+                                    onPaste={onEditorPaste}
                                     placeholder={placeholder}
                                     dir={direction}
                                     className={cn(

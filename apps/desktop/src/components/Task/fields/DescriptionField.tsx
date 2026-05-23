@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
+import { type ClipboardEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import { Maximize2 } from 'lucide-react';
 import type { MarkdownSelection, MarkdownToolbarActionId, MarkdownToolbarResult } from '@mindwtr/core';
 
@@ -39,6 +39,7 @@ type DescriptionFieldProps = {
     onUndo: () => MarkdownSelection | undefined;
     onApplyAction: (actionId: MarkdownToolbarActionId, selection: MarkdownSelection) => MarkdownToolbarResult;
     onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+    onPaste: (event: ClipboardEvent<HTMLTextAreaElement>) => void;
 };
 
 export function DescriptionField({
@@ -64,6 +65,7 @@ export function DescriptionField({
     onUndo,
     onApplyAction,
     onKeyDown,
+    onPaste,
 }: DescriptionFieldProps) {
     const handlePreviewClick = (event: MouseEvent<HTMLDivElement>) => {
         const target = event.target instanceof HTMLElement ? event.target : null;
@@ -139,6 +141,7 @@ export function DescriptionField({
                             });
                         }}
                         onKeyDown={onKeyDown}
+                        onPaste={onPaste}
                         minHeight={112}
                         maxHeight={480}
                         className={cn(
@@ -177,6 +180,7 @@ export function DescriptionField({
                 onApplyAction={onApplyAction}
                 onSelectionChange={onSelectionChange}
                 onEditorKeyDown={onKeyDown}
+                onEditorPaste={onPaste}
                 currentTaskId={taskId}
             />
         </div>

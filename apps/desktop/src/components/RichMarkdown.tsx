@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { normalizeMarkdownInternalLinks } from '@mindwtr/core';
+import { Copy } from 'lucide-react';
 
 import { cn } from '../lib/utils';
 import { InternalMarkdownLink } from './InternalMarkdownLink';
@@ -18,6 +19,40 @@ function transformMarkdownUrl(url: string) {
         return url;
     }
     return '';
+}
+
+const extractTextContent = (node: unknown): string => {
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(extractTextContent).join('');
+    if (node && typeof node === 'object' && 'props' in node) {
+        return extractTextContent((node as { props?: { children?: unknown } }).props?.children);
+    }
+    return '';
+};
+
+function CodeBlock({ children, className, ...props }: any) {
+    const code = extractTextContent(children).replace(/\n$/, '');
+    const handleCopy = () => {
+        if (!code || typeof navigator === 'undefined') return;
+        void navigator.clipboard?.writeText(code);
+    };
+
+    return (
+        <div className="group relative my-1">
+            <button
+                type="button"
+                onClick={handleCopy}
+                className="absolute right-1.5 top-1.5 rounded border border-border/70 bg-background/90 p-1 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-muted hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary/30 group-hover:opacity-100"
+                aria-label="Copy code"
+                title="Copy code"
+            >
+                <Copy className="h-3.5 w-3.5" />
+            </button>
+            <pre className={cn('bg-muted p-2 pr-9 rounded-md overflow-x-auto', className)} {...props}>
+                {children}
+            </pre>
+        </div>
+    );
 }
 
 export function RichMarkdown({ markdown }: { markdown: string }) {
@@ -57,16 +92,14 @@ export function RichMarkdown({ markdown }: { markdown: string }) {
                     <li className={cn('pl-1', className)} {...props} />
                 ),
                 p: ({ className, children, ...props }: any) => (
-                    <p className={cn('mb-1 last:mb-0 leading-relaxed', className)} {...props}>
+                    <p className={cn('mb-1 last:mb-0 leading-relaxed whitespace-pre-line', className)} {...props}>
                         {children}
                     </p>
                 ),
                 code: ({ className, ...props }: any) => (
                     <code className={cn('bg-muted px-1 py-0.5 rounded text-[0.9em] font-mono', className)} {...props} />
                 ),
-                pre: ({ className, ...props }: any) => (
-                    <pre className={cn('bg-muted p-2 rounded-md overflow-x-auto my-1', className)} {...props} />
-                ),
+                pre: CodeBlock,
                 blockquote: ({ className, ...props }: any) => (
                     <blockquote className={cn('border-l-2 border-primary/50 pl-3 italic my-1 text-muted-foreground/80', className)} {...props} />
                 ),

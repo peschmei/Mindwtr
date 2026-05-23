@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    applyMarkdownKeyboardShortcut,
+    applyMarkdownPairInsertion,
     applyMarkdownToolbarAction,
+    applyMarkdownUrlPaste,
     continueMarkdownOnEnter,
     continueMarkdownOnTextChange,
 } from './markdown';
@@ -85,6 +88,95 @@ describe('applyMarkdownToolbarAction', () => {
         ).toEqual({
             value: '- [ ] alpha\n- [ ] beta',
             selection: { start: 0, end: 22 },
+        });
+    });
+
+    it('keeps link and code actions in the toolbar action list behavior', () => {
+        expect(
+            applyMarkdownToolbarAction('read docs', { start: 5, end: 9 }, 'code'),
+        ).toEqual({
+            value: 'read `docs`',
+            selection: { start: 6, end: 10 },
+        });
+    });
+});
+
+describe('applyMarkdownPairInsertion', () => {
+    it('wraps selected text when an opening bracket replaces the selection', () => {
+        expect(
+            applyMarkdownPairInsertion('read docs', 'read [', { start: 5, end: 9 }),
+        ).toEqual({
+            value: 'read [docs]',
+            selection: { start: 6, end: 10 },
+        });
+    });
+
+    it('supports repeated backtick wrapping for fenced code', () => {
+        const replaceSelectionWithBacktick = (value: string, selection: { start: number; end: number }) => (
+            `${value.slice(0, selection.start)}\`${value.slice(selection.end)}`
+        );
+        const once = applyMarkdownPairInsertion('code sample', '`', { start: 0, end: 11 });
+        expect(once).toEqual({
+            value: '`code sample`',
+            selection: { start: 1, end: 12 },
+        });
+        const twice = applyMarkdownPairInsertion(once!.value, replaceSelectionWithBacktick(once!.value, once!.selection), once!.selection);
+        const three = applyMarkdownPairInsertion(twice!.value, replaceSelectionWithBacktick(twice!.value, twice!.selection), twice!.selection);
+        expect(three).toEqual({
+            value: '```code sample```',
+            selection: { start: 3, end: 14 },
+        });
+    });
+
+    it('ignores normal typing without a selected range', () => {
+        expect(
+            applyMarkdownPairInsertion('read docs', 'read [docs', { start: 5, end: 5 }),
+        ).toBeNull();
+    });
+});
+
+describe('applyMarkdownUrlPaste', () => {
+    it('turns selected text into a markdown link when a url replaces the selection', () => {
+        expect(
+            applyMarkdownUrlPaste('read docs today', 'read https://example.com today', { start: 5, end: 9 }),
+        ).toEqual({
+            value: 'read [docs](https://example.com) today',
+            selection: { start: 32, end: 32 },
+        });
+    });
+
+    it('ignores non-url replacements', () => {
+        expect(
+            applyMarkdownUrlPaste('read docs', 'read note', { start: 5, end: 9 }),
+        ).toBeNull();
+    });
+});
+
+describe('applyMarkdownKeyboardShortcut', () => {
+    it('wraps selected text with bold markers for Ctrl+B', () => {
+        expect(
+            applyMarkdownKeyboardShortcut('read docs', { start: 5, end: 9 }, { key: 'b', ctrlKey: true }),
+        ).toEqual({
+            value: 'read **docs**',
+            selection: { start: 7, end: 11 },
+        });
+    });
+
+    it('inserts two spaces for Tab at the cursor', () => {
+        expect(
+            applyMarkdownKeyboardShortcut('read docs', { start: 5, end: 5 }, { key: 'Tab' }),
+        ).toEqual({
+            value: 'read   docs',
+            selection: { start: 7, end: 7 },
+        });
+    });
+
+    it('indents selected lines with two spaces for Tab', () => {
+        expect(
+            applyMarkdownKeyboardShortcut('alpha\nbeta', { start: 0, end: 10 }, { key: 'Tab' }),
+        ).toEqual({
+            value: '  alpha\n  beta',
+            selection: { start: 0, end: 14 },
         });
     });
 });

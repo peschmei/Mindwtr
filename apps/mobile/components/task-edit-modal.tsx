@@ -587,6 +587,7 @@ function TaskEditModalInner({
         isDescriptionInputFocused: descriptionEditor.isDescriptionInputFocused,
         setIsDescriptionInputFocused: descriptionEditor.setIsDescriptionInputFocused,
         handleDescriptionChange: descriptionEditor.handleDescriptionChange,
+        handleDescriptionKeyPress: descriptionEditor.handleDescriptionKeyPress,
         handleDescriptionUndo: descriptionEditor.handleDescriptionUndo,
         handleDescriptionApplyAction: descriptionEditor.handleDescriptionApplyAction,
         applyDescriptionResult: descriptionEditor.applyDescriptionResult,

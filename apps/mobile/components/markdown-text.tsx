@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, type TextStyle } from 'react-native';
+import { NativeModules, Pressable, View, Text, StyleSheet, type TextStyle } from 'react-native';
 import * as Linking from 'expo-linking';
+import { Ionicons } from '@expo/vector-icons';
 
 import type { ThemeColors } from '@/hooks/use-theme-colors';
 import { parseInlineMarkdown, parseMarkdownReferenceHref, shallow, tFallback, useTaskStore } from '@mindwtr/core';
@@ -12,6 +13,15 @@ const BULLET_LIST_RE = /^\s{0,3}[-*+]\s+(.+)$/;
 const HEADING_RE = /^(#{1,3})\s+(.+)$/;
 const HORIZONTAL_RULE_RE = /^(?:-{3,}|\*{3,}|_{3,})$/;
 const FENCED_CODE_RE = /^```.*$/;
+
+type ClipboardModule = {
+  setString?: (value: string) => void;
+};
+
+const writeClipboardText = (text: string) => {
+  const clipboard = (NativeModules as { Clipboard?: ClipboardModule }).Clipboard;
+  clipboard?.setString?.(text);
+};
 
 function isBlockBoundary(line: string): boolean {
   const trimmed = line.trim();
@@ -143,6 +153,7 @@ export function MarkdownText({
     : undefined;
   const deletedTaskLabel = tFallback(t, 'markdown.referenceDeletedTask', 'deleted task');
   const deletedProjectLabel = tFallback(t, 'markdown.referenceDeletedProject', 'deleted project');
+  const copyCodeLabel = tFallback(t, 'markdown.copyCode', 'Copy code');
   const resolveTask = React.useCallback((id: string) => {
     const task = tasks.find((candidate) => candidate.id === id && !candidate.deletedAt);
     if (!task) return null;
@@ -208,13 +219,29 @@ export function MarkdownText({
       if (i < lines.length && FENCED_CODE_RE.test(lines[i].trim())) {
         i += 1;
       }
+      const codeText = codeLines.join('\n');
       blocks.push(
         <View
           key={`code-${start}`}
           style={[styles.codeBlock, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
         >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={copyCodeLabel}
+            hitSlop={8}
+            onPress={() => writeClipboardText(codeText)}
+            style={({ pressed }) => [
+              styles.codeCopyButton,
+              {
+                backgroundColor: pressed ? tc.border : tc.filterBg,
+                borderColor: tc.border,
+              },
+            ]}
+          >
+            <Ionicons name="copy-outline" size={15} color={tc.secondaryText} />
+          </Pressable>
           <Text style={[styles.codeBlockText, { color: tc.text }, directionStyle]}>
-            {codeLines.join('\n')}
+            {codeText}
           </Text>
         </View>
       );
@@ -275,7 +302,7 @@ export function MarkdownText({
       paragraph.push(lines[i]);
       i += 1;
     }
-    const text = paragraph.join(' ').trim();
+    const text = paragraph.join('\n').trim();
     if (text) {
       blocks.push(
         <Text key={`p-${i}`} style={[styles.paragraph, { color: tc.text }, directionStyle]}>
@@ -333,6 +360,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    paddingRight: 38,
+  },
+  codeCopyButton: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    zIndex: 1,
+    width: 28,
+    height: 28,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   codeBlockText: {
     fontFamily: 'monospace',

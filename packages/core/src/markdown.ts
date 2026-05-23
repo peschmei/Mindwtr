@@ -83,10 +83,20 @@ export type MarkdownToolbarResult = {
     selection: MarkdownSelection;
 };
 
+export type MarkdownKeyboardShortcut = {
+    key: string;
+    altKey?: boolean;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    shiftKey?: boolean;
+};
+
 export const MARKDOWN_TOOLBAR_ACTIONS: MarkdownToolbarAction[] = [
     { id: 'heading', shortLabel: 'H1', labelKey: 'markdown.toolbar.heading', fallbackLabel: 'Insert heading' },
     { id: 'bold', shortLabel: 'B', labelKey: 'markdown.toolbar.bold', fallbackLabel: 'Bold' },
     { id: 'italic', shortLabel: 'I', labelKey: 'markdown.toolbar.italic', fallbackLabel: 'Italic' },
+    { id: 'link', shortLabel: '[]', labelKey: 'markdown.toolbar.link', fallbackLabel: 'Insert link' },
+    { id: 'code', shortLabel: '`', labelKey: 'markdown.toolbar.code', fallbackLabel: 'Inline code' },
     { id: 'quote', shortLabel: '>', labelKey: 'markdown.toolbar.quote', fallbackLabel: 'Quote' },
     { id: 'bulletList', shortLabel: '-', labelKey: 'markdown.toolbar.bulletList', fallbackLabel: 'Bullet list' },
     { id: 'orderedList', shortLabel: '1.', labelKey: 'markdown.toolbar.orderedList', fallbackLabel: 'Numbered list' },
@@ -543,6 +553,120 @@ const prefixLines = (value: string, selection: MarkdownSelection, prefix: string
         },
     };
 };
+
+const replaceSelection = (
+    value: string,
+    selection: MarkdownSelection,
+    insertedText: string,
+): MarkdownToolbarResult => {
+    const { start, end } = normalizeSelection(value, selection);
+    const nextValue = `${value.slice(0, start)}${insertedText}${value.slice(end)}`;
+    const cursor = start + insertedText.length;
+    return {
+        value: nextValue,
+        selection: { start: cursor, end: cursor },
+    };
+};
+
+const indentSelection = (value: string, selection: MarkdownSelection): MarkdownToolbarResult => {
+    const normalizedSelection = normalizeSelection(value, selection);
+    if (normalizedSelection.start === normalizedSelection.end) {
+        return replaceSelection(value, normalizedSelection, '  ');
+    }
+
+    return prefixLines(value, normalizedSelection, '  ');
+};
+
+const detectSelectionReplacement = (
+    previousValue: string,
+    nextValue: string,
+    selection: MarkdownSelection,
+): { selection: MarkdownSelection; selectedText: string; insertedText: string } | null => {
+    const normalizedSelection = normalizeSelection(previousValue, selection);
+    if (normalizedSelection.start === normalizedSelection.end) return null;
+
+    const before = previousValue.slice(0, normalizedSelection.start);
+    const after = previousValue.slice(normalizedSelection.end);
+    if (!nextValue.startsWith(before) || !nextValue.endsWith(after)) return null;
+
+    const insertedEnd = nextValue.length - after.length;
+    if (insertedEnd < before.length) return null;
+
+    return {
+        selection: normalizedSelection,
+        selectedText: previousValue.slice(normalizedSelection.start, normalizedSelection.end),
+        insertedText: nextValue.slice(before.length, insertedEnd),
+    };
+};
+
+const escapeMarkdownLinkLabel = (label: string): string => label.replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
+
+const MARKDOWN_INSERTION_PAIRS: Record<string, string> = {
+    '[': ']',
+    '(': ')',
+    '{': '}',
+    '`': '`',
+};
+
+export function applyMarkdownPairInsertion(
+    previousValue: string,
+    nextValue: string,
+    selection: MarkdownSelection,
+): MarkdownToolbarResult | null {
+    const replacement = detectSelectionReplacement(previousValue, nextValue, selection);
+    if (!replacement) return null;
+    const suffix = MARKDOWN_INSERTION_PAIRS[replacement.insertedText];
+    if (!suffix) return null;
+
+    const prefix = replacement.insertedText;
+    const { start, end } = replacement.selection;
+    const next = `${previousValue.slice(0, start)}${prefix}${replacement.selectedText}${suffix}${previousValue.slice(end)}`;
+    return {
+        value: next,
+        selection: {
+            start: start + prefix.length,
+            end: start + prefix.length + replacement.selectedText.length,
+        },
+    };
+}
+
+export function applyMarkdownUrlPaste(
+    previousValue: string,
+    nextValue: string,
+    selection: MarkdownSelection,
+): MarkdownToolbarResult | null {
+    const replacement = detectSelectionReplacement(previousValue, nextValue, selection);
+    if (!replacement) return null;
+    const href = sanitizeLinkHref(replacement.insertedText);
+    if (!href) return null;
+
+    const token = `[${escapeMarkdownLinkLabel(replacement.selectedText)}](${href})`;
+    const { start, end } = replacement.selection;
+    const value = `${previousValue.slice(0, start)}${token}${previousValue.slice(end)}`;
+    const cursor = start + token.length;
+    return {
+        value,
+        selection: { start: cursor, end: cursor },
+    };
+}
+
+export function applyMarkdownKeyboardShortcut(
+    value: string,
+    selection: MarkdownSelection,
+    shortcut: MarkdownKeyboardShortcut,
+): MarkdownToolbarResult | null {
+    if (shortcut.key === 'Tab' && !shortcut.altKey && !shortcut.ctrlKey && !shortcut.metaKey) {
+        return indentSelection(value, selection);
+    }
+
+    if (shortcut.altKey || shortcut.shiftKey) return null;
+    if (!shortcut.ctrlKey && !shortcut.metaKey) return null;
+
+    const lowerKey = shortcut.key.toLowerCase();
+    if (lowerKey === 'b') return applyMarkdownToolbarAction(value, selection, 'bold');
+    if (lowerKey === 'i') return applyMarkdownToolbarAction(value, selection, 'italic');
+    return null;
+}
 
 export function applyMarkdownToolbarAction(
     value: string,

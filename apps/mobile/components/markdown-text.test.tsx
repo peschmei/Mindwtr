@@ -45,6 +45,26 @@ const flattenText = (
 };
 
 describe('MarkdownText', () => {
+  const renderMarkdown = (markdown: string) => {
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(
+        <MarkdownText
+          markdown={markdown}
+          tc={{
+            text: '#fff',
+            secondaryText: '#aaa',
+            tint: '#3b82f6',
+            border: '#334155',
+            filterBg: '#111827',
+          } as any}
+          direction="ltr"
+        />
+      );
+    });
+    return tree;
+  };
+
   it('renders fenced code blocks without stalling on the opening fence', () => {
     const markdown = [
       '## Setup commands',
@@ -66,27 +86,24 @@ describe('MarkdownText', () => {
       '```',
     ].join('\n');
 
-    let tree!: renderer.ReactTestRenderer;
-    renderer.act(() => {
-      tree = renderer.create(
-        <MarkdownText
-          markdown={markdown}
-          tc={{
-            text: '#fff',
-            secondaryText: '#aaa',
-            tint: '#3b82f6',
-            border: '#334155',
-            filterBg: '#111827',
-          } as any}
-          direction="ltr"
-        />
-      );
-    });
+    const tree = renderMarkdown(markdown);
 
     const rendered = flattenText(tree.toJSON());
     expect(rendered).toContain('Setup commands');
     expect(rendered).toContain('npx create-next-app@latest client-site --typescript');
     expect(rendered).toContain('Folder structure');
     expect(rendered).toContain('page.tsx');
+  });
+
+  it('keeps soft line breaks inside paragraphs', () => {
+    const tree = renderMarkdown('line 1\nline 2');
+
+    expect(flattenText(tree.toJSON())).toContain('line 1\nline 2');
+  });
+
+  it('adds an accessible copy button to fenced code blocks', () => {
+    const tree = renderMarkdown('```ts\nconst value = 1;\n```');
+
+    expect(tree.root.findByProps({ accessibilityLabel: 'Copy code' })).toBeTruthy();
   });
 });

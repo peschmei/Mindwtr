@@ -38,8 +38,16 @@ const renderActionLabel = (actionId: MarkdownToolbarActionId, shortLabel: string
     switch (actionId) {
         case 'bulletList':
             return <Ionicons name="list-outline" size={16} color={color} />;
+        case 'orderedList':
+            return <Ionicons name="list-circle-outline" size={16} color={color} />;
         case 'taskList':
             return <Ionicons name="checkbox-outline" size={16} color={color} />;
+        case 'quote':
+            return <Ionicons name="chatbox-ellipses-outline" size={16} color={color} />;
+        case 'link':
+            return <Ionicons name="link-outline" size={16} color={color} />;
+        case 'code':
+            return <Ionicons name="code-slash-outline" size={16} color={color} />;
         default:
             return (
                 <Text

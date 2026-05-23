@@ -61,6 +61,7 @@ export type TaskEditFieldRendererProps = {
     isDescriptionInputFocused: boolean;
     setIsDescriptionInputFocused: React.Dispatch<React.SetStateAction<boolean>>;
     handleDescriptionChange: (text: string) => void;
+    handleDescriptionKeyPress: (event: any) => void;
     handleDescriptionUndo: () => MarkdownSelection | undefined;
     handleDescriptionApplyAction: (actionId: MarkdownToolbarActionId, selection: MarkdownSelection) => MarkdownToolbarResult;
     applyDescriptionResult: (result: MarkdownToolbarResult) => void;

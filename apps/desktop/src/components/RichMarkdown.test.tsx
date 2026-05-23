@@ -11,4 +11,17 @@ describe('RichMarkdown', () => {
         expect(screen.getByRole('heading', { level: 2, name: 'Section' })).toHaveClass('text-base', 'font-semibold');
         expect(screen.getByText('Body')).toBeInTheDocument();
     });
+
+    it('preserves soft line breaks inside paragraphs', () => {
+        render(<RichMarkdown markdown={'line 1\nline 2'} />);
+
+        expect(screen.getByText(/line 1/)).toHaveClass('whitespace-pre-line');
+    });
+
+    it('adds an accessible copy button to fenced code blocks', () => {
+        render(<RichMarkdown markdown={'```ts\nconst value = 1;\n```'} />);
+
+        expect(screen.getByRole('button', { name: 'Copy code' })).toBeInTheDocument();
+        expect(screen.getByText('const value = 1;')).toBeInTheDocument();
+    });
 });

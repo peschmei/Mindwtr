@@ -28,6 +28,7 @@ export function TaskEditContentField({
     fieldId,
     handleDescriptionApplyAction,
     handleDescriptionChange,
+    handleDescriptionKeyPress,
     handleDescriptionUndo,
     handleInputFocus,
     handleResetChecklist,
@@ -116,6 +117,7 @@ export function TaskEditContentField({
                                 }}
                                 onBlur={() => setIsDescriptionInputFocused(false)}
                                 onChangeText={handleDescriptionChange}
+                                onKeyPress={handleDescriptionKeyPress}
                                 onSelectionChange={(event) => setDescriptionSelection(event.nativeEvent.selection)}
                                 selection={getControlledTextInputSelection(descriptionSelection)}
                                 placeholder={t('taskEdit.descriptionPlaceholder')}

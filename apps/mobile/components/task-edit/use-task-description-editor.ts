@@ -1,7 +1,10 @@
 import React from 'react';
-import { TextInput } from 'react-native';
+import { TextInput, type NativeSyntheticEvent, type TextInputKeyPressEventData } from 'react-native';
 import {
+    applyMarkdownKeyboardShortcut,
+    applyMarkdownPairInsertion,
     applyMarkdownToolbarAction,
+    applyMarkdownUrlPaste,
     continueMarkdownOnTextChange,
     type MarkdownSelection,
     type MarkdownToolbarActionId,
@@ -146,6 +149,32 @@ export function useTaskDescriptionEditor({
     ]);
 
     const handleDescriptionChange = React.useCallback((text: string) => {
+        const pastedUrl = applyMarkdownUrlPaste(
+            descriptionDraftRef.current,
+            text,
+            descriptionSelectionRef.current,
+        );
+        if (pastedUrl) {
+            applyDescriptionValue(pastedUrl.value, {
+                baseSelection: descriptionSelectionRef.current,
+                nextSelection: pastedUrl.selection,
+            });
+            restoreDescriptionSelection(pastedUrl.selection);
+            return;
+        }
+        const pairedInsertion = applyMarkdownPairInsertion(
+            descriptionDraftRef.current,
+            text,
+            descriptionSelectionRef.current,
+        );
+        if (pairedInsertion) {
+            applyDescriptionValue(pairedInsertion.value, {
+                baseSelection: descriptionSelectionRef.current,
+                nextSelection: pairedInsertion.selection,
+            });
+            restoreDescriptionSelection(pairedInsertion.selection);
+            return;
+        }
         const continued = continueMarkdownOnTextChange(
             descriptionDraftRef.current,
             text,
@@ -161,6 +190,21 @@ export function useTaskDescriptionEditor({
         }
         applyDescriptionValue(text);
     }, [applyDescriptionValue, restoreDescriptionSelection]);
+
+    const handleDescriptionKeyPress = React.useCallback((event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+        const next = applyMarkdownKeyboardShortcut(
+            descriptionDraftRef.current,
+            descriptionSelectionRef.current,
+            { key: event.nativeEvent.key },
+        );
+        if (!next) return;
+        event.preventDefault?.();
+        applyDescriptionValue(next.value, {
+            baseSelection: descriptionSelectionRef.current,
+            nextSelection: next.selection,
+        });
+        restoreDescriptionSelection(next.selection);
+    }, [applyDescriptionValue, descriptionDraftRef, restoreDescriptionSelection]);
 
     const handleDescriptionSelectionChange = React.useCallback((selection: MarkdownSelection) => {
         const pendingSelection = pendingDescriptionSelectionRef.current;
@@ -224,6 +268,7 @@ export function useTaskDescriptionEditor({
         isDescriptionInputFocused,
         setIsDescriptionInputFocused,
         handleDescriptionChange,
+        handleDescriptionKeyPress,
         handleDescriptionUndo,
         handleDescriptionApplyAction,
         applyDescriptionResult,

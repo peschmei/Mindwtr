@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from 'react';
-import { CheckSquare, List, ListOrdered, Quote, Undo2 } from 'lucide-react';
+import { CheckSquare, Code, Link, List, ListOrdered, Quote, Undo2 } from 'lucide-react';
 import {
     MARKDOWN_TOOLBAR_ACTIONS,
     translateWithFallback,
@@ -29,6 +29,10 @@ const renderActionLabel = (actionId: MarkdownToolbarActionId, shortLabel: string
             return <CheckSquare className="h-3.5 w-3.5" />;
         case 'quote':
             return <Quote className="h-3.5 w-3.5" />;
+        case 'link':
+            return <Link className="h-3.5 w-3.5" />;
+        case 'code':
+            return <Code className="h-3.5 w-3.5" />;
         default:
             return <span>{shortLabel}</span>;
     }

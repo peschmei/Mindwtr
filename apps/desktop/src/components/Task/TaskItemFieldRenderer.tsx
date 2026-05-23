@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import {
+    applyMarkdownKeyboardShortcut,
+    applyMarkdownPairInsertion,
     applyMarkdownToolbarAction,
+    applyMarkdownUrlPaste,
     buildRRuleString,
     continueMarkdownOnEnter,
     hasTimeComponent,
@@ -296,8 +299,35 @@ export function TaskItemFieldRenderer({
         if (descriptionAutocomplete.handleKeyDown(event)) {
             return;
         }
+        const currentValue = event.currentTarget.value;
+        const selection = {
+            start: event.currentTarget.selectionStart ?? currentValue.length,
+            end: event.currentTarget.selectionEnd ?? currentValue.length,
+        };
+        const applyDescriptionKeyboardResult = (next: MarkdownToolbarResult) => {
+            applyDescriptionValue(next.value, {
+                baseSelection: selection,
+                nextSelection: next.selection,
+            });
+            descriptionSelectionRef.current = next.selection;
+            requestAnimationFrame(() => {
+                descriptionTextareaRef.current?.focus();
+                descriptionTextareaRef.current?.setSelectionRange(next.selection.start, next.selection.end);
+            });
+        };
         const lowerKey = event.key.toLowerCase();
         if ((event.metaKey || event.ctrlKey) && !event.altKey) {
+            if (lowerKey === 'b' || lowerKey === 'i') {
+                const next = applyMarkdownKeyboardShortcut(currentValue, selection, {
+                    key: event.key,
+                    ctrlKey: event.ctrlKey,
+                    metaKey: event.metaKey,
+                });
+                if (!next) return;
+                event.preventDefault();
+                applyDescriptionKeyboardResult(next);
+                return;
+            }
             if (lowerKey !== 'z') return;
             if (descriptionUndoRef.current.length === 0) return;
             event.preventDefault();
@@ -305,15 +335,50 @@ export function TaskItemFieldRenderer({
             return;
         }
 
+        if (
+            event.key === 'Tab'
+            || (
+                selection.start !== selection.end
+                && !event.altKey
+                && !event.ctrlKey
+                && !event.metaKey
+                && ['[', '(', '{', '`'].includes(event.key)
+            )
+        ) {
+            const next = event.key === 'Tab'
+                ? applyMarkdownKeyboardShortcut(currentValue, selection, { key: event.key })
+                : applyMarkdownPairInsertion(
+                    currentValue,
+                    `${currentValue.slice(0, selection.start)}${event.key}${currentValue.slice(selection.end)}`,
+                    selection,
+                );
+            if (!next) return;
+            event.preventDefault();
+            applyDescriptionKeyboardResult(next);
+            return;
+        }
+
         if (event.key !== 'Enter' || event.shiftKey || event.altKey) return;
+        const next = continueMarkdownOnEnter(currentValue, selection);
+        if (!next) return;
+
+        event.preventDefault();
+        applyDescriptionKeyboardResult(next);
+    };
+    const handleDescriptionPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+        const pastedText = event.clipboardData.getData('text/plain');
+        if (!pastedText) return;
         const currentValue = event.currentTarget.value;
         const selection = {
             start: event.currentTarget.selectionStart ?? currentValue.length,
             end: event.currentTarget.selectionEnd ?? currentValue.length,
         };
-        const next = continueMarkdownOnEnter(currentValue, selection);
+        const next = applyMarkdownUrlPaste(
+            currentValue,
+            `${currentValue.slice(0, selection.start)}${pastedText}${currentValue.slice(selection.end)}`,
+            selection,
+        );
         if (!next) return;
-
         event.preventDefault();
         applyDescriptionValue(next.value, {
             baseSelection: selection,
@@ -434,6 +499,7 @@ export function TaskItemFieldRenderer({
                     onUndo={handleDescriptionUndo}
                     onApplyAction={handleDescriptionApplyAction}
                     onKeyDown={handleDescriptionKeyDown}
+                    onPaste={handleDescriptionPaste}
                 />
             );
         case 'attachments':

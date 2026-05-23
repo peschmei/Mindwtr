@@ -10,6 +10,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    type TextInputKeyPressEventData,
     type TextInputSelectionChangeEventData,
     type NativeSyntheticEvent,
     type TextStyle,
@@ -17,7 +18,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
+    applyMarkdownKeyboardShortcut,
+    applyMarkdownPairInsertion,
     applyMarkdownToolbarAction,
+    applyMarkdownUrlPaste,
     continueMarkdownOnTextChange,
     type MarkdownSelection,
     type MarkdownToolbarActionId,
@@ -249,6 +253,38 @@ export function ExpandedMarkdownEditor({
     }, []);
 
     const handleChangeText = React.useCallback((nextValue: string) => {
+        const pastedUrl = applyMarkdownUrlPaste(
+            valueRef.current,
+            nextValue,
+            selectionRef.current,
+        );
+        if (pastedUrl) {
+            valueRef.current = pastedUrl.value;
+            selectionRef.current = pastedUrl.selection;
+            setEditorValue(pastedUrl.value);
+            setEditorSelection(pastedUrl.selection);
+            onChange(pastedUrl.value);
+            onSelectionChange(pastedUrl.selection);
+            restoreEditorFocus(pastedUrl.selection);
+            return;
+        }
+
+        const pairedInsertion = applyMarkdownPairInsertion(
+            valueRef.current,
+            nextValue,
+            selectionRef.current,
+        );
+        if (pairedInsertion) {
+            valueRef.current = pairedInsertion.value;
+            selectionRef.current = pairedInsertion.selection;
+            setEditorValue(pairedInsertion.value);
+            setEditorSelection(pairedInsertion.selection);
+            onChange(pairedInsertion.value);
+            onSelectionChange(pairedInsertion.selection);
+            restoreEditorFocus(pairedInsertion.selection);
+            return;
+        }
+
         const continued = continueMarkdownOnTextChange(
             valueRef.current,
             nextValue,
@@ -268,6 +304,22 @@ export function ExpandedMarkdownEditor({
         valueRef.current = nextValue;
         setEditorValue(nextValue);
         onChange(nextValue);
+    }, [onChange, onSelectionChange, restoreEditorFocus]);
+    const handleKeyPress = React.useCallback((event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+        const next = applyMarkdownKeyboardShortcut(
+            valueRef.current,
+            selectionRef.current,
+            { key: event.nativeEvent.key },
+        );
+        if (!next) return;
+        event.preventDefault?.();
+        valueRef.current = next.value;
+        selectionRef.current = next.selection;
+        setEditorValue(next.value);
+        setEditorSelection(next.selection);
+        onChange(next.value);
+        onSelectionChange(next.selection);
+        restoreEditorFocus(next.selection);
     }, [onChange, onSelectionChange, restoreEditorFocus]);
 
     const handleApplyAction = React.useCallback((actionId: MarkdownToolbarActionId, currentSelection: MarkdownSelection) => {
@@ -388,6 +440,7 @@ export function ExpandedMarkdownEditor({
                                     ]}
                                     value={editorValue}
                                     onChangeText={handleChangeText}
+                                    onKeyPress={handleKeyPress}
                                     onFocus={() => {
                                         setIsInputFocused(true);
                                     }}
