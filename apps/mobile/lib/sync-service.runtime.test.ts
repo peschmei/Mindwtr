@@ -10,6 +10,14 @@ const emptyData = {
   settings: {},
 };
 
+const remoteChangedData = {
+  ...emptyData,
+  settings: {
+    syncPreferences: { appearance: true },
+    theme: 'dark',
+  },
+};
+
 const emptyStats = {
   tasks: { mergedTotal: 0, conflicts: 0, conflictIds: [], maxClockSkewMs: 0, timestampAdjustments: 0 },
   projects: { mergedTotal: 0, conflicts: 0, conflictIds: [], maxClockSkewMs: 0, timestampAdjustments: 0 },
@@ -271,6 +279,7 @@ describe('mobile sync-service runtime', () => {
 
     coreMocks.flushPendingSave.mockResolvedValue(undefined);
     coreMocks.withRetry.mockImplementation(async (operation: () => Promise<unknown>) => await operation());
+    coreMocks.webdavGetJson.mockResolvedValue(emptyData);
     coreMocks.webdavHeadFile.mockResolvedValue({ exists: true, fingerprint: 'webdav:v1:etag="initial":mtime=:len=2' });
     coreMocks.cloudHeadJson.mockResolvedValue({ exists: true, fingerprint: 'cloud:v1:etag="initial":mtime=:len=2' });
     coreMocks.getInMemoryAppDataSnapshot.mockReturnValue(emptyData);
@@ -333,7 +342,7 @@ describe('mobile sync-service runtime', () => {
       isInternetReachable: false,
       isAirplaneModeEnabled: false,
     });
-    coreMocks.webdavGetJson.mockResolvedValue(emptyData);
+    coreMocks.webdavGetJson.mockResolvedValue(remoteChangedData);
 
     const result = await syncServiceModule.performMobileSync();
     unsubscribeActivity();
@@ -388,10 +397,23 @@ describe('mobile sync-service runtime', () => {
     expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
     expect(coreMocks.webdavGetJson).not.toHaveBeenCalled();
     expect(coreMocks.webdavHeadFile).toHaveBeenCalledTimes(1);
-    expect(storeStateRef.current.updateSettings).toHaveBeenCalledWith(expect.objectContaining({
-      lastSyncStatus: 'success',
-      lastSyncError: undefined,
-    }));
+    expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
+  });
+
+  it('keeps WebDAV read-only no-change checks out of the visible sync activity state', async () => {
+    const activityStates: string[] = [];
+    const unsubscribeActivity = syncServiceModule.subscribeMobileSyncActivityState((state) => {
+      activityStates.push(state);
+    });
+
+    const result = await syncServiceModule.performMobileSync();
+    unsubscribeActivity();
+
+    expect(result).toEqual({ success: true, skipped: 'unchanged' });
+    expect(activityStates).toEqual(['idle']);
+    expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
+    expect(coreMocks.webdavGetJson).toHaveBeenCalledTimes(1);
+    expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
   });
 
   it('reports Dropbox as unavailable in FOSS builds instead of falling through to self-hosted config', async () => {
@@ -423,7 +445,7 @@ describe('mobile sync-service runtime', () => {
       });
       return { remove: vi.fn() };
     });
-    coreMocks.webdavGetJson.mockResolvedValue(emptyData);
+    coreMocks.webdavGetJson.mockResolvedValue(remoteChangedData);
 
     const result = await syncServiceModule.performMobileSync();
 
@@ -440,7 +462,7 @@ describe('mobile sync-service runtime', () => {
     const result = await syncServiceModule.performMobileSync();
 
     expect(result).toEqual({ success: true, skipped: 'offline' });
-    expect(coreMocks.performSyncCycle).toHaveBeenCalledTimes(1);
+    expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
     expect(coreMocks.webdavGetJson).toHaveBeenCalledTimes(1);
     expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
     expect(logMocks.logSyncError).not.toHaveBeenCalled();
@@ -468,6 +490,7 @@ describe('mobile sync-service runtime', () => {
   });
 
   it('returns a queued retry result when fresher local edits abort the merge', async () => {
+    coreMocks.webdavGetJson.mockResolvedValue(remoteChangedData);
     coreMocks.performSyncCycle.mockImplementation(async (io: any) => {
       const local = await io.readLocal();
       storeStateRef.current = {
@@ -506,7 +529,7 @@ describe('mobile sync-service runtime', () => {
     );
   });
 
-  it('skips WebDAV writes when remote data only differs by device-local sync history', async () => {
+  it('skips the full WebDAV merge when remote data only differs by device-local sync history', async () => {
     const localSyncedData = {
       tasks: [],
       projects: [],
@@ -556,7 +579,8 @@ describe('mobile sync-service runtime', () => {
 
     const result = await syncServiceModule.performMobileSync();
 
-    expect(result).toEqual({ success: true, stats: emptyStats });
+    expect(result).toEqual({ success: true, skipped: 'unchanged' });
+    expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
     expect(coreMocks.webdavPutJson).not.toHaveBeenCalled();
   });
 
@@ -654,7 +678,7 @@ describe('mobile sync-service runtime', () => {
     const result = await syncServiceModule.performMobileSync();
 
     expect(result.success).toBe(false);
-    expect(coreMocks.performSyncCycle).toHaveBeenCalledTimes(1);
+    expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
     expect(storeStateRef.current.updateSettings).toHaveBeenCalledWith(expect.objectContaining({
       lastSyncStatus: 'error',
       lastSyncStats: undefined,
@@ -667,7 +691,7 @@ describe('mobile sync-service runtime', () => {
       releaseSync = resolve;
     });
 
-    coreMocks.webdavGetJson.mockResolvedValue(emptyData);
+    coreMocks.webdavGetJson.mockResolvedValue(remoteChangedData);
     coreMocks.performSyncCycle.mockImplementation(async (io: any) => {
       await io.readLocal();
       await io.readRemote();

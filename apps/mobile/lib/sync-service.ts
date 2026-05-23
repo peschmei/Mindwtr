@@ -512,6 +512,8 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
       let dropboxLastRev: string | null = null;
       let fileSyncPath: string | null = null;
       let remoteDataForCompare: AppData | null = null;
+      let readCheckLocalData: AppData | null = null;
+      let readCheckRemoteData: AppData | null | undefined;
       let webdavRemoteCorrupted = false;
       step = 'flush';
       await flushPendingSave();
@@ -663,6 +665,12 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
       }
 
       const readRemoteDataByBackend = async (): Promise<AppData | null> => {
+        if (readCheckRemoteData !== undefined) {
+          const data = readCheckRemoteData;
+          readCheckRemoteData = undefined;
+          remoteDataForCompare = data;
+          return data;
+        }
         await ensureNetworkStillAvailable();
         if (backend === 'webdav' && webdavConfig?.url) {
           ensureWebdavSyncNotRateLimited();
@@ -855,6 +863,12 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
       };
 
       const readLocalDataForSyncCycle = async (): Promise<AppData> => {
+        if (readCheckLocalData) {
+          ensureLocalSnapshotFresh();
+          const data = readCheckLocalData;
+          readCheckLocalData = null;
+          return data;
+        }
         const inMemorySnapshot = getInMemoryAppDataSnapshot();
         const baseData = preSyncedLocalData
           ? mergeAppData(preSyncedLocalData, inMemorySnapshot)
@@ -915,48 +929,6 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         dropboxClientId,
       });
 
-      const trySkipUnchangedSync = async (): Promise<MobileSyncResult | null> => {
-        if (!fastSyncScope) return null;
-        step = 'fast-check';
-        logSyncInfo('Sync step', { step });
-        const localDataForFastCheck = await readLocalDataForSyncCycle();
-        ensureLocalSnapshotFresh();
-        if (hasPendingSyncSideEffects(localDataForFastCheck)) return null;
-
-        const localFingerprint = computeSyncPayloadFingerprint(localDataForFastCheck);
-        const cached = await readFastSyncState(fastSyncScope);
-        if (!cached || cached.localFingerprint !== localFingerprint) return null;
-
-        let remoteFingerprint: string | null = null;
-        try {
-          remoteFingerprint = await readRemoteFingerprintForFastCheck();
-        } catch (error) {
-          logSyncWarning('Sync fast check failed; falling back to full sync', error);
-          return null;
-        }
-        if (!remoteFingerprint || remoteFingerprint !== cached.remoteFingerprint) return null;
-
-        const now = new Date().toISOString();
-        await writeFastSyncState({
-          scope: fastSyncScope,
-          localFingerprint,
-          remoteFingerprint,
-          checkedAt: now,
-        });
-        useTaskStore.getState().setError(null);
-        try {
-          await useTaskStore.getState().updateSettings({
-            lastSyncAt: now,
-            lastSyncStatus: 'success',
-            lastSyncError: undefined,
-          });
-        } catch (error) {
-          logSyncWarning('[Mobile] Failed to persist unchanged sync status', error);
-        }
-        logSyncInfo('Sync fast check found no changes', { backend });
-        return { success: true, skipped: 'unchanged' };
-      };
-
       const recordFastSyncState = async (data: AppData): Promise<void> => {
         if (!fastSyncScope || hasPendingSyncSideEffects(data)) return;
         if (useTaskStore.getState().lastDataChangeAt > localSnapshotChangeAt) return;
@@ -980,7 +952,65 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         });
       };
 
-      const unchangedResult = await trySkipUnchangedSync();
+      const trySkipUnchangedFastSync = async (): Promise<MobileSyncResult | null> => {
+        if (!fastSyncScope) return null;
+        step = 'fast-check';
+        logSyncInfo('Sync step', { step });
+        const localDataForFastCheck = await readLocalDataForSyncCycle();
+        ensureLocalSnapshotFresh();
+        if (hasPendingSyncSideEffects(localDataForFastCheck)) return null;
+
+        const localFingerprint = computeSyncPayloadFingerprint(localDataForFastCheck);
+        const cached = await readFastSyncState(fastSyncScope);
+        if (!cached || cached.localFingerprint !== localFingerprint) return null;
+
+        let remoteFingerprint: string | null = null;
+        try {
+          remoteFingerprint = await readRemoteFingerprintForFastCheck();
+        } catch (error) {
+          logSyncWarning('Sync fast check failed; falling back to read-only comparison', error);
+          return null;
+        }
+        if (!remoteFingerprint || remoteFingerprint !== cached.remoteFingerprint) return null;
+
+        await writeFastSyncState({
+          scope: fastSyncScope,
+          localFingerprint,
+          remoteFingerprint,
+          checkedAt: new Date().toISOString(),
+        });
+        useTaskStore.getState().setError(null);
+        logSyncInfo('Sync fast check found no changes', { backend });
+        return { success: true, skipped: 'unchanged' };
+      };
+
+      const trySkipUnchangedReadSync = async (): Promise<MobileSyncResult | null> => {
+        step = 'read-check';
+        logSyncInfo('Sync step', { step });
+        const localDataForReadCheck = await readLocalDataForSyncCycle();
+        ensureLocalSnapshotFresh();
+        if (hasPendingSyncSideEffects(localDataForReadCheck)) return null;
+
+        const remoteData = await readRemoteDataByBackend();
+        ensureLocalSnapshotFresh();
+        if (!remoteData) return null;
+        readCheckLocalData = localDataForReadCheck;
+        readCheckRemoteData = remoteData;
+
+        const localSanitized = sanitizeAppDataForRemote(localDataForReadCheck);
+        const remoteSanitized = sanitizeAppDataForRemote(remoteData);
+        if (!areSyncPayloadsEqual(remoteSanitized, localSanitized)) return null;
+
+        await recordFastSyncState(localDataForReadCheck);
+        readCheckLocalData = null;
+        readCheckRemoteData = undefined;
+        useTaskStore.getState().setError(null);
+        logSyncInfo('Sync read check found no changes', { backend });
+        return { success: true, skipped: 'unchanged' };
+      };
+
+      const unchangedFastResult = await trySkipUnchangedFastSync();
+      const unchangedResult = unchangedFastResult ?? await trySkipUnchangedReadSync();
       if (unchangedResult) {
         return unchangedResult;
       }
