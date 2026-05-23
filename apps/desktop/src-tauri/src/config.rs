@@ -758,7 +758,7 @@ fn read_obsidian_config_payload(config: &AppConfigToml) -> ObsidianConfigPayload
         .unwrap_or_default()
 }
 
-fn expand_obsidian_vault_scope(app: &tauri::AppHandle, payload: &ObsidianConfigPayload) {
+fn expand_obsidian_payload_scope(app: &tauri::AppHandle, payload: &ObsidianConfigPayload) {
     let Some(vault_path) = payload.vault_path.as_ref() else {
         return;
     };
@@ -802,8 +802,21 @@ pub(crate) fn set_obsidian_config(app: tauri::AppHandle, config: Value) -> Resul
             .map_err(|e| format!("Failed to encode Obsidian config: {e}"))?,
     );
     write_config_files(&config_path, &get_secrets_path(&app), &current)?;
-    expand_obsidian_vault_scope(&app, &payload);
+    expand_obsidian_payload_scope(&app, &payload);
     serde_json::to_value(payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub(crate) fn expand_obsidian_vault_scope(
+    app: tauri::AppHandle,
+    vault_path: String,
+) -> Result<bool, String> {
+    let trimmed = vault_path.trim();
+    if trimmed.is_empty() {
+        return Ok(false);
+    }
+    expand_tauri_fs_scope(&app, &PathBuf::from(trimmed));
+    Ok(true)
 }
 
 #[tauri::command]

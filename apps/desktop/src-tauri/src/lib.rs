@@ -57,8 +57,8 @@ mod ui;
 use audio::{start_audio_recording, stop_audio_recording, transcribe_whisper};
 use autostart::{get_launch_at_startup_enabled, set_launch_at_startup_enabled};
 use config::{
-    check_obsidian_vault_marker, expand_external_calendar_file_scopes, get_ai_key,
-    get_cloud_config, get_external_calendars, get_obsidian_config, get_sync_backend,
+    check_obsidian_vault_marker, expand_external_calendar_file_scopes, expand_obsidian_vault_scope,
+    get_ai_key, get_cloud_config, get_external_calendars, get_obsidian_config, get_sync_backend,
     get_webdav_config, get_webdav_password, set_ai_key, set_cloud_config, set_external_calendars,
     set_obsidian_config, set_sync_backend, set_webdav_config,
 };
@@ -849,6 +849,7 @@ pub fn run() {
             set_sync_backend,
             get_obsidian_config,
             set_obsidian_config,
+            expand_obsidian_vault_scope,
             check_obsidian_vault_marker,
             start_obsidian_watcher,
             stop_obsidian_watcher,
