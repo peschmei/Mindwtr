@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyThemeMode, watchNativeSystemThemePreference, watchSystemThemePreference } from './theme';
+import {
+    applyThemeMode,
+    resolveDesktopThemeMode,
+    watchNativeSystemThemePreference,
+    watchSystemThemePreference,
+} from './theme';
 
 const flushMicrotasks = async () => {
     await Promise.resolve();
@@ -37,6 +42,20 @@ describe('applyThemeMode', () => {
         applyThemeMode('system', 'light');
 
         expect(document.documentElement.classList.contains('dark')).toBe(false);
+    });
+});
+
+describe('resolveDesktopThemeMode', () => {
+    it('defaults missing synced and stored theme values to system', () => {
+        expect(resolveDesktopThemeMode(undefined, null)).toBe('system');
+    });
+
+    it('keeps an older local-only theme preference when synced settings are missing', () => {
+        expect(resolveDesktopThemeMode(undefined, 'dark')).toBe('dark');
+    });
+
+    it('prefers synced settings over older local storage', () => {
+        expect(resolveDesktopThemeMode('system', 'dark')).toBe('system');
     });
 });
 

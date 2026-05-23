@@ -30,7 +30,7 @@ import { beginSettingsOpenTrace, markSettingsOpenTrace, wrapSettingsOpenImport }
 import {
     THEME_STORAGE_KEY,
     applyThemeMode,
-    mapSyncedThemeToDesktop,
+    resolveDesktopThemeMode,
     resolveNativeTheme,
     watchNativeSystemThemePreference,
     watchSystemThemePreference,
@@ -132,9 +132,13 @@ function App() {
         await flushPendingSave();
     }, [updateSettings]);
 
+    const getActiveThemeMode = useCallback(() => (
+        resolveDesktopThemeMode(settingsTheme, localStorage.getItem(THEME_STORAGE_KEY))
+    ), [settingsTheme]);
+
     useEffect(() => {
-        const normalizedTheme = mapSyncedThemeToDesktop(settingsTheme);
-        if (!normalizedTheme) return;
+        if (!hasHydratedSettings) return;
+        const normalizedTheme = getActiveThemeMode();
         localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
         applyThemeMode(normalizedTheme);
 
@@ -143,7 +147,7 @@ function App() {
         import('@tauri-apps/api/app')
             .then(({ setTheme }) => setTheme(nativeTheme))
             .catch((error) => void logError(error, { scope: 'theme', step: 'apply' }));
-    }, [settingsTheme]);
+    }, [getActiveThemeMode, hasHydratedSettings]);
 
     useEffect(() => {
         if (!hasHydratedSettings) return;
@@ -157,7 +161,8 @@ function App() {
     }, [hasHydratedSettings, settingsTextSize]);
 
     useEffect(() => {
-        const normalizedTheme = mapSyncedThemeToDesktop(settingsTheme);
+        if (!hasHydratedSettings) return;
+        const normalizedTheme = getActiveThemeMode();
         if (normalizedTheme !== 'system') return;
 
         const stopWatchingSystemTheme = watchSystemThemePreference((theme) => {
@@ -184,7 +189,7 @@ function App() {
             stopWatchingSystemTheme();
             stopWatchingNativeTheme();
         };
-    }, [settingsTheme]);
+    }, [getActiveThemeMode, hasHydratedSettings]);
 
     useEffect(() => {
         if (!settingsLanguage || !isSupportedLanguage(settingsLanguage)) return;

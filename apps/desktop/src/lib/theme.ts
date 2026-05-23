@@ -41,6 +41,15 @@ export const mapSyncedThemeToDesktop = (value: AppData['settings']['theme'] | nu
     return null;
 };
 
+export const resolveDesktopThemeMode = (
+    syncedTheme: AppData['settings']['theme'] | null | undefined,
+    storedTheme: string | null | undefined,
+): DesktopThemeMode => (
+    mapSyncedThemeToDesktop(syncedTheme)
+    ?? coerceDesktopThemeMode(storedTheme)
+    ?? 'system'
+);
+
 export const resolveSystemThemePreference = (override?: SystemThemePreference): SystemThemePreference => {
     if (override === 'light' || override === 'dark') return override;
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null;
