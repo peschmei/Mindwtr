@@ -31,4 +31,20 @@ if (!guardedSupportedModes) {
   process.exit(1);
 }
 
+const appShortcutPhrases = source.match(/phrases:\s*\[[\s\S]*?\]/);
+if (!appShortcutPhrases) {
+  console.error('Expected MindwtrSiriCaptureIntent AppShortcut phrases.');
+  process.exit(1);
+}
+
+if (/\\\(\\\.\$(task|note)\)/.test(appShortcutPhrases[0])) {
+  console.error(
+    'MindwtrSiriCaptureIntent AppShortcut phrases must not interpolate String parameters.'
+  );
+  console.error(
+    'The iOS 26 AppIntents metadata processor only accepts AppEntity/AppEnum values in shortcut phrases.'
+  );
+  process.exit(1);
+}
+
 console.log('iOS App Intents availability guard is valid.');

@@ -88,8 +88,8 @@ struct MindwtrSiriCaptureShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: MindwtrSiriCaptureIntent(),
             phrases: [
-                "Capture \(\.$task) in \(.applicationName)",
-                "Add \(\.$task) to \(.applicationName)",
+                "Capture in \(.applicationName)",
+                "Add to \(.applicationName)",
                 "Create a task in \(.applicationName)"
             ],
             shortTitle: "Capture",

@@ -23,7 +23,9 @@ describe('ios-widgets-and-shortcuts', () => {
     expect(collectSwiftFiles(sourceDir)).toContain('MindwtrSiriCaptureIntents.swift');
     expect(source).toContain('struct MindwtrSiriCaptureIntent: AppIntent');
     expect(source).toContain('struct MindwtrSiriCaptureShortcuts: AppShortcutsProvider');
-    expect(source).toContain('"Capture \\(\\.$task) in \\(.applicationName)"');
+    expect(source).toContain('"Capture in \\(.applicationName)"');
+    const phraseBlock = source.match(/phrases:\s*\[[\s\S]*?\]/)?.[0] ?? '';
+    expect(phraseBlock).not.toContain('\\(\\.$task)');
     expect(source).toContain('mindwtr');
     expect(source).toContain('/capture');
     expect(source).toContain('.foreground(.immediate)');
