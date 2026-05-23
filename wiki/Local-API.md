@@ -11,8 +11,9 @@ Desktop builds can start the local REST API without running source code:
 - Open **Settings -> Advanced**.
 - Enable **Local API server**.
 - Keep the default port `3456` or choose another localhost port.
+- Copy the generated bearer token from the same settings card.
 
-The app binds to `127.0.0.1` only. Mobile binaries do not expose a local REST API surface.
+The app binds to `127.0.0.1` only and requires `Authorization: Bearer <token>` on every request. Mobile binaries do not expose a local REST API surface.
 
 ### Development Helper
 
@@ -56,7 +57,7 @@ bun run mindwtr:api -- --port 4317 --host 127.0.0.1
 | ------------------- | ---------------------------------------------------- |
 | `MINDWTR_DATA`      | Override data.json location (if `--data` is omitted) |
 | `MINDWTR_DB_PATH`   | Override mindwtr.db location (if `--db` is omitted)  |
-| `MINDWTR_API_TOKEN` | If set, require `Authorization: Bearer <token>`      |
+| `MINDWTR_API_TOKEN` | Bun helper only: if set, require `Authorization: Bearer <token>` |
 
 By default, the API resolves both `data.json` and `mindwtr.db` using Mindwtr's platform paths (preferring XDG data on Linux).
 
@@ -64,11 +65,13 @@ By default, the API resolves both `data.json` and `mindwtr.db` using Mindwtr's p
 
 ## Authentication
 
-If `MINDWTR_API_TOKEN` is set, include:
+Desktop Local API requests always require the bearer token shown in **Settings -> Advanced**:
 
 ```
 Authorization: Bearer <token>
 ```
+
+The Bun helper only requires a token when `MINDWTR_API_TOKEN` is set.
 
 ---
 
@@ -142,13 +145,17 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "input": "Call Alice due:tomorrow @phone #errands",
+  "input": "Call Alice",
   "title": "Alternative title",
-  "props": { "status": "next" }
+  "props": {
+    "status": "next",
+    "contexts": ["@phone"],
+    "tags": ["#errands"]
+  }
 }
 ```
 
-If `input` is provided, it runs the quick-add parser (`parseQuickAdd`) to derive fields like `dueDate`, `tags`, `contexts`, `projectId`, etc.
+Desktop uses `title` when present, otherwise `input`, and applies explicit `props`. The Bun helper additionally runs `parseQuickAdd` for `input`.
 
 ---
 
@@ -157,15 +164,17 @@ If `input` is provided, it runs the quick-add parser (`parseQuickAdd`) to derive
 **List next actions:**
 
 ```bash
-curl -s 'http://127.0.0.1:4317/tasks?status=next' | jq .
+curl -s 'http://127.0.0.1:3456/tasks?status=next' \
+  -H 'Authorization: Bearer <token>' | jq .
 ```
 
-**Create via quick-add:**
+**Create with explicit props:**
 
 ```bash
-curl -s -X POST 'http://127.0.0.1:4317/tasks' \
+curl -s -X POST 'http://127.0.0.1:3456/tasks' \
+  -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
-  -d '{"input":"Call Alice due:tomorrow @phone #errands"}' | jq .
+  -d '{"title":"Call Alice","props":{"status":"next","contexts":["@phone"],"tags":["#errands"]}}' | jq .
 ```
 
 **Complete a task:**
@@ -229,7 +238,8 @@ bun mindwtr:cli -- projects
 ## Security Notes
 
 - The server is intended to run on `127.0.0.1` (localhost). Don't expose it publicly unless you understand the risks.
-- If you need remote access, set `MINDWTR_API_TOKEN` and place the server behind an authenticated reverse proxy.
+- Desktop API access requires the generated bearer token from Settings. Keep that token private.
+- If you need remote access to the Bun helper, set `MINDWTR_API_TOKEN` and place the server behind an authenticated reverse proxy.
 
 ---
 

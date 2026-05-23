@@ -362,6 +362,7 @@ struct AppConfigToml {
     ai_key_gemini: Option<String>,
     local_api_enabled: Option<String>,
     local_api_port: Option<String>,
+    local_api_token: Option<String>,
 }
 
 fn default_obsidian_scan_folders() -> Vec<String> {

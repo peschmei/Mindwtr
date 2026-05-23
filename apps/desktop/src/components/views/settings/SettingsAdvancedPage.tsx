@@ -127,6 +127,18 @@ export function SettingsAdvancedPage({
                         onChange={(event) => onLocalApiPortInputChange(event.target.value)}
                     />
                 </SettingsRow>
+                {localApiStatus.enabled && localApiStatus.token && (
+                    <SettingsRow title={t.localApiToken} description={t.localApiTokenDesc}>
+                        <code className="max-w-[320px] break-all rounded border border-border bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
+                            {localApiStatus.token}
+                        </code>
+                    </SettingsRow>
+                )}
+                {localApiStatus.enabled && (
+                    <div className="px-4 py-3 text-xs text-muted-foreground">
+                        {t.localApiSecurityNote}
+                    </div>
+                )}
                 {errorText && (
                     <div className="px-4 py-3 text-xs text-destructive">
                         {errorText}

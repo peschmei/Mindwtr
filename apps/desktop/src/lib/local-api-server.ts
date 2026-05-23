@@ -7,6 +7,7 @@ export type LocalApiServerStatus = {
     running: boolean;
     port: number;
     url?: string | null;
+    token?: string | null;
     error?: string | null;
 };
 
@@ -15,6 +16,7 @@ const fallbackStatus = (): LocalApiServerStatus => ({
     running: false,
     port: DEFAULT_LOCAL_API_PORT,
     url: null,
+    token: null,
     error: null,
 });
 

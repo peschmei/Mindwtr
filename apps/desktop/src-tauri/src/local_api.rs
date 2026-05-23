@@ -19,6 +19,9 @@ const MIN_LOCAL_API_PORT: u16 = 1024;
 const MAX_LOCAL_API_PORT: u16 = u16::MAX;
 const REQUEST_HEADER_LIMIT_BYTES: usize = 16 * 1024;
 const REQUEST_BODY_LIMIT_BYTES: usize = 1_000_000;
+const LOCAL_API_TOKEN_BYTES: usize = 32;
+const LOCAL_API_REV_BY: &str = "desktop-local-api";
+const MAX_SYNC_REVISION: i64 = 2_147_483_647;
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -27,6 +30,7 @@ pub(crate) struct LocalApiServerStatus {
     running: bool,
     port: u16,
     url: Option<String>,
+    token: Option<String>,
     error: Option<String>,
 }
 
@@ -34,6 +38,7 @@ pub(crate) struct LocalApiServerStatus {
 struct LocalApiConfig {
     enabled: bool,
     port: u16,
+    token: Option<String>,
 }
 
 impl Default for LocalApiConfig {
@@ -41,6 +46,7 @@ impl Default for LocalApiConfig {
         Self {
             enabled: false,
             port: DEFAULT_LOCAL_API_PORT,
+            token: None,
         }
     }
 }
@@ -68,6 +74,7 @@ struct ApiRequest {
     method: String,
     path: String,
     query: HashMap<String, String>,
+    headers: HashMap<String, String>,
     body: Vec<u8>,
 }
 
@@ -126,6 +133,12 @@ fn generate_uuid_v4() -> String {
     )
 }
 
+fn generate_local_api_token() -> String {
+    let mut bytes = [0_u8; LOCAL_API_TOKEN_BYTES];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
 fn normalize_local_api_port(port: Option<u16>) -> Result<u16, String> {
     let port = port.unwrap_or(DEFAULT_LOCAL_API_PORT);
     if !(MIN_LOCAL_API_PORT..=MAX_LOCAL_API_PORT).contains(&port) {
@@ -143,6 +156,12 @@ fn parse_bool_setting(value: Option<&String>) -> bool {
         .unwrap_or(false)
 }
 
+fn normalize_local_api_token(value: Option<&String>) -> Option<String> {
+    value
+        .map(|raw| raw.trim().to_string())
+        .filter(|raw| !raw.is_empty())
+}
+
 fn read_local_api_config(app: &tauri::AppHandle) -> LocalApiConfig {
     let config = read_config(app);
     let port = config
@@ -154,6 +173,7 @@ fn read_local_api_config(app: &tauri::AppHandle) -> LocalApiConfig {
     LocalApiConfig {
         enabled: parse_bool_setting(config.local_api_enabled.as_ref()),
         port,
+        token: normalize_local_api_token(config.local_api_token.as_ref()),
     }
 }
 
@@ -161,7 +181,20 @@ fn write_local_api_config(app: &tauri::AppHandle, next: LocalApiConfig) -> Resul
     let mut config: AppConfigToml = read_config(app);
     config.local_api_enabled = Some(if next.enabled { "true" } else { "false" }.to_string());
     config.local_api_port = Some(next.port.to_string());
+    config.local_api_token = next.token;
     write_config_files(&get_config_path(app), &get_secrets_path(app), &config)
+}
+
+fn ensure_local_api_token(
+    app: &tauri::AppHandle,
+    mut config: LocalApiConfig,
+    required: bool,
+) -> Result<LocalApiConfig, String> {
+    if required && config.token.is_none() {
+        config.token = Some(generate_local_api_token());
+        write_local_api_config(app, config.clone())?;
+    }
+    Ok(config)
 }
 
 fn status_from_runtime(config: LocalApiConfig, runtime: &LocalApiRuntime) -> LocalApiServerStatus {
@@ -172,6 +205,7 @@ fn status_from_runtime(config: LocalApiConfig, runtime: &LocalApiRuntime) -> Loc
         running: running_port.is_some(),
         port,
         url: running_port.map(|value| format!("http://{}:{}", LOCAL_API_HOST, value)),
+        token: config.enabled.then(|| config.token.clone()).flatten(),
         error: runtime.last_error.clone(),
     }
 }
@@ -190,6 +224,7 @@ fn stop_runtime(runtime: &mut LocalApiRuntime) {
 fn start_runtime(
     app: tauri::AppHandle,
     port: u16,
+    token: String,
     write_lock: Arc<Mutex<()>>,
 ) -> Result<LocalApiHandle, String> {
     ensure_data_file(&app)?;
@@ -206,8 +241,9 @@ fn start_runtime(
             match listener.accept() {
                 Ok((stream, _)) => {
                     let app = app.clone();
+                    let token = token.clone();
                     let write_lock = write_lock.clone();
-                    thread::spawn(move || handle_connection(app, write_lock, stream));
+                    thread::spawn(move || handle_connection(app, token, write_lock, stream));
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                     thread::sleep(Duration::from_millis(50));
@@ -235,6 +271,13 @@ pub(crate) fn start_configured_local_api_server(
     if !config.enabled {
         return;
     }
+    let config = match ensure_local_api_token(app, config, true) {
+        Ok(config) => config,
+        Err(error) => {
+            log::warn!("Failed to prepare local API token: {error}");
+            return;
+        }
+    };
 
     let mut runtime = state
         .inner
@@ -243,7 +286,11 @@ pub(crate) fn start_configured_local_api_server(
     if runtime.handle.is_some() {
         return;
     }
-    match start_runtime(app.clone(), config.port, state.write_lock.clone()) {
+    let Some(token) = config.token.clone() else {
+        runtime.last_error = Some("Local API token is not configured".to_string());
+        return;
+    };
+    match start_runtime(app.clone(), config.port, token, state.write_lock.clone()) {
         Ok(handle) => {
             runtime.handle = Some(handle);
             runtime.last_error = None;
@@ -261,6 +308,7 @@ pub(crate) fn get_local_api_server_status(
     state: tauri::State<'_, LocalApiServerState>,
 ) -> Result<LocalApiServerStatus, String> {
     let config = read_local_api_config(&app);
+    let config = ensure_local_api_token(&app, config.clone(), config.enabled)?;
     let runtime = state.inner.lock().map_err(|e| e.to_string())?;
     Ok(status_from_runtime(config, &runtime))
 }
@@ -273,12 +321,22 @@ pub(crate) fn set_local_api_server_config(
     port: Option<u16>,
 ) -> Result<LocalApiServerStatus, String> {
     let port = normalize_local_api_port(port)?;
+    let current_config = ensure_local_api_token(&app, read_local_api_config(&app), enabled)?;
+    let token = current_config.token.clone();
     let mut runtime = state.inner.lock().map_err(|e| e.to_string())?;
 
     if enabled {
+        let token_for_runtime = token
+            .clone()
+            .ok_or_else(|| "Local API token is not configured".to_string())?;
         if runtime.handle.as_ref().map(|handle| handle.port) != Some(port) {
             stop_runtime(&mut runtime);
-            match start_runtime(app.clone(), port, state.write_lock.clone()) {
+            match start_runtime(
+                app.clone(),
+                port,
+                token_for_runtime.clone(),
+                state.write_lock.clone(),
+            ) {
                 Ok(handle) => {
                     runtime.handle = Some(handle);
                     runtime.last_error = None;
@@ -290,12 +348,14 @@ pub(crate) fn set_local_api_server_config(
                         LocalApiConfig {
                             enabled: false,
                             port,
+                            token: token.clone(),
                         },
                     );
                     return Ok(status_from_runtime(
                         LocalApiConfig {
                             enabled: false,
                             port,
+                            token,
                         },
                         &runtime,
                     ));
@@ -307,15 +367,24 @@ pub(crate) fn set_local_api_server_config(
         runtime.last_error = None;
     }
 
-    let config = LocalApiConfig { enabled, port };
+    let config = LocalApiConfig {
+        enabled,
+        port,
+        token,
+    };
     write_local_api_config(&app, config.clone())?;
     Ok(status_from_runtime(config, &runtime))
 }
 
-fn handle_connection(app: tauri::AppHandle, write_lock: Arc<Mutex<()>>, mut stream: TcpStream) {
+fn handle_connection(
+    app: tauri::AppHandle,
+    token: String,
+    write_lock: Arc<Mutex<()>>,
+    mut stream: TcpStream,
+) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let response = match read_request(&mut stream) {
-        Ok(Some(request)) => handle_api_request(&app, &write_lock, request),
+        Ok(Some(request)) => handle_api_request(&app, &token, &write_lock, request),
         Ok(None) => return,
         Err(error) => ApiResponse::error(400, error),
     };
@@ -363,16 +432,20 @@ fn read_request(stream: &mut TcpStream) -> Result<Option<ApiRequest>, String> {
     let (path, query) = parse_request_target(target);
 
     let mut content_length = 0_usize;
+    let mut headers = HashMap::new();
     for line in lines {
         let Some((name, value)) = line.split_once(':') else {
             continue;
         };
-        if name.trim().eq_ignore_ascii_case("content-length") {
+        let header_name = name.trim().to_ascii_lowercase();
+        let header_value = value.trim().to_string();
+        if header_name == "content-length" {
             content_length = value
                 .trim()
                 .parse::<usize>()
                 .map_err(|_| "Invalid Content-Length".to_string())?;
         }
+        headers.insert(header_name, header_value);
     }
     if content_length > REQUEST_BODY_LIMIT_BYTES {
         return Err("Request body too large".to_string());
@@ -392,6 +465,7 @@ fn read_request(stream: &mut TcpStream) -> Result<Option<ApiRequest>, String> {
         method,
         path,
         query,
+        headers,
         body,
     }))
 }
@@ -417,42 +491,58 @@ fn parse_request_target(target: &str) -> (String, HashMap<String, String>) {
 }
 
 fn write_response(stream: &mut TcpStream, response: ApiResponse) -> Result<(), String> {
+    let raw = http_response(&response);
+    stream.write_all(raw.as_bytes()).map_err(|e| e.to_string())
+}
+
+fn http_response(response: &ApiResponse) -> String {
     let status_text = match response.status {
         200 => "OK",
         201 => "Created",
         400 => "Bad Request",
+        401 => "Unauthorized",
         404 => "Not Found",
         405 => "Method Not Allowed",
         413 => "Payload Too Large",
         500 => "Internal Server Error",
         _ => "OK",
     };
-    let body = serde_json::to_string_pretty(&response.body).map_err(|e| e.to_string())?;
-    let headers = format!(
-        "HTTP/1.1 {} {}\r\nContent-Type: application/json; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: Authorization, Content-Type\r\nAccess-Control-Allow-Methods: GET,POST,PATCH,DELETE,OPTIONS\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+    let body = serde_json::to_string_pretty(&response.body).unwrap_or_else(|_| "{}".to_string());
+    format!(
+        "HTTP/1.1 {} {}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         response.status,
         status_text,
-        body.as_bytes().len(),
-    );
-    stream
-        .write_all(headers.as_bytes())
-        .and_then(|_| stream.write_all(body.as_bytes()))
-        .map_err(|e| e.to_string())
+        body.len(),
+        body,
+    )
 }
 
 fn handle_api_request(
     app: &tauri::AppHandle,
+    token: &str,
     write_lock: &Arc<Mutex<()>>,
     request: ApiRequest,
 ) -> ApiResponse {
     if request.method == "OPTIONS" {
         return ApiResponse::ok(json!({ "ok": true }));
     }
+    if !is_request_authorized(&request, token) {
+        return ApiResponse::error(401, "Unauthorized");
+    }
 
     match route_api_request(app, write_lock, request) {
         Ok(response) => response,
         Err(error) => api_error_response(error),
     }
+}
+
+fn is_request_authorized(request: &ApiRequest, token: &str) -> bool {
+    let expected = format!("Bearer {token}");
+    request
+        .headers
+        .get("authorization")
+        .map(|value| value.trim() == expected)
+        .unwrap_or(false)
 }
 
 fn api_error_response(error: String) -> ApiResponse {
@@ -519,7 +609,8 @@ fn route_api_request(
         let _guard = write_lock.lock().map_err(|e| e.to_string())?;
         let mut data = load_data_snapshot(app)?;
         let body = parse_body_object(&request.body)?;
-        let task = create_task_from_body(&body)?;
+        let device_id = device_id_from_data(&data);
+        let task = create_task_from_body(&body, &device_id)?;
         ensure_array_mut(&mut data, "tasks")?.push(Value::Object(task.clone()));
         persist_data_snapshot_with_retries(app, &data)?;
         return Ok(ApiResponse::created(json!({ "task": Value::Object(task) })));
@@ -528,9 +619,10 @@ fn route_api_request(
     if segments.len() == 2 && segments[0] == "tasks" && request.method == "PATCH" {
         let _guard = write_lock.lock().map_err(|e| e.to_string())?;
         let mut data = load_data_snapshot(app)?;
+        let device_id = device_id_from_data(&data);
         let body = parse_body_object(&request.body)?;
         let task = update_task_in_data(&mut data, &segments[1], |task| {
-            apply_task_patch(task, &body)
+            apply_task_patch(task, &body, &device_id)
         })?;
         persist_data_snapshot_with_retries(app, &data)?;
         return Ok(ApiResponse::ok(json!({ "task": task })));
@@ -539,10 +631,12 @@ fn route_api_request(
     if segments.len() == 2 && segments[0] == "tasks" && request.method == "DELETE" {
         let _guard = write_lock.lock().map_err(|e| e.to_string())?;
         let mut data = load_data_snapshot(app)?;
+        let device_id = device_id_from_data(&data);
         update_task_in_data(&mut data, &segments[1], |task| {
             let now = now_iso();
             task.insert("deletedAt".to_string(), Value::String(now.clone()));
             task.insert("updatedAt".to_string(), Value::String(now));
+            bump_task_revision(task, &device_id);
             Ok(())
         })?;
         persist_data_snapshot_with_retries(app, &data)?;
@@ -556,6 +650,7 @@ fn route_api_request(
         }
         let _guard = write_lock.lock().map_err(|e| e.to_string())?;
         let mut data = load_data_snapshot(app)?;
+        let device_id = device_id_from_data(&data);
         let task = update_task_in_data(&mut data, &segments[1], |task| {
             let now = now_iso();
             if action == "complete" {
@@ -568,6 +663,7 @@ fn route_api_request(
                 task.remove("purgedAt");
             }
             task.insert("updatedAt".to_string(), Value::String(now));
+            bump_task_revision(task, &device_id);
             Ok(())
         })?;
         persist_data_snapshot_with_retries(app, &data)?;
@@ -738,7 +834,40 @@ fn parse_body_object(body: &[u8]) -> Result<Map<String, Value>, String> {
         .ok_or_else(|| "Invalid JSON body".to_string())
 }
 
-fn create_task_from_body(body: &Map<String, Value>) -> Result<Map<String, Value>, String> {
+fn device_id_from_data(data: &Value) -> String {
+    data.get("settings")
+        .and_then(|settings| settings.get("deviceId"))
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(LOCAL_API_REV_BY)
+        .to_string()
+}
+
+fn next_revision(value: Option<&Value>) -> i64 {
+    let current = value
+        .and_then(|value| value.as_i64())
+        .filter(|value| *value >= 0)
+        .unwrap_or(0);
+    if current >= MAX_SYNC_REVISION {
+        MAX_SYNC_REVISION
+    } else {
+        current + 1
+    }
+}
+
+fn bump_task_revision(task: &mut Map<String, Value>, device_id: &str) {
+    task.insert(
+        "rev".to_string(),
+        Value::Number(next_revision(task.get("rev")).into()),
+    );
+    task.insert("revBy".to_string(), Value::String(device_id.to_string()));
+}
+
+fn create_task_from_body(
+    body: &Map<String, Value>,
+    device_id: &str,
+) -> Result<Map<String, Value>, String> {
     let input = body
         .get("input")
         .and_then(|value| value.as_str())
@@ -770,12 +899,15 @@ fn create_task_from_body(body: &Map<String, Value>) -> Result<Map<String, Value>
         .or_insert_with(|| Value::String("inbox".to_string()));
     task.insert("createdAt".to_string(), Value::String(now.clone()));
     task.insert("updatedAt".to_string(), Value::String(now));
+    task.insert("rev".to_string(), Value::Number(1.into()));
+    task.insert("revBy".to_string(), Value::String(device_id.to_string()));
     Ok(task)
 }
 
 fn apply_task_patch(
     task: &mut Map<String, Value>,
     patch: &Map<String, Value>,
+    device_id: &str,
 ) -> Result<(), String> {
     let mut sanitized = patch.clone();
     sanitize_task_patch_map(&mut sanitized)?;
@@ -787,6 +919,7 @@ fn apply_task_patch(
         }
     }
     task.insert("updatedAt".to_string(), Value::String(now_iso()));
+    bump_task_revision(task, device_id);
     Ok(())
 }
 
@@ -878,6 +1011,52 @@ mod tests {
         assert_eq!(
             filtered[0].get("id").and_then(|value| value.as_str()),
             Some("1")
+        );
+    }
+
+    #[test]
+    fn local_api_requires_bearer_token() {
+        let mut headers = HashMap::new();
+        headers.insert("authorization".to_string(), "Bearer secret".to_string());
+        let authorized = ApiRequest {
+            method: "GET".to_string(),
+            path: "/tasks".to_string(),
+            query: HashMap::new(),
+            headers,
+            body: Vec::new(),
+        };
+        let unauthorized = ApiRequest {
+            method: "GET".to_string(),
+            path: "/tasks".to_string(),
+            query: HashMap::new(),
+            headers: HashMap::new(),
+            body: Vec::new(),
+        };
+
+        assert!(is_request_authorized(&authorized, "secret"));
+        assert!(!is_request_authorized(&unauthorized, "secret"));
+    }
+
+    #[test]
+    fn local_api_response_does_not_enable_wildcard_cors() {
+        let response = ApiResponse::ok(json!({ "ok": true }));
+        let raw = http_response(&response);
+
+        assert!(!raw.contains("Access-Control-Allow-Origin"));
+        assert!(!raw.contains("Access-Control-Allow-Methods"));
+    }
+
+    #[test]
+    fn local_api_tasks_include_revision_metadata() {
+        let mut body = Map::new();
+        body.insert("input".to_string(), Value::String("Call Alice".to_string()));
+
+        let task = create_task_from_body(&body, "device-a").expect("task");
+
+        assert_eq!(task.get("rev").and_then(|value| value.as_i64()), Some(1));
+        assert_eq!(
+            task.get("revBy").and_then(|value| value.as_str()),
+            Some("device-a")
         );
     }
 }

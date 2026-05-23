@@ -190,6 +190,8 @@ pub(crate) fn read_config_toml(path: &Path) -> AppConfigToml {
             config.local_api_enabled = parse_toml_string_value(value);
         } else if key == "local_api_port" {
             config.local_api_port = parse_toml_string_value(value);
+        } else if key == "local_api_token" {
+            config.local_api_token = parse_toml_string_value(value);
         }
     }
     config
@@ -328,6 +330,12 @@ fn write_config_toml_with_header(
             serialize_toml_string_value(local_api_port)
         ));
     }
+    if let Some(local_api_token) = &config.local_api_token {
+        lines.push(format!(
+            "local_api_token = {}",
+            serialize_toml_string_value(local_api_token)
+        ));
+    }
     let content = format!("{}\n", lines.join("\n"));
     fs::write(path, content).map_err(|e| e.to_string())
 }
@@ -390,6 +398,9 @@ fn merge_config(base: &mut AppConfigToml, overrides: AppConfigToml) {
     if overrides.local_api_port.is_some() {
         base.local_api_port = overrides.local_api_port;
     }
+    if overrides.local_api_token.is_some() {
+        base.local_api_token = overrides.local_api_token;
+    }
 }
 
 pub(crate) fn read_config(app: &tauri::AppHandle) -> AppConfigToml {
@@ -437,6 +448,10 @@ fn split_config_for_secrets(config: &AppConfigToml) -> (AppConfigToml, AppConfig
         secrets_config.ai_key_gemini = Some(value);
         public_config.ai_key_gemini = None;
     }
+    if let Some(value) = config.local_api_token.clone() {
+        secrets_config.local_api_token = Some(value);
+        public_config.local_api_token = None;
+    }
 
     (public_config, secrets_config)
 }
@@ -461,6 +476,7 @@ fn config_has_values(config: &AppConfigToml) -> bool {
         || config.ai_key_gemini.is_some()
         || config.local_api_enabled.is_some()
         || config.local_api_port.is_some()
+        || config.local_api_token.is_some()
 }
 
 pub(crate) fn write_config_files(
