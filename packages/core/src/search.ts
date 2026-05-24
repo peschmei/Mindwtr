@@ -192,6 +192,8 @@ export function matchesTask(term: SearchTerm, task: Task, projectById: Map<strin
 
     if (!field) {
         result = matchesText(task.title, value) || matchesText(task.description, value) || matchesText(task.location, value);
+    } else if (field === 'id') {
+        result = value.trim().length > 0 && matchesText(task.id, value);
     } else if (field === 'status') {
         const normalized = normalizeTaskStatus(value);
         result = TASK_STATUS_SET.has(normalized) ? task.status === normalized : false;

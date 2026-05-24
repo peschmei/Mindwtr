@@ -269,6 +269,40 @@ describe('search', () => {
         expect(filterTasksBySearch(tasks, [], 'location:home').map((task) => task.id)).toEqual(['t2']);
     });
 
+    it('matches task id filters', () => {
+        const nowIso = new Date('2025-01-01T00:00:00Z').toISOString();
+        const tasks: Task[] = [
+            {
+                id: '018f4d3a-b89c-74c3-81aa-0c1ef3de0001',
+                title: 'Investigate sync warning',
+                status: 'next',
+                tags: [],
+                contexts: [],
+                createdAt: nowIso,
+                updatedAt: nowIso,
+            },
+            {
+                id: '018f4d3a-b89c-74c3-81aa-0c1ef3de0002',
+                title: 'Review notes',
+                status: 'next',
+                tags: [],
+                contexts: [],
+                createdAt: nowIso,
+                updatedAt: nowIso,
+            },
+        ];
+
+        expect(filterTasksBySearch(tasks, [], 'id:0c1ef3de0001').map((task) => task.id)).toEqual([
+            '018f4d3a-b89c-74c3-81aa-0c1ef3de0001',
+        ]);
+        expect(filterTasksBySearch(tasks, [], 'id:018F4D3A-B89C-74C3-81AA-0C1EF3DE0002').map((task) => task.id)).toEqual([
+            '018f4d3a-b89c-74c3-81aa-0c1ef3de0002',
+        ]);
+        expect(filterTasksBySearch(tasks, [], '-id:0002').map((task) => task.id)).toEqual([
+            '018f4d3a-b89c-74c3-81aa-0c1ef3de0001',
+        ]);
+    });
+
     it('does not build project lookup when query has no project terms', () => {
         const nowIso = new Date('2025-01-01T00:00:00Z').toISOString();
         const tasks: Task[] = [
