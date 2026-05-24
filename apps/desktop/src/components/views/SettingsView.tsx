@@ -53,8 +53,6 @@ import {
 } from "./settings/labels";
 import {
   isDesktopAnalyticsHeartbeatConfigured,
-  resetDesktopAnalyticsOptOutMarker,
-  sendDesktopAnalyticsOptOut,
 } from "../../lib/analytics-heartbeat";
 import { SettingsUpdateModal } from "./settings/SettingsUpdateModal";
 import { SettingsSidebar } from "./settings/SettingsSidebar";
@@ -559,13 +557,6 @@ export function SettingsView() {
         heartbeatEnabled: enabled,
       },
     })
-      .then(async () => {
-        if (enabled) {
-          await resetDesktopAnalyticsOptOutMarker();
-          return;
-        }
-        await sendDesktopAnalyticsOptOut();
-      })
       .then(showSaved)
       .catch((error) =>
         reportError("Failed to update analytics heartbeat setting", error),

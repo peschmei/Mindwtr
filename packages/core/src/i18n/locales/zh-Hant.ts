@@ -696,7 +696,7 @@ export const zhHant: Record<string, string> = {
         'settings.analyticsHeartbeat': '匿名使用心跳',
         'settings.analyticsHeartbeatDesc': '每天發送一個很小的診斷信號，用於了解應用健康狀況以及平台和版本使用情況。不包含任務或個人資料。',
         'settings.analyticsHeartbeatDisableTitle': '關閉匿名心跳？',
-        'settings.analyticsHeartbeatDisableDesc': '心跳不包含任務、項目、筆記、文件、AI 提示詞、郵箱、姓名、聯絡人或賬戶資料。它幫助了解活躍平台和版本。關閉後，Mindwtr 會使用這個匿名安裝 ID 發送最後一次退出事件，然後停止發送心跳。',
+        'settings.analyticsHeartbeatDisableDesc': '心跳不包含任務、項目、筆記、文件、AI 提示詞、郵箱、姓名、聯絡人或賬戶資料。它幫助了解活躍平台和版本。關閉後，Mindwtr 將停止從此安裝發送心跳請求。',
         'settings.analyticsHeartbeatDisableConfirm': '關閉',
         'settings.analyticsHeartbeatKeepEnabled': '保持開啓',
         'settings.debugLogging': '調試日誌',

@@ -689,7 +689,7 @@ export const arOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': 'نبض استخدام مجهول',
         'settings.analyticsHeartbeatDesc': 'إشارة تشخيصية يومية صغيرة لفهم صحة التطبيق واعتماد المنصات والإصدارات. لا تتضمن أي مهام أو بيانات شخصية.',
         'settings.analyticsHeartbeatDisableTitle': 'تعطيل النبض المجهول؟',
-        'settings.analyticsHeartbeatDisableDesc': 'لا يتضمن النبض المهام أو المشاريع أو الملاحظات أو الملفات أو مطالبات الذكاء الاصطناعي أو البريد الإلكتروني أو الاسم أو جهات الاتصال أو بيانات الحساب. يساعد في قياس المنصات والإصدارات النشطة. إذا عطّلته، سيرسل Mindwtr إشارة أخيرة لإلغاء الاشتراك باستخدام معرّف التثبيت المجهول هذا، ثم سيتوقف عن إرسال نبضات الاستخدام.',
+        'settings.analyticsHeartbeatDisableDesc': 'لا يتضمن النبض المهام أو المشاريع أو الملاحظات أو الملفات أو مطالبات الذكاء الاصطناعي أو البريد الإلكتروني أو الاسم أو جهات الاتصال أو بيانات الحساب. يساعد في قياس المنصات والإصدارات النشطة. إذا عطّلته، سيتوقف Mindwtr عن إرسال طلبات النبض من هذا التثبيت.',
         'settings.analyticsHeartbeatDisableConfirm': 'تعطيل',
         'settings.analyticsHeartbeatKeepEnabled': 'إبقاؤه مفعّلًا',
         'settings.debugLogging': 'تسجيل التصحيح',

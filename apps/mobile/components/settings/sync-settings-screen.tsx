@@ -27,8 +27,6 @@ import {
 } from '@/lib/sync-service-utils';
 import {
     isMobileAnalyticsHeartbeatConfigured,
-    resetMobileAnalyticsOptOutMarker,
-    sendMobileAnalyticsOptOut,
 } from '@/lib/analytics-heartbeat';
 
 import { MobileExtraConfig } from './settings.constants';
@@ -192,18 +190,6 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
                     heartbeatEnabled: enabled,
                 },
             })
-                .then(async () => {
-                    if (enabled) {
-                        await resetMobileAnalyticsOptOutMarker();
-                        return;
-                    }
-                    await sendMobileAnalyticsOptOut({
-                        analyticsHeartbeatUrl,
-                        appVersion,
-                        isExpoGo,
-                        isFossBuild,
-                    });
-                })
                 .catch(logSettingsError);
         };
 

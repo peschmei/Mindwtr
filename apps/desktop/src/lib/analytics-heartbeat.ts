@@ -1,9 +1,7 @@
 import {
     type AppData,
     generateUUID,
-    resetHeartbeatOptOutMarker,
     sendDailyHeartbeat,
-    sendHeartbeatOptOut,
 } from '@mindwtr/core';
 
 import { getInstallSourceOrFallback, isTauriRuntime } from './runtime';
@@ -132,22 +130,9 @@ const buildDesktopHeartbeatOptions = async () => {
     };
 };
 
-export const sendDesktopAnalyticsOptOut = async (): Promise<boolean> => {
-    if (!canSendDesktopAnalyticsHeartbeat()) return false;
-    return sendHeartbeatOptOut(await buildDesktopHeartbeatOptions());
-};
-
-export const resetDesktopAnalyticsOptOutMarker = async (): Promise<void> => {
-    await resetHeartbeatOptOutMarker(localStorage);
-};
-
 export const sendDesktopDailyHeartbeat = async (): Promise<void> => {
     if (!canSendDesktopAnalyticsHeartbeat()) return;
     const heartbeatEnabled = await getStartupAnalyticsHeartbeatEnabled();
-    const options = await buildDesktopHeartbeatOptions();
-    if (!heartbeatEnabled) {
-        await sendHeartbeatOptOut(options);
-        return;
-    }
-    await sendDailyHeartbeat(options);
+    if (!heartbeatEnabled) return;
+    await sendDailyHeartbeat(await buildDesktopHeartbeatOptions());
 };

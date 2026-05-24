@@ -759,7 +759,7 @@ export const en: Record<string, string> = {
         'settings.analyticsHeartbeat': 'Anonymous usage heartbeat',
         'settings.analyticsHeartbeatDesc': 'Small daily diagnostic signal for app health and platform/version adoption. No task or personal data is included.',
         'settings.analyticsHeartbeatDisableTitle': 'Disable anonymous heartbeat?',
-        'settings.analyticsHeartbeatDisableDesc': 'The heartbeat does not include tasks, projects, notes, files, AI prompts, email, name, contacts, or account data. It helps measure active platforms and versions. If you disable it, Mindwtr will send one final opt-out event with this anonymous install ID, then stop sending heartbeat events.',
+        'settings.analyticsHeartbeatDisableDesc': 'The heartbeat does not include tasks, projects, notes, files, AI prompts, email, name, contacts, or account data. It helps measure active platforms and versions. If you disable it, Mindwtr stops sending heartbeat requests from this install.',
         'settings.analyticsHeartbeatDisableConfirm': 'Disable',
         'settings.analyticsHeartbeatKeepEnabled': 'Keep enabled',
         'settings.debugLogging': 'Debug logging',

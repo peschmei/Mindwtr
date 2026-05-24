@@ -646,7 +646,7 @@ export const deOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': 'Anonymer Nutzungs-Heartbeat',
         'settings.analyticsHeartbeatDesc': 'Kleines tägliches Diagnosesignal für App-Zustand und Plattform-/Versionsnutzung. Es enthält keine Aufgaben oder personenbezogenen Daten.',
         'settings.analyticsHeartbeatDisableTitle': 'Anonymen Heartbeat deaktivieren?',
-        'settings.analyticsHeartbeatDisableDesc': 'Der Heartbeat enthält keine Aufgaben, Projekte, Notizen, Dateien, KI-Eingaben, E-Mail-Adresse, Namen, Kontakte oder Kontodaten. Er hilft, aktive Plattformen und Versionen zu messen. Wenn du ihn deaktivierst, sendet Mindwtr ein letztes anonymes Abmeldeereignis mit dieser Installations-ID und stoppt danach Heartbeat-Ereignisse.',
+        'settings.analyticsHeartbeatDisableDesc': 'Der Heartbeat enthält keine Aufgaben, Projekte, Notizen, Dateien, KI-Eingaben, E-Mail-Adresse, Namen, Kontakte oder Kontodaten. Er hilft, aktive Plattformen und Versionen zu messen. Wenn du ihn deaktivierst, sendet Mindwtr von dieser Installation keine Heartbeat-Anfragen mehr.',
         'settings.analyticsHeartbeatDisableConfirm': 'Deaktivieren',
         'settings.analyticsHeartbeatKeepEnabled': 'Aktiviert lassen',
         'settings.debugLogging': 'Debug-Protokollierung',

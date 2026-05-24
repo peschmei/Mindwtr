@@ -25,7 +25,7 @@ In official non-FOSS mobile builds, Mindwtr may send a small heartbeat event at 
 * **What may be sent:** platform (for example iOS/Android/macOS/Windows/Linux), app version, distribution channel (for example App Store/Play Store/winget/Homebrew), coarse device class (for example phone/tablet/desktop), coarse OS major version (for example iOS 18 or Android 15), locale (for example en-US), and an app-generated random identifier.
 * **Country data:** country may be derived server-side from edge network metadata during request handling.
 * **What is not sent in the heartbeat payload:** task/project/note content, AI prompt content, email address, name, contacts, or files.
-* **Opt-out:** supported builds include a Settings toggle to disable future heartbeat analytics. When this is turned off, Mindwtr sends one final anonymous `opt_out` heartbeat with the same app-generated identifier so the server can stop counting that install as active.
+* **Opt-out:** supported builds include a Settings toggle to disable future heartbeat analytics. When this is turned off, Mindwtr stops sending heartbeat requests from that install.
 * **Third-party analytics SDKs:** Mindwtr does not embed third-party analytics SDKs such as Google Analytics or Firebase.
 * **Android FOSS builds:** heartbeat analytics is disabled.
 
