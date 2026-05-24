@@ -316,13 +316,25 @@ Use checklists as templates:
 
 ## Calendar Integration
 
-Mindwtr can overlay external calendars (ICS subscriptions) in the Calendar view:
+Mindwtr can overlay external calendars and push dated Mindwtr tasks to the device calendar.
 
-1. Go to **Settings → Advanced → Calendar**
+To push tasks to Android/Google Calendar or Apple Calendar on iOS:
+
+1. Go to **Settings -> Advanced -> Calendar**
+2. Enable **Push tasks to calendar**
+3. Grant calendar permission
+4. Expand **Sync target**
+5. Choose a dedicated `Mindwtr` calendar or another writable calendar target
+
+For Android Google Calendar and iOS Apple Calendar target setup, see [[Calendar Integration]].
+
+To overlay external calendars with ICS subscriptions:
+
+1. Go to **Settings -> Advanced -> Calendar**
 2. Add your **ICS URL**
 3. Refresh to fetch events
 
-External events are view‑only and are not synced.
+External events are view-only and are not synced.
 
 ---
 
