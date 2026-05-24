@@ -257,6 +257,65 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         expect(handlers.setEditDueDate).toHaveBeenCalledWith('2026-04-19T09:00');
     });
 
+    it.each([
+        {
+            fieldId: 'startTime' as const,
+            editValue: { editStartTime: '2026-04-18' },
+            inputLabel: 'Start date',
+            dialogLabel: 'Start Date calendar',
+        },
+        {
+            fieldId: 'dueDate' as const,
+            editValue: { editDueDate: '2026-04-19' },
+            inputLabel: 'Due date',
+            dialogLabel: 'Due Date calendar',
+        },
+        {
+            fieldId: 'reviewAt' as const,
+            editValue: { editReviewAt: '2026-04-20' },
+            inputLabel: 'Review date',
+            dialogLabel: 'Review Date calendar',
+        },
+    ])('closes the $fieldId mini calendar when clicking outside', ({ fieldId, editValue, inputLabel, dialogLabel }) => {
+        const handlers = createHandlers();
+
+        const { getByLabelText, getByRole, queryByRole } = render(
+            <TaskItemFieldRenderer
+                fieldId={fieldId}
+                data={createData(editValue)}
+                handlers={handlers}
+            />
+        );
+
+        fireEvent.focus(getByLabelText(inputLabel));
+        expect(getByRole('dialog', { name: dialogLabel })).toBeInTheDocument();
+
+        fireEvent.mouseDown(document.body);
+
+        expect(queryByRole('dialog', { name: dialogLabel })).not.toBeInTheDocument();
+    });
+
+    it('sets the date and closes the mini calendar when a day is double-clicked', () => {
+        const handlers = createHandlers();
+
+        const { getByLabelText, getByRole, queryByRole } = render(
+            <TaskItemFieldRenderer
+                fieldId="dueDate"
+                data={createData({ editDueDate: '2026-04-12' })}
+                handlers={handlers}
+            />
+        );
+
+        fireEvent.focus(getByLabelText('Due date'));
+        const dialog = getByRole('dialog', { name: 'Due Date calendar' });
+
+        fireEvent.doubleClick(getByRole('button', { name: /April 19, 2026/i }));
+
+        expect(handlers.setEditDueDate).toHaveBeenCalledWith('2026-04-19');
+        expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+        expect(dialog).not.toBeInTheDocument();
+    });
+
     it('lets quick date shortcuts use the full date field width', () => {
         const handlers = createHandlers();
 
