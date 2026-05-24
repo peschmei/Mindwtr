@@ -450,7 +450,7 @@ function formatCalendarEventTitle(title: string, shouldPrefixTitle: boolean): st
     if (trimmed.toLowerCase().startsWith(ACCOUNT_TARGET_TITLE_PREFIX.toLowerCase())) {
         return title;
     }
-    return `${ACCOUNT_TARGET_TITLE_PREFIX}${trimmed || title}`;
+    return trimmed || title;
 }
 
 function buildEventDetails(task: Task, shouldPrefixTitle: boolean) {

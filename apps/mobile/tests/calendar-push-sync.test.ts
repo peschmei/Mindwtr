@@ -537,7 +537,7 @@ describe('buildEventDetails — date-only due date stays on correct local day', 
 });
 
 describe('runFullCalendarSync — selected target calendar', () => {
-    it('writes prefixed events to a selected account calendar instead of creating the managed calendar', async () => {
+    it('writes unprefixed events to a selected account calendar instead of creating the managed calendar', async () => {
         setupEnabled('cal-managed', 'google-primary');
         mockGetCalendarsAsync.mockResolvedValue([
             {
@@ -557,7 +557,7 @@ describe('runFullCalendarSync — selected target calendar', () => {
         expect(mockCreateCalendarAsync).not.toHaveBeenCalled();
         expect(mockCreateEventAsync).toHaveBeenCalledWith('google-primary', expect.objectContaining({
             calendarId: 'google-primary',
-            title: `Mindwtr: ${task.title}`,
+            title: task.title,
         }));
     });
 
@@ -582,7 +582,7 @@ describe('runFullCalendarSync — selected target calendar', () => {
         }));
     });
 
-    it('does not duplicate the Mindwtr title prefix on account calendars', async () => {
+    it('preserves task titles that already start with the Mindwtr prefix', async () => {
         setupEnabled('cal-managed', 'google-primary');
         mockGetCalendarsAsync.mockResolvedValue([
             {
