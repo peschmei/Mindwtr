@@ -460,6 +460,7 @@ function buildEventDetails(task: Task, shouldPrefixTitle: boolean) {
     const parsed = safeParseDate(dateValue);
     const startDate = parsed ?? new Date();
     const title = formatCalendarEventTitle(task.title, shouldPrefixTitle);
+    const location = typeof task.location === 'string' ? task.location.trim() : '';
     if (hasTimeComponent(dateValue)) {
         const endDate = new Date(startDate.getTime() + timeEstimateToMinutes(task.timeEstimate) * 60 * 1000);
         return {
@@ -468,6 +469,7 @@ function buildEventDetails(task: Task, shouldPrefixTitle: boolean) {
             endDate,
             allDay: false,
             notes: task.description ?? '',
+            location,
         };
     }
 
@@ -479,6 +481,7 @@ function buildEventDetails(task: Task, shouldPrefixTitle: boolean) {
         endDate,
         allDay: true,
         notes: task.description ?? '',
+        location,
         ...(Platform.OS === 'android' ? { timeZone: 'UTC', endTimeZone: 'UTC' } : {}),
     };
 }
@@ -506,7 +509,11 @@ async function removeTaskFromCalendar(taskId: string): Promise<void> {
 
 /** Returns true for tasks that should not have a calendar event. */
 function shouldRemoveFromCalendar(task: Task): boolean {
-    return (!task.dueDate && !task.startTime) || !!task.deletedAt || task.status === 'done' || task.status === 'archived';
+    return (!task.dueDate && !task.startTime)
+        || !!task.deletedAt
+        || task.status === 'done'
+        || task.status === 'archived'
+        || task.status === 'reference';
 }
 
 async function syncTaskToCalendar(task: Task, target: CalendarPushTarget): Promise<void> {
@@ -657,6 +664,8 @@ export const startCalendarPushSync = (): (() => void) => {
                     prev.deletedAt !== task.deletedAt ||
                     prev.status !== task.status ||
                     prev.title !== task.title ||
+                    prev.description !== task.description ||
+                    prev.location !== task.location ||
                     prev.timeEstimate !== task.timeEstimate
                 ) {
                     changedIds.push(task.id);

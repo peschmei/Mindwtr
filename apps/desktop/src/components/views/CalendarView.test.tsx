@@ -258,7 +258,8 @@ describe('CalendarView', () => {
             status: 'next',
             startTime: '2026-04-03T10:00:00.000Z',
             timeEstimate: '1hr',
-            description: 'Discuss launch.\n\nLocation: Room 1\n\nCalendar: Work',
+            location: 'Room 1',
+            description: 'Discuss launch.\n\nCalendar: Work',
         });
     });
 
@@ -372,7 +373,7 @@ describe('CalendarView', () => {
         expect(storeMocks.taskStoreState.addTask).not.toHaveBeenCalled();
     });
 
-    it('shows only tasks with explicit start times on the calendar', async () => {
+    it('shows date-only start times as all-day scheduled tasks on the calendar', async () => {
         storeMocks.taskStoreState.tasks = [
             makeTask({
                 id: 'task-date-only',
@@ -389,7 +390,7 @@ describe('CalendarView', () => {
         renderCalendar();
         await flushCalendarEffects();
 
-        expect(screen.queryByText('Date-only start')).not.toBeInTheDocument();
+        expect(screen.getByText('Date-only start')).toBeInTheDocument();
         expect(screen.getByText('Timed start')).toBeInTheDocument();
     });
 

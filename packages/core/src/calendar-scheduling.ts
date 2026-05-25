@@ -117,9 +117,13 @@ export function buildCalendarEventTaskDraft(
         }
     }
 
+    const location = cleanEventTaskText(event.location);
+    if (location) {
+        initialProps.location = location;
+    }
+
     const descriptionParts = [
         cleanEventTaskText(event.description),
-        cleanEventTaskText(event.location) ? `Location: ${cleanEventTaskText(event.location)}` : '',
         cleanEventTaskText(options.calendarName) ? `Calendar: ${cleanEventTaskText(options.calendarName)}` : '',
     ].filter((part) => part.length > 0);
 

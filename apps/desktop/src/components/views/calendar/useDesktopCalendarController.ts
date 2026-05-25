@@ -347,7 +347,6 @@ export function useDesktopCalendarController() {
                 }
             }
             if (task.startTime) {
-                if (!hasTimeComponent(task.startTime)) continue;
                 const startTime = safeParseDate(task.startTime);
                 if (startTime) {
                     const startKey = dayKey(startTime);
@@ -984,8 +983,12 @@ export function useDesktopCalendarController() {
         });
     };
     const getAllDayItemsForDay = (date: Date) => {
-        const scheduledIds = new Set(getScheduledForDay(date).map((task) => task.id));
+        const scheduled = getScheduledForDay(date);
+        const scheduledIds = new Set(scheduled.map((task) => task.id));
         return [
+            ...scheduled
+                .filter((task) => !hasTimeComponent(task.startTime))
+                .map((task) => ({ id: `scheduled-${task.id}`, kind: 'scheduled' as const, task, title: task.title })),
             ...getDeadlinesForDay(date)
                 .filter((task) => !scheduledIds.has(task.id))
                 .map((task) => ({ id: `deadline-${task.id}`, kind: 'deadline' as const, task, title: task.title })),
@@ -1002,6 +1005,7 @@ export function useDesktopCalendarController() {
         const items: CalendarTimedItem[] = [];
 
         for (const task of getScheduledForDay(date)) {
+            if (!hasTimeComponent(task.startTime)) continue;
             const start = task.startTime ? safeParseDate(task.startTime) : null;
             if (!start) continue;
             const durationMinutes = timeEstimateToMinutes(task.timeEstimate);

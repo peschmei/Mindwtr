@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     addCalendarMinutes,
+    buildCalendarEventTaskDraft,
     findFreeSlotForDay,
     formatCalendarDurationLabel,
     formatCalendarTimeInputValue,
@@ -76,6 +77,16 @@ describe('calendar scheduling helpers', () => {
         expect(formatCalendarDurationLabel(30)).toBe('30m');
         expect(formatCalendarDurationLabel(90)).toBe('1.5h');
         expect(formatCalendarDurationLabel(120)).toBe('2h');
+    });
+
+    it('keeps external event locations in the task location field', () => {
+        const draft = buildCalendarEventTaskDraft(event({
+            description: 'Discuss launch.',
+            location: 'Room 1',
+        }), { calendarName: 'Work' });
+
+        expect(draft.initialProps.location).toBe('Room 1');
+        expect(draft.initialProps.description).toBe('Discuss launch.\n\nCalendar: Work');
     });
 
     it('finds the first open slot around external events and scheduled tasks', () => {

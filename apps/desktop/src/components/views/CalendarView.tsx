@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type DragEvent, type KeyboardEvent } from 'react';
 import { format, getMonth, isSameDay, isSameMonth, isToday } from 'date-fns';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
-import { safeFormatDate } from '@mindwtr/core';
+import { hasTimeComponent, safeFormatDate } from '@mindwtr/core';
 
 import { ErrorBoundary } from '../ErrorBoundary';
 import { cn } from '../../lib/utils';
@@ -486,7 +486,12 @@ export function CalendarView() {
                                                     draggable
                                                     onDragStart={(event) => handleCalendarTaskDragStart(event, item.task.id, item.kind)}
                                                     onClick={() => openTaskFromCalendar(item.task)}
-                                                    className="block w-full truncate rounded border-l-[3px] border-destructive/70 bg-background/70 px-2 py-1 text-left text-xs hover:bg-muted"
+                                                    className={cn(
+                                                        "block w-full truncate rounded border-l-[3px] px-2 py-1 text-left text-xs hover:bg-muted",
+                                                        item.kind === 'scheduled'
+                                                            ? "border-primary/70 bg-primary/5"
+                                                            : "border-destructive/70 bg-background/70"
+                                                    )}
                                                     title={item.title}
                                                 >
                                                     {item.title}
@@ -628,7 +633,10 @@ export function CalendarView() {
                                         </div>
                                         <div className="space-y-1">
                                             {items.map((item) => {
-                                                const timeLabel = item.start && (item.kind === 'scheduled' || (item.kind === 'event' && !item.event.allDay))
+                                                const isAllDayScheduled = item.kind === 'scheduled' && !hasTimeComponent(item.task.startTime);
+                                                const timeLabel = isAllDayScheduled
+                                                    ? t('calendar.allDay')
+                                                    : item.start && (item.kind === 'scheduled' || (item.kind === 'event' && !item.event.allDay))
                                                     ? safeFormatDate(item.start, 'p')
                                                     : item.kind === 'event' && item.event.allDay
                                                         ? t('calendar.allDay')

@@ -172,6 +172,8 @@ function makeTask(overrides: Partial<{
     timeEstimate: string;
     deletedAt: string | null;
     updatedAt: string;
+    description: string;
+    location: string | null;
 }> = {}) {
     return {
         id: 'task-1',
@@ -565,6 +567,22 @@ describe('buildEventDetails — date-only calendar events stay on the intended d
         expect(eventData.startDate.toISOString()).toBe('2026-04-20T10:45:00.000Z');
         expect(eventData.endDate.toISOString()).toBe('2026-04-20T11:45:00.000Z');
     });
+
+    it('passes task location into pushed calendar event details', async () => {
+        setupEnabled();
+        const task = makeTask({
+            description: 'Bring notes',
+            location: 'Office 2A',
+        });
+        setStoreTasks([task]);
+
+        await runFullCalendarSync();
+
+        expect(mockCreateEventAsync).toHaveBeenCalledWith('cal-1', expect.objectContaining({
+            notes: 'Bring notes',
+            location: 'Office 2A',
+        }));
+    });
 });
 
 describe('runFullCalendarSync — selected target calendar', () => {
@@ -722,6 +740,22 @@ describe('runFullCalendarSync — completion removes event', () => {
         expect(mockDeleteEventAsync).toHaveBeenCalledWith('evt-arch');
         expect(mockCreateEventAsync).not.toHaveBeenCalled();
     });
+
+    it('removes a calendar event when the task becomes reference material', async () => {
+        setupEnabled();
+        const task = makeTask({ status: 'reference' });
+        setStoreTasks([task]);
+        mockGetCalendarSyncEntry.mockResolvedValue(
+            { taskId: task.id, calendarEventId: 'evt-ref', calendarId: 'cal-1', platform: 'ios', lastSyncedAt: '' }
+        );
+        mockGetAllCalendarSyncEntries.mockResolvedValue([]);
+
+        await runFullCalendarSync();
+
+        expect(mockDeleteEventAsync).toHaveBeenCalledWith('evt-ref');
+        expect(mockDeleteCalendarSyncEntry).toHaveBeenCalledWith(task.id, 'ios');
+        expect(mockCreateEventAsync).not.toHaveBeenCalled();
+    });
 });
 
 describe('runFullCalendarSync — event removal', () => {
@@ -798,6 +832,56 @@ describe('runFullCalendarSync — startup reconciliation', () => {
 });
 
 describe('startCalendarPushSync', () => {
+    it('syncs an existing calendar event when only the task location changes', async () => {
+        setupEnabled();
+
+        const task = makeTask({
+            id: 'task-location',
+            location: 'Room A',
+            updatedAt: '2026-04-20T00:00:00.000Z',
+        });
+        const updatedTask = {
+            ...task,
+            location: 'Room B',
+        };
+        const makeTaskMap = (items: ReturnType<typeof makeTask>[]) => new Map(items.map((item) => [item.id, item]));
+        let storeState = {
+            tasks: [task],
+            _allTasks: [task],
+            _tasksById: makeTaskMap([task]),
+        };
+
+        mockGetState.mockImplementation(() => storeState);
+        mockGetCalendarSyncEntry.mockResolvedValue({
+            taskId: task.id,
+            calendarEventId: 'evt-location',
+            calendarId: 'cal-1',
+            platform: 'ios',
+            lastSyncedAt: '',
+        });
+
+        startCalendarPushSync();
+        const selector = mockSubscribe.mock.calls[0]?.[0] as ((state: typeof storeState) => unknown) | undefined;
+        const listener = mockSubscribe.mock.calls[0]?.[1] as ((tasks: typeof storeState._allTasks) => void) | undefined;
+        expect(selector).toBeTypeOf('function');
+        expect(listener).toBeTypeOf('function');
+        if (!selector || !listener) return;
+
+        storeState = {
+            tasks: [updatedTask],
+            _allTasks: [updatedTask],
+            _tasksById: makeTaskMap([updatedTask]),
+        };
+        listener(selector(storeState) as typeof storeState._allTasks);
+
+        await vi.advanceTimersByTimeAsync(2500);
+        await Promise.resolve();
+
+        expect(mockUpdateEventAsync).toHaveBeenCalledWith('evt-location', expect.objectContaining({
+            location: 'Room B',
+        }));
+    });
+
     it('keeps deleted tombstones in the debounced sync set until the partial sync runs', async () => {
         setupEnabled();
 

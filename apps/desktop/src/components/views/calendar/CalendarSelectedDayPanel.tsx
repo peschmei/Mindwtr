@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import type { DragEvent } from 'react';
 import { Check, Clock, MoreHorizontal, Plus, X } from 'lucide-react';
-import { safeFormatDate, safeParseDate } from '@mindwtr/core';
+import { hasTimeComponent, safeFormatDate, safeParseDate } from '@mindwtr/core';
 
 import { cn } from '../../../lib/utils';
 import { reportError } from '../../../lib/report-error';
@@ -202,10 +202,13 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                         <div className="space-y-1">
                             {selectedTaskRows.map(({ id, kind, task, start }) => {
                                 const durationMinutes = timeEstimateToMinutes(task.timeEstimate);
-                                const end = start && kind === 'scheduled'
+                                const isAllDayScheduled = kind === 'scheduled' && !hasTimeComponent(task.startTime);
+                                const end = start && kind === 'scheduled' && !isAllDayScheduled
                                     ? new Date(start.getTime() + durationMinutes * 60 * 1000)
                                     : null;
-                                const timeLabel = start && end
+                                const timeLabel = isAllDayScheduled
+                                    ? t('calendar.allDay')
+                                    : start && end
                                     ? `${safeFormatDate(start, 'p')}-${safeFormatDate(end, 'p')}`
                                     : kind === 'deadline'
                                         ? t('calendar.deadline')
