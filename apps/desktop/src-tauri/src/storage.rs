@@ -100,6 +100,7 @@ pub(crate) fn open_sqlite(app: &tauri::AppHandle) -> Result<Connection, String> 
     ensure_tasks_section_column(&conn)?;
     ensure_tasks_organization_indexes(&conn)?;
     ensure_projects_order_column(&conn)?;
+    ensure_column(&conn, "projects", "sequentialScope", "TEXT")?;
     ensure_projects_due_date_column(&conn)?;
     ensure_projects_area_order_index(&conn)?;
     ensure_sync_revision_columns(&conn)?;
@@ -767,6 +768,11 @@ fn row_to_project_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Erro
             map.insert("isSequential".to_string(), Value::Bool(true));
         }
     }
+    if let Ok(val) = row.get::<_, Option<String>>("sequentialScope") {
+        if let Some(v) = val {
+            map.insert("sequentialScope".to_string(), Value::String(v));
+        }
+    }
     if let Ok(val) = row.get::<_, i64>("isFocused") {
         if val != 0 {
             map.insert("isFocused".to_string(), Value::Bool(true));
@@ -952,7 +958,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
         let tag_ids_json = json_str_or_default(project.get("tagIds"), "[]");
         let attachments_json = json_str(project.get("attachments"));
         tx.execute(
-            "INSERT OR REPLACE INTO projects (id, title, status, color, orderNum, tagIds, isSequential, isFocused, supportNotes, attachments, dueDate, reviewAt, areaId, areaTitle, rev, revBy, createdAt, updatedAt, deletedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
+            "INSERT OR REPLACE INTO projects (id, title, status, color, orderNum, tagIds, isSequential, sequentialScope, isFocused, supportNotes, attachments, dueDate, reviewAt, areaId, areaTitle, rev, revBy, createdAt, updatedAt, deletedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)",
             params![
                 project.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
                 project.get("title").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -961,6 +967,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 project.get("order").and_then(|v| v.as_i64()),
                 tag_ids_json,
                 project.get("isSequential").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
+                project.get("sequentialScope").and_then(|v| v.as_str()),
                 project.get("isFocused").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
                 project.get("supportNotes").and_then(|v| v.as_str()),
                 attachments_json,
@@ -1600,7 +1607,10 @@ pub(crate) fn search_fts(app: tauri::AppHandle, query: String) -> Result<Value, 
         .prepare("SELECT t.* FROM tasks_fts f JOIN tasks t ON f.id = t.id WHERE tasks_fts MATCH ?1 AND t.deletedAt IS NULL LIMIT ?2")
         .map_err(|e| e.to_string())?;
     let task_rows = task_stmt
-        .query_map(params![fts_query.clone(), SEARCH_RESULT_QUERY_LIMIT], |row| row_to_task_value(row))
+        .query_map(
+            params![fts_query.clone(), SEARCH_RESULT_QUERY_LIMIT],
+            |row| row_to_task_value(row),
+        )
         .map_err(|e| e.to_string())?;
     for row in task_rows {
         let value = row.map_err(|e| e.to_string())?;
@@ -1615,7 +1625,9 @@ pub(crate) fn search_fts(app: tauri::AppHandle, query: String) -> Result<Value, 
         .prepare("SELECT p.* FROM projects_fts f JOIN projects p ON f.id = p.id WHERE projects_fts MATCH ?1 AND p.deletedAt IS NULL LIMIT ?2")
         .map_err(|e| e.to_string())?;
     let project_rows = project_stmt
-        .query_map(params![fts_query, SEARCH_RESULT_QUERY_LIMIT], |row| row_to_project_value(row))
+        .query_map(params![fts_query, SEARCH_RESULT_QUERY_LIMIT], |row| {
+            row_to_project_value(row)
+        })
         .map_err(|e| e.to_string())?;
     for row in project_rows {
         let value = row.map_err(|e| e.to_string())?;
@@ -1751,7 +1763,9 @@ mod tests {
             .expect("should read project indexes")
             .map(|row| row.expect("index row"))
             .collect();
-        assert!(index_names.iter().any(|name| name == "idx_projects_dueDate"));
+        assert!(index_names
+            .iter()
+            .any(|name| name == "idx_projects_dueDate"));
     }
 
     #[test]
@@ -1780,8 +1794,47 @@ mod tests {
             .expect("should read task indexes")
             .map(|row| row.expect("index row"))
             .collect();
-        assert!(index_names.iter().any(|name| name == "idx_tasks_energyLevel"));
-        assert!(index_names.iter().any(|name| name == "idx_tasks_assignedTo"));
+        assert!(index_names
+            .iter()
+            .any(|name| name == "idx_tasks_energyLevel"));
+        assert!(index_names
+            .iter()
+            .any(|name| name == "idx_tasks_assignedTo"));
+    }
+
+    #[test]
+    fn sqlite_project_round_trip_preserves_sequential_scope() {
+        let mut conn = Connection::open_in_memory().expect("should open in-memory db");
+        conn.execute_batch(SQLITE_SCHEMA)
+            .expect("should create schema");
+
+        let data = serde_json::json!({
+            "tasks": [],
+            "projects": [{
+                "id": "project-1",
+                "title": "Project",
+                "status": "active",
+                "color": "#6B7280",
+                "order": 1,
+                "tagIds": [],
+                "isSequential": true,
+                "sequentialScope": "section",
+                "createdAt": "2026-05-25T00:00:00.000Z",
+                "updatedAt": "2026-05-25T00:00:00.000Z"
+            }],
+            "areas": [],
+            "sections": [],
+            "settings": {}
+        });
+
+        migrate_json_to_sqlite(&mut conn, &data).expect("should write data");
+        let read = read_sqlite_data(&conn).expect("should read data");
+        let project = read["projects"]
+            .as_array()
+            .and_then(|projects| projects.first())
+            .expect("project should exist");
+
+        assert_eq!(project["sequentialScope"], "section");
     }
 }
 

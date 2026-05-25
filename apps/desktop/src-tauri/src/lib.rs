@@ -217,6 +217,7 @@ CREATE TABLE IF NOT EXISTS projects (
   orderNum INTEGER,
   tagIds TEXT,
   isSequential INTEGER,
+  sequentialScope TEXT,
   isFocused INTEGER,
   supportNotes TEXT,
   attachments TEXT,

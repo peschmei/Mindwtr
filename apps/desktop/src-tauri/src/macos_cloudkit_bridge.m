@@ -157,6 +157,7 @@ static const MWFieldSpec kProjectFields[] = {
     {"order",        "sortOrder",    MWFieldKindInt},
     {"tagIds",       "tagIds",       MWFieldKindStringArray},
     {"isSequential", "isSequential", MWFieldKindBool},
+    {"sequentialScope", "sequentialScope", MWFieldKindString},
     {"isFocused",    "isFocused",    MWFieldKindBool},
     {"supportNotes", "supportNotes", MWFieldKindString},
     {"attachments",  "attachments",  MWFieldKindJsonString},
