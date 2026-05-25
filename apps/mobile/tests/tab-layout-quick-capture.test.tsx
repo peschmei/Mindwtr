@@ -90,10 +90,6 @@ vi.mock('@/components/mobile-area-switcher', () => ({
   MobileAreaSwitcher: () => React.createElement('MobileAreaSwitcher'),
 }));
 
-vi.mock('@/components/mobile-header-sync-bar', () => ({
-  MobileHeaderSyncBar: () => React.createElement('MobileHeaderSyncBar'),
-}));
-
 vi.mock('@/components/quick-capture-sheet', () => ({
   QuickCaptureSheet: (props: any) => React.createElement('QuickCaptureSheet', props),
 }));

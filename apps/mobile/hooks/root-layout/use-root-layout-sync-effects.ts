@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, type AppStateStatus, Platform } from 'react-native';
 
-import { flushPendingSave, useTaskStore } from '@mindwtr/core';
+import { computeSyncPayloadFingerprint, flushPendingSave, getInMemoryAppDataSnapshot, useTaskStore } from '@mindwtr/core';
 
 import type { ToastOptions } from '@/contexts/toast-context';
 import { getNotificationPermissionStatus, startMobileNotifications, stopMobileNotifications } from '@/lib/notification-service';
@@ -118,6 +118,7 @@ export function useRootLayoutSyncEffects({
         backend: 'off',
         readAt: 0,
     });
+    const lastAutoSyncPayloadFingerprint = useRef<string | null>(null);
     const showToastRef = useRef(showToast);
     const openSyncSettingsRef = useRef(openSyncSettings);
     const openNotificationsSettingsRef = useRef(openNotificationsSettings);
@@ -151,6 +152,15 @@ export function useRootLayoutSyncEffects({
         syncBackendCacheRef.current = { backend, readAt: now };
         syncCadenceRef.current = getCadenceForBackend(backend);
         return syncCadenceRef.current;
+    }, []);
+
+    const readCurrentSyncPayloadFingerprint = useCallback((): string | null => {
+        try {
+            return computeSyncPayloadFingerprint(getInMemoryAppDataSnapshot());
+        } catch (error) {
+            logAppError(error);
+            return null;
+        }
     }, []);
 
     const runSync = useCallback((minIntervalMs?: number) => {
@@ -254,8 +264,15 @@ export function useRootLayoutSyncEffects({
     useEffect(() => {
         void refreshSyncCadence().catch(logAppError);
         reconcileBackgroundSyncTask();
+        lastAutoSyncPayloadFingerprint.current = readCurrentSyncPayloadFingerprint();
         const unsubscribe = useTaskStore.subscribe((state, prevState) => {
+            const currentFingerprint = readCurrentSyncPayloadFingerprint();
+            const previousFingerprint = lastAutoSyncPayloadFingerprint.current;
+            if (currentFingerprint) {
+                lastAutoSyncPayloadFingerprint.current = currentFingerprint;
+            }
             if (state.lastDataChangeAt === prevState.lastDataChangeAt) return;
+            if (currentFingerprint && previousFingerprint && currentFingerprint === previousFingerprint) return;
             const cadence = syncCadenceRef.current;
             const hadTimer = !!syncDebounceTimer.current;
             if (syncDebounceTimer.current) {
@@ -277,7 +294,7 @@ export function useRootLayoutSyncEffects({
                 clearTimeout(syncThrottleTimer.current);
             }
         };
-    }, [requestSync, refreshSyncCadence]);
+    }, [readCurrentSyncPayloadFingerprint, requestSync, refreshSyncCadence]);
 
     useEffect(() => {
         const handleAppStateChange = (nextAppState: AppStateStatus) => {

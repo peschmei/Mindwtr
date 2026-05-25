@@ -9,7 +9,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MobileAreaSwitcher } from '@/components/mobile-area-switcher';
-import { MobileHeaderSyncBar } from '@/components/mobile-header-sync-bar';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useMobileSyncBadge } from '@/hooks/use-mobile-sync-badge';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -635,9 +634,7 @@ export default function TabLayout() {
                 borderBottomColor: tc.border,
               },
             ]}
-          >
-            <MobileHeaderSyncBar />
-          </View>
+          />
         ),
         headerLeft: () => <MobileAreaSwitcher />,
         headerLeftContainerStyle: {
