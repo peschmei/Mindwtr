@@ -88,6 +88,7 @@ const installCoreLoggerBridge = () => {
 type MobileExtraConfig = {
   isFossBuild?: boolean | string;
   analyticsHeartbeatUrl?: string;
+  analyticsHeartbeatChannel?: string;
 };
 
 const parseBool = (value: unknown): boolean =>
@@ -153,6 +154,7 @@ function RootLayoutContentInner() {
   const extraConfig = Constants.expoConfig?.extra as MobileExtraConfig | undefined;
   const isFossBuild = parseBool(extraConfig?.isFossBuild);
   const analyticsHeartbeatUrl = String(extraConfig?.analyticsHeartbeatUrl || '').trim();
+  const analyticsHeartbeatChannel = String(extraConfig?.analyticsHeartbeatChannel || '').trim();
   const isExpoGo = Constants.appOwnership === 'expo';
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
   const settingsLanguage = useTaskStore((state) => state.settings?.language);
@@ -189,6 +191,7 @@ function RootLayoutContentInner() {
   });
   const { dataReady } = useRootLayoutStartup({
     analyticsHeartbeatUrl,
+    analyticsHeartbeatChannel,
     appVersion,
     isExpoGo,
     isFossBuild,

@@ -30,6 +30,10 @@ if [[ "${FOSS_BUILD}" == "1" && "${SKIP_FDROID_PREP:-0}" != "1" ]]; then
   ./scripts/fdroid_prep.sh
 fi
 
+if [[ "${FOSS_BUILD}" == "1" && -n "${ANALYTICS_HEARTBEAT_URL:-}" && "${ANALYTICS_HEARTBEAT_DISABLED:-0}" != "1" ]]; then
+  export ANALYTICS_HEARTBEAT_CHANNEL="${ANALYTICS_HEARTBEAT_CHANNEL:-fdroid}"
+fi
+
 npx expo prebuild --clean --platform android
 
 if [[ "${FOSS_BUILD}" == "1" ]]; then

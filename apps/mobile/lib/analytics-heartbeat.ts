@@ -23,6 +23,7 @@ const platformExtras = Platform as PlatformExtras;
 
 export type MobileAnalyticsHeartbeatConfig = {
   analyticsHeartbeatUrl: string;
+  analyticsHeartbeatChannel?: string;
   appVersion: string;
   isExpoGo: boolean;
   isFossBuild: boolean;
@@ -31,19 +32,23 @@ export type MobileAnalyticsHeartbeatConfig = {
 export function isMobileAnalyticsHeartbeatConfigured({
   analyticsHeartbeatUrl,
   isExpoGo,
-  isFossBuild,
 }: Pick<MobileAnalyticsHeartbeatConfig, 'analyticsHeartbeatUrl' | 'isExpoGo' | 'isFossBuild'>): boolean {
-  return !isFossBuild && !isExpoGo && Boolean(analyticsHeartbeatUrl.trim());
+  return !isExpoGo && Boolean(analyticsHeartbeatUrl.trim());
 }
 
 function canSendMobileAnalyticsHeartbeat(config: MobileAnalyticsHeartbeatConfig): boolean {
   return isMobileAnalyticsHeartbeatConfigured(config) && !__DEV__;
 }
 
-async function getMobileAnalyticsChannel(isFossBuild: boolean): Promise<string> {
+async function getMobileAnalyticsChannel(
+  isFossBuild: boolean,
+  configuredChannel?: string | null
+): Promise<string> {
+  const channel = String(configuredChannel ?? '').trim();
+  if (channel) return channel;
   if (Platform.OS === 'ios') return 'app-store';
   if (Platform.OS !== 'android') return Platform.OS || 'mobile';
-  if (isFossBuild) return 'android-sideload';
+  if (isFossBuild) return 'fdroid';
   try {
     const referrer = await Application.getInstallReferrerAsync();
     return (referrer || '').trim() ? 'play-store' : 'android-sideload';
@@ -88,9 +93,12 @@ export function getDeviceLocale(): string {
   }
 }
 
-export async function getMobileStartupAnalyticsContext(isFossBuild: boolean) {
+export async function getMobileStartupAnalyticsContext(
+  isFossBuild: boolean,
+  analyticsHeartbeatChannel?: string | null
+) {
   return {
-    channel: await getMobileAnalyticsChannel(isFossBuild).catch(() => Platform.OS || 'mobile'),
+    channel: await getMobileAnalyticsChannel(isFossBuild, analyticsHeartbeatChannel).catch(() => Platform.OS || 'mobile'),
     deviceClass: getMobileDeviceClass(),
     locale: getDeviceLocale(),
     osMajor: getMobileOsMajor(),
@@ -101,7 +109,7 @@ export async function getMobileStartupAnalyticsContext(isFossBuild: boolean) {
 async function buildMobileHeartbeatOptions(config: MobileAnalyticsHeartbeatConfig) {
   const [distinctId, channel] = await Promise.all([
     getOrCreateAnalyticsDistinctId(),
-    getMobileAnalyticsChannel(config.isFossBuild),
+    getMobileAnalyticsChannel(config.isFossBuild, config.analyticsHeartbeatChannel),
   ]);
   return {
     enabled: true,

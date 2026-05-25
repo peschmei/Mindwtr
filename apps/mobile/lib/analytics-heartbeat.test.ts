@@ -32,7 +32,11 @@ vi.mock('expo-application', () => ({
   getInstallReferrerAsync: vi.fn(async () => ''),
 }));
 
-import { sendMobileAnalyticsOptOut, sendMobileDailyHeartbeat } from './analytics-heartbeat';
+import {
+  isMobileAnalyticsHeartbeatConfigured,
+  sendMobileAnalyticsOptOut,
+  sendMobileDailyHeartbeat,
+} from './analytics-heartbeat';
 
 describe('sendMobileDailyHeartbeat', () => {
   const config = {
@@ -62,6 +66,23 @@ describe('sendMobileDailyHeartbeat', () => {
     expect(asyncStorageSetItem).not.toHaveBeenCalled();
     expect(sendDailyHeartbeat).not.toHaveBeenCalled();
     expect(sendHeartbeatOptOut).not.toHaveBeenCalled();
+  });
+
+  it('allows configured FOSS builds to send the anonymous heartbeat', async () => {
+    const fossConfig = {
+      ...config,
+      analyticsHeartbeatChannel: 'fdroid',
+      isFossBuild: true,
+    };
+
+    expect(isMobileAnalyticsHeartbeatConfigured(fossConfig)).toBe(true);
+
+    await expect(sendMobileDailyHeartbeat(fossConfig, {})).resolves.toBe(true);
+
+    expect(sendDailyHeartbeat).toHaveBeenCalledWith(expect.objectContaining({
+      channel: 'fdroid',
+      endpointUrl: 'https://analytics.example.com/heartbeat',
+    }));
   });
 
   it('sends the final opt-out only from the explicit opt-out action', async () => {

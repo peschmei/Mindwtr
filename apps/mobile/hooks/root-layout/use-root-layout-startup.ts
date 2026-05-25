@@ -25,6 +25,7 @@ import {
 
 type UseRootLayoutStartupParams = {
     analyticsHeartbeatUrl: string;
+    analyticsHeartbeatChannel?: string;
     appVersion: string;
     isExpoGo: boolean;
     isFossBuild: boolean;
@@ -75,6 +76,7 @@ const applyStartupSnapshotToStore = (data: AppData): void => {
 
 export function useRootLayoutStartup({
     analyticsHeartbeatUrl,
+    analyticsHeartbeatChannel,
     appVersion,
     isExpoGo,
     isFossBuild,
@@ -141,7 +143,10 @@ export function useRootLayoutStartup({
                     startupContextLogged.current = true;
                     const rawBackend = await AsyncStorage.getItem(SYNC_BACKEND_KEY);
                     const syncBackend = coerceSupportedBackend(resolveBackend(rawBackend), supportsNativeICloudSync());
-                    const analyticsContext = await getMobileStartupAnalyticsContext(isFossBuild);
+                    const analyticsContext = await getMobileStartupAnalyticsContext(
+                        isFossBuild,
+                        analyticsHeartbeatChannel
+                    );
                     void logInfo('App started', {
                         scope: 'startup',
                         force: true,
@@ -163,7 +168,13 @@ export function useRootLayoutStartup({
                     try {
                         await measureStartupPhase('js.analytics.heartbeat', async () => {
                             await sendMobileDailyHeartbeat(
-                                { analyticsHeartbeatUrl, appVersion, isExpoGo, isFossBuild },
+                                {
+                                    analyticsHeartbeatUrl,
+                                    analyticsHeartbeatChannel,
+                                    appVersion,
+                                    isExpoGo,
+                                    isFossBuild,
+                                },
                                 loadedStore.settings
                             );
                         });
@@ -234,7 +245,7 @@ export function useRootLayoutStartup({
                 widgetRefreshTimer.current = null;
             }
         };
-    }, [analyticsHeartbeatUrl, appVersion, isExpoGo, isFossBuild, requestSync, storageInitError]);
+    }, [analyticsHeartbeatUrl, analyticsHeartbeatChannel, appVersion, isExpoGo, isFossBuild, requestSync, storageInitError]);
 
     return { dataReady };
 }

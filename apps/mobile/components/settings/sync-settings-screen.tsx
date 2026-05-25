@@ -73,6 +73,9 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
     const analyticsHeartbeatUrl = typeof extraConfig?.analyticsHeartbeatUrl === 'string'
         ? extraConfig.analyticsHeartbeatUrl.trim()
         : '';
+    const analyticsHeartbeatChannel = typeof extraConfig?.analyticsHeartbeatChannel === 'string'
+        ? extraConfig.analyticsHeartbeatChannel.trim()
+        : '';
     const appVersion = Constants.expoConfig?.version ?? '0.0.0';
     const dropboxAppKey = typeof extraConfig?.dropboxAppKey === 'string' ? extraConfig.dropboxAppKey.trim() : '';
     const dropboxConfigured = !isFossBuild && isDropboxClientConfigured(dropboxAppKey);
@@ -199,6 +202,7 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
                     }
                     await sendMobileAnalyticsOptOut({
                         analyticsHeartbeatUrl,
+                        analyticsHeartbeatChannel,
                         appVersion,
                         isExpoGo,
                         isFossBuild,
@@ -226,6 +230,7 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
         );
     }, [
         analyticsHeartbeatAvailable,
+        analyticsHeartbeatChannel,
         analyticsHeartbeatUrl,
         appVersion,
         isExpoGo,

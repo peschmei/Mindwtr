@@ -80,6 +80,7 @@ export const FOSS_LOCAL_LLM_COPILOT_OPTIONS = ['llama3.2', 'qwen2.5', 'mistral',
 
 export type MobileExtraConfig = {
     analyticsHeartbeatUrl?: string;
+    analyticsHeartbeatChannel?: string;
     isFossBuild?: boolean | string;
     dropboxAppKey?: string;
 };
