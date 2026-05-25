@@ -229,6 +229,39 @@ describe('CalendarView', () => {
         expect(screen.getByText(/Failed to load "Work": HTTP 504/)).toBeInTheDocument();
     });
 
+    it('creates a task from a selected external calendar event', async () => {
+        vi.mocked(fetchExternalCalendarEvents).mockResolvedValue({
+            calendars: [{ id: 'work', name: 'Work', url: 'https://calendar.example/work', enabled: true }],
+            events: [{
+                id: 'event-1',
+                sourceId: 'work',
+                title: 'Launch window',
+                start: '2026-04-03T10:00:00.000Z',
+                end: '2026-04-03T10:45:00.000Z',
+                allDay: false,
+                description: 'Discuss launch.',
+                location: 'Room 1',
+            }],
+            warnings: [],
+        });
+
+        renderCalendar();
+        await flushCalendarEffects();
+        await selectDay('3');
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /create task: launch window/i }));
+            await Promise.resolve();
+        });
+
+        expect(storeMocks.taskStoreState.addTask).toHaveBeenCalledWith('Launch window', {
+            status: 'next',
+            startTime: '2026-04-03T10:00:00.000Z',
+            timeEstimate: '1hr',
+            description: 'Discuss launch.\n\nLocation: Room 1\n\nCalendar: Work',
+        });
+    });
+
     it('opens the day view when month overflow is clicked', async () => {
         storeMocks.taskStoreState.tasks = Array.from({ length: 5 }, (_, index) => makeTask({
             id: `overflow-task-${index}`,

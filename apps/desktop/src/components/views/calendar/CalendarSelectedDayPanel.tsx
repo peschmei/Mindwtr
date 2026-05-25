@@ -14,6 +14,7 @@ type CalendarSelectedDayPanelController = Pick<
     | 'calendarNameById'
     | 'cancelEditScheduledTime'
     | 'commitEditScheduledTime'
+    | 'createTaskFromExternalEvent'
     | 'editingTimeTaskId'
     | 'editingTimeValue'
     | 'externalCalendarColor'
@@ -51,6 +52,7 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
         calendarNameById,
         cancelEditScheduledTime,
         commitEditScheduledTime,
+        createTaskFromExternalEvent,
         editingTimeTaskId,
         editingTimeValue,
         externalCalendarColor,
@@ -133,6 +135,16 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                                         >
                                             <span className="min-w-0 flex-1 truncate">{event.title}</span>
                                             {sourceLabel && <span className="truncate text-xs text-muted-foreground">{sourceLabel}</span>}
+                                            <button
+                                                type="button"
+                                                className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 text-xs font-medium text-primary hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                onClick={() => void createTaskFromExternalEvent(event)}
+                                                aria-label={`${resolveText('calendar.createTaskFromEvent', 'Create task')}: ${event.title}`}
+                                                title={resolveText('calendar.createTaskFromEvent', 'Create task')}
+                                            >
+                                                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                                                {resolveText('calendar.createTaskFromEvent', 'Create task')}
+                                            </button>
                                         </div>
                                     );
                                 })}
@@ -164,6 +176,16 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                                         <span className="w-28 shrink-0 text-xs font-medium text-muted-foreground">{timeLabel}</span>
                                         <span className="min-w-0 flex-1 truncate">{event.title}</span>
                                         {sourceLabel && <span className="truncate text-xs text-muted-foreground">{sourceLabel}</span>}
+                                        <button
+                                            type="button"
+                                            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 text-xs font-medium text-primary hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                            onClick={() => void createTaskFromExternalEvent(event)}
+                                            aria-label={`${resolveText('calendar.createTaskFromEvent', 'Create task')}: ${event.title}`}
+                                            title={resolveText('calendar.createTaskFromEvent', 'Create task')}
+                                        >
+                                            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                                            {resolveText('calendar.createTaskFromEvent', 'Create task')}
+                                        </button>
                                     </div>
                                 );
                             })}

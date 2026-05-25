@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type DragEvent, type KeyboardEvent } from 'react';
 import { format, getMonth, isSameDay, isSameMonth, isToday } from 'date-fns';
-import { CalendarDays, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { safeFormatDate } from '@mindwtr/core';
 
 import { ErrorBoundary } from '../ErrorBoundary';
@@ -29,6 +29,7 @@ export function CalendarView() {
     const controller = useDesktopCalendarController();
     const {
         calendarBodyRef,
+        createTaskFromExternalEvent,
         currentMonth,
         currentMonthLabel,
         currentYear,
@@ -641,6 +642,16 @@ export function CalendarView() {
                                                         >
                                                             <span className="w-20 shrink-0 text-xs font-medium text-muted-foreground">{timeLabel}</span>
                                                             <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                                                            <button
+                                                                type="button"
+                                                                className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 text-xs font-medium text-primary hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                                onClick={() => void createTaskFromExternalEvent(item.event)}
+                                                                aria-label={`${resolveText('calendar.createTaskFromEvent', 'Create task')}: ${item.title}`}
+                                                                title={resolveText('calendar.createTaskFromEvent', 'Create task')}
+                                                            >
+                                                                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                                                                {resolveText('calendar.createTaskFromEvent', 'Create task')}
+                                                            </button>
                                                         </div>
                                                     );
                                                 }

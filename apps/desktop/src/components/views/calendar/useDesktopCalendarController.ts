@@ -20,6 +20,7 @@ import {
 import {
     DEFAULT_CALENDAR_DAY_START_HOUR,
     addCalendarMinutes,
+    buildCalendarEventTaskDraft,
     formatCalendarDurationLabel,
     formatCalendarTimeInputValue,
     findFreeSlotForDay as findCalendarFreeSlotForDay,
@@ -380,6 +381,32 @@ export function useDesktopCalendarController() {
     }, [updateTask]);
 
     const calendarNameById = useMemo(() => new Map(externalCalendars.map((c) => [c.id, c.name])), [externalCalendars]);
+    const createTaskFromExternalEvent = useCallback(async (event: ExternalCalendarEvent) => {
+        try {
+            const { initialProps, title } = buildCalendarEventTaskDraft(event, {
+                calendarName: calendarNameById.get(event.sourceId),
+                fallbackTitle: resolveText('calendar.eventFallbackTitle', 'Calendar event'),
+            });
+            const result = await addTask(title, initialProps);
+            if (!result.success) {
+                setScheduleError(result.error ?? resolveText('calendar.saveTaskFailed', 'Could not save the task.'));
+                return;
+            }
+
+            const nextDate = safeParseDate(initialProps.startTime ?? initialProps.dueDate ?? event.start);
+            if (nextDate) {
+                setSelectedDate(nextDate);
+                setCurrentMonth(nextDate);
+            }
+            setScheduleError(null);
+            if (result.id) {
+                setOpenTaskId(result.id);
+            }
+        } catch (error) {
+            reportError('Failed to create task from calendar event', error);
+            setScheduleError(resolveText('calendar.saveTaskFailed', 'Could not save the task.'));
+        }
+    }, [addTask, calendarNameById, resolveText]);
 
     const visibleExternalEvents = useMemo(
         () => externalEvents.filter((event) => {
@@ -1101,6 +1128,7 @@ export function useDesktopCalendarController() {
         currentMonth,
         currentMonthLabel,
         currentYear,
+        createTaskFromExternalEvent,
         days,
         editingTimeTaskId,
         editingTimeValue,

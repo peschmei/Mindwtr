@@ -382,6 +382,7 @@ export type {
 
 export {
     addCalendarMinutes,
+    buildCalendarEventTaskDraft,
     CALENDAR_TIME_ESTIMATE_OPTIONS,
     DEFAULT_CALENDAR_DAY_END_HOUR,
     DEFAULT_CALENDAR_DAY_START_HOUR,
@@ -394,6 +395,9 @@ export {
     normalizeCalendarDurationMinutes,
     parseCalendarTimeOnDate,
     timeEstimateToMinutes,
+} from './calendar-scheduling';
+export type {
+    CalendarEventTaskDraft,
 } from './calendar-scheduling';
 
 export {

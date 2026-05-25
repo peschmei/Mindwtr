@@ -1,4 +1,4 @@
-import { hasTimeComponent, safeParseDate } from './date';
+import { hasTimeComponent, safeFormatDate, safeParseDate } from './date';
 import type { ExternalCalendarEvent } from './ics';
 import type { Task, TimeEstimate } from './types';
 
@@ -18,6 +18,16 @@ export const CALENDAR_TIME_ESTIMATE_OPTIONS: Array<{ estimate: TimeEstimate; min
 
 type SchedulingTask = Pick<Task, 'deletedAt' | 'id' | 'startTime' | 'status' | 'timeEstimate'>;
 type SchedulingEvent = Pick<ExternalCalendarEvent, 'allDay' | 'end' | 'start'>;
+
+export type CalendarEventTaskDraft = {
+    initialProps: Partial<Task>;
+    title: string;
+};
+
+type CalendarEventTaskDraftOptions = {
+    calendarName?: string;
+    fallbackTitle?: string;
+};
 
 type CalendarSchedulingOptions = {
     dayEndHour?: number;
@@ -71,6 +81,56 @@ export function minutesToTimeEstimate(minutes: number): TimeEstimate {
 
     const nextLargest = CALENDAR_TIME_ESTIMATE_OPTIONS.find((option) => option.minutes >= normalized);
     return nextLargest?.estimate ?? '4hr+';
+}
+
+function cleanEventTaskText(value: string | undefined): string {
+    return (value ?? '').trim();
+}
+
+function allDayEventDateValue(event: ExternalCalendarEvent, start: Date): string {
+    const datePrefix = /^(\d{4}-\d{2}-\d{2})/.exec(event.start)?.[1];
+    return datePrefix ?? safeFormatDate(start, 'yyyy-MM-dd', start.toISOString().slice(0, 10));
+}
+
+export function buildCalendarEventTaskDraft(
+    event: ExternalCalendarEvent,
+    options: CalendarEventTaskDraftOptions = {},
+): CalendarEventTaskDraft {
+    const title = cleanEventTaskText(event.title)
+        || cleanEventTaskText(options.fallbackTitle)
+        || 'Calendar event';
+    const start = safeParseDate(event.start);
+    const end = safeParseDate(event.end);
+    const initialProps: Partial<Task> = {
+        status: 'next',
+    };
+
+    if (event.allDay) {
+        if (start) {
+            initialProps.dueDate = allDayEventDateValue(event, start);
+        }
+    } else if (start) {
+        initialProps.startTime = start.toISOString();
+        if (end && end > start) {
+            const durationMinutes = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60_000));
+            initialProps.timeEstimate = minutesToTimeEstimate(durationMinutes);
+        }
+    }
+
+    const descriptionParts = [
+        cleanEventTaskText(event.description),
+        cleanEventTaskText(event.location) ? `Location: ${cleanEventTaskText(event.location)}` : '',
+        cleanEventTaskText(options.calendarName) ? `Calendar: ${cleanEventTaskText(options.calendarName)}` : '',
+    ].filter((part) => part.length > 0);
+
+    if (descriptionParts.length > 0) {
+        initialProps.description = descriptionParts.join('\n\n');
+    }
+
+    return {
+        initialProps,
+        title,
+    };
 }
 
 export function normalizeCalendarDurationMinutes(minutes: number): number {

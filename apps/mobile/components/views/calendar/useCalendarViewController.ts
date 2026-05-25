@@ -1,9 +1,10 @@
-import { Alert, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { Alert, type AlertButton, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_CALENDAR_DAY_END_HOUR,
   DEFAULT_CALENDAR_DAY_START_HOUR,
   addCalendarMinutes,
+  buildCalendarEventTaskDraft,
   formatCalendarTimeInputValue,
   formatI18nTemplate,
   normalizeDateFormatSetting,
@@ -855,17 +856,7 @@ export function useCalendarViewController() {
     Alert.alert(task.title, undefined, buttons, { cancelable: true });
   };
 
-  const openExternalEvent = (event: ExternalCalendarEvent) => {
-    if (!canOpenExternalCalendarEvent(event)) {
-      showToast({
-        title: t('calendar.cannotOpenEventTitle'),
-        message: t('calendar.openDeviceEventOnly'),
-        tone: 'info',
-        durationMs: 3600,
-      });
-      return;
-    }
-
+  const openExternalEventInCalendar = (event: ExternalCalendarEvent) => {
     openExternalCalendarEvent(event)
       .then((opened) => {
         if (opened) return;
@@ -885,6 +876,67 @@ export function useCalendarViewController() {
           durationMs: 4200,
         });
       });
+  };
+
+  const createTaskFromExternalEvent = async (event: ExternalCalendarEvent) => {
+    try {
+      const { initialProps, title } = buildCalendarEventTaskDraft(event, {
+        calendarName: calendarNameById.get(event.sourceId),
+        fallbackTitle: t('calendar.eventFallbackTitle'),
+      });
+      const result = await addTask(title, initialProps);
+      if (!result.success) {
+        showToast({
+          title: t('calendar.saveTaskFailed'),
+          message: result.error ?? t('calendar.saveTaskFailed'),
+          tone: 'warning',
+          durationMs: 4200,
+        });
+        return;
+      }
+
+      const nextDate = safeParseDate(initialProps.startTime ?? initialProps.dueDate ?? event.start);
+      if (nextDate) {
+        setSelectedDate(nextDate);
+        setCurrentMonth(nextDate.getMonth());
+        setCurrentYear(nextDate.getFullYear());
+      }
+      showToast({
+        title: t('calendar.eventTaskCreatedTitle'),
+        message: t('calendar.eventTaskCreated'),
+        tone: 'success',
+        durationMs: 3000,
+      });
+    } catch (error) {
+      logCalendarError(error);
+      showToast({
+        title: t('calendar.saveTaskFailed'),
+        message: t('calendar.saveTaskFailed'),
+        tone: 'warning',
+        durationMs: 4200,
+      });
+    }
+  };
+
+  const openExternalEvent = (event: ExternalCalendarEvent) => {
+    const buttons: AlertButton[] = [
+      {
+        text: t('calendar.createTaskFromEvent'),
+        onPress: () => {
+          void createTaskFromExternalEvent(event);
+        },
+      },
+    ];
+
+    if (canOpenExternalCalendarEvent(event)) {
+      buttons.push({
+        text: t('calendar.openInCalendar'),
+        onPress: () => openExternalEventInCalendar(event),
+      });
+    }
+
+    buttons.push({ text: t('common.cancel'), style: 'cancel' });
+    Alert.alert(event.title || t('calendar.eventFallbackTitle'), undefined, buttons, { cancelable: true });
   };
 
   const handlePrevMonth = () => {
