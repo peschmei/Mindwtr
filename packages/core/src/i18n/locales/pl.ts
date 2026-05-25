@@ -619,7 +619,7 @@ export const plOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': 'Anonimowy sygnał użycia',
         'settings.analyticsHeartbeatDesc': 'Mały codzienny sygnał diagnostyczny dotyczący stanu aplikacji oraz użycia platform i wersji. Nie zawiera zadań ani danych osobowych.',
         'settings.analyticsHeartbeatDisableTitle': 'Wyłączyć anonimowy sygnał?',
-        'settings.analyticsHeartbeatDisableDesc': 'Sygnał nie zawiera zadań, projektów, notatek, plików, promptów SI, adresu e-mail, imienia, kontaktów ani danych konta. Pomaga mierzyć aktywne platformy i wersje. Po wyłączeniu Mindwtr wyśle jedno ostatnie anonimowe zdarzenie rezygnacji z tym identyfikatorem instalacji, a potem przestanie wysyłać sygnały.',
+        'settings.analyticsHeartbeatDisableDesc': 'Sygnały nigdy nie zawierają danych użytkownika ani informacji osobistych. Wysyłają tylko anonimową diagnostykę, która pomaga deweloperom rozumieć stan aplikacji i wersje. Wyłączenie wysyła ostatnie anonimowe zdarzenie rezygnacji, a potem zatrzymuje sygnały.',
         'settings.analyticsHeartbeatDisableConfirm': 'Wyłącz',
         'settings.analyticsHeartbeatKeepEnabled': 'Zostaw włączone',
         'settings.debugLogging': 'Logowanie debugowe',

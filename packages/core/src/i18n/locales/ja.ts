@@ -620,7 +620,7 @@ export const jaOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': '匿名利用ハートビート',
         'settings.analyticsHeartbeatDesc': 'アプリの健全性とプラットフォーム/バージョンの利用状況を把握するための小さな日次診断信号です。タスクや個人データは含まれません。',
         'settings.analyticsHeartbeatDisableTitle': '匿名ハートビートを無効にしますか？',
-        'settings.analyticsHeartbeatDisableDesc': 'ハートビートには、タスク、プロジェクト、メモ、ファイル、人工知能プロンプト、メールアドレス、名前、連絡先、アカウントデータは含まれません。利用中のプラットフォームとバージョンを把握するために使われます。無効にすると、Mindwtr はこの匿名インストール識別子で最後の停止通知を送信し、その後ハートビートを送信しません。',
+        'settings.analyticsHeartbeatDisableDesc': 'ハートビートにユーザーデータや個人情報は含まれません。開発者がアプリの状態とバージョンを把握するための匿名診断情報だけを送信します。無効にすると最後の匿名停止通知を送信し、その後停止します。',
         'settings.analyticsHeartbeatDisableConfirm': '無効にする',
         'settings.analyticsHeartbeatKeepEnabled': '有効のままにする',
         'settings.debugLogging': 'デバッグログ',

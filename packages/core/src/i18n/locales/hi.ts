@@ -622,7 +622,7 @@ export const hiOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': 'अनाम उपयोग संकेत',
         'settings.analyticsHeartbeatDesc': 'ऐप की स्थिति और प्लेटफ़ॉर्म/संस्करण अपनाने को समझने के लिए छोटा दैनिक निदान संकेत। इसमें कोई कार्य या निजी डेटा शामिल नहीं है।',
         'settings.analyticsHeartbeatDisableTitle': 'अनाम संकेत बंद करें?',
-        'settings.analyticsHeartbeatDisableDesc': 'इस संकेत में कार्य, प्रोजेक्ट, नोट, फ़ाइलें, कृत्रिम बुद्धिमत्ता प्रॉम्प्ट, ईमेल पता, नाम, संपर्क या खाता डेटा शामिल नहीं होते। यह सक्रिय प्लेटफ़ॉर्म और संस्करण मापने में मदद करता है। यदि आप इसे बंद करते हैं, तो Mindwtr इस अनाम इंस्टॉल पहचान के साथ एक अंतिम बंद-सूचना भेजेगा और फिर उपयोग संकेत भेजना बंद कर देगा।',
+        'settings.analyticsHeartbeatDisableDesc': 'इन संकेतों में उपयोगकर्ता डेटा या निजी जानकारी शामिल नहीं होती। ये केवल अनाम निदान जानकारी भेजते हैं, जिससे डेवलपर ऐप की स्थिति और संस्करण समझ सकें। बंद करने पर एक अंतिम अनाम बंद-सूचना भेजी जाती है, फिर संकेत रुक जाते हैं।',
         'settings.analyticsHeartbeatDisableConfirm': 'बंद करें',
         'settings.analyticsHeartbeatKeepEnabled': 'चालू रखें',
         'settings.debugLogging': 'लॉगिंग डीबग करें',

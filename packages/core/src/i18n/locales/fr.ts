@@ -613,7 +613,7 @@ export const frOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': 'Signal d\'utilisation anonyme',
         'settings.analyticsHeartbeatDesc': 'Petit signal de diagnostic quotidien pour la santé de l\'app et l\'adoption des plateformes/versions. Il n\'inclut aucune tâche ni donnée personnelle.',
         'settings.analyticsHeartbeatDisableTitle': 'Désactiver le signal anonyme ?',
-        'settings.analyticsHeartbeatDisableDesc': 'Le signal n\'inclut pas les tâches, projets, notes, fichiers, prompts IA, adresse e-mail, nom, contacts ou données de compte. Il aide à mesurer les plateformes et versions actives. Si vous le désactivez, Mindwtr enverra un dernier événement anonyme de désactivation avec cet identifiant d\'installation, puis cessera d\'envoyer des signaux.',
+        'settings.analyticsHeartbeatDisableDesc': 'Les signaux n’incluent jamais de données utilisateur ni d’informations personnelles. Ils envoient seulement des diagnostics anonymes pour aider les développeurs à comprendre la santé de l’app et les versions. La désactivation envoie un dernier événement anonyme, puis arrête les signaux.',
         'settings.analyticsHeartbeatDisableConfirm': 'Désactiver',
         'settings.analyticsHeartbeatKeepEnabled': 'Garder activé',
         'settings.debugLogging': 'Journalisation du débogage',

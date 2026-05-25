@@ -628,7 +628,7 @@ export const trOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': 'Anonim kullanım sinyali',
         'settings.analyticsHeartbeatDesc': 'Uygulama sağlığı ve platform/sürüm kullanımı için küçük bir günlük tanı sinyali. Görev veya kişisel veri içermez.',
         'settings.analyticsHeartbeatDisableTitle': 'Anonim sinyal devre dışı bırakılsın mı?',
-        'settings.analyticsHeartbeatDisableDesc': 'Sinyal; görev, proje, not, dosya, yapay zeka istemi, e-posta adresi, ad, kişi veya hesap verisi içermez. Aktif platformları ve sürümleri ölçmeye yardımcı olur. Devre dışı bırakırsanız Mindwtr bu anonim kurulum kimliğiyle son bir çıkış olayı gönderir, ardından sinyal göndermeyi durdurur.',
+        'settings.analyticsHeartbeatDisableDesc': 'Sinyaller kullanıcı verisi veya kişisel bilgi içermez. Yalnızca geliştiricilerin uygulama sağlığını ve sürümleri anlamasına yardımcı olan anonim tanılama bilgisi gönderir. Devre dışı bırakınca son bir anonim çıkış olayı gönderilir, sonra sinyaller durur.',
         'settings.analyticsHeartbeatDisableConfirm': 'Devre dışı bırak',
         'settings.analyticsHeartbeatKeepEnabled': 'Etkin kalsın',
         'settings.debugLogging': 'Hata ayıklama günlüğü',

@@ -616,7 +616,7 @@ export const koOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': '익명 사용 하트비트',
         'settings.analyticsHeartbeatDesc': '앱 상태와 플랫폼/버전 사용 현황을 파악하기 위한 작은 일일 진단 신호입니다. 작업이나 개인 데이터는 포함되지 않습니다.',
         'settings.analyticsHeartbeatDisableTitle': '익명 하트비트를 끌까요?',
-        'settings.analyticsHeartbeatDisableDesc': '하트비트에는 작업, 프로젝트, 노트, 파일, 인공지능 프롬프트, 이메일 주소, 이름, 연락처 또는 계정 데이터가 포함되지 않습니다. 활성 플랫폼과 버전을 파악하는 데 사용됩니다. 끄면 Mindwtr가 이 익명 설치 식별자로 마지막 해제 신호를 보낸 뒤 더 이상 하트비트를 보내지 않습니다.',
+        'settings.analyticsHeartbeatDisableDesc': '하트비트에는 사용자 데이터나 개인 정보가 포함되지 않습니다. 개발자가 앱 상태와 버전을 파악하는 데 도움이 되는 익명 진단 정보만 보냅니다. 끄면 마지막 익명 해제 이벤트를 보낸 뒤 하트비트를 중지합니다.',
         'settings.analyticsHeartbeatDisableConfirm': '끄기',
         'settings.analyticsHeartbeatKeepEnabled': '켜 둠',
         'settings.debugLogging': '디버그 로깅',

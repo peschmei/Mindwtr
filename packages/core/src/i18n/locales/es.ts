@@ -552,7 +552,7 @@ export const esOverrides: Record<string, string> = {
         'settings.analyticsHeartbeat': 'Latido de uso anónimo',
         'settings.analyticsHeartbeatDesc': 'Pequeña señal diaria de diagnóstico para la salud de la app y la adopción de plataformas/versiones. No incluye tareas ni datos personales.',
         'settings.analyticsHeartbeatDisableTitle': '¿Desactivar el latido anónimo?',
-        'settings.analyticsHeartbeatDisableDesc': 'El latido no incluye tareas, proyectos, notas, archivos, prompts de IA, correo electrónico, nombre, contactos ni datos de cuenta. Ayuda a medir plataformas y versiones activas. Si lo desactivas, Mindwtr enviará un último evento anónimo de baja con este identificador de instalación y luego dejará de enviar latidos.',
+        'settings.analyticsHeartbeatDisableDesc': 'Los latidos nunca incluyen datos de usuario ni información personal. Solo envían diagnósticos anónimos para ayudar a los desarrolladores a entender la salud y las versiones de la app. Al desactivarlos se envía un último evento anónimo de baja y luego se detienen.',
         'settings.analyticsHeartbeatDisableConfirm': 'Desactivar',
         'settings.analyticsHeartbeatKeepEnabled': 'Mantener activado',
         'settings.debugLogging': 'Registro de depuración',
