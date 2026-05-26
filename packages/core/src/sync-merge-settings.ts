@@ -195,7 +195,10 @@ const sanitizeExternalCalendars = (
         && isNonEmptyString(item.name)
         && isNonEmptyString(item.url)
         && typeof item.enabled === 'boolean';
-    const isLocalCalendarSource = (item: { url: string }): boolean => item.url.trim().toLowerCase().startsWith('file://');
+    const isLocalCalendarSource = (item: { url: string }): boolean => {
+        const url = item.url.trim().toLowerCase();
+        return url.startsWith('file://') || url.startsWith('content://');
+    };
     const next = value
         .filter(isValidCalendar)
         .filter((item) => !isLocalCalendarSource(item))

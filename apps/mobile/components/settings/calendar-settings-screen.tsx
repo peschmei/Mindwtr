@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { generateUUID, type ExternalCalendarSubscription, useTaskStore } from '@mindwtr/core';
@@ -344,6 +345,46 @@ export function CalendarSettingsScreen() {
         await updateSettings({ externalCalendars: next });
     };
 
+    const handleChooseLocalCalendar = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ['text/calendar', 'application/ics', 'application/octet-stream', '*/*'],
+                copyToCacheDirectory: false,
+            });
+            if (result.canceled) return;
+            const asset = result.assets[0];
+            if (!asset?.uri) return;
+
+            const fileName = (asset.name || asset.uri.split('/').pop() || '').trim();
+            const inferredName = fileName.replace(/\.ics$/iu, '').trim();
+            const name = (newCalendarName.trim() || inferredName || tr('nav.calendar')).trim();
+            const next: ExternalCalendarSubscription[] = [
+                ...externalCalendars,
+                { id: generateUUID(), name, url: asset.uri.trim(), enabled: true },
+            ];
+
+            setExternalCalendars(next);
+            setNewCalendarName('');
+            setNewCalendarUrl('');
+            await saveExternalCalendars(next);
+            await updateSettings({ externalCalendars: next });
+            showToast({
+                title: tr('settings.calendarMobile.localIcsFileAdded'),
+                message: tr('settings.calendarMobile.localIcsFilesAreReadOnly'),
+                tone: 'success',
+                durationMs: 3500,
+            });
+        } catch (error) {
+            console.error(error);
+            showToast({
+                title: tr('settings.syncMobile.error'),
+                message: tr('settings.calendarMobile.failedToLoadSavedCalendars'),
+                tone: 'warning',
+                durationMs: 4200,
+            });
+        }
+    };
+
     const handleToggleCalendar = async (id: string, enabled: boolean) => {
         const next = externalCalendars.map((c) => (c.id === id ? { ...c, enabled } : c));
         setExternalCalendars(next);
@@ -685,6 +726,18 @@ export function CalendarSettingsScreen() {
                                 <Text style={[styles.backendOptionText, { color: tc.text }]}>{tr('settings.calendarMobile.test')}</Text>
                             </TouchableOpacity>
                         </View>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.backendOption,
+                                { borderColor: tc.border, backgroundColor: tc.filterBg, marginTop: 12, alignSelf: 'flex-start' },
+                            ]}
+                            onPress={() => void handleChooseLocalCalendar()}
+                        >
+                            <Text style={[styles.backendOptionText, { color: tc.text }]}>
+                                {tr('settings.calendarMobile.chooseLocalIcsFile')}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 

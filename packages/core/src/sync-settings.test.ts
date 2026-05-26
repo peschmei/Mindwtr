@@ -300,6 +300,7 @@ describe('Sync Logic', () => {
         it('keeps local file calendar sources out of synced settings merges', () => {
             const localCalendars = [
                 { id: 'cal-local', name: 'Local', url: 'file:///home/user/agenda.ics', enabled: true },
+                { id: 'cal-android-local', name: 'Android Local', url: 'content://calendar/agenda.ics', enabled: true },
             ];
             const local: AppData = {
                 ...mockAppData(),
@@ -315,6 +316,7 @@ describe('Sync Logic', () => {
                 settings: {
                     externalCalendars: [
                         { id: 'cal-file', name: 'File', url: 'file:///tmp/other.ics', enabled: true },
+                        { id: 'cal-content', name: 'Android File', url: 'content://downloads/other.ics', enabled: true },
                         { id: 'cal-team', name: 'Team', url: 'https://calendar.example.com/team.ics', enabled: true },
                     ],
                     syncPreferencesUpdatedAt: {
@@ -327,7 +329,7 @@ describe('Sync Logic', () => {
 
             expect(merged.settings.externalCalendars).toEqual([
                 { id: 'cal-team', name: 'Team', url: 'https://calendar.example.com/team.ics', enabled: true },
-                localCalendars[0],
+                ...localCalendars,
             ]);
         });
 

@@ -253,7 +253,20 @@ export const StorageAccessFramework = {
         ? () => LegacyFileSystem.StorageAccessFramework.createFileAsync(parentUri, name, mimeType)
         : null
     ),
-  readAsStringAsync,
+  readAsStringAsync: async (uri: string, options: ReadOptions = {}): Promise<string> =>
+    withLegacyFallback(
+      canUseModernApi()
+        ? async () => {
+            const file = new ModernFile(uri);
+            return options.encoding === EncodingType.Base64 ? await file.base64() : await file.text();
+          }
+        : null,
+      LegacyFileSystem.StorageAccessFramework?.readAsStringAsync
+        ? () => LegacyFileSystem.StorageAccessFramework.readAsStringAsync(uri, options)
+        : LegacyFileSystem.readAsStringAsync
+          ? () => LegacyFileSystem.readAsStringAsync(uri, options)
+          : null
+    ),
   writeAsStringAsync,
   deleteAsync,
 };
