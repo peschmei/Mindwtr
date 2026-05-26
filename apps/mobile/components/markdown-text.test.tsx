@@ -61,6 +61,13 @@ const countByTestId = (
   return (value.props?.testID === testID ? 1 : 0) + countByTestId(value.children, testID);
 };
 
+const flattenStyle = (style: unknown): Record<string, unknown> => {
+  if (Array.isArray(style)) {
+    return Object.assign({}, ...style.map((item) => flattenStyle(item)));
+  }
+  return style && typeof style === 'object' ? style as Record<string, unknown> : {};
+};
+
 describe('MarkdownText', () => {
   const renderMarkdown = (markdown: string) => {
     let tree!: renderer.ReactTestRenderer;
@@ -122,6 +129,30 @@ describe('MarkdownText', () => {
     const tree = renderMarkdown('line 1\n\nline 2');
 
     expect(countByTestId(tree.toJSON(), 'markdown-blank-line')).toBe(1);
+  });
+
+  it('renders nested unordered list items with indentation', () => {
+    const tree = renderMarkdown('- Parent\n  - Child\n    - Grandchild');
+
+    const rows = tree.root.findAll((node) => (
+      String(node.type) === 'View' && node.props.testID === 'markdown-list-item'
+    ));
+    expect(rows).toHaveLength(3);
+    expect(flattenStyle(rows[0].props.style).marginLeft ?? 0).toBe(0);
+    expect(flattenStyle(rows[1].props.style).marginLeft).toBe(14);
+    expect(flattenStyle(rows[2].props.style).marginLeft).toBe(28);
+    expect(flattenText(tree.toJSON())).toContain('Parent');
+    expect(flattenText(tree.toJSON())).toContain('Child');
+    expect(flattenText(tree.toJSON())).toContain('Grandchild');
+  });
+
+  it('renders ordered list markers in preview', () => {
+    const tree = renderMarkdown('1. First\n2. Second');
+
+    expect(flattenText(tree.toJSON())).toContain('1.');
+    expect(flattenText(tree.toJSON())).toContain('First');
+    expect(flattenText(tree.toJSON())).toContain('2.');
+    expect(flattenText(tree.toJSON())).toContain('Second');
   });
 
   it('adds an accessible copy button to fenced code blocks', () => {

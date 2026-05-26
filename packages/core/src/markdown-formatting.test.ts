@@ -276,6 +276,17 @@ describe('continueMarkdownOnEnter', () => {
         });
     });
 
+    it('splits nested unordered list items and leaves the cursor after the nested marker', () => {
+        const value = 'List of items\n  - Item 1\n  - Item 2';
+        const cursor = value.indexOf('Item 1');
+        expect(
+            continueMarkdownOnEnter(value, { start: cursor, end: cursor }),
+        ).toEqual({
+            value: 'List of items\n  - \n  - Item 1\n  - Item 2',
+            selection: { start: cursor + 5, end: cursor + 5 },
+        });
+    });
+
     it('increments ordered list markers', () => {
         expect(
             continueMarkdownOnEnter('1. item', { start: 7, end: 7 }),
@@ -326,6 +337,15 @@ describe('continueMarkdownOnTextChange', () => {
         ).toEqual({
             value: '- \n- item',
             selection: { start: 5, end: 5 },
+        });
+    });
+
+    it('recognizes a raw newline insertion inside a nested list item on mobile', () => {
+        expect(
+            continueMarkdownOnTextChange('  - item', '  - \nitem', { start: 4, end: 4 }),
+        ).toEqual({
+            value: '  - \n  - item',
+            selection: { start: 9, end: 9 },
         });
     });
 

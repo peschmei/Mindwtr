@@ -9,8 +9,9 @@ import { parseInlineMarkdown, parseMarkdownReferenceHref, shallow, tFallback, us
 import { useLanguage } from '@/contexts/language-context';
 import { openProjectScreen, openTaskScreen } from '@/lib/task-meta-navigation';
 
-const TASK_LIST_RE = /^\s{0,3}(?:[-*+]\s+)?\[( |x|X)\]\s+(.+)$/;
-const BULLET_LIST_RE = /^\s{0,3}[-*+]\s+(.+)$/;
+const TASK_LIST_RE = /^(\s*)(?:[-*+]\s+)?\[( |x|X)\]\s+(.+)$/;
+const BULLET_LIST_RE = /^(\s*)[-*+]\s+(.+)$/;
+const ORDERED_LIST_RE = /^(\s*)(\d+)([.)])\s+(.+)$/;
 const HEADING_RE = /^(#{1,3})\s+(.+)$/;
 const HORIZONTAL_RULE_RE = /^(?:-{3,}|\*{3,}|_{3,})$/;
 const FENCED_CODE_RE = /^```.*$/;
@@ -27,8 +28,16 @@ function isBlockBoundary(line: string): boolean {
   if (HORIZONTAL_RULE_RE.test(trimmed)) return true;
   if (TASK_LIST_RE.test(line)) return true;
   if (BULLET_LIST_RE.test(line)) return true;
+  if (ORDERED_LIST_RE.test(line)) return true;
   return false;
 }
+
+const getListIndentDepth = (indent: string): number => {
+  const width = indent.replace(/\t/g, '    ').length;
+  return Math.max(0, Math.floor(width / 2));
+};
+
+const getBulletMarker = (depth: number): string => ['•', '◦', '▪'][Math.min(depth, 2)] ?? '•';
 
 function isSafeLink(href: string): boolean {
   return /^https?:\/\//i.test(href) || /^mailto:/i.test(href) || /^tel:/i.test(href);
@@ -262,18 +271,18 @@ export function MarkdownText({
 
     const taskListMatch = TASK_LIST_RE.exec(line);
     if (taskListMatch) {
-      const items: { checked: boolean; text: string }[] = [];
+      const items: { checked: boolean; depth: number; text: string }[] = [];
       const start = i;
       while (i < lines.length) {
         const m = TASK_LIST_RE.exec(lines[i]);
         if (!m) break;
-        items.push({ checked: m[1].toLowerCase() === 'x', text: m[2] });
+        items.push({ checked: m[2].toLowerCase() === 'x', depth: getListIndentDepth(m[1]), text: m[3] });
         i += 1;
       }
       blocks.push(
         <View key={`task-ul-${start}`} style={styles.list}>
           {items.map((item, idx) => (
-            <View key={idx} style={styles.taskListRow}>
+            <View key={idx} testID="markdown-list-item" style={[styles.listRow, { marginLeft: item.depth * 14 }]}>
               <Text style={[styles.taskListMarker, { color: tc.secondaryText }]}>
                 {item.checked ? '☑' : '☐'}
               </Text>
@@ -289,20 +298,53 @@ export function MarkdownText({
 
     const listMatch = BULLET_LIST_RE.exec(line);
     if (listMatch) {
-      const items: string[] = [];
+      const items: { depth: number; marker: string; text: string }[] = [];
       const start = i;
       while (i < lines.length) {
         const m = BULLET_LIST_RE.exec(lines[i]);
         if (!m) break;
-        items.push(m[1]);
+        const depth = getListIndentDepth(m[1]);
+        items.push({ depth, marker: getBulletMarker(depth), text: m[2] });
         i += 1;
       }
       blocks.push(
         <View key={`ul-${start}`} style={styles.list}>
           {items.map((item, idx) => (
-            <Text key={idx} style={[styles.paragraph, { color: tc.text }, directionStyle]}>
-              • {renderInline(item, tc, `li-${start}-${idx}`, { resolveTask, resolveProject, deletedTaskLabel, deletedProjectLabel })}
-            </Text>
+            <View key={idx} testID="markdown-list-item" style={[styles.listRow, { marginLeft: item.depth * 14 }]}>
+              <Text style={[styles.listMarker, { color: tc.secondaryText }]}>
+                {item.marker}
+              </Text>
+              <Text style={[styles.paragraph, styles.listItemText, { color: tc.text }, directionStyle]}>
+                {renderInline(item.text, tc, `li-${start}-${idx}`, { resolveTask, resolveProject, deletedTaskLabel, deletedProjectLabel })}
+              </Text>
+            </View>
+          ))}
+        </View>
+      );
+      continue;
+    }
+
+    const orderedListMatch = ORDERED_LIST_RE.exec(line);
+    if (orderedListMatch) {
+      const items: { depth: number; marker: string; text: string }[] = [];
+      const start = i;
+      while (i < lines.length) {
+        const m = ORDERED_LIST_RE.exec(lines[i]);
+        if (!m) break;
+        items.push({ depth: getListIndentDepth(m[1]), marker: `${m[2]}${m[3]}`, text: m[4] });
+        i += 1;
+      }
+      blocks.push(
+        <View key={`ol-${start}`} style={styles.list}>
+          {items.map((item, idx) => (
+            <View key={idx} testID="markdown-list-item" style={[styles.listRow, { marginLeft: item.depth * 14 }]}>
+              <Text style={[styles.orderedListMarker, { color: tc.secondaryText }]}>
+                {item.marker}
+              </Text>
+              <Text style={[styles.paragraph, styles.listItemText, { color: tc.text }, directionStyle]}>
+                {renderInline(item.text, tc, `oli-${start}-${idx}`, { resolveTask, resolveProject, deletedTaskLabel, deletedProjectLabel })}
+              </Text>
+            </View>
           ))}
         </View>
       );
@@ -346,14 +388,28 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingLeft: 6,
   },
-  taskListRow: {
+  listRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
   },
+  listMarker: {
+    fontSize: 13,
+    lineHeight: 18,
+    width: 14,
+  },
+  orderedListMarker: {
+    fontSize: 13,
+    lineHeight: 18,
+    minWidth: 22,
+  },
   taskListMarker: {
     fontSize: 13,
     lineHeight: 18,
+    width: 14,
+  },
+  listItemText: {
+    flexShrink: 1,
   },
   taskListText: {
     flexShrink: 1,

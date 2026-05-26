@@ -73,15 +73,22 @@ export function useTaskDescriptionEditor({
             descriptionInputRef.current?.setNativeProps?.({ selection });
         };
         requestAnimationFrame(applySelection);
-        setTimeout(() => {
+        const applyDelayedSelection = (shouldClearPending: boolean) => {
             applySelection();
             if (
-                pendingDescriptionSelectionRef.current
+                shouldClearPending
+                && pendingDescriptionSelectionRef.current
                 && selectionsEqual(pendingDescriptionSelectionRef.current, selection)
             ) {
                 pendingDescriptionSelectionRef.current = null;
             }
+        };
+        setTimeout(() => {
+            applyDelayedSelection(false);
         }, 40);
+        setTimeout(() => {
+            applyDelayedSelection(true);
+        }, 140);
     }, []);
 
     React.useEffect(() => {

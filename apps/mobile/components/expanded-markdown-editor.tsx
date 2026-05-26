@@ -252,16 +252,23 @@ export function ExpandedMarkdownEditor({
             }
         };
         requestAnimationFrame(focusInput);
-        setTimeout(() => {
+        const applyDelayedFocus = (shouldClearPending: boolean) => {
             focusInput();
             if (
                 targetSelection
                 && pendingSelectionRef.current
+                && shouldClearPending
                 && selectionsEqual(pendingSelectionRef.current, targetSelection)
             ) {
                 pendingSelectionRef.current = null;
             }
+        };
+        setTimeout(() => {
+            applyDelayedFocus(false);
         }, 40);
+        setTimeout(() => {
+            applyDelayedFocus(true);
+        }, 140);
     }, []);
     const handleToolbarInteractionStart = React.useCallback(() => {
         toolbarInteractionUntilRef.current = Date.now() + 300;
