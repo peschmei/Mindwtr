@@ -301,6 +301,19 @@
   body,
   #root {
     height: 100%;
+    background-color: #ffffff;
+    color: #0f172a;
+    background-color: hsl(var(--background, 0 0% 100%));
+    color: hsl(var(--foreground, 222.2 84% 4.9%));
+  }
+
+  .dark,
+  .dark body,
+  .dark #root {
+    background-color: #1e1e2e;
+    color: #e4e4e7;
+    background-color: hsl(var(--background, 220 13% 13%));
+    color: hsl(var(--foreground, 220 13% 91%));
   }
 
   html[data-text-size] .text-\[10px\] {
