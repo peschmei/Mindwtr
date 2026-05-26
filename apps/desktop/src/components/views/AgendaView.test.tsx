@@ -598,6 +598,60 @@ describe('AgendaView', () => {
         expect(getByText('Standalone task')).toBeInTheDocument();
     });
 
+    it('groups next actions by priority in Focus view', () => {
+        const urgentTask: Task = {
+            id: 'urgent-task',
+            title: 'Urgent task',
+            status: 'next',
+            priority: 'urgent',
+            contexts: [],
+            tags: [],
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        };
+        const lowTask: Task = {
+            id: 'low-task',
+            title: 'Low task',
+            status: 'next',
+            priority: 'low',
+            contexts: [],
+            tags: [],
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        };
+        const noPriorityTask: Task = {
+            id: 'no-priority-task',
+            title: 'No priority task',
+            status: 'next',
+            contexts: [],
+            tags: [],
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        };
+
+        useTaskStore.setState({
+            tasks: [lowTask, noPriorityTask, urgentTask],
+            _allTasks: [lowTask, noPriorityTask, urgentTask],
+            projects: [],
+            _allProjects: [],
+            areas: [],
+            _allAreas: [],
+            settings: {},
+            highlightTaskId: null,
+        });
+
+        const { getByLabelText, getByText } = renderAgenda();
+        const groupSelect = getByLabelText('Group') as HTMLSelectElement;
+        fireEvent.change(groupSelect, { target: { value: 'priority' } });
+
+        expect(getByText('Urgent')).toBeInTheDocument();
+        expect(getByText('Low')).toBeInTheDocument();
+        expect(getByText('No priority')).toBeInTheDocument();
+        expect(getByText('Urgent task')).toBeInTheDocument();
+        expect(getByText('Low task')).toBeInTheDocument();
+        expect(getByText('No priority task')).toBeInTheDocument();
+    });
+
     it('filters focus tasks by project', () => {
         const projectTask: Task = {
             id: 'project-task',

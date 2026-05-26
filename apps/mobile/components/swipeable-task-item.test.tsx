@@ -337,8 +337,10 @@ describe('SwipeableTaskItem', () => {
     expect(hasText(tree, '3 weeks old')).toBe(false);
   });
 
-  it('shows stale task age when enabled in appearance settings', () => {
+  it('shows task age when enabled in appearance settings', () => {
     storeState.settings = { features: {}, appearance: { showTaskAge: true } };
+    getTaskAgeLabel.mockReturnValue('2 days old');
+    getTaskStaleness.mockReturnValue('fresh');
 
     let tree!: renderer.ReactTestRenderer;
     renderer.act(() => {
@@ -367,7 +369,7 @@ describe('SwipeableTaskItem', () => {
       );
     });
 
-    expect(hasText(tree, '3 weeks old')).toBe(true);
+    expect(hasText(tree, '2 days old')).toBe(true);
   });
 
   it('shows the completion date and time for completed tasks', () => {

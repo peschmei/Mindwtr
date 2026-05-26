@@ -2,7 +2,6 @@ import React, { type ReactNode, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
     getTaskAgeLabel,
-    getTaskStaleness,
     getStatusColor,
     hasTimeComponent,
     resolveTaskTextDirection,
@@ -120,12 +119,10 @@ export function SwipeableTaskItemContent({
         if (!completionTimestamp) return null;
         return safeFormatDate(completionTimestamp, 'Pp', completionTimestamp);
     })();
-    const staleness = getTaskStaleness(task.createdAt);
     const ageLabel = getTaskAgeLabel(task.createdAt, language as Language);
     const showAge = showTaskAge
         && task.status !== 'done'
         && task.status !== 'reference'
-        && (staleness === 'stale' || staleness === 'very-stale')
         && !!ageLabel;
     const statusColors = getStatusColor(task.status);
     const metaParts: ReactNode[] = [];

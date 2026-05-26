@@ -21,7 +21,7 @@ import { reportError } from '../../lib/report-error';
 import { AREA_FILTER_ALL, AREA_FILTER_NONE, projectMatchesAreaFilter, resolveAreaFilter, taskMatchesAreaFilter } from '../../lib/area-filter';
 import { cn } from '../../lib/utils';
 import { sortDoneTasksForListView } from './list/done-sort';
-import { groupTasksByArea, groupTasksByContext, groupTasksByProject, type NextGroupBy, type TaskGroup } from './list/next-grouping';
+import { groupTasksByArea, groupTasksByContext, groupTasksByPriority, groupTasksByProject, type NextGroupBy, type TaskGroup } from './list/next-grouping';
 import { useListSelection } from './list/useListSelection';
 import { StoreTaskItem } from './list/StoreTaskItem';
 import { LIST_VIRTUALIZATION_THRESHOLD, LIST_VIRTUAL_ROW_ESTIMATE, LIST_VIRTUAL_OVERSCAN } from './list/useVirtualList';
@@ -431,11 +431,18 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 noProjectLabel: resolveText('taskEdit.noProjectOption', 'No project'),
             });
         }
+        if (activeNextGroupBy === 'priority') {
+            return groupTasksByPriority({
+                tasks: filteredTasks,
+                getPriorityLabel: (priority) => t(`priority.${priority}`),
+                noPriorityLabel: resolveText('focus.group.noPriority', 'No priority'),
+            });
+        }
         return groupTasksByContext({
             tasks: filteredTasks,
             noContextLabel: resolveText('contexts.none', 'No context'),
         });
-    }, [activeNextGroupBy, areas, filteredTasks, isNextGrouping, projectMap, resolveText]);
+    }, [activeNextGroupBy, areas, filteredTasks, isNextGrouping, projectMap, resolveText, t]);
     const groupedTasks = isReferenceAreaGrouping ? referenceAreaGroups : nextGroups;
     const taskIndexById = useMemo(() => {
         const map = new Map<string, number>();

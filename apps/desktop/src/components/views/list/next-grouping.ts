@@ -1,8 +1,8 @@
 import { DEFAULT_AREA_COLOR } from '@mindwtr/core';
-import type { Area, Project, Task } from '@mindwtr/core';
+import type { Area, Project, Task, TaskPriority } from '@mindwtr/core';
 import { getContextColor } from '../../../lib/context-color';
 
-export type NextGroupBy = 'none' | 'context' | 'area' | 'project';
+export type NextGroupBy = 'none' | 'context' | 'area' | 'project' | 'priority';
 
 export interface TaskGroup {
     id: string;
@@ -29,6 +29,14 @@ interface GroupByProjectParams {
     projectMap: Map<string, Project>;
     noProjectLabel: string;
 }
+
+interface GroupByPriorityParams {
+    tasks: Task[];
+    getPriorityLabel: (priority: TaskPriority) => string;
+    noPriorityLabel: string;
+}
+
+const PRIORITY_GROUP_ORDER: TaskPriority[] = ['urgent', 'high', 'medium', 'low'];
 
 export function groupTasksByArea({
     areas,
@@ -120,6 +128,47 @@ export function groupTasksByContext({
             dotColor: getContextColor(context),
         });
     });
+    return groups;
+}
+
+export function groupTasksByPriority({
+    tasks,
+    getPriorityLabel,
+    noPriorityLabel,
+}: GroupByPriorityParams): TaskGroup[] {
+    const grouped = new Map<TaskPriority, Task[]>();
+    const noPriorityTasks: Task[] = [];
+
+    tasks.forEach((task) => {
+        if (!task.priority) {
+            noPriorityTasks.push(task);
+            return;
+        }
+        const priorityTasks = grouped.get(task.priority) ?? [];
+        priorityTasks.push(task);
+        grouped.set(task.priority, priorityTasks);
+    });
+
+    const groups: TaskGroup[] = [];
+    PRIORITY_GROUP_ORDER.forEach((priority) => {
+        const priorityTasks = grouped.get(priority) ?? [];
+        if (priorityTasks.length === 0) return;
+        groups.push({
+            id: `priority:${priority}`,
+            title: getPriorityLabel(priority),
+            tasks: priorityTasks,
+        });
+    });
+
+    if (noPriorityTasks.length > 0) {
+        groups.push({
+            id: 'priority:none',
+            title: noPriorityLabel,
+            tasks: noPriorityTasks,
+            muted: true,
+        });
+    }
+
     return groups;
 }
 

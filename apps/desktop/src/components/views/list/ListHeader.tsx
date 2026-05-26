@@ -79,6 +79,10 @@ export function ListHeader({
         const value = t('list.groupByProject');
         return value === 'list.groupByProject' ? 'Project' : value;
     })();
+    const groupByPriorityLabel = (() => {
+        const value = t('filters.priority');
+        return value === 'filters.priority' ? 'Priority' : value;
+    })();
     const controlBaseClass = "text-xs border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40";
     const controlMutedClass = "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground";
     const controlActiveClass = "bg-primary/10 text-primary border-primary";
@@ -136,6 +140,7 @@ export function ListHeader({
                             <option value="context">{groupByContextLabel}</option>
                             <option value="area">{groupByAreaLabel}</option>
                             <option value="project">{groupByProjectLabel}</option>
+                            <option value="priority">{groupByPriorityLabel}</option>
                         </select>
                         <ChevronDown
                             className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"

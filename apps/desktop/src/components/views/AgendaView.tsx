@@ -15,7 +15,7 @@ import { AgendaFiltersPanel, type AgendaActiveFilterChip, type AgendaProjectFilt
 import { AgendaHeader } from './agenda/AgendaHeader';
 import { AgendaCollapsibleSection, AgendaProjectSection } from './agenda/AgendaSections';
 import { StoreTaskItem } from './list/StoreTaskItem';
-import { groupTasksByArea, groupTasksByContext, groupTasksByProject, type TaskGroup } from './list/next-grouping';
+import { groupTasksByArea, groupTasksByContext, groupTasksByPriority, groupTasksByProject, type TaskGroup } from './list/next-grouping';
 import { PromptModal } from '../PromptModal';
 import { ConfirmModal } from '../ConfirmModal';
 
@@ -674,11 +674,18 @@ export function AgendaView() {
                 noProjectLabel: resolveText('taskEdit.noProjectOption', 'No project'),
             });
         }
+        if (nextGroupBy === 'priority') {
+            return groupTasksByPriority({
+                tasks: sections.nextActions,
+                getPriorityLabel: (priority) => t(`priority.${priority}`),
+                noPriorityLabel: resolveText('focus.group.noPriority', 'No priority'),
+            });
+        }
         return groupTasksByContext({
             tasks: sections.nextActions,
             noContextLabel: resolveText('contexts.none', 'No context'),
         });
-    }, [areas, nextGroupBy, projectMap, resolveText, sections.nextActions]);
+    }, [areas, nextGroupBy, projectMap, resolveText, sections.nextActions, t]);
     const focusedCount = focusedTasks.length;
     const { top3Tasks, remainingCount } = useMemo(() => {
         const byId = new Map<string, Task>();
