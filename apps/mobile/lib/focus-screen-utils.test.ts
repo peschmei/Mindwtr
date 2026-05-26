@@ -74,6 +74,7 @@ describe('taskMatchesFocusFilters', () => {
         expect(taskMatchesFocusFilters(task as any, {
             tokens: ['@work'],
             projects: [],
+            locations: [],
             priorities: [],
             energyLevels: [],
             timeEstimates: [],
@@ -81,6 +82,7 @@ describe('taskMatchesFocusFilters', () => {
         expect(taskMatchesFocusFilters(task as any, {
             tokens: ['#ops'],
             projects: [],
+            locations: [],
             priorities: [],
             energyLevels: [],
             timeEstimates: [],
@@ -88,6 +90,7 @@ describe('taskMatchesFocusFilters', () => {
         expect(taskMatchesFocusFilters(task as any, {
             tokens: ['@errands'],
             projects: [],
+            locations: [],
             priorities: [],
             energyLevels: [],
             timeEstimates: [],
@@ -107,6 +110,7 @@ describe('taskMatchesFocusFilters', () => {
         expect(taskMatchesFocusFilters(task as any, {
             tokens: [],
             projects: ['project-1'],
+            locations: [],
             priorities: ['high'],
             energyLevels: ['medium'],
             timeEstimates: ['30min'],
@@ -115,6 +119,33 @@ describe('taskMatchesFocusFilters', () => {
         expect(taskMatchesFocusFilters(task as any, {
             tokens: [],
             projects: [NO_PROJECT_FILTER_ID],
+            locations: [],
+            priorities: [],
+            energyLevels: [],
+            timeEstimates: [],
+        })).toBe(false);
+    });
+
+    it('matches location filters case-insensitively', () => {
+        const task = {
+            contexts: [],
+            tags: [],
+            projectId: 'project-1',
+            location: 'Main Office',
+        };
+
+        expect(taskMatchesFocusFilters(task as any, {
+            tokens: [],
+            projects: [],
+            locations: ['office'],
+            priorities: [],
+            energyLevels: [],
+            timeEstimates: [],
+        })).toBe(true);
+        expect(taskMatchesFocusFilters(task as any, {
+            tokens: [],
+            projects: [],
+            locations: ['home'],
             priorities: [],
             energyLevels: [],
             timeEstimates: [],

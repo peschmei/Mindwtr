@@ -109,6 +109,8 @@ vi.mock('../contexts/language-context', () => ({
         'energyLevel.high': 'High energy',
         'filters.label': 'Filters',
         'savedFilters.save': 'Save',
+        'taskEdit.locationLabel': 'Location',
+        'taskEdit.locationPlaceholder': 'e.g. Office',
       }[key] ?? key),
   }),
 }));
@@ -695,7 +697,8 @@ describe('FocusScreen', () => {
       findButtonByText(tree, 'Save', { last: true }).props.onPress();
     });
 
-    const input = tree.root.findByType(TextInput);
+    const inputs = tree.root.findAllByType(TextInput);
+    const input = inputs[inputs.length - 1];
     await act(async () => {
       input.props.onChangeText('High energy preset');
     });
@@ -710,6 +713,33 @@ describe('FocusScreen', () => {
         criteria: { energy: ['high'] },
       })],
     });
+  });
+
+  it('filters Focus tasks by location from the filter sheet', async () => {
+    storeState.tasks = [
+      makeTask('office-task', { title: 'Office task', location: 'Main Office' }),
+      makeTask('home-task', { title: 'Home task', location: 'Home' }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    act(() => {
+      findButtonByLabel(tree, 'Filters').props.onPress();
+    });
+
+    const locationInput = tree.root.findByProps({ accessibilityLabel: 'Location' });
+    await act(async () => {
+      locationInput.props.onChangeText('office');
+    });
+
+    expect(
+      tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
+    ).toEqual(['office-task']);
+    expect(textContent(findButtonByText(tree, 'Location: office'))).toContain('Location: office');
   });
 
 });

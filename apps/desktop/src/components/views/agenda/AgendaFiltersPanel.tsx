@@ -24,8 +24,10 @@ type AgendaFiltersPanelProps = {
     formatEstimate: (estimate: TimeEstimate) => string;
     canSaveFilter: boolean;
     hasFilters: boolean;
+    locationFilter: string;
     onSaveFilter: () => void;
     onClearFilters: () => void;
+    onLocationChange: (value: string) => void;
     onSearchChange: (value: string) => void;
     onToggleEnergy: (energyLevel: TaskEnergyLevel) => void;
     onToggleFiltersOpen: () => void;
@@ -57,7 +59,9 @@ export function AgendaFiltersPanel({
     formatEstimate,
     canSaveFilter,
     hasFilters,
+    locationFilter,
     onClearFilters,
+    onLocationChange,
     onSearchChange,
     onSaveFilter,
     onToggleEnergy,
@@ -235,6 +239,22 @@ export function AgendaFiltersPanel({
                             </div>
                         </div>
                     )}
+                    <div className="space-y-2">
+                        <label
+                            htmlFor="agenda-location-filter"
+                            className="text-xs uppercase tracking-wide text-muted-foreground"
+                        >
+                            {t('taskEdit.locationLabel')}
+                        </label>
+                        <input
+                            id="agenda-location-filter"
+                            type="text"
+                            value={locationFilter}
+                            onChange={(event) => onLocationChange(event.target.value)}
+                            placeholder={t('taskEdit.locationPlaceholder')}
+                            className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                    </div>
                     {prioritiesEnabled && (
                         <div className="space-y-2">
                             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('filters.priority')}</div>

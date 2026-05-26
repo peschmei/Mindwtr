@@ -104,12 +104,14 @@ function filterSelectionStable<T>(current: T[], predicate: (item: T) => boolean)
 
 function buildFocusFilterCriteria({
   energyLevels,
+  locations,
   priorities,
   projects,
   timeEstimates,
   tokens,
 }: {
   energyLevels: TaskEnergyLevel[];
+  locations: string[];
   priorities: TaskPriority[];
   projects: string[];
   timeEstimates: TimeEstimate[];
@@ -121,6 +123,7 @@ function buildFocusFilterCriteria({
     ...(contexts.length > 0 ? { contexts } : {}),
     ...(tags.length > 0 ? { tags } : {}),
     ...(projects.length > 0 ? { projects } : {}),
+    ...(locations.length > 0 ? { locations } : {}),
     ...(priorities.length > 0 ? { priority: priorities } : {}),
     ...(energyLevels.length > 0 ? { energy: energyLevels } : {}),
     ...(timeEstimates.length > 0 ? { timeEstimates } : {}),
@@ -188,6 +191,7 @@ export default function FocusScreen() {
   const [selectedPriorities, setSelectedPriorities] = useState<TaskPriority[]>([]);
   const [selectedEnergyLevels, setSelectedEnergyLevels] = useState<TaskEnergyLevel[]>([]);
   const [selectedTimeEstimates, setSelectedTimeEstimates] = useState<TimeEstimate[]>([]);
+  const [locationFilter, setLocationFilter] = useState('');
   const [activeSavedFilterId, setActiveSavedFilterId] = useState<string | null>(null);
   const [saveFilterDialogVisible, setSaveFilterDialogVisible] = useState(false);
   const [saveFilterName, setSaveFilterName] = useState('');
@@ -260,10 +264,12 @@ export default function FocusScreen() {
   const currentFilterCriteria = useMemo(() => buildFocusFilterCriteria({
     tokens: selectedTokens,
     projects: selectedProjects,
+    locations: locationFilter.trim() ? [locationFilter.trim()] : [],
     priorities: prioritiesEnabled ? selectedPriorities : [],
     energyLevels: selectedEnergyLevels,
     timeEstimates: timeEstimatesEnabled ? selectedTimeEstimates : [],
   }), [
+    locationFilter,
     prioritiesEnabled,
     selectedEnergyLevels,
     selectedPriorities,
@@ -369,10 +375,15 @@ export default function FocusScreen() {
       current.includes(estimate) ? current.filter((item) => item !== estimate) : [...current, estimate]
     ));
   }, []);
+  const updateLocationFilter = useCallback((value: string) => {
+    setActiveSavedFilterId(null);
+    setLocationFilter(value);
+  }, []);
   const clearFilters = useCallback(() => {
     setActiveSavedFilterId(null);
     setSelectedTokens([]);
     setSelectedProjects([]);
+    setLocationFilter('');
     setSelectedPriorities([]);
     setSelectedEnergyLevels([]);
     setSelectedTimeEstimates([]);
@@ -384,6 +395,7 @@ export default function FocusScreen() {
     const estimateSet = new Set<TimeEstimate>(ALL_TIME_ESTIMATE_OPTIONS);
     setSelectedTokens([...(criteria.contexts ?? []), ...(criteria.tags ?? [])]);
     setSelectedProjects(criteria.projects ?? []);
+    setLocationFilter((criteria.locations ?? [])[0] ?? '');
     setSelectedPriorities((criteria.priority ?? []).filter((priority): priority is TaskPriority => (
       priority !== 'none' && prioritySet.has(priority)
     )));
@@ -784,10 +796,20 @@ export default function FocusScreen() {
         onPress: () => toggleTimeEstimate(estimate),
       });
     });
+    const normalizedLocationFilter = locationFilter.trim();
+    if (normalizedLocationFilter && !activeSavedFilter) {
+      chips.push({
+        id: `location:${normalizedLocationFilter}`,
+        label: `${resolveText('taskEdit.locationLabel', 'Location')}: ${normalizedLocationFilter}`,
+        onPress: () => updateLocationFilter(''),
+      });
+    }
     chips.push(...advancedFilterChips);
     return chips;
   }, [
+    activeSavedFilter,
     advancedFilterChips,
+    locationFilter,
     projectById,
     resolveText,
     selectedEnergyLevels,
@@ -801,6 +823,7 @@ export default function FocusScreen() {
     toggleProject,
     toggleTimeEstimate,
     toggleToken,
+    updateLocationFilter,
   ]);
   const openSaveFilterDialog = useCallback(() => {
     const defaultName = activeFilterChips.slice(0, 3).map((chip) => chip.label).join(' + ')
@@ -1223,6 +1246,21 @@ export default function FocusScreen() {
                 </>
               ) : null}
 
+              <Text style={[styles.sheetSectionLabel, { color: tc.secondaryText }]}>
+                {resolveText('taskEdit.locationLabel', 'Location')}
+              </Text>
+              <TextInput
+                value={locationFilter}
+                onChangeText={updateLocationFilter}
+                placeholder={resolveText('taskEdit.locationPlaceholder', 'e.g. Office')}
+                placeholderTextColor={tc.secondaryText}
+                accessibilityLabel={resolveText('taskEdit.locationLabel', 'Location')}
+                style={[styles.sheetInput, { borderColor: tc.border, color: tc.text, backgroundColor: tc.bg }]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+              />
+
               {prioritiesEnabled ? (
                 <>
                   <Text style={[styles.sheetSectionLabel, { color: tc.secondaryText }]}>
@@ -1640,6 +1678,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  sheetInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 15,
   },
   dialogRoot: {
     flex: 1,

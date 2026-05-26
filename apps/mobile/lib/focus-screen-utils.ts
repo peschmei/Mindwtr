@@ -32,6 +32,7 @@ export const NO_PROJECT_FILTER_ID = SAVED_FILTER_NO_PROJECT_ID;
 export type FocusTaskFilters = {
     tokens: string[];
     projects: string[];
+    locations: string[];
     priorities: TaskPriority[];
     energyLevels: TaskEnergyLevel[];
     timeEstimates: TimeEstimate[];
@@ -90,7 +91,7 @@ export function groupFocusTasksByContext(tasks: Task[], noContextLabel: string):
 }
 
 export function taskMatchesFocusFilters(
-    task: Pick<Task, 'contexts' | 'tags' | 'projectId' | 'priority' | 'energyLevel' | 'timeEstimate'>,
+    task: Pick<Task, 'contexts' | 'tags' | 'projectId' | 'location' | 'priority' | 'energyLevel' | 'timeEstimate'>,
     filters: FocusTaskFilters,
 ): boolean {
     const taskTokens = [...(task.contexts ?? []), ...(task.tags ?? [])];
@@ -109,6 +110,15 @@ export function taskMatchesFocusFilters(
                 : task.projectId === selectedProjectId
         ));
         if (!matchesProject) return false;
+    }
+
+    if (filters.locations.length > 0) {
+        const normalizedLocation = task.location?.trim().toLowerCase();
+        if (!normalizedLocation) return false;
+        const matchesLocation = filters.locations.some((location) =>
+            normalizedLocation.includes(location.trim().toLowerCase())
+        );
+        if (!matchesLocation) return false;
     }
 
     if (filters.priorities.length > 0 && (!task.priority || !filters.priorities.includes(task.priority))) {

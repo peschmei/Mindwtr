@@ -39,6 +39,7 @@ function getAgendaScrollMargin(containerElement: HTMLDivElement, scrollElement: 
 }
 
 function buildFocusFilterCriteria({
+    locations,
     priorities,
     energyLevels,
     projects,
@@ -46,6 +47,7 @@ function buildFocusFilterCriteria({
     tokens,
 }: {
     energyLevels: TaskEnergyLevel[];
+    locations: string[];
     priorities: TaskPriority[];
     projects: string[];
     timeEstimates: TimeEstimate[];
@@ -57,6 +59,7 @@ function buildFocusFilterCriteria({
         ...(contexts.length > 0 ? { contexts } : {}),
         ...(tags.length > 0 ? { tags } : {}),
         ...(projects.length > 0 ? { projects } : {}),
+        ...(locations.length > 0 ? { locations } : {}),
         ...(priorities.length > 0 ? { priority: priorities } : {}),
         ...(energyLevels.length > 0 ? { energy: energyLevels } : {}),
         ...(timeEstimates.length > 0 ? { timeEstimates } : {}),
@@ -211,6 +214,7 @@ export function AgendaView() {
     const [selectedEnergyLevels, setSelectedEnergyLevels] = useState<TaskEnergyLevel[]>([]);
     const [selectedTimeEstimates, setSelectedTimeEstimates] = useState<TimeEstimate[]>([]);
     const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+    const [locationFilter, setLocationFilter] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [activeSavedFilterId, setActiveSavedFilterId] = useState<string | null>(null);
@@ -295,6 +299,7 @@ export function AgendaView() {
     const currentFilterCriteria = buildFocusFilterCriteria({
         tokens: selectedTokens,
         projects: selectedProjects,
+        locations: locationFilter.trim() ? [locationFilter.trim()] : [],
         priorities: activePriorities,
         energyLevels: selectedEnergyLevels,
         timeEstimates: activeTimeEstimates,
@@ -388,6 +393,13 @@ export function AgendaView() {
                 label: formatEstimate(estimate),
             });
         });
+        const normalizedLocationFilter = locationFilter.trim();
+        if (normalizedLocationFilter && !activeSavedFilter) {
+            chips.push({
+                id: `location:${normalizedLocationFilter}`,
+                label: `${resolveText('taskEdit.locationLabel', 'Location')}: ${normalizedLocationFilter}`,
+            });
+        }
         if (activeSavedFilter) {
             chips.push(...buildAdvancedFilterCriteriaChips(effectiveFilterCriteria, {
                 getAreaColor: (areaId) => areaById.get(areaId)?.color,
@@ -413,6 +425,7 @@ export function AgendaView() {
         removeAdvancedSavedFilterCriterion,
         resolveText,
         selectedEnergyLevels,
+        locationFilter,
         selectedProjects,
         selectedTokens,
         t,
@@ -488,10 +501,15 @@ export function AgendaView() {
             prev.includes(estimate) ? prev.filter((item) => item !== estimate) : [...prev, estimate]
         );
     };
+    const updateLocationFilter = (value: string) => {
+        setActiveSavedFilterId(null);
+        setLocationFilter(value);
+    };
     const clearFilters = () => {
         setActiveSavedFilterId(null);
         setSelectedTokens([]);
         setSelectedProjects([]);
+        setLocationFilter('');
         setSelectedPriorities([]);
         setSelectedEnergyLevels([]);
         setSelectedTimeEstimates([]);
@@ -507,6 +525,7 @@ export function AgendaView() {
         const estimateSet = new Set<TimeEstimate>(timeEstimateOptions);
         setSelectedTokens([...(criteria.contexts ?? []), ...(criteria.tags ?? [])]);
         setSelectedProjects(criteria.projects ?? []);
+        setLocationFilter((criteria.locations ?? [])[0] ?? '');
         setSelectedPriorities((criteria.priority ?? []).filter((priority): priority is TaskPriority => (
             priority !== 'none' && prioritySet.has(priority)
         )));
@@ -839,7 +858,9 @@ export function AgendaView() {
                 energyLevelOptions={energyLevelOptions}
                 formatEstimate={formatEstimate}
                 hasFilters={hasFilters}
+                locationFilter={locationFilter}
                 onClearFilters={clearFilters}
+                onLocationChange={updateLocationFilter}
                 onSaveFilter={() => setSaveFilterPromptOpen(true)}
                 onSearchChange={setSearchQuery}
                 onToggleEnergy={toggleEnergyFilter}
