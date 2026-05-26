@@ -68,6 +68,13 @@ function renderInline(
         </Text>
       );
     }
+    if (token.type === 'strike') {
+      return (
+        <Text key={`${keyPrefix}-strike-${index}`} style={styles.struckText}>
+          {token.text}
+        </Text>
+      );
+    }
     if (token.type === 'link') {
       const reference = parseMarkdownReferenceHref(token.href);
       if (reference?.entityType === 'project') {

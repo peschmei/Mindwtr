@@ -10,7 +10,7 @@ import type { Project, Task } from './types';
 const CODE_BLOCK_RE = /```[\s\S]*?```/g;
 const INLINE_CODE_RE = /`([^`]+)`/g;
 const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g;
-const INLINE_TOKEN_RE = /(\*\*([^*]+)\*\*|__([^_]+)__|\*([^*\n]+)\*|_([^_\n]+)_|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))/g;
+const INLINE_TOKEN_RE = /(\*\*([^*]+)\*\*|__([^_]+)__|~~([^~\n]+)~~|\*([^*\n]+)\*|_([^_\n]+)_|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))/g;
 const INTERNAL_LINK_RE = /\[\[(task|project):([^\]|]+)\|([^\]]+)\]\]/g;
 const INTERNAL_LINK_TOKEN_RE = /^\[\[(task|project):([^\]|]+)\|([^\]]+)\]\]$/;
 const TASK_LIST_RE = /^\s{0,3}(?:[-*+]\s+)?\[( |x|X)\]\s+(.+)$/;
@@ -19,6 +19,7 @@ export type InlineToken =
     | { type: 'text'; text: string }
     | { type: 'bold'; text: string }
     | { type: 'italic'; text: string }
+    | { type: 'strike'; text: string }
     | { type: 'code'; text: string }
     | { type: 'link'; text: string; href: string };
 
@@ -346,16 +347,19 @@ export function parseInlineMarkdown(text: string): InlineToken[] {
 
         const boldA = match[2];
         const boldB = match[3];
-        const italicA = match[4];
-        const italicB = match[5];
-        const code = match[6];
-        const linkText = match[7];
-        const linkHref = match[8];
+        const strike = match[4];
+        const italicA = match[5];
+        const italicB = match[6];
+        const code = match[7];
+        const linkText = match[8];
+        const linkHref = match[9];
 
         if (code) {
             tokens.push({ type: 'code', text: code });
         } else if (boldA || boldB) {
             tokens.push({ type: 'bold', text: boldA || boldB });
+        } else if (strike) {
+            tokens.push({ type: 'strike', text: strike });
         } else if (italicA || italicB) {
             tokens.push({ type: 'italic', text: italicA || italicB });
         } else if (linkText && linkHref) {
@@ -606,6 +610,49 @@ const MARKDOWN_INSERTION_PAIRS: Record<string, string> = {
     '(': ')',
     '{': '}',
     '`': '`',
+    '~': '~~',
+};
+
+const countBackticksBefore = (value: string, index: number): number => {
+    let count = 0;
+    for (let cursor = index - 1; cursor >= 0 && value[cursor] === '`'; cursor -= 1) {
+        count += 1;
+    }
+    return count;
+};
+
+const countBackticksAfter = (value: string, index: number): number => {
+    let count = 0;
+    for (let cursor = index; cursor < value.length && value[cursor] === '`'; cursor += 1) {
+        count += 1;
+    }
+    return count;
+};
+
+const wrapSelectionInFencedCodeBlock = (
+    value: string,
+    selection: MarkdownSelection,
+    selectedText: string,
+    existingFenceTicks = 0,
+): MarkdownToolbarResult => {
+    const fenceStart = Math.max(0, selection.start - existingFenceTicks);
+    const fenceEnd = Math.min(value.length, selection.end + existingFenceTicks);
+    const before = value.slice(0, fenceStart);
+    const after = value.slice(fenceEnd);
+    const leadingBreak = before && !before.endsWith('\n') ? '\n' : '';
+    const trailingBreak = after && !after.startsWith('\n') ? '\n' : '';
+    const blockPrefix = `${leadingBreak}\`\`\`\n`;
+    const blockSuffix = `\n\`\`\`${trailingBreak}`;
+    const nextValue = `${before}${blockPrefix}${selectedText}${blockSuffix}${after}`;
+    const nextStart = before.length + blockPrefix.length;
+
+    return {
+        value: nextValue,
+        selection: {
+            start: nextStart,
+            end: nextStart + selectedText.length,
+        },
+    };
 };
 
 export function applyMarkdownPairInsertion(
@@ -615,11 +662,21 @@ export function applyMarkdownPairInsertion(
 ): MarkdownToolbarResult | null {
     const replacement = detectSelectionReplacement(previousValue, nextValue, selection);
     if (!replacement) return null;
+    if (replacement.insertedText === '```') {
+        return wrapSelectionInFencedCodeBlock(previousValue, replacement.selection, replacement.selectedText);
+    }
     const suffix = MARKDOWN_INSERTION_PAIRS[replacement.insertedText];
     if (!suffix) return null;
 
-    const prefix = replacement.insertedText;
+    const prefix = replacement.insertedText === '~' ? '~~' : replacement.insertedText;
     const { start, end } = replacement.selection;
+    if (
+        replacement.insertedText === '`'
+        && countBackticksBefore(previousValue, start) === 2
+        && countBackticksAfter(previousValue, end) === 2
+    ) {
+        return wrapSelectionInFencedCodeBlock(previousValue, replacement.selection, replacement.selectedText, 2);
+    }
     const next = `${previousValue.slice(0, start)}${prefix}${replacement.selectedText}${suffix}${previousValue.slice(end)}`;
     return {
         value: next,

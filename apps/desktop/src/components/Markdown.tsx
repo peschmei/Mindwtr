@@ -36,6 +36,9 @@ function renderInline(text: string): React.ReactNode[] {
         if (token.type === 'italic') {
             return <em key={`italic-${index}`}>{token.text}</em>;
         }
+        if (token.type === 'strike') {
+            return <del key={`strike-${index}`}>{token.text}</del>;
+        }
         if (token.type === 'link') {
             return (
                 <InternalMarkdownLink

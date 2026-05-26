@@ -7,6 +7,7 @@ import {
     applyMarkdownUrlPaste,
     continueMarkdownOnEnter,
     continueMarkdownOnTextChange,
+    parseInlineMarkdown,
 } from './markdown';
 
 describe('applyMarkdownToolbarAction', () => {
@@ -123,8 +124,26 @@ describe('applyMarkdownPairInsertion', () => {
         const twice = applyMarkdownPairInsertion(once!.value, replaceSelectionWithBacktick(once!.value, once!.selection), once!.selection);
         const three = applyMarkdownPairInsertion(twice!.value, replaceSelectionWithBacktick(twice!.value, twice!.selection), twice!.selection);
         expect(three).toEqual({
-            value: '```code sample```',
-            selection: { start: 3, end: 14 },
+            value: '```\ncode sample\n```',
+            selection: { start: 4, end: 15 },
+        });
+    });
+
+    it('wraps selected text in a fenced code block when triple backticks replace the selection', () => {
+        expect(
+            applyMarkdownPairInsertion('run tests', '```', { start: 0, end: 9 }),
+        ).toEqual({
+            value: '```\nrun tests\n```',
+            selection: { start: 4, end: 13 },
+        });
+    });
+
+    it('wraps selected text in strikethrough markers when tilde replaces the selection', () => {
+        expect(
+            applyMarkdownPairInsertion('drop this', '~', { start: 0, end: 9 }),
+        ).toEqual({
+            value: '~~drop this~~',
+            selection: { start: 2, end: 11 },
         });
     });
 
@@ -132,6 +151,16 @@ describe('applyMarkdownPairInsertion', () => {
         expect(
             applyMarkdownPairInsertion('read docs', 'read [docs', { start: 5, end: 5 }),
         ).toBeNull();
+    });
+});
+
+describe('parseInlineMarkdown', () => {
+    it('parses strikethrough spans', () => {
+        expect(parseInlineMarkdown('keep ~~drop~~ done')).toEqual([
+            { type: 'text', text: 'keep ' },
+            { type: 'strike', text: 'drop' },
+            { type: 'text', text: ' done' },
+        ]);
     });
 });
 
