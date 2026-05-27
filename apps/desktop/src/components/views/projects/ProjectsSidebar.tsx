@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, ChevronDown, ChevronRight, CornerDownRight, Folder, Plus, Star } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, ChevronsLeft, CornerDownRight, Folder, Plus, Star } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { SortableProjectRow } from './SortableRows';
 import { tFallback, type Area, type Project, type StoreActionResult, type Task } from '@mindwtr/core';
@@ -69,6 +69,8 @@ interface ProjectsSidebarProps {
     reorderProjects: (projectIds: string[], areaId?: string) => Promise<void> | void;
     onDuplicateProject: (projectId: string) => void;
     showToast?: (message: string, tone?: 'success' | 'error' | 'info', durationMs?: number) => void;
+    collapseLabel?: string;
+    onToggleCollapsed?: () => void;
 }
 
 export function ProjectsSidebar({
@@ -107,6 +109,8 @@ export function ProjectsSidebar({
     reorderProjects,
     onDuplicateProject,
     showToast,
+    collapseLabel,
+    onToggleCollapsed,
 }: ProjectsSidebarProps) {
     const projectSensors = useSensors(
         useSensor(PointerSensor, {
@@ -264,13 +268,28 @@ export function ProjectsSidebar({
                         </span>
                     )}
                 </div>
-                <button
-                    onClick={onStartCreate}
-                    className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isCreatingProject}
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                    {onToggleCollapsed && collapseLabel && (
+                        <button
+                            type="button"
+                            onClick={onToggleCollapsed}
+                            className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40"
+                            title={collapseLabel}
+                            aria-label={collapseLabel}
+                            aria-controls="projects-sidebar-panel"
+                            aria-expanded={true}
+                        >
+                            <ChevronsLeft className="w-4 h-4" />
+                        </button>
+                    )}
+                    <button
+                        onClick={onStartCreate}
+                        className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isCreatingProject}
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-2">
