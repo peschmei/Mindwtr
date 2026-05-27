@@ -295,12 +295,9 @@ export function TaskEditFormTab({
                             value={titleDraft}
                             onChangeText={(text) => onTitleDraftChange(text)}
                             placeholderTextColor={tc.secondaryText}
-                            onFocus={(event) => {
+                            onFocus={() => {
                                 setTitleFocused(true);
                                 onTitleInputFocusChange?.(true);
-                                if (event.nativeEvent.target) {
-                                    ensureInputVisible(event.nativeEvent.target);
-                                }
                             }}
                             onBlur={() => {
                                 setTitleFocused(false);

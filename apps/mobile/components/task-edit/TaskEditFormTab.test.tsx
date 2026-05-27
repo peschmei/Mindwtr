@@ -201,6 +201,32 @@ describe('TaskEditFormTab keyboard handling', () => {
     expect(onTitleInputFocusChange).toHaveBeenCalledWith(false);
   });
 
+  it('does not schedule measured scrolling when the title input reports a native handle', () => {
+    const onTitleInputFocusChange = vi.fn();
+    const requestAnimationFrameSpy = vi.spyOn(globalThis, 'requestAnimationFrame');
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditFormTab
+          {...baseProps}
+          onTitleInputFocusChange={onTitleInputFocusChange}
+        />
+      );
+    });
+
+    requestAnimationFrameSpy.mockClear();
+
+    const titleInput = tree.root.findAllByType(TextInput)[0];
+
+    act(() => {
+      titleInput.props.onFocus({ nativeEvent: { target: 42 } });
+    });
+
+    expect(onTitleInputFocusChange).toHaveBeenCalledWith(true);
+    expect(requestAnimationFrameSpy).not.toHaveBeenCalled();
+  });
+
   it('renders a configured mobile location field in the details section', () => {
     const renderField = vi.fn((fieldId) => (
       <TextInput accessibilityLabel={fieldId} value={`field:${fieldId}`} />
