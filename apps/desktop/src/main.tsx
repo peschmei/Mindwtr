@@ -137,6 +137,9 @@ if (diagnosticsEnabled) {
     setupGlobalErrorLogging();
 }
 const isQuickAddWindow = isQuickAddWindowLocation();
+if (isQuickAddWindow) {
+    document.documentElement.dataset.quickAddWindow = 'true';
+}
 
 const nativeTheme = resolveNativeTheme(savedTheme);
 if (isTauriRuntime()) {

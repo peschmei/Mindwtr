@@ -336,6 +336,12 @@
     @apply bg-background text-foreground;
     overflow: hidden;
   }
+
+  html[data-quick-add-window='true'],
+  html[data-quick-add-window='true'] body,
+  html[data-quick-add-window='true'] #root {
+    background-color: transparent;
+  }
 }
 
 @layer components {

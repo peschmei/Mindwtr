@@ -657,7 +657,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         <div
             className={cn(
                 'fixed inset-0 flex items-start justify-center z-50',
-                standaloneWindow ? 'bg-background px-3 pt-4' : 'bg-black/50 pt-[20vh]',
+                standaloneWindow ? 'bg-transparent px-3 pt-4' : 'bg-black/50 pt-[20vh]',
             )}
             role="button"
             tabIndex={0}

@@ -107,6 +107,8 @@ describe('QuickAddModal', () => {
         });
 
         expect(fetchData).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('button', { name: 'Close' })).toHaveClass('bg-transparent');
+        expect(screen.getByRole('button', { name: 'Close' })).not.toHaveClass('bg-background');
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByPlaceholderText('Add Task')).toHaveValue('Fast capture');
 
