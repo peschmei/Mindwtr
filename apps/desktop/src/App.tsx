@@ -19,6 +19,11 @@ import { KeybindingProvider } from './contexts/keybinding-context';
 import { QuickAddModal } from './components/QuickAddModal';
 import { CloseBehaviorModal } from './components/CloseBehaviorModal';
 import { startDesktopNotifications, stopDesktopNotifications } from './lib/notification-service';
+import {
+    runFullDesktopCalendarPushSync,
+    startDesktopCalendarPushSync,
+    stopDesktopCalendarPushSync,
+} from './lib/desktop-calendar-push-sync';
 import { SyncService } from './lib/sync-service';
 import type { ExternalSyncChange, ExternalSyncChangeResolution } from './lib/sync-service';
 import * as LocalDataWatcher from './lib/local-data-watcher';
@@ -247,20 +252,31 @@ function App() {
     useEffect(() => {
         if (import.meta.env.MODE === 'test' || import.meta.env.VITEST || process.env.NODE_ENV === 'test') return;
         let cancelled = false;
-        fetchData()
-            .finally(() => {
-                if (!cancelled) {
-                    setHasHydratedSettings(true);
-                }
-            });
-        useObsidianStore.getState().loadConfig().catch((error) => reportError('Obsidian init failed', error));
-        const unsubscribeExternalSync = SyncService.subscribeExternalSyncChange(setExternalSyncChange);
+        let disposed = false;
+        let stopCalendarPush: (() => void) | null = null;
 
         const reportError = (label: string, error: unknown) => {
             const message = error instanceof Error ? error.message : String(error);
             setError(`${label}: ${message}`);
             void logError(error, { scope: 'app', step: label });
         };
+
+        fetchData()
+            .finally(() => {
+                if (!cancelled) {
+                    setHasHydratedSettings(true);
+                }
+            })
+            .then(() => {
+                if (!disposed && isTauriRuntime()) {
+                    stopCalendarPush = startDesktopCalendarPushSync();
+                    runFullDesktopCalendarPushSync()
+                        .catch((error) => reportError('Calendar push failed', error));
+                }
+            })
+            .catch((error) => reportError('Data load failed', error));
+        useObsidianStore.getState().loadConfig().catch((error) => reportError('Obsidian init failed', error));
+        const unsubscribeExternalSync = SyncService.subscribeExternalSyncChange(setExternalSyncChange);
 
         const handleUnload = () => {
             flushPendingSave().catch((error) => reportError('Save failed', error));
@@ -269,7 +285,6 @@ function App() {
         let unlistenClose: (() => void) | null = null;
         let closingPromise: Promise<void> | null = null;
         let isClosing = false;
-        let disposed = false;
         if (isTauriRuntime()) {
             import('@tauri-apps/api/window')
                 .then(async ({ getCurrentWindow }) => {
@@ -367,6 +382,8 @@ function App() {
             }
             storeUnsubscribe();
             autoSyncController.dispose();
+            stopCalendarPush?.();
+            stopDesktopCalendarPushSync();
             stopDesktopNotifications();
             LocalDataWatcher.stop();
             SyncService.stopFileWatcher().catch((error) => reportError('File watcher failed', error));

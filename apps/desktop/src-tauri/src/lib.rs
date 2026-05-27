@@ -81,12 +81,16 @@ use platform::{
     cloudkit_account_status, cloudkit_consume_pending_remote_change, cloudkit_delete_records,
     cloudkit_ensure_subscription, cloudkit_ensure_zone, cloudkit_fetch_all_records,
     cloudkit_fetch_changes, cloudkit_register_for_notifications, cloudkit_save_records,
-    get_macos_calendar_events, get_macos_calendar_permission_status, open_path,
-    request_macos_calendar_permission, set_macos_activation_policy,
+    create_macos_calendar_event, delete_macos_calendar_event, ensure_macos_mindwtr_calendar,
+    get_macos_calendar_events, get_macos_calendar_permission_status, get_macos_writable_calendars,
+    open_path, request_macos_calendar_permission, set_macos_activation_policy,
+    update_macos_calendar_event,
 };
 use storage::{
-    create_data_snapshot, get_config_path_cmd, get_data, get_data_path_cmd, get_db_path_cmd,
+    create_data_snapshot, delete_calendar_sync_entry, get_all_calendar_sync_entries,
+    get_calendar_sync_entry, get_config_path_cmd, get_data, get_data_path_cmd, get_db_path_cmd,
     list_data_snapshots, query_tasks, read_data_json, restore_data_snapshot, save_data, search_fts,
+    upsert_calendar_sync_entry,
 };
 use sync::{
     connect_dropbox, disconnect_dropbox, get_dropbox_access_token, get_dropbox_redirect_uri,
@@ -175,6 +179,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   startTime TEXT,
   dueDate TEXT,
   recurrence TEXT,
+  showFutureRecurrence INTEGER,
   pushCount INTEGER,
   tags TEXT,
   contexts TEXT,
@@ -262,6 +267,15 @@ CREATE TABLE IF NOT EXISTS sections (
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   data TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS calendar_sync (
+  task_id TEXT NOT NULL,
+  calendar_event_id TEXT NOT NULL,
+  calendar_id TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  last_synced_at TEXT NOT NULL,
+  PRIMARY KEY (task_id, platform)
 );
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -436,6 +450,37 @@ struct MacOsCalendarReadResult {
     events: Vec<ExternalCalendarEventRecord>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct MacOsCalendarPushTarget {
+    id: String,
+    name: String,
+    source_name: Option<String>,
+    color: Option<String>,
+    is_mindwtr_dedicated: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct MacOsCalendarEventPayload {
+    calendar_id: String,
+    title: String,
+    start: String,
+    end: String,
+    all_day: bool,
+    notes: Option<String>,
+    location: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+struct MacOsCalendarEventWriteResult {
+    #[serde(default)]
+    ok: bool,
+    event_id: Option<String>,
+    error: Option<String>,
+}
+
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
     fn mindwtr_macos_calendar_permission_status_json() -> *mut c_char;
@@ -444,6 +489,16 @@ unsafe extern "C" {
         range_start: *const c_char,
         range_end: *const c_char,
     ) -> *mut c_char;
+    fn mindwtr_macos_writable_calendars_json() -> *mut c_char;
+    fn mindwtr_macos_ensure_mindwtr_calendar_json(
+        stored_calendar_id: *const c_char,
+    ) -> *mut c_char;
+    fn mindwtr_macos_create_calendar_event_json(event_json: *const c_char) -> *mut c_char;
+    fn mindwtr_macos_update_calendar_event_json(
+        event_id: *const c_char,
+        event_json: *const c_char,
+    ) -> *mut c_char;
+    fn mindwtr_macos_delete_calendar_event_json(event_id: *const c_char) -> *mut c_char;
     fn mindwtr_macos_calendar_free_string(value: *mut c_char);
     fn mindwtr_macos_create_security_bookmark(path_cstr: *const c_char) -> *mut c_char;
     fn mindwtr_macos_resolve_security_bookmark(base64_cstr: *const c_char) -> *mut c_char;
@@ -875,6 +930,15 @@ pub fn run() {
             get_macos_calendar_permission_status,
             request_macos_calendar_permission,
             get_macos_calendar_events,
+            get_macos_writable_calendars,
+            ensure_macos_mindwtr_calendar,
+            create_macos_calendar_event,
+            update_macos_calendar_event,
+            delete_macos_calendar_event,
+            get_calendar_sync_entry,
+            upsert_calendar_sync_entry,
+            delete_calendar_sync_entry,
+            get_all_calendar_sync_entries,
             cloudkit_account_status,
             cloudkit_ensure_zone,
             cloudkit_ensure_subscription,

@@ -251,6 +251,10 @@ vi.mock('./settings/useCalendarSettings', () => ({
             newCalendarUrl: '',
             calendarError: null,
             systemCalendarPermission: 'unsupported',
+            calendarPushEnabled: false,
+            calendarPushTargetCalendarId: null,
+            calendarPushTargets: [],
+            calendarPushLoading: false,
             setNewCalendarName: vi.fn(),
             setNewCalendarUrl: vi.fn(),
             handleAddCalendar: vi.fn(),
@@ -258,6 +262,9 @@ vi.mock('./settings/useCalendarSettings', () => ({
             handleToggleCalendar: vi.fn(),
             handleRemoveCalendar: vi.fn(),
             handleRequestSystemCalendarPermission: vi.fn(),
+            handleToggleCalendarPush: vi.fn(),
+            handleCalendarPushTargetChange: vi.fn(),
+            handleRefreshCalendarPushTargets: vi.fn(),
         };
     },
 }));

@@ -1,5 +1,5 @@
 import type { ExternalCalendarSubscription } from '@mindwtr/core';
-import type { SystemCalendarPermissionStatus } from '../../../lib/system-calendar';
+import type { SystemCalendarPermissionStatus, SystemCalendarPushTarget } from '../../../lib/system-calendar';
 
 import { SettingsCalendarPage } from './SettingsCalendarPage';
 import { SettingsObsidianSection } from './SettingsObsidianSection';
@@ -22,6 +22,14 @@ type Labels = {
     calendarSystemPermissionUnsupported: string;
     calendarSystemRequestAccess: string;
     calendarSystemDeniedHint: string;
+    calendarPushTitle: string;
+    calendarPushDesc: string;
+    calendarPushEnable: string;
+    calendarPushTarget: string;
+    calendarPushManagedTarget: string;
+    calendarPushRefresh: string;
+    calendarPushLoading: string;
+    calendarPushTargetHint: string;
     obsidianVault: string;
     obsidianVaultDesc: string;
     obsidianEnable: string;
@@ -61,6 +69,10 @@ type SettingsIntegrationsPageProps = {
     externalCalendars: ExternalCalendarSubscription[];
     showSystemCalendarSection: boolean;
     systemCalendarPermission: SystemCalendarPermissionStatus;
+    calendarPushEnabled: boolean;
+    calendarPushTargetCalendarId: string | null;
+    calendarPushTargets: SystemCalendarPushTarget[];
+    calendarPushLoading: boolean;
     onCalendarNameChange: (value: string) => void;
     onCalendarUrlChange: (value: string) => void;
     onAddCalendar: () => void;
@@ -68,6 +80,9 @@ type SettingsIntegrationsPageProps = {
     onToggleCalendar: (id: string, enabled: boolean) => void;
     onRemoveCalendar: (id: string) => void;
     onRequestSystemCalendarPermission: () => void;
+    onToggleCalendarPush: (enabled: boolean) => Promise<void> | void;
+    onCalendarPushTargetChange: (id: string | null) => Promise<void> | void;
+    onRefreshCalendarPushTargets: () => Promise<void> | void;
     maskCalendarUrl: (url: string) => string;
     obsidianVaultPath: string;
     obsidianEnabled: boolean;
@@ -103,6 +118,10 @@ export function SettingsIntegrationsPage({
     externalCalendars,
     showSystemCalendarSection,
     systemCalendarPermission,
+    calendarPushEnabled,
+    calendarPushTargetCalendarId,
+    calendarPushTargets,
+    calendarPushLoading,
     onCalendarNameChange,
     onCalendarUrlChange,
     onAddCalendar,
@@ -110,6 +129,9 @@ export function SettingsIntegrationsPage({
     onToggleCalendar,
     onRemoveCalendar,
     onRequestSystemCalendarPermission,
+    onToggleCalendarPush,
+    onCalendarPushTargetChange,
+    onRefreshCalendarPushTargets,
     maskCalendarUrl,
     obsidianVaultPath,
     obsidianEnabled,
@@ -145,6 +167,10 @@ export function SettingsIntegrationsPage({
                 externalCalendars={externalCalendars}
                 showSystemCalendarSection={showSystemCalendarSection}
                 systemCalendarPermission={systemCalendarPermission}
+                calendarPushEnabled={calendarPushEnabled}
+                calendarPushTargetCalendarId={calendarPushTargetCalendarId}
+                calendarPushTargets={calendarPushTargets}
+                calendarPushLoading={calendarPushLoading}
                 onCalendarNameChange={onCalendarNameChange}
                 onCalendarUrlChange={onCalendarUrlChange}
                 onAddCalendar={onAddCalendar}
@@ -152,6 +178,9 @@ export function SettingsIntegrationsPage({
                 onToggleCalendar={onToggleCalendar}
                 onRemoveCalendar={onRemoveCalendar}
                 onRequestSystemCalendarPermission={onRequestSystemCalendarPermission}
+                onToggleCalendarPush={onToggleCalendarPush}
+                onCalendarPushTargetChange={onCalendarPushTargetChange}
+                onRefreshCalendarPushTargets={onRefreshCalendarPushTargets}
                 maskCalendarUrl={maskCalendarUrl}
             />
 

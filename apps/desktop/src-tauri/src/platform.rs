@@ -175,6 +175,136 @@ pub(crate) fn get_macos_calendar_events(
     }
 }
 
+#[tauri::command]
+pub(crate) fn get_macos_writable_calendars() -> Result<Vec<MacOsCalendarPushTarget>, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let value =
+            parse_macos_eventkit_json(unsafe { mindwtr_macos_writable_calendars_json() })?;
+        let parsed = serde_json::from_value::<Vec<MacOsCalendarPushTarget>>(value)
+            .map_err(|error| format!("Failed to decode writable EventKit calendars: {error}"))?;
+        return Ok(parsed);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok(Vec::new())
+    }
+}
+
+#[tauri::command]
+pub(crate) fn ensure_macos_mindwtr_calendar(
+    stored_calendar_id: Option<String>,
+) -> Result<Option<MacOsCalendarPushTarget>, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let stored = CString::new(stored_calendar_id.unwrap_or_default())
+            .map_err(|error| format!("Invalid stored calendar ID: {error}"))?;
+        let value = parse_macos_eventkit_json(unsafe {
+            mindwtr_macos_ensure_mindwtr_calendar_json(stored.as_ptr())
+        })?;
+        if value.is_null() {
+            return Ok(None);
+        }
+        let parsed = serde_json::from_value::<MacOsCalendarPushTarget>(value)
+            .map_err(|error| format!("Failed to decode Mindwtr EventKit calendar: {error}"))?;
+        return Ok(Some(parsed));
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = stored_calendar_id;
+        Ok(None)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn encode_macos_calendar_event_payload(
+    details: &MacOsCalendarEventPayload,
+) -> Result<CString, String> {
+    let raw = serde_json::to_string(details)
+        .map_err(|error| format!("Failed to encode EventKit event payload: {error}"))?;
+    CString::new(raw).map_err(|error| format!("Invalid EventKit event payload: {error}"))
+}
+
+#[tauri::command]
+pub(crate) fn create_macos_calendar_event(
+    details: MacOsCalendarEventPayload,
+) -> Result<MacOsCalendarEventWriteResult, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let event_json = encode_macos_calendar_event_payload(&details)?;
+        let value = parse_macos_eventkit_json(unsafe {
+            mindwtr_macos_create_calendar_event_json(event_json.as_ptr())
+        })?;
+        let parsed = serde_json::from_value::<MacOsCalendarEventWriteResult>(value)
+            .map_err(|error| format!("Failed to decode EventKit create result: {error}"))?;
+        return Ok(parsed);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = details;
+        Ok(MacOsCalendarEventWriteResult {
+            ok: false,
+            event_id: None,
+            error: Some("unsupported".to_string()),
+        })
+    }
+}
+
+#[tauri::command]
+pub(crate) fn update_macos_calendar_event(
+    event_id: String,
+    details: MacOsCalendarEventPayload,
+) -> Result<MacOsCalendarEventWriteResult, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let event_id = CString::new(event_id.as_str())
+            .map_err(|error| format!("Invalid EventKit event ID: {error}"))?;
+        let event_json = encode_macos_calendar_event_payload(&details)?;
+        let value = parse_macos_eventkit_json(unsafe {
+            mindwtr_macos_update_calendar_event_json(event_id.as_ptr(), event_json.as_ptr())
+        })?;
+        let parsed = serde_json::from_value::<MacOsCalendarEventWriteResult>(value)
+            .map_err(|error| format!("Failed to decode EventKit update result: {error}"))?;
+        return Ok(parsed);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = event_id;
+        let _ = details;
+        Ok(MacOsCalendarEventWriteResult {
+            ok: false,
+            event_id: None,
+            error: Some("unsupported".to_string()),
+        })
+    }
+}
+
+#[tauri::command]
+pub(crate) fn delete_macos_calendar_event(
+    event_id: String,
+) -> Result<MacOsCalendarEventWriteResult, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let event_id = CString::new(event_id.as_str())
+            .map_err(|error| format!("Invalid EventKit event ID: {error}"))?;
+        let value = parse_macos_eventkit_json(unsafe {
+            mindwtr_macos_delete_calendar_event_json(event_id.as_ptr())
+        })?;
+        let parsed = serde_json::from_value::<MacOsCalendarEventWriteResult>(value)
+            .map_err(|error| format!("Failed to decode EventKit delete result: {error}"))?;
+        return Ok(parsed);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = event_id;
+        Ok(MacOsCalendarEventWriteResult {
+            ok: false,
+            event_id: None,
+            error: Some("unsupported".to_string()),
+        })
+    }
+}
+
 #[cfg(target_os = "macos")]
 fn parse_cloudkit_json(raw: *mut c_char) -> Result<Value, String> {
     if raw.is_null() {

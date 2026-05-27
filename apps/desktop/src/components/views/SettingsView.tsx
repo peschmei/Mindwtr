@@ -933,6 +933,10 @@ export function SettingsView() {
     newCalendarUrl,
     calendarError,
     systemCalendarPermission,
+    calendarPushEnabled,
+    calendarPushTargetCalendarId,
+    calendarPushTargets,
+    calendarPushLoading,
     setNewCalendarName,
     setNewCalendarUrl,
     handleAddCalendar,
@@ -940,6 +944,9 @@ export function SettingsView() {
     handleToggleCalendar,
     handleRemoveCalendar,
     handleRequestSystemCalendarPermission,
+    handleToggleCalendarPush,
+    handleCalendarPushTargetChange,
+    handleRefreshCalendarPushTargets,
   } = useCalendarSettings({ showSaved, settings, updateSettings, isMac });
   const syncPreferences = settings?.syncPreferences ?? {};
   const handleUpdateSyncPreferences = useCallback(
@@ -1049,6 +1056,10 @@ export function SettingsView() {
           externalCalendars={externalCalendars}
           showSystemCalendarSection={isMac}
           systemCalendarPermission={systemCalendarPermission}
+          calendarPushEnabled={calendarPushEnabled}
+          calendarPushTargetCalendarId={calendarPushTargetCalendarId}
+          calendarPushTargets={calendarPushTargets}
+          calendarPushLoading={calendarPushLoading}
           onCalendarNameChange={setNewCalendarName}
           onCalendarUrlChange={setNewCalendarUrl}
           onAddCalendar={handleAddCalendar}
@@ -1058,6 +1069,9 @@ export function SettingsView() {
           onRequestSystemCalendarPermission={
             handleRequestSystemCalendarPermission
           }
+          onToggleCalendarPush={handleToggleCalendarPush}
+          onCalendarPushTargetChange={handleCalendarPushTargetChange}
+          onRefreshCalendarPushTargets={handleRefreshCalendarPushTargets}
           maskCalendarUrl={maskCalendarUrl}
           obsidianVaultPath={obsidianVaultPath}
           obsidianEnabled={obsidianEnabled}

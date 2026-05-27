@@ -94,6 +94,7 @@ pub(crate) fn open_sqlite(app: &tauri::AppHandle) -> Result<Connection, String> 
         .map_err(|e| e.to_string())?;
     ensure_column(&conn, "tasks", "energyLevel", "TEXT")?;
     ensure_column(&conn, "tasks", "assignedTo", "TEXT")?;
+    ensure_column(&conn, "tasks", "showFutureRecurrence", "INTEGER")?;
     ensure_tasks_purged_at_column(&conn)?;
     ensure_tasks_order_column(&conn)?;
     ensure_tasks_area_column(&conn)?;
@@ -107,6 +108,7 @@ pub(crate) fn open_sqlite(app: &tauri::AppHandle) -> Result<Connection, String> 
     ensure_tasks_fts_schema(&conn)?;
     ensure_fts_triggers(&conn)?;
     ensure_fts_populated(&conn, false)?;
+    ensure_calendar_sync_schema(&conn)?;
     Ok(conn)
 }
 
@@ -252,6 +254,22 @@ fn ensure_sync_revision_columns(conn: &Connection) -> Result<(), String> {
     ensure_column(conn, "areas", "deletedAt", "TEXT")?;
     ensure_column(conn, "areas", "rev", "INTEGER")?;
     ensure_column(conn, "areas", "revBy", "TEXT")?;
+    Ok(())
+}
+
+fn ensure_calendar_sync_schema(conn: &Connection) -> Result<(), String> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS calendar_sync (
+          task_id TEXT NOT NULL,
+          calendar_event_id TEXT NOT NULL,
+          calendar_id TEXT NOT NULL,
+          platform TEXT NOT NULL,
+          last_synced_at TEXT NOT NULL,
+          PRIMARY KEY (task_id, platform)
+        )",
+        [],
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -676,6 +694,11 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
     if !recurrence_val.is_null() {
         map.insert("recurrence".to_string(), recurrence_val);
     }
+    if let Ok(val) = row.get::<_, i64>("showFutureRecurrence") {
+        if val != 0 {
+            map.insert("showFutureRecurrence".to_string(), Value::Bool(true));
+        }
+    }
     if let Ok(val) = row.get::<_, Option<i64>>("pushCount") {
         if let Some(v) = val {
             map.insert("pushCount".to_string(), Value::Number(v.into()));
@@ -946,7 +969,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
         let checklist_json = json_str(task.get("checklist"));
         let attachments_json = json_str(task.get("attachments"));
         tx.execute(
-            "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, pushCount, tags, contexts, checklist, description, attachments, location, projectId, sectionId, areaId, orderNum, isFocusedToday, timeEstimate, reviewAt, completedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31)",
+            "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, attachments, location, projectId, sectionId, areaId, orderNum, isFocusedToday, timeEstimate, reviewAt, completedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32)",
             params![
                 task.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
                 task.get("title").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -958,6 +981,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 task.get("startTime").and_then(|v| v.as_str()),
                 task.get("dueDate").and_then(|v| v.as_str()),
                 recurrence_json,
+                task.get("showFutureRecurrence").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
                 task.get("pushCount").and_then(|v| v.as_i64()),
                 tags_json,
                 contexts_json,
@@ -1195,6 +1219,101 @@ pub(crate) fn read_sqlite_data(conn: &Connection) -> Result<Value, String> {
         .unwrap()
         .clone(),
     ))
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CalendarSyncEntryRecord {
+    task_id: String,
+    calendar_event_id: String,
+    calendar_id: String,
+    platform: String,
+    last_synced_at: String,
+}
+
+fn row_to_calendar_sync_entry(row: &rusqlite::Row<'_>) -> Result<CalendarSyncEntryRecord, rusqlite::Error> {
+    Ok(CalendarSyncEntryRecord {
+        task_id: row.get("task_id")?,
+        calendar_event_id: row.get("calendar_event_id")?,
+        calendar_id: row.get("calendar_id")?,
+        platform: row.get("platform")?,
+        last_synced_at: row.get("last_synced_at")?,
+    })
+}
+
+#[tauri::command]
+pub(crate) fn get_calendar_sync_entry(
+    app: tauri::AppHandle,
+    task_id: String,
+    platform: String,
+) -> Result<Option<CalendarSyncEntryRecord>, String> {
+    let conn = open_sqlite(&app)?;
+    conn.query_row(
+        "SELECT task_id, calendar_event_id, calendar_id, platform, last_synced_at FROM calendar_sync WHERE task_id = ?1 AND platform = ?2",
+        params![task_id, platform],
+        row_to_calendar_sync_entry,
+    )
+    .optional()
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub(crate) fn upsert_calendar_sync_entry(
+    app: tauri::AppHandle,
+    entry: CalendarSyncEntryRecord,
+) -> Result<bool, String> {
+    let conn = open_sqlite(&app)?;
+    conn.execute(
+        "INSERT INTO calendar_sync (task_id, calendar_event_id, calendar_id, platform, last_synced_at)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(task_id, platform) DO UPDATE SET
+           calendar_event_id = excluded.calendar_event_id,
+           calendar_id = excluded.calendar_id,
+           last_synced_at = excluded.last_synced_at",
+        params![
+            entry.task_id,
+            entry.calendar_event_id,
+            entry.calendar_id,
+            entry.platform,
+            entry.last_synced_at,
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub(crate) fn delete_calendar_sync_entry(
+    app: tauri::AppHandle,
+    task_id: String,
+    platform: String,
+) -> Result<bool, String> {
+    let conn = open_sqlite(&app)?;
+    conn.execute(
+        "DELETE FROM calendar_sync WHERE task_id = ?1 AND platform = ?2",
+        params![task_id, platform],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub(crate) fn get_all_calendar_sync_entries(
+    app: tauri::AppHandle,
+    platform: String,
+) -> Result<Vec<CalendarSyncEntryRecord>, String> {
+    let conn = open_sqlite(&app)?;
+    let mut stmt = conn
+        .prepare("SELECT task_id, calendar_event_id, calendar_id, platform, last_synced_at FROM calendar_sync WHERE platform = ?1")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![platform], row_to_calendar_sync_entry)
+        .map_err(|e| e.to_string())?;
+    let mut entries = Vec::new();
+    for row in rows {
+        entries.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(entries)
 }
 
 fn get_legacy_config_json_path(app: &tauri::AppHandle) -> PathBuf {
