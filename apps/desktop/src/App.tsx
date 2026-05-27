@@ -29,6 +29,7 @@ import { canDesktopAutoSync } from './lib/desktop-auto-sync-eligibility';
 import { beginSettingsOpenTrace, markSettingsOpenTrace, wrapSettingsOpenImport } from './lib/settings-open-diagnostics';
 import {
     THEME_STORAGE_KEY,
+    applyNativeTheme,
     applyThemeMode,
     resolveDesktopThemeMode,
     resolveNativeTheme,
@@ -144,9 +145,12 @@ function App() {
 
         if (!isTauriRuntime()) return;
         const nativeTheme = resolveNativeTheme(normalizedTheme);
-        import('@tauri-apps/api/app')
-            .then(({ setTheme }) => setTheme(nativeTheme))
-            .catch((error) => void logError(error, { scope: 'theme', step: 'apply' }));
+        void applyNativeTheme(
+            nativeTheme,
+            () => import('@tauri-apps/api/app'),
+            () => import('@tauri-apps/api/window'),
+            (step, error) => void logError(error, { scope: 'theme', step: `apply:${step}` }),
+        );
     }, [getActiveThemeMode, hasHydratedSettings]);
 
     useEffect(() => {

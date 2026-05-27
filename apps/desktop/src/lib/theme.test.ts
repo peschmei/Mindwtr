@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+    applyNativeTheme,
     applyThemeMode,
     resolveDesktopThemeMode,
     watchNativeSystemThemePreference,
@@ -56,6 +57,46 @@ describe('resolveDesktopThemeMode', () => {
 
     it('prefers synced settings over older local storage', () => {
         expect(resolveDesktopThemeMode('system', 'dark')).toBe('system');
+    });
+});
+
+describe('applyNativeTheme', () => {
+    it('applies the resolved theme to both the app and current window', async () => {
+        const setAppTheme = vi.fn(async () => undefined);
+        const setWindowTheme = vi.fn(async () => undefined);
+        const theme = vi.fn(async () => 'dark' as const);
+        const onThemeChanged = vi.fn(async () => vi.fn());
+
+        await applyNativeTheme(
+            'dark',
+            async () => ({ setTheme: setAppTheme }),
+            async () => ({ getCurrentWindow: () => ({ theme, onThemeChanged, setTheme: setWindowTheme }) }),
+        );
+
+        expect(setAppTheme).toHaveBeenCalledWith('dark');
+        expect(setWindowTheme).toHaveBeenCalledWith('dark');
+    });
+
+    it('reports app and window theme errors independently', async () => {
+        const appError = new Error('app theme failed');
+        const windowError = new Error('window theme failed');
+        const onError = vi.fn();
+
+        await applyNativeTheme(
+            'light',
+            async () => ({ setTheme: vi.fn(async () => { throw appError; }) }),
+            async () => ({
+                getCurrentWindow: () => ({
+                    theme: vi.fn(async () => 'light' as const),
+                    onThemeChanged: vi.fn(async () => vi.fn()),
+                    setTheme: vi.fn(async () => { throw windowError; }),
+                }),
+            }),
+            onError,
+        );
+
+        expect(onError).toHaveBeenCalledWith('app', appError);
+        expect(onError).toHaveBeenCalledWith('window', windowError);
     });
 });
 

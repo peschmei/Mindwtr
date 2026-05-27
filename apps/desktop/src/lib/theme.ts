@@ -3,8 +3,13 @@ import type { AppData } from '@mindwtr/core';
 export type DesktopThemeMode = 'system' | 'light' | 'dark' | 'eink' | 'nord' | 'sepia';
 export type SystemThemePreference = 'light' | 'dark' | null;
 type NativeThemePreference = Exclude<SystemThemePreference, null>;
+type NativeThemeSetter = (theme?: NativeThemePreference | null) => Promise<void>;
+type NativeThemeAppModule = {
+    setTheme: NativeThemeSetter;
+};
 type NativeThemeWindow = {
     theme: () => Promise<SystemThemePreference>;
+    setTheme?: NativeThemeSetter;
     onThemeChanged: (
         listener: (event: { payload: NativeThemePreference }) => void
     ) => Promise<() => void>;
@@ -154,4 +159,24 @@ export const resolveNativeTheme = (mode: DesktopThemeMode | null): 'light' | 'da
     if (!mode || mode === 'system') return null;
     if (mode === 'dark' || mode === 'nord') return 'dark';
     return 'light';
+};
+
+export const applyNativeTheme = async (
+    theme: ReturnType<typeof resolveNativeTheme>,
+    loadAppModule: () => Promise<NativeThemeAppModule>,
+    loadWindowModule: () => Promise<NativeThemeWindowModule>,
+    onError?: (step: 'app' | 'window', error: unknown) => void,
+): Promise<void> => {
+    await Promise.all([
+        loadAppModule()
+            .then(({ setTheme }) => setTheme(theme))
+            .catch((error) => onError?.('app', error)),
+        loadWindowModule()
+            .then(({ getCurrentWindow }) => {
+                const currentWindow = getCurrentWindow();
+                if (typeof currentWindow.setTheme !== 'function') return undefined;
+                return currentWindow.setTheme(theme);
+            })
+            .catch((error) => onError?.('window', error)),
+    ]);
 };

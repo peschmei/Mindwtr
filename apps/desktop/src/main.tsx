@@ -10,7 +10,7 @@ import { isTauriRuntime } from './lib/runtime';
 import { reportError } from './lib/report-error';
 import { webStorage } from './lib/storage-adapter-web';
 import { isDiagnosticsEnabled, logError, logInfo, logWarn, setupGlobalErrorLogging } from './lib/app-log';
-import { THEME_STORAGE_KEY, applyThemeMode, coerceDesktopThemeMode, resolveNativeTheme } from './lib/theme';
+import { THEME_STORAGE_KEY, applyNativeTheme, applyThemeMode, coerceDesktopThemeMode, resolveNativeTheme } from './lib/theme';
 import { TEXT_SIZE_STORAGE_KEY, applyDesktopTextSize, coerceDesktopTextSize } from './lib/text-size';
 import { loadStoredFullscreen } from './lib/window-state';
 import { restoreStoredWebviewZoom } from './lib/webview-zoom';
@@ -143,9 +143,11 @@ if (isQuickAddWindow) {
 
 const nativeTheme = resolveNativeTheme(savedTheme);
 if (isTauriRuntime()) {
-    import('@tauri-apps/api/app')
-        .then(({ setTheme }) => setTheme(nativeTheme))
-        .catch(() => undefined);
+    void applyNativeTheme(
+        nativeTheme,
+        () => import('@tauri-apps/api/app'),
+        () => import('@tauri-apps/api/window'),
+    );
 }
 
 async function initStorage() {

@@ -337,6 +337,27 @@
     overflow: hidden;
   }
 
+  select {
+    color-scheme: light;
+  }
+
+  option,
+  optgroup {
+    background-color: hsl(var(--popover, 0 0% 100%));
+    color: hsl(var(--popover-foreground, 222.2 84% 4.9%));
+  }
+
+  option:checked {
+    background-color: hsl(var(--accent, 210 40% 96.1%));
+    color: hsl(var(--accent-foreground, 222.2 47.4% 11.2%));
+  }
+
+  .dark select,
+  .dark option,
+  .dark optgroup {
+    color-scheme: dark;
+  }
+
   html[data-quick-add-window='true'],
   html[data-quick-add-window='true'] body,
   html[data-quick-add-window='true'] #root {
