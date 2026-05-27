@@ -130,4 +130,29 @@ describe('computeGlobalSearchResults', () => {
 
         expect(result.results.map((item) => item.item.id)).toEqual(['task-office']);
     });
+
+    it('keeps task id lookups visible when completed tasks are hidden by default', () => {
+        const matchingId = 'c5290e2c-1b77-4f77-8927-6d187e141891';
+        const result = computeGlobalSearchResults({
+            query: `id:${matchingId}`,
+            tasks: [
+                { ...task(matchingId, 'Archived sync warning task'), status: 'archived' },
+                { ...task('other-task', 'Other task'), status: 'next' },
+            ],
+            projects: [],
+            areas: [],
+            includeCompleted: false,
+            includeReference: false,
+            hideFutureTasks: false,
+            selectedStatuses: [],
+            selectedArea: 'all',
+            selectedTokens: [],
+            locationQuery: '',
+            duePreset: 'any',
+            scope: 'all',
+            weekStart: 'sunday',
+        });
+
+        expect(result.results.map((item) => item.item.id)).toEqual([matchingId]);
+    });
 });

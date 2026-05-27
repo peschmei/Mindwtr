@@ -1,5 +1,6 @@
 import {
     matchesHierarchicalToken,
+    parseSearchQuery,
     safeParseDueDate,
     searchAll,
     shouldShowTaskForStart,
@@ -65,6 +66,13 @@ const buildDueMatcher = (duePreset: DuePreset, weekStart: number) => {
     };
 };
 
+const hasPositiveTaskIdLookup = (query: string) => {
+    const ast = parseSearchQuery(query);
+    return ast.clauses.some((clause) =>
+        clause.terms.some((term) => term.field === 'id' && !term.negated && term.value.trim().length > 0)
+    );
+};
+
 export const computeGlobalSearchResults = ({
     query,
     tasks,
@@ -91,6 +99,7 @@ export const computeGlobalSearchResults = ({
         : fallbackResults;
 
     const hasStatusFilter = selectedStatuses.length > 0;
+    const shouldBypassDefaultStatusHiding = hasPositiveTaskIdLookup(trimmedQuery);
     const normalizedLocationQuery = locationQuery.trim().toLowerCase();
     const projectById = new Map(projects.map((project) => [project.id, project]));
     const areaById = new Map(areas.map((area) => [area.id, area]));
@@ -127,8 +136,8 @@ export const computeGlobalSearchResults = ({
         if (hasStatusFilter) {
             if (!selectedStatuses.includes(task.status)) return false;
         } else {
-            if (!includeCompleted && ['done', 'archived'].includes(task.status)) return false;
-            if (!includeReference && task.status === 'reference') return false;
+            if (!shouldBypassDefaultStatusHiding && !includeCompleted && ['done', 'archived'].includes(task.status)) return false;
+            if (!shouldBypassDefaultStatusHiding && !includeReference && task.status === 'reference') return false;
         }
         if (!shouldShowTaskForStart(task, { showFutureStarts: !hideFutureTasks })) return false;
         if (scope === 'project_tasks' && !task.projectId) return false;
