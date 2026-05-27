@@ -225,6 +225,8 @@ export const TaskItem = memo(function TaskItem({
         setEditRecurrenceStrategy,
         editRecurrenceRRule,
         setEditRecurrenceRRule,
+        editShowFutureRecurrence,
+        setEditShowFutureRecurrence,
         editTimeEstimate,
         setEditTimeEstimate,
         editPriority,
@@ -488,6 +490,7 @@ export const TaskItem = memo(function TaskItem({
         editRecurrence,
         editRecurrenceStrategy,
         editRecurrenceRRule,
+        editShowFutureRecurrence,
         monthlyRecurrence,
         editTimeEstimate,
         editContexts,
@@ -516,6 +519,7 @@ export const TaskItem = memo(function TaskItem({
         editRecurrence,
         editRecurrenceStrategy,
         editRecurrenceRRule,
+        editShowFutureRecurrence,
         monthlyRecurrence,
         editTimeEstimate,
         editContexts,
@@ -546,6 +550,7 @@ export const TaskItem = memo(function TaskItem({
         setEditRecurrence,
         setEditRecurrenceStrategy,
         setEditRecurrenceRRule,
+        setEditShowFutureRecurrence,
         openCustomRecurrence,
         setEditTimeEstimate,
         setEditContexts,
@@ -571,6 +576,7 @@ export const TaskItem = memo(function TaskItem({
         setEditRecurrence,
         setEditRecurrenceStrategy,
         setEditRecurrenceRRule,
+        setEditShowFutureRecurrence,
         openCustomRecurrence,
         setEditTimeEstimate,
         setEditContexts,
@@ -664,6 +670,7 @@ export const TaskItem = memo(function TaskItem({
         editRecurrence,
         editRecurrenceRRule,
         editRecurrenceStrategy,
+        editShowFutureRecurrence,
         editReviewAt,
         editSectionId,
         editStartTime,
@@ -845,6 +852,7 @@ export const TaskItem = memo(function TaskItem({
         if (editRecurrence !== getRecurrenceRuleValue(task.recurrence)) return true;
         if (editRecurrenceStrategy !== getRecurrenceStrategyValue(task.recurrence)) return true;
         if (editRecurrenceRRule !== getRecurrenceRRuleValue(task.recurrence)) return true;
+        if (editShowFutureRecurrence !== Boolean(task.showFutureRecurrence)) return true;
         if (editTimeEstimate !== (task.timeEstimate || '')) return true;
         if (editPriority !== (task.priority || '')) return true;
         if (editEnergyLevel !== (task.energyLevel || '')) return true;
@@ -866,6 +874,7 @@ export const TaskItem = memo(function TaskItem({
         editRecurrence,
         editRecurrenceStrategy,
         editRecurrenceRRule,
+        editShowFutureRecurrence,
         editTimeEstimate,
         editPriority,
         editEnergyLevel,

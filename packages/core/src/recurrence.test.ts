@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { buildRRuleString, parseRRuleString, createNextRecurringTask, normalizeRecurrenceForLoad } from './recurrence';
+import {
+    buildRRuleString,
+    parseRRuleString,
+    createNextRecurringTask,
+    createProjectedRecurringTask,
+    getProjectedRecurringTaskId,
+    isProjectedRecurringTask,
+    normalizeRecurrenceForLoad,
+} from './recurrence';
 import type { Task } from './types';
 
 describe('recurrence', () => {
@@ -590,6 +598,88 @@ describe('recurrence', () => {
 
         const next = createNextRecurringTask(task, '2025-01-01T10:00:00.000Z', 'done');
         expect(next?.areaId).toBe('area-1');
+    });
+
+    it('projects the next future strict recurrence without creating a real task', () => {
+        const task: Task = {
+            id: 't-projected-monthly',
+            title: 'Monthly bill',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            dueDate: '2025-01-01',
+            recurrence: 'monthly',
+            showFutureRecurrence: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+        };
+
+        const projected = createProjectedRecurringTask(task, '2025-05-27T12:00:00.000Z');
+
+        expect(projected?.id).toBe(getProjectedRecurringTaskId(task.id));
+        expect(projected?.sourceTaskId).toBe(task.id);
+        expect(isProjectedRecurringTask(projected)).toBe(true);
+        expect(projected?.dueDate).toBe('2025-06-01');
+        expect(projected?.createdAt).toBe(task.createdAt);
+        expect(projected?.updatedAt).toBe('2025-05-27T12:00:00.000Z');
+    });
+
+    it('does not project recurring tasks unless the calendar preview is enabled', () => {
+        const task: Task = {
+            id: 't-projected-disabled',
+            title: 'Monthly bill',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            dueDate: '2025-01-01',
+            recurrence: 'monthly',
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+        };
+
+        expect(createProjectedRecurringTask(task, '2025-05-27T12:00:00.000Z')).toBeNull();
+    });
+
+    it('does not project past the configured recurrence count', () => {
+        const task: Task = {
+            id: 't-projected-count',
+            title: 'Three-time reminder',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            dueDate: '2025-01-01',
+            recurrence: {
+                rule: 'daily',
+                strategy: 'strict',
+                count: 3,
+                completedOccurrences: 0,
+                rrule: 'FREQ=DAILY;COUNT=3',
+            },
+            showFutureRecurrence: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+        };
+
+        expect(createProjectedRecurringTask(task, '2025-01-04T12:00:00.000Z')).toBeNull();
+    });
+
+    it('carries the calendar projection setting to the next real recurrence', () => {
+        const task: Task = {
+            id: 't-projected-carry',
+            title: 'Monthly bill',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            dueDate: '2025-01-01',
+            recurrence: 'monthly',
+            showFutureRecurrence: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+        };
+
+        const next = createNextRecurringTask(task, '2025-01-01T12:00:00.000Z', 'done');
+
+        expect(next?.showFutureRecurrence).toBe(true);
     });
 
     it('keeps priority and energy level on recurring task instances', () => {

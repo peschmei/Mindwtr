@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import type { DragEvent } from 'react';
 import { Check, Clock, MoreHorizontal, Plus, X } from 'lucide-react';
-import { hasTimeComponent, safeFormatDate, safeParseDate } from '@mindwtr/core';
+import { hasTimeComponent, isProjectedRecurringTask, safeFormatDate, safeParseDate } from '@mindwtr/core';
 
 import { cn } from '../../../lib/utils';
 import { reportError } from '../../../lib/report-error';
@@ -201,6 +201,7 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                         <h3 className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{resolveText('calendar.tasks', 'Tasks')}</h3>
                         <div className="space-y-1">
                             {selectedTaskRows.map(({ id, kind, task, start }) => {
+                                const projected = isProjectedRecurringTask(task);
                                 const durationMinutes = timeEstimateToMinutes(task.timeEstimate);
                                 const isAllDayScheduled = kind === 'scheduled' && !hasTimeComponent(task.startTime);
                                 const end = start && kind === 'scheduled' && !isAllDayScheduled
@@ -219,17 +220,24 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                                     <div
                                         key={id}
                                         data-task-id={task.id}
-                                        draggable
-                                        onDragStart={(event) => handleTaskDragStart(event, task.id, kind)}
+                                        draggable={!projected}
+                                        onDragStart={(event) => {
+                                            if (!projected) handleTaskDragStart(event, task.id, kind);
+                                        }}
                                         className={cn(
                                             "group flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted/50",
-                                            kind === 'scheduled' ? "bg-primary/5" : "border-l-[3px] border-destructive/70 bg-background/60"
+                                            projected
+                                                ? "border border-dashed border-primary/50 bg-primary/5"
+                                                : kind === 'scheduled' ? "bg-primary/5" : "border-l-[3px] border-destructive/70 bg-background/60"
                                         )}
                                     >
                                         <button
                                             type="button"
-                                            data-task-edit-trigger
-                                            onClick={() => openTaskFromCalendar(task)}
+                                            {...(!projected ? { 'data-task-edit-trigger': true } : {})}
+                                            disabled={projected}
+                                            onClick={() => {
+                                                if (!projected) openTaskFromCalendar(task);
+                                            }}
                                             className="min-w-0 flex-1 truncate text-left text-foreground focus:outline-none focus:underline"
                                         >
                                             <span className="mr-2 inline-flex w-28 items-center gap-1 text-xs font-medium text-muted-foreground">
@@ -238,7 +246,12 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                                             </span>
                                             {task.title}
                                         </button>
-                                        {isEditing ? (
+                                        {projected && (
+                                            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                                {resolveText('calendar.projectedRecurrence', 'Projected')}
+                                            </span>
+                                        )}
+                                        {!projected && isEditing ? (
                                             <div className="flex shrink-0 items-center gap-1">
                                                 <input
                                                     type="time"
@@ -261,7 +274,7 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                                                     {t('common.cancel')}
                                                 </button>
                                             </div>
-                                        ) : (
+                                        ) : !projected ? (
                                             <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                                                 <button
                                                     type="button"
@@ -295,7 +308,7 @@ export function CalendarSelectedDayPanel({ controller }: CalendarSelectedDayPane
                                                     </button>
                                                 )}
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
                                 );
                             })}

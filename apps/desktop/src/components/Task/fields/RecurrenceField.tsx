@@ -1,4 +1,4 @@
-import { buildRRuleString, parseRRuleString, type RecurrenceByDay, type RecurrenceRule, type RecurrenceStrategy } from '@mindwtr/core';
+import { buildRRuleString, parseRRuleString, tFallback, type RecurrenceByDay, type RecurrenceRule, type RecurrenceStrategy } from '@mindwtr/core';
 
 import { cn } from '../../../lib/utils';
 import { WeekdaySelector } from '../TaskForm/WeekdaySelector';
@@ -9,6 +9,7 @@ type RecurrenceFieldProps = {
     editRecurrence: RecurrenceRule | '';
     editRecurrenceStrategy: RecurrenceStrategy;
     editRecurrenceRRule: string;
+    editShowFutureRecurrence: boolean;
     monthlyRecurrence: MonthlyRecurrenceInfo;
     parsedRecurrenceRRule: ReturnType<typeof parseRRuleString>;
     recurrenceEndMode: 'never' | 'until' | 'count';
@@ -16,6 +17,7 @@ type RecurrenceFieldProps = {
     onRecurrenceChange: (value: RecurrenceRule | '') => void;
     onRecurrenceStrategyChange: (value: RecurrenceStrategy) => void;
     onRecurrenceRRuleChange: (value: string) => void;
+    onShowFutureRecurrenceChange: (value: boolean) => void;
     openCustomRecurrence: () => void;
     buildRecurrenceRRule: (
         rule: RecurrenceRule,
@@ -34,6 +36,7 @@ export function RecurrenceField({
     editRecurrence,
     editRecurrenceStrategy,
     editRecurrenceRRule,
+    editShowFutureRecurrence,
     monthlyRecurrence,
     parsedRecurrenceRRule,
     recurrenceEndMode,
@@ -41,6 +44,7 @@ export function RecurrenceField({
     onRecurrenceChange,
     onRecurrenceStrategyChange,
     onRecurrenceRRuleChange,
+    onShowFutureRecurrenceChange,
     openCustomRecurrence,
     buildRecurrenceRRule,
 }: RecurrenceFieldProps) {
@@ -131,6 +135,24 @@ export function RecurrenceField({
                         className="accent-primary"
                     />
                     {t('recurrence.afterCompletion')}
+                </label>
+            )}
+            {editRecurrence && (
+                <label className="flex items-start gap-2 rounded-md border border-border/70 bg-muted/30 px-2 py-1.5 text-[10px] text-muted-foreground">
+                    <input
+                        type="checkbox"
+                        checked={editShowFutureRecurrence}
+                        onChange={(event) => onShowFutureRecurrenceChange(event.target.checked)}
+                        className="mt-0.5 accent-primary"
+                    />
+                    <span className="min-w-0">
+                        <span className="block font-medium text-foreground">
+                            {tFallback(t, 'recurrence.showFutureInCalendar', 'Show next occurrence in Calendar')}
+                        </span>
+                        <span className="block leading-snug">
+                            {tFallback(t, 'recurrence.showFutureInCalendarHint', 'Planning-only preview; the next task is still created when this one is completed.')}
+                        </span>
+                    </span>
                 </label>
             )}
             {editRecurrence === 'weekly' && (

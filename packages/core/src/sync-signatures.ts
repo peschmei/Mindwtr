@@ -84,6 +84,7 @@ export const normalizeTaskForContentComparison = (task: Task): Record<string, un
         // surfacing as a user-visible task conflict.
         attachments: task.deletedAt ? undefined : normalizeAttachmentsForContentComparison(task.attachments),
         isFocusedToday: task.isFocusedToday ? true : undefined,
+        showFutureRecurrence: task.showFutureRecurrence ? true : undefined,
         pushCount: task.pushCount === 0 ? undefined : task.pushCount,
     };
     if (task.status === 'inbox') delete comparable.status;

@@ -306,6 +306,9 @@ export function useTaskEditActions({
         } else {
             updates.recurrence = undefined;
         }
+        updates.showFutureRecurrence = updates.recurrence && editedTask.showFutureRecurrence === true
+            ? true
+            : undefined;
 
         const baseTask = baseTaskRef.current ?? task;
         const nextProjectId = updates.projectId ?? baseTask.projectId;
@@ -541,6 +544,7 @@ export function useTaskEditActions({
             dueDate: undefined,
             reviewAt: undefined,
             recurrence: undefined,
+            showFutureRecurrence: undefined,
             priority: undefined,
             timeEstimate: undefined,
             isFocusedToday: false,

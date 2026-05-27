@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type DragEvent, type KeyboardEvent } from 'react';
 import { format, getMonth, isSameDay, isSameMonth, isToday } from 'date-fns';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
-import { hasTimeComponent, safeFormatDate } from '@mindwtr/core';
+import { hasTimeComponent, isProjectedRecurringTask, safeFormatDate, type Task } from '@mindwtr/core';
 
 import { ErrorBoundary } from '../ErrorBoundary';
 import { cn } from '../../lib/utils';
@@ -69,10 +69,11 @@ export function CalendarView() {
         weekdayHeaders,
         yearOptions,
     } = controller;
-    const handleCalendarTaskDragStart = useCallback((event: DragEvent<HTMLElement>, taskId: string, itemKind: CalendarCellItem['kind']) => {
+    const handleCalendarTaskDragStart = useCallback((event: DragEvent<HTMLElement>, task: Task, itemKind: CalendarCellItem['kind']) => {
         if (itemKind === 'event') return;
+        if (isProjectedRecurringTask(task)) return;
         event.stopPropagation();
-        setCalendarTaskDragData(event.dataTransfer, taskId, {
+        setCalendarTaskDragData(event.dataTransfer, task.id, {
             itemKind,
             variant: 'calendar-block',
         });
@@ -376,23 +377,28 @@ export function CalendarView() {
                                         }
 
                                         const task = item.task;
+                                        const projected = isProjectedRecurringTask(task);
                                         return (
                                             <button
                                                 key={item.id}
                                                 type="button"
                                                 data-task-id={task.id}
-                                                data-task-edit-trigger
-                                                draggable
+                                                {...(!projected ? { 'data-task-edit-trigger': true } : {})}
+                                                draggable={!projected}
+                                                disabled={projected}
                                                 className={cn(
                                                     "block w-full truncate rounded px-1.5 py-1 text-left text-xs focus:outline-none focus:ring-2 focus:ring-primary/40",
-                                                    item.kind === 'scheduled'
+                                                    projected
+                                                        ? "border border-dashed border-primary/50 bg-primary/5 text-primary/80"
+                                                        : item.kind === 'scheduled'
                                                         ? "bg-primary/10 text-primary"
                                                         : "border-l-[3px] border-destructive/70 bg-background/60 text-foreground"
                                                 )}
-                                                title={task.title}
-                                                onDragStart={(event) => handleCalendarTaskDragStart(event, task.id, item.kind)}
+                                                title={projected ? `${task.title} (${resolveText('calendar.projectedRecurrence', 'Projected')})` : task.title}
+                                                onDragStart={(event) => handleCalendarTaskDragStart(event, task, item.kind)}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    if (projected) return;
                                                     openTaskFromCalendar(task);
                                                 }}
                                             >
@@ -477,22 +483,28 @@ export function CalendarView() {
                                                     </div>
                                                 );
                                             }
+                                            const projected = isProjectedRecurringTask(item.task);
                                             return (
                                                 <button
                                                     key={item.id}
                                                     type="button"
                                                     data-task-id={item.task.id}
-                                                    data-task-edit-trigger
-                                                    draggable
-                                                    onDragStart={(event) => handleCalendarTaskDragStart(event, item.task.id, item.kind)}
-                                                    onClick={() => openTaskFromCalendar(item.task)}
+                                                    {...(!projected ? { 'data-task-edit-trigger': true } : {})}
+                                                    draggable={!projected}
+                                                    disabled={projected}
+                                                    onDragStart={(event) => handleCalendarTaskDragStart(event, item.task, item.kind)}
+                                                    onClick={() => {
+                                                        if (!projected) openTaskFromCalendar(item.task);
+                                                    }}
                                                     className={cn(
                                                         "block w-full truncate rounded border-l-[3px] px-2 py-1 text-left text-xs hover:bg-muted",
-                                                        item.kind === 'scheduled'
+                                                        projected
+                                                            ? "border-primary/50 border-dashed bg-primary/5 text-primary/80"
+                                                            : item.kind === 'scheduled'
                                                             ? "border-primary/70 bg-primary/5"
                                                             : "border-destructive/70 bg-background/70"
                                                     )}
-                                                    title={item.title}
+                                                    title={projected ? `${item.title} (${resolveText('calendar.projectedRecurrence', 'Projected')})` : item.title}
                                                 >
                                                     {item.title}
                                                 </button>
@@ -579,25 +591,35 @@ export function CalendarView() {
                                                         </div>
                                                     );
                                                 }
+                                                const projected = isProjectedRecurringTask(item.task);
                                                 return (
                                                     <button
                                                         key={item.id}
                                                         type="button"
                                                         data-calendar-block
                                                         data-task-id={item.task.id}
-                                                        data-task-edit-trigger
-                                                        draggable
-                                                        className="absolute z-10 overflow-hidden rounded bg-primary px-2 py-1 text-left text-xs text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                        {...(!projected ? { 'data-task-edit-trigger': true } : {})}
+                                                        draggable={!projected}
+                                                        disabled={projected}
+                                                        className={cn(
+                                                            "absolute z-10 overflow-hidden rounded px-2 py-1 text-left text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40",
+                                                            projected
+                                                                ? "border border-dashed border-primary/50 bg-primary/10 text-primary"
+                                                                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                                        )}
                                                         style={commonStyle}
-                                                        title={`${item.title} ${timeLabel}`}
-                                                        onDragStart={(event) => handleCalendarTaskDragStart(event, item.task.id, 'scheduled')}
+                                                        title={projected ? `${item.title} ${timeLabel} (${resolveText('calendar.projectedRecurrence', 'Projected')})` : `${item.title} ${timeLabel}`}
+                                                        onDragStart={(event) => handleCalendarTaskDragStart(event, item.task, 'scheduled')}
                                                         onClick={(event) => {
                                                             event.stopPropagation();
+                                                            if (projected) return;
                                                             openTaskFromCalendar(item.task);
                                                         }}
                                                     >
                                                         <div className="truncate font-semibold">{item.title}</div>
-                                                        <div className="truncate opacity-90">{timeLabel}</div>
+                                                        <div className="truncate opacity-90">
+                                                            {projected ? `${timeLabel} · ${resolveText('calendar.projectedRecurrence', 'Projected')}` : timeLabel}
+                                                        </div>
                                                     </button>
                                                 );
                                             })}
@@ -663,22 +685,33 @@ export function CalendarView() {
                                                         </div>
                                                     );
                                                 }
+                                                const projected = isProjectedRecurringTask(item.task);
                                                 return (
                                                     <button
                                                         key={item.id}
                                                         type="button"
                                                         data-task-id={item.task.id}
-                                                        data-task-edit-trigger
-                                                        draggable
-                                                        onDragStart={(event) => handleCalendarTaskDragStart(event, item.task.id, item.kind)}
-                                                        onClick={() => openTaskFromCalendar(item.task)}
+                                                        {...(!projected ? { 'data-task-edit-trigger': true } : {})}
+                                                        draggable={!projected}
+                                                        disabled={projected}
+                                                        onDragStart={(event) => handleCalendarTaskDragStart(event, item.task, item.kind)}
+                                                        onClick={() => {
+                                                            if (!projected) openTaskFromCalendar(item.task);
+                                                        }}
                                                         className={cn(
                                                             "flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40",
-                                                            item.kind === 'scheduled' ? "bg-primary/10 text-primary" : "border-l-[3px] border-destructive/70 bg-background"
+                                                            projected
+                                                                ? "border border-dashed border-primary/50 bg-primary/5 text-primary"
+                                                                : item.kind === 'scheduled' ? "bg-primary/10 text-primary" : "border-l-[3px] border-destructive/70 bg-background"
                                                         )}
                                                     >
                                                         <span className="w-20 shrink-0 text-xs font-medium text-muted-foreground">{timeLabel}</span>
                                                         <span className="min-w-0 flex-1 truncate text-foreground">{item.title}</span>
+                                                        {projected && (
+                                                            <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                                                {resolveText('calendar.projectedRecurrence', 'Projected')}
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 );
                                             })}

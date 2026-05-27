@@ -21,12 +21,14 @@ import {
     DEFAULT_CALENDAR_DAY_START_HOUR,
     addCalendarMinutes,
     buildCalendarEventTaskDraft,
+    createProjectedRecurringTask,
     formatCalendarDurationLabel,
     formatCalendarTimeInputValue,
     findFreeSlotForDay as findCalendarFreeSlotForDay,
     getWeekStartsOnIndex,
     isSlotFreeForDay as isCalendarSlotFreeForDay,
     isTaskInActiveProject,
+    isProjectedRecurringTask,
     hasTimeComponent,
     minutesToTimeEstimate,
     normalizeCalendarDurationMinutes,
@@ -355,6 +357,27 @@ export function useDesktopCalendarController() {
                     else scheduledByDay.set(startKey, [task]);
                 }
             }
+            const projectedTask = createProjectedRecurringTask(task);
+            if (!projectedTask || !isCalendarTaskVisible(projectedTask)) continue;
+            visibleTasks.push(projectedTask);
+            if (projectedTask.dueDate) {
+                const dueDate = safeParseDueDate(projectedTask.dueDate);
+                if (dueDate) {
+                    const dueKey = dayKey(dueDate);
+                    const existingDue = deadlinesByDay.get(dueKey);
+                    if (existingDue) existingDue.push(projectedTask);
+                    else deadlinesByDay.set(dueKey, [projectedTask]);
+                }
+            }
+            if (projectedTask.startTime) {
+                const startTime = safeParseDate(projectedTask.startTime);
+                if (startTime) {
+                    const startKey = dayKey(startTime);
+                    const existingStart = scheduledByDay.get(startKey);
+                    if (existingStart) existingStart.push(projectedTask);
+                    else scheduledByDay.set(startKey, [projectedTask]);
+                }
+            }
         }
         return { visibleTasks, deadlinesByDay, scheduledByDay };
     }, [tasks, isCalendarTaskVisible]);
@@ -372,12 +395,15 @@ export function useDesktopCalendarController() {
     const openTask = openTaskId ? tasks.find((task) => task.id === openTaskId) ?? null : null;
     const openProject = openTask?.projectId ? projectMap.get(openTask.projectId) : undefined;
     const openTaskFromCalendar = useCallback((task: Task) => {
+        if (isProjectedRecurringTask(task)) return;
         setOpenTaskId(task.id);
     }, []);
     const markTaskDone = useCallback((taskId: string) => {
+        const task = calendarTaskData.visibleTasks.find((candidate) => candidate.id === taskId);
+        if (isProjectedRecurringTask(task)) return;
         updateTask(taskId, { status: 'done', isFocusedToday: false })
             .catch((error) => reportError('Failed to mark task done', error));
-    }, [updateTask]);
+    }, [calendarTaskData.visibleTasks, updateTask]);
 
     const calendarNameById = useMemo(() => new Map(externalCalendars.map((c) => [c.id, c.name])), [externalCalendars]);
     const createTaskFromExternalEvent = useCallback(async (event: ExternalCalendarEvent) => {

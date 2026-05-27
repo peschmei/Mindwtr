@@ -491,6 +491,7 @@ export type TaskItemFieldRendererData = {
     editRecurrence: RecurrenceRule | '';
     editRecurrenceStrategy: RecurrenceStrategy;
     editRecurrenceRRule: string;
+    editShowFutureRecurrence: boolean;
     monthlyRecurrence: MonthlyRecurrenceInfo;
     editTimeEstimate: TimeEstimate | '';
     editContexts: string;
@@ -522,6 +523,7 @@ export type TaskItemFieldRendererHandlers = {
     setEditRecurrence: (value: RecurrenceRule | '') => void;
     setEditRecurrenceStrategy: (value: RecurrenceStrategy) => void;
     setEditRecurrenceRRule: (value: string) => void;
+    setEditShowFutureRecurrence: (value: boolean) => void;
     openCustomRecurrence: () => void;
     setEditTimeEstimate: (value: TimeEstimate | '') => void;
     setEditContexts: (value: string) => void;
@@ -560,6 +562,7 @@ export function TaskItemFieldRenderer({
         editRecurrence,
         editRecurrenceStrategy,
         editRecurrenceRRule,
+        editShowFutureRecurrence,
         monthlyRecurrence,
         editTimeEstimate,
         editContexts,
@@ -614,6 +617,7 @@ export function TaskItemFieldRenderer({
         setEditRecurrence,
         setEditRecurrenceStrategy,
         setEditRecurrenceRRule,
+        setEditShowFutureRecurrence,
         openCustomRecurrence,
         setEditTimeEstimate,
         setEditContexts,
@@ -1103,6 +1107,7 @@ export function TaskItemFieldRenderer({
                     editRecurrence={editRecurrence}
                     editRecurrenceStrategy={editRecurrenceStrategy}
                     editRecurrenceRRule={editRecurrenceRRule}
+                    editShowFutureRecurrence={editShowFutureRecurrence}
                     monthlyRecurrence={monthlyRecurrence}
                     parsedRecurrenceRRule={parsedRecurrenceRRule}
                     recurrenceEndMode={recurrenceEndMode}
@@ -1110,6 +1115,7 @@ export function TaskItemFieldRenderer({
                     onRecurrenceChange={setEditRecurrence}
                     onRecurrenceStrategyChange={setEditRecurrenceStrategy}
                     onRecurrenceRRuleChange={setEditRecurrenceRRule}
+                    onShowFutureRecurrenceChange={setEditShowFutureRecurrence}
                     openCustomRecurrence={openCustomRecurrence}
                     buildRecurrenceRRule={buildRecurrenceRRule}
                 />

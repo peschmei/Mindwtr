@@ -14,7 +14,7 @@ import {
   type GestureResponderEvent,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { CALENDAR_TIME_ESTIMATE_OPTIONS, safeFormatDate, safeParseDate, type Task } from '@mindwtr/core';
+import { CALENDAR_TIME_ESTIMATE_OPTIONS, isProjectedRecurringTask, safeFormatDate, safeParseDate, type Task } from '@mindwtr/core';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,6 +61,7 @@ type ScheduledTaskBlockProps = {
   height: number;
   isDark: boolean;
   openTaskActions: (taskId: string) => void;
+  projectedLabel: string;
   setTimelineScrollEnabled: (enabled: boolean) => void;
   task: Task;
   tc: ReturnType<typeof useCalendarViewController>['tc'];
@@ -81,6 +82,7 @@ function ScheduledTaskBlock({
   height,
   isDark,
   openTaskActions,
+  projectedLabel,
   setTimelineScrollEnabled,
   task,
   tc,
@@ -92,6 +94,7 @@ function ScheduledTaskBlock({
   const scale = useSharedValue(1);
   const zIndex = useSharedValue(1);
   const taskId = task.id;
+  const projected = isProjectedRecurringTask(task);
 
   const panGesture = Gesture.Pan()
     .activateAfterLongPress(140)
@@ -131,6 +134,44 @@ function ScheduledTaskBlock({
   const compact = height < 48;
   const showTime = height >= 44;
 
+  const blockContent = (
+    <>
+      <Text
+        style={[styles.taskBlockTitle, compact && styles.taskBlockTitleCompact, projected && { color: tc.tint }]}
+        numberOfLines={compact ? 1 : 2}
+      >
+        {task.title}
+      </Text>
+      {showTime && (
+        <Text style={[styles.taskBlockTime, projected && { color: tc.secondaryText }]} numberOfLines={1}>
+          {projected ? `${label} · ${projectedLabel}` : label}
+        </Text>
+      )}
+    </>
+  );
+
+  if (projected) {
+    return (
+      <Animated.View
+        style={[
+          styles.taskBlock,
+          {
+            top,
+            height,
+            paddingVertical: compact ? 2 : 8,
+            justifyContent: compact ? 'center' : undefined,
+            backgroundColor: toRgba(tc.tint, isDark ? 0.18 : 0.1),
+            borderColor: toRgba(tc.tint, isDark ? 0.7 : 0.45),
+            borderStyle: 'dashed',
+          },
+          animatedStyle,
+        ]}
+      >
+        {blockContent}
+      </Animated.View>
+    );
+  }
+
   return (
     <GestureDetector gesture={Gesture.Race(panGesture, tapGesture)}>
       <Animated.View
@@ -147,14 +188,7 @@ function ScheduledTaskBlock({
           animatedStyle,
         ]}
       >
-        <Text style={[styles.taskBlockTitle, compact && styles.taskBlockTitleCompact]} numberOfLines={compact ? 1 : 2}>
-          {task.title}
-        </Text>
-        {showTime && (
-          <Text style={styles.taskBlockTime} numberOfLines={1}>
-            {label}
-          </Text>
-        )}
+        {blockContent}
       </Animated.View>
     </GestureDetector>
   );
@@ -746,13 +780,16 @@ export function CalendarView() {
             {(selectedDateAllDayScheduledTasks.length > 0 || selectedDateAllDayEvents.length > 0) && (
               <View style={[styles.allDayCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
                 <Text style={[styles.sectionLabel, { color: tc.secondaryText }]}>{t('calendar.allDay')}</Text>
-                {selectedDateAllDayScheduledTasks.slice(0, 6).map((task) => (
-                  <Pressable key={task.id} onPress={() => openTaskActions(task.id)} style={styles.allDayPressable}>
-                    <Text style={[styles.allDayItem, { color: tc.text }]} numberOfLines={1}>
-                      {task.title}
-                    </Text>
-                  </Pressable>
-                ))}
+                {selectedDateAllDayScheduledTasks.slice(0, 6).map((task) => {
+                  const projected = isProjectedRecurringTask(task);
+                  return (
+                    <Pressable key={task.id} onPress={() => openTaskActions(task.id)} style={styles.allDayPressable}>
+                      <Text style={[styles.allDayItem, { color: projected ? tc.tint : tc.text }]} numberOfLines={1}>
+                        {projected ? `${task.title} · ${tr('calendar.projectedRecurrence')}` : task.title}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
                 {selectedDateAllDayEvents.slice(0, 6).map((event) => {
                   return (
                     <Pressable key={event.id} onPress={() => openExternalEvent(event)} style={styles.allDayPressable}>
@@ -860,6 +897,7 @@ export function CalendarView() {
                       formatTimeRange={formatTimeRange}
                       isDark={isDark}
                       openTaskActions={openTaskActions}
+                      projectedLabel={tr('calendar.projectedRecurrence')}
                       setTimelineScrollEnabled={setTimelineScrollEnabled}
                       tc={tc}
                       toRgba={toRgba}
@@ -1017,9 +1055,11 @@ export function CalendarView() {
                   <View key={`all-${day.toISOString()}`} style={[styles.weekAllDayCell, compactWeekColumns && styles.weekAllDayCellCompact, { width: weekColumnWidth, borderLeftColor: tc.border }]}>
                     {allDayItems.map((item) => {
                       const isEvent = item.kind === 'event';
+                      const projected = item.kind !== 'event' && isProjectedRecurringTask(item.task);
                       return (
                         <Pressable
                           key={item.id}
+                          disabled={projected}
                           onPress={(pressEvent) => {
                             pressEvent.stopPropagation();
                             if (item.kind === 'event') openExternalEvent(item.event);
@@ -1030,12 +1070,17 @@ export function CalendarView() {
                             compactWeekColumns && styles.weekAllDayItemCompact,
                             {
                               backgroundColor: isEvent ? toRgba(tc.secondaryText, isDark ? 0.28 : 0.14) : tc.inputBg,
-                              borderLeftColor: isEvent ? sourceColorForId(item.event.sourceId) : tc.danger,
+                              borderLeftColor: isEvent
+                                ? sourceColorForId(item.event.sourceId)
+                                : projected
+                                  ? tc.tint
+                                  : tc.danger,
+                              borderStyle: projected ? 'dashed' : 'solid',
                             },
                           ]}
                         >
                           <Text style={[styles.weekAllDayText, compactWeekColumns && styles.weekAllDayTextCompact, { color: tc.text }]} numberOfLines={1}>
-                            {item.title}
+                            {projected ? `${item.title} · ${tr('calendar.projectedRecurrence')}` : item.title}
                           </Text>
                         </Pressable>
                       );
@@ -1134,6 +1179,7 @@ export function CalendarView() {
                           );
                         }
 
+                        const projected = isProjectedRecurringTask(item.task);
                         const start = item.task.startTime ? safeParseDate(item.task.startTime) : null;
                         if (!start) return null;
                         const durationMinutes = timeEstimateToMinutes(item.task.timeEstimate);
@@ -1142,8 +1188,10 @@ export function CalendarView() {
                         return (
                           <Pressable
                             key={item.id}
+                            disabled={projected}
                             onPress={(event) => {
                               event.stopPropagation();
+                              if (projected) return;
                               openTaskActions(item.task.id);
                             }}
                             style={[
@@ -1153,15 +1201,18 @@ export function CalendarView() {
                               {
                                 top,
                                 height,
-                                backgroundColor: isDark ? toRgba(tc.tint, 0.85) : tc.tint,
+                                backgroundColor: projected
+                                  ? toRgba(tc.tint, isDark ? 0.18 : 0.1)
+                                  : isDark ? toRgba(tc.tint, 0.85) : tc.tint,
                                 borderLeftColor: tc.tint,
+                                borderStyle: projected ? 'dashed' : 'solid',
                               },
                             ]}
                           >
-                            <Text style={[styles.weekTaskBlockTitle, compactWeekColumns && styles.weekTaskBlockTitleCompact]} numberOfLines={compactWeekColumns ? 2 : 1}>{item.title}</Text>
+                            <Text style={[styles.weekTaskBlockTitle, compactWeekColumns && styles.weekTaskBlockTitleCompact, projected && { color: tc.tint }]} numberOfLines={compactWeekColumns ? 2 : 1}>{item.title}</Text>
                             {!compactWeekColumns && (
-                              <Text style={styles.weekTaskBlockTime} numberOfLines={1}>
-                                {formatTimeRange(start, durationMinutes)}
+                              <Text style={[styles.weekTaskBlockTime, projected && { color: tc.secondaryText }]} numberOfLines={1}>
+                                {projected ? `${formatTimeRange(start, durationMinutes)} · ${tr('calendar.projectedRecurrence')}` : formatTimeRange(start, durationMinutes)}
                               </Text>
                             )}
                           </Pressable>
@@ -1318,6 +1369,7 @@ export function CalendarView() {
                     );
                   }
 
+                  const projected = isProjectedRecurringTask(item.task);
                   const start = item.task.startTime ? safeParseDate(item.task.startTime) : null;
                   const timeLabel = start
                     ? formatTimeRange(start, timeEstimateToMinutes(item.task.timeEstimate))
@@ -1325,21 +1377,25 @@ export function CalendarView() {
                   return (
                     <Pressable
                       key={item.id}
+                      disabled={projected}
                       style={[
                         styles.scheduleItem,
                         {
-                          backgroundColor: item.kind === 'scheduled' ? toRgba(tc.tint, isDark ? 0.2 : 0.12) : tc.inputBg,
+                          backgroundColor: item.kind === 'scheduled' || projected ? toRgba(tc.tint, isDark ? 0.2 : 0.12) : tc.inputBg,
                           borderLeftColor: item.kind === 'scheduled' ? tc.tint : tc.danger,
+                          borderStyle: projected ? 'dashed' : 'solid',
                         },
                       ]}
-                      onPress={() => openTaskActions(item.task.id)}
+                      onPress={() => {
+                        if (!projected) openTaskActions(item.task.id);
+                      }}
                     >
                       <View style={styles.taskItemMain}>
                         <Text style={[styles.taskItemTitle, { color: tc.text }]} numberOfLines={1}>
                           {item.title}
                         </Text>
                         <Text style={[styles.taskItemTime, { color: tc.secondaryText }]}>
-                          {timeLabel}
+                          {projected ? `${timeLabel} · ${tr('calendar.projectedRecurrence')}` : timeLabel}
                         </Text>
                       </View>
                     </Pressable>
@@ -1453,6 +1509,7 @@ export function CalendarView() {
                     <View style={styles.monthPreviewList}>
                       {visibleItems.map((item) => {
                         const isEvent = item.kind === 'event';
+                        const projected = item.kind !== 'event' && isProjectedRecurringTask(item.task);
                         return (
                           <View
                             key={item.id}
@@ -1466,17 +1523,20 @@ export function CalendarView() {
                                     : toRgba(tc.secondaryText, isDark ? 0.28 : 0.16),
                                 borderLeftColor: isEvent
                                   ? sourceColorForId(item.event.sourceId)
-                                  : item.kind === 'deadline'
+                                  : projected
+                                    ? tc.tint
+                                    : item.kind === 'deadline'
                                     ? tc.danger
                                     : tc.tint,
+                                borderStyle: projected ? 'dashed' : 'solid',
                               },
                             ]}
                           >
                             <Text
-                              style={[styles.monthPreviewText, { color: item.kind === 'scheduled' ? tc.tint : tc.text }]}
+                              style={[styles.monthPreviewText, { color: item.kind === 'scheduled' || projected ? tc.tint : tc.text }]}
                               numberOfLines={1}
                             >
-                              {item.title}
+                              {projected ? `${item.title} · ${tr('calendar.projectedRecurrence')}` : item.title}
                             </Text>
                           </View>
                         );
@@ -1633,63 +1693,95 @@ export function CalendarView() {
                 </View>
               )}
 
-              {selectedDateDeadlines.map((task) => (
-                <View key={task.id} style={[styles.taskItem, { backgroundColor: tc.inputBg, borderLeftColor: tc.tint }]}>
-                  <Pressable style={styles.taskItemMain} onPress={() => openTaskActions(task.id)}>
-                    <Text style={[styles.taskItemTitle, { color: tc.text }]} numberOfLines={1}>
-                      {task.title}
-                    </Text>
-                    <Text style={[styles.taskItemTime, { color: tc.secondaryText }]}>
-                      {t('calendar.deadline')}
-                    </Text>
-                  </Pressable>
-                  {task.status !== 'done' && task.status !== 'archived' && (
+              {selectedDateDeadlines.map((task) => {
+                const projected = isProjectedRecurringTask(task);
+                return (
+                  <View
+                    key={task.id}
+                    style={[
+                      styles.taskItem,
+                      {
+                        backgroundColor: projected ? toRgba(tc.tint, isDark ? 0.18 : 0.1) : tc.inputBg,
+                        borderLeftColor: tc.tint,
+                        borderStyle: projected ? 'dashed' : 'solid',
+                      },
+                    ]}
+                  >
                     <Pressable
-                      style={[styles.quickDoneButton, { borderColor: toRgba(tc.tint, 0.35), backgroundColor: toRgba(tc.tint, 0.16) }]}
-                      onPress={() => markTaskDone(task.id)}
-                    >
-                      <Text style={[styles.quickDoneButtonText, { color: tc.tint }]}>{t('status.done')}</Text>
-                    </Pressable>
-                  )}
-                </View>
-              ))}
-
-              {selectedDateScheduled.map((task) => (
-                <Pressable
-                  key={task.id}
-                  style={[styles.taskItem, { backgroundColor: tc.inputBg, borderLeftColor: tc.tint }]}
-                  onPress={() => openTaskActions(task.id)}
-                >
-                  <View style={styles.taskItemMain}>
-                    <Text style={[styles.taskItemTitle, { color: tc.text }]} numberOfLines={1}>
-                      {task.title}
-                    </Text>
-                    <Text style={[styles.taskItemTime, { color: tc.secondaryText }]}>
-                      {(() => {
-                        const start = safeParseDate(task.startTime);
-                        if (!start) return '';
-                        const durMs = timeEstimateToMinutes(task.timeEstimate) * 60 * 1000;
-                        const end = new Date(start.getTime() + durMs);
-                        if (!isTimedScheduledTask(task)) return t('calendar.allDay');
-                        const startLabel = safeFormatDate(start, 'p');
-                        const endLabel = safeFormatDate(end, 'p');
-                        return `${startLabel}-${endLabel}`;
-                      })()}
-                    </Text>
-                  </View>
-                  {task.status !== 'done' && task.status !== 'archived' && (
-                    <Pressable
-                      style={[styles.quickDoneButton, { borderColor: toRgba(tc.tint, 0.35), backgroundColor: toRgba(tc.tint, 0.16) }]}
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        markTaskDone(task.id);
+                      disabled={projected}
+                      style={styles.taskItemMain}
+                      onPress={() => {
+                        if (!projected) openTaskActions(task.id);
                       }}
                     >
-                      <Text style={[styles.quickDoneButtonText, { color: tc.tint }]}>{t('status.done')}</Text>
+                      <Text style={[styles.taskItemTitle, { color: projected ? tc.tint : tc.text }]} numberOfLines={1}>
+                        {task.title}
+                      </Text>
+                      <Text style={[styles.taskItemTime, { color: tc.secondaryText }]}>
+                        {projected ? `${t('calendar.deadline')} · ${tr('calendar.projectedRecurrence')}` : t('calendar.deadline')}
+                      </Text>
                     </Pressable>
-                  )}
-                </Pressable>
-              ))}
+                    {!projected && task.status !== 'done' && task.status !== 'archived' && (
+                      <Pressable
+                        style={[styles.quickDoneButton, { borderColor: toRgba(tc.tint, 0.35), backgroundColor: toRgba(tc.tint, 0.16) }]}
+                        onPress={() => markTaskDone(task.id)}
+                      >
+                        <Text style={[styles.quickDoneButtonText, { color: tc.tint }]}>{t('status.done')}</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })}
+
+              {selectedDateScheduled.map((task) => {
+                const projected = isProjectedRecurringTask(task);
+                return (
+                  <Pressable
+                    key={task.id}
+                    disabled={projected}
+                    style={[
+                      styles.taskItem,
+                      {
+                        backgroundColor: projected ? toRgba(tc.tint, isDark ? 0.18 : 0.1) : tc.inputBg,
+                        borderLeftColor: tc.tint,
+                        borderStyle: projected ? 'dashed' : 'solid',
+                      },
+                    ]}
+                    onPress={() => {
+                      if (!projected) openTaskActions(task.id);
+                    }}
+                  >
+                    <View style={styles.taskItemMain}>
+                      <Text style={[styles.taskItemTitle, { color: projected ? tc.tint : tc.text }]} numberOfLines={1}>
+                        {task.title}
+                      </Text>
+                      <Text style={[styles.taskItemTime, { color: tc.secondaryText }]}>
+                        {(() => {
+                          const start = safeParseDate(task.startTime);
+                          if (!start) return '';
+                          const durMs = timeEstimateToMinutes(task.timeEstimate) * 60 * 1000;
+                          const end = new Date(start.getTime() + durMs);
+                          const label = !isTimedScheduledTask(task)
+                            ? t('calendar.allDay')
+                            : `${safeFormatDate(start, 'p')}-${safeFormatDate(end, 'p')}`;
+                          return projected ? `${label} · ${tr('calendar.projectedRecurrence')}` : label;
+                        })()}
+                      </Text>
+                    </View>
+                    {!projected && task.status !== 'done' && task.status !== 'archived' && (
+                      <Pressable
+                        style={[styles.quickDoneButton, { borderColor: toRgba(tc.tint, 0.35), backgroundColor: toRgba(tc.tint, 0.16) }]}
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          markTaskDone(task.id);
+                        }}
+                      >
+                        <Text style={[styles.quickDoneButtonText, { color: tc.tint }]}>{t('status.done')}</Text>
+                      </Pressable>
+                    )}
+                  </Pressable>
+                );
+              })}
 
               {selectedDateDeadlines.length === 0
                 && selectedDateScheduled.length === 0

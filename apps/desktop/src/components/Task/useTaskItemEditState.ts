@@ -41,6 +41,8 @@ type TaskItemEditState = {
     setEditRecurrenceStrategy: (value: RecurrenceStrategy) => void;
     editRecurrenceRRule: string;
     setEditRecurrenceRRule: (value: string) => void;
+    editShowFutureRecurrence: boolean;
+    setEditShowFutureRecurrence: (value: boolean) => void;
     editTimeEstimate: TimeEstimate | '';
     setEditTimeEstimate: (value: TimeEstimate | '') => void;
     editPriority: TaskPriority | '';
@@ -83,6 +85,7 @@ export function useTaskItemEditState({
     const [editRecurrenceRRule, setEditRecurrenceRRule] = useState<string>(
         getRecurrenceRRuleValue(task.recurrence),
     );
+    const [editShowFutureRecurrence, setEditShowFutureRecurrence] = useState(Boolean(task.showFutureRecurrence));
     const [editTimeEstimate, setEditTimeEstimate] = useState<TimeEstimate | ''>(task.timeEstimate || '');
     const [editPriority, setEditPriority] = useState<TaskPriority | ''>(task.priority || '');
     const [editEnergyLevel, setEditEnergyLevel] = useState<NonNullable<Task['energyLevel']> | ''>(task.energyLevel || '');
@@ -104,6 +107,7 @@ export function useTaskItemEditState({
         setEditRecurrence(getRecurrenceRuleValue(task.recurrence));
         setEditRecurrenceStrategy(getRecurrenceStrategyValue(task.recurrence));
         setEditRecurrenceRRule(getRecurrenceRRuleValue(task.recurrence));
+        setEditShowFutureRecurrence(Boolean(task.showFutureRecurrence));
         setEditTimeEstimate(task.timeEstimate || '');
         setEditPriority(task.priority || '');
         setEditEnergyLevel(task.energyLevel || '');
@@ -142,6 +146,8 @@ export function useTaskItemEditState({
         setEditRecurrenceStrategy,
         editRecurrenceRRule,
         setEditRecurrenceRRule,
+        editShowFutureRecurrence,
+        setEditShowFutureRecurrence,
         editTimeEstimate,
         setEditTimeEstimate,
         editPriority,

@@ -171,6 +171,7 @@ export interface Task {
     startTime?: string; // ISO date string
     dueDate?: string; // ISO date string
     recurrence?: Recurrence | RecurrenceRule; // Legacy string inputs are normalized to Recurrence on load/store writes
+    showFutureRecurrence?: boolean; // Calendar-only preview of the next recurrence; does not create a real task.
     pushCount?: number; // Tracks how many times dueDate was pushed later
     tags: string[];
     contexts: string[]; // e.g., '@home', '@work'

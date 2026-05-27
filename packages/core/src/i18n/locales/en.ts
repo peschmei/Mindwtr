@@ -299,6 +299,8 @@ export const en: Record<string, string> = {
         'recurrence.strategyFluidDesc': 'Due after completion (e.g., laundry)',
         'recurrence.afterCompletion': 'Repeat after completion',
         'recurrence.afterCompletionShort': 'after completion',
+        'recurrence.showFutureInCalendar': 'Show next occurrence in Calendar',
+        'recurrence.showFutureInCalendarHint': 'Planning-only preview; the next task is still created when this one is completed.',
 
         // Inbox (Mobile)
         'inbox.title': 'Inbox',
@@ -439,6 +441,8 @@ export const en: Record<string, string> = {
         'calendar.events': 'Events',
         'calendar.allDay': 'All day',
         'calendar.deadline': 'Deadline',
+        'calendar.projectedRecurrence': 'Projected',
+        'calendar.projectedRecurrenceDescription': 'Planning-only preview. Complete the current recurring task to create the real next task.',
         'calendar.unschedule': 'Remove from calendar',
         'calendar.changeTime': 'Change time',
         'calendar.noTasks': 'No tasks for this day',

@@ -506,6 +506,31 @@ export function TaskEditScheduleField({
                             </TouchableOpacity>
                         </View>
                     )}
+                    {!!recurrenceRuleValue && (
+                        <TouchableOpacity
+                            accessibilityRole="switch"
+                            accessibilityState={{ checked: editedTask.showFutureRecurrence === true }}
+                            style={[
+                                styles.dateBtn,
+                                {
+                                    marginTop: 8,
+                                    backgroundColor: editedTask.showFutureRecurrence ? tc.filterBg : tc.cardBg,
+                                    borderColor: editedTask.showFutureRecurrence ? tc.tint : tc.border,
+                                },
+                            ]}
+                            onPress={() => setEditedTask((prev) => ({
+                                ...prev,
+                                showFutureRecurrence: prev.showFutureRecurrence ? undefined : true,
+                            }))}
+                        >
+                            <Text style={[styles.modalLabel, { color: tc.text }]}>
+                                {tFallback(t, 'recurrence.showFutureInCalendar', 'Show next occurrence in Calendar')}
+                            </Text>
+                            <Text style={{ marginTop: 4, color: tc.secondaryText, fontSize: 12, lineHeight: 16 }}>
+                                {tFallback(t, 'recurrence.showFutureInCalendarHint', 'Planning-only preview; the next task is still created when this one is completed.')}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             );
         case 'startTime': {

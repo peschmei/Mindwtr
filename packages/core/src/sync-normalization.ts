@@ -75,6 +75,7 @@ export const normalizeTaskForSyncMerge = (task: Task, nowIso: string): Task => {
         contexts: normalizeStringArray(normalized.contexts),
         sectionId: normalizeOptionalString(normalized.sectionId),
         isFocusedToday: normalized.isFocusedToday === true,
+        showFutureRecurrence: normalized.showFutureRecurrence === true,
     };
 };
 

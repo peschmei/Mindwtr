@@ -1,4 +1,4 @@
-export const SQLITE_SCHEMA_VERSION = 5;
+export const SQLITE_SCHEMA_VERSION = 6;
 
 export const SQLITE_BASE_SCHEMA = `
 PRAGMA journal_mode = WAL;
@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   startTime TEXT,
   dueDate TEXT,
   recurrence TEXT,
+  showFutureRecurrence INTEGER,
   pushCount INTEGER,
   tags TEXT,
   contexts TEXT,

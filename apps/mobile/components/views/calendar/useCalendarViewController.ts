@@ -5,6 +5,7 @@ import {
   DEFAULT_CALENDAR_DAY_START_HOUR,
   addCalendarMinutes,
   buildCalendarEventTaskDraft,
+  createProjectedRecurringTask,
   formatCalendarTimeInputValue,
   formatI18nTemplate,
   normalizeDateFormatSetting,
@@ -13,6 +14,8 @@ import {
   getEnglishI18nValue,
   getWeekStartsOnIndex,
   isSlotFreeForDay as isCalendarSlotFreeForDay,
+  isProjectedRecurringTask,
+  isProjectedRecurringTaskId,
   isTaskInActiveProject,
   minutesToTimeEstimate,
   normalizeCalendarDurationMinutes,
@@ -294,7 +297,13 @@ export function useCalendarViewController() {
     ))
   ), [tasks, resolvedAreaFilter, projectById, areaById]);
 
-  const visibleTasks = areaVisibleTasks;
+  const visibleTasks = useMemo(() => {
+    const projectedAtIso = new Date(nowTick).toISOString();
+    return areaVisibleTasks.flatMap((task) => {
+      const projectedTask = createProjectedRecurringTask(task, projectedAtIso);
+      return projectedTask ? [task, projectedTask] : [task];
+    });
+  }, [areaVisibleTasks, nowTick]);
 
   const schedulableTasks = useMemo(() => (
     areaVisibleTasks
@@ -795,6 +804,7 @@ export function useCalendarViewController() {
   };
 
   const commitTaskDrag = (taskId: string, dayStartMs: number, startMinutes: number, durationMinutes: number) => {
+    if (isProjectedRecurringTaskId(taskId)) return;
     const day = new Date(dayStartMs);
     const nextStart = new Date(dayStartMs + startMinutes * 60 * 1000);
     const ok = isSlotFreeForDay(day, nextStart, durationMinutes, taskId);
@@ -823,6 +833,15 @@ export function useCalendarViewController() {
   const openTaskActions = (taskId: string) => {
     const task = visibleTasks.find((item) => item.id === taskId);
     if (!task) return;
+    if (isProjectedRecurringTask(task)) {
+      Alert.alert(
+        task.title,
+        tr('calendar.projectedRecurrenceDescription'),
+        [{ text: t('common.ok') }],
+        { cancelable: true },
+      );
+      return;
+    }
 
     const buttons = [
       {

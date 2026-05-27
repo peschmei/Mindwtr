@@ -285,13 +285,20 @@ export {
 export {
     buildRRuleString,
     createNextRecurringTask,
+    createProjectedRecurringTask,
+    getProjectedRecurringTaskId,
     getRecurrenceCompletedOccurrencesValue,
     getRecurrenceCountValue,
     getRecurrenceUntilValue,
+    isProjectedRecurringTask,
+    isProjectedRecurringTaskId,
     isRecurrenceRule,
     normalizeRecurrenceForLoad,
     parseRRuleString,
     RECURRENCE_RULES,
+} from './recurrence';
+export type {
+    ProjectedRecurringTask,
 } from './recurrence';
 
 export {

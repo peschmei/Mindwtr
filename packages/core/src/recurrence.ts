@@ -36,6 +36,29 @@ type BuildRRuleOptions = {
     until?: string;
 };
 
+export type ProjectedRecurringTask = Task & {
+    isProjectedRecurringTask: true;
+    sourceTaskId: string;
+};
+
+const PROJECTED_RECURRENCE_ID_SUFFIX = ':projected-recurrence';
+
+export const getProjectedRecurringTaskId = (taskId: string): string => (
+    `${taskId}${PROJECTED_RECURRENCE_ID_SUFFIX}`
+);
+
+export const isProjectedRecurringTaskId = (taskId: string | undefined | null): boolean => (
+    typeof taskId === 'string' && taskId.endsWith(PROJECTED_RECURRENCE_ID_SUFFIX)
+);
+
+export const isProjectedRecurringTask = (task: Partial<Task> | null | undefined): task is ProjectedRecurringTask => (
+    Boolean(
+        task
+        && (task as Partial<ProjectedRecurringTask>).isProjectedRecurringTask === true
+        && typeof (task as Partial<ProjectedRecurringTask>).sourceTaskId === 'string'
+    )
+);
+
 const parseByDayToken = (token: string): RecurrenceByDay | null => {
     const trimmed = token.toUpperCase().trim();
     if (!trimmed) return null;
@@ -648,6 +671,115 @@ const shouldStopAtUntil = (nextIso: string | undefined, until: string | undefine
     return nextDate.getTime() > untilDate.getTime();
 };
 
+type ProjectedIsoResult = {
+    iso?: string;
+    steps: number;
+};
+
+const getProjectionBaseDate = (projectedAtIso: string): Date => {
+    const parsed = safeParseDate(projectedAtIso);
+    if (parsed) return parsed;
+    const fallback = new Date(projectedAtIso);
+    return Number.isNaN(fallback.getTime()) ? new Date() : fallback;
+};
+
+function projectStrictIsoFrom(
+    baseIso: string | undefined,
+    rule: RecurrenceRule,
+    projectionBase: Date,
+    byDay?: RecurrenceByDay[],
+    interval: number = 1,
+    byMonthDay?: number[],
+    weekStart?: RecurrenceWeekday,
+    anchorDay?: number
+): ProjectedIsoResult {
+    let nextIso = nextIsoFrom(baseIso, rule, projectionBase, byDay, interval, byMonthDay, weekStart, undefined, anchorDay);
+    if (!nextIso) return { iso: undefined, steps: 0 };
+
+    let steps = 1;
+    for (let guard = 0; guard < 1000; guard += 1) {
+        const parsedNext = safeParseDate(nextIso);
+        if (!parsedNext || parsedNext > projectionBase) break;
+        const followingIso = nextIsoFrom(nextIso, rule, projectionBase, byDay, interval, byMonthDay, weekStart, undefined, anchorDay);
+        if (!followingIso || followingIso === nextIso) break;
+        nextIso = followingIso;
+        steps += 1;
+    }
+    return { iso: nextIso, steps };
+}
+
+/**
+ * Create a read-only, calendar-only preview of the next visible occurrence.
+ *
+ * This never creates a persisted task. It uses a synthetic ID so calendar views
+ * and device calendar push can add/update/remove the preview independently.
+ */
+export function createProjectedRecurringTask(
+    task: Task,
+    projectedAtIso: string = new Date().toISOString()
+): ProjectedRecurringTask | null {
+    if (!task.showFutureRecurrence) return null;
+    if (isProjectedRecurringTask(task)) return null;
+    if (task.deletedAt || task.status === 'done' || task.status === 'archived' || task.status === 'reference') {
+        return null;
+    }
+
+    const rule = getRecurrenceRule(task.recurrence);
+    if (!rule) return null;
+
+    const strategy = getRecurrenceStrategy(task.recurrence);
+    const byDay = getRecurrenceByDay(task.recurrence);
+    const byMonthDay = getRecurrenceByMonthDay(task.recurrence);
+    const interval = getRecurrenceInterval(task.recurrence);
+    const weekStart = getRecurrenceWeekStart(task.recurrence);
+    const count = getRecurrenceCountValue(task.recurrence);
+    const until = getRecurrenceUntilValue(task.recurrence);
+    const completedOccurrences = getRecurrenceCompletedOccurrencesValue(task.recurrence) ?? 0;
+    const projectionBase = getProjectionBaseDate(projectedAtIso);
+
+    const projectField = (field: 'startTime' | 'dueDate' | 'reviewAt'): ProjectedIsoResult => {
+        const baseIso = task[field];
+        if (!baseIso) return { iso: undefined, steps: 0 };
+        if (strategy === 'fluid') {
+            return {
+                iso: nextIsoFrom(projectedAtIso, rule, projectionBase, byDay, interval, byMonthDay, weekStart),
+                steps: 1,
+            };
+        }
+        const anchorDay = getRecurrenceFieldAnchorDay(task.recurrence, field)
+            ?? getDateDay(baseIso);
+        return projectStrictIsoFrom(baseIso, rule, projectionBase, byDay, interval, byMonthDay, weekStart, anchorDay);
+    };
+
+    const nextStart = projectField('startTime');
+    const nextDue = projectField('dueDate');
+    const nextReview = projectField('reviewAt');
+    const projectionSteps = Math.max(nextStart.steps, nextDue.steps, nextReview.steps);
+    if (!nextStart.iso && !nextDue.iso && !nextReview.iso) return null;
+    if (!nextStart.iso && !nextDue.iso) return null;
+    if (count && completedOccurrences + projectionSteps >= count) return null;
+
+    const nextOccurrenceAnchor = nextDue.iso ?? nextStart.iso ?? nextReview.iso;
+    if (shouldStopAtUntil(nextOccurrenceAnchor, until)) return null;
+
+    return {
+        ...task,
+        id: getProjectedRecurringTaskId(task.id),
+        sourceTaskId: task.id,
+        isProjectedRecurringTask: true,
+        startTime: nextStart.iso,
+        dueDate: nextDue.iso,
+        reviewAt: nextReview.iso,
+        attachments: undefined,
+        completedAt: undefined,
+        deletedAt: undefined,
+        purgedAt: undefined,
+        isFocusedToday: false,
+        createdAt: task.createdAt,
+        updatedAt: projectedAtIso,
+    };
+}
+
 /**
  * Create the next instance of a recurring task.
  *
@@ -797,6 +929,7 @@ export function createNextRecurringTask(
         startTime: nextStartTime,
         dueDate: nextDueDate,
         recurrence: nextRecurrence,
+        showFutureRecurrence: task.showFutureRecurrence ? true : undefined,
         tags: [...(task.tags || [])],
         contexts: [...(task.contexts || [])],
         checklist: resetChecklist(task.checklist),

@@ -35,6 +35,7 @@ type UseTaskItemSubmitParams = {
     editRecurrence: Task['recurrence'] extends infer R ? R extends { rule?: infer Rule } ? Rule | '' : '' : '';
     editRecurrenceRRule: string;
     editRecurrenceStrategy: Task['recurrence'] extends infer R ? R extends { strategy?: infer Strategy } ? Strategy : never : never;
+    editShowFutureRecurrence: boolean;
     editReviewAt: string;
     editSectionId: string;
     editStartTime: string;
@@ -72,6 +73,7 @@ export function useTaskItemSubmit({
     editRecurrence,
     editRecurrenceRRule,
     editRecurrenceStrategy,
+    editShowFutureRecurrence,
     editReviewAt,
     editSectionId,
     editStartTime,
@@ -188,6 +190,7 @@ export function useTaskItemSubmit({
             ...(resolvedChecklist ? { checklist: resolvedChecklist } : {}),
             location: editLocation || undefined,
             recurrence: recurrenceValue,
+            showFutureRecurrence: recurrenceValue && editShowFutureRecurrence ? true : undefined,
             timeEstimate: editTimeEstimate || undefined,
             priority: editPriority || undefined,
             energyLevel: editEnergyLevel || undefined,
@@ -220,6 +223,7 @@ export function useTaskItemSubmit({
         editRecurrence,
         editRecurrenceRRule,
         editRecurrenceStrategy,
+        editShowFutureRecurrence,
         editReviewAt,
         editSectionId,
         editStartTime,

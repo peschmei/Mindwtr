@@ -9,7 +9,16 @@
 import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { hasTimeComponent, safeParseDate, useTaskStore, type Task } from '@mindwtr/core';
+import {
+    createProjectedRecurringTask,
+    getProjectedRecurringTaskId,
+    hasTimeComponent,
+    isProjectedRecurringTask,
+    isProjectedRecurringTaskId,
+    safeParseDate,
+    useTaskStore,
+    type Task,
+} from '@mindwtr/core';
 
 import { logInfo, logWarn, logError } from './app-log';
 import {
@@ -461,6 +470,12 @@ function buildEventDetails(task: Task, shouldPrefixTitle: boolean) {
     const startDate = parsed ?? new Date();
     const title = formatCalendarEventTitle(task.title, shouldPrefixTitle);
     const location = typeof task.location === 'string' ? task.location.trim() : '';
+    const notes = [
+        isProjectedRecurringTask(task)
+            ? 'Projected recurring occurrence. Complete the current Mindwtr task to create the real next task.'
+            : '',
+        task.description ?? '',
+    ].filter(Boolean).join('\n\n');
     if (hasTimeComponent(dateValue)) {
         const endDate = new Date(startDate.getTime() + timeEstimateToMinutes(task.timeEstimate) * 60 * 1000);
         return {
@@ -468,7 +483,7 @@ function buildEventDetails(task: Task, shouldPrefixTitle: boolean) {
             startDate,
             endDate,
             allDay: false,
-            notes: task.description ?? '',
+            notes,
             location,
         };
     }
@@ -480,7 +495,7 @@ function buildEventDetails(task: Task, shouldPrefixTitle: boolean) {
         startDate: startDateOnly,
         endDate,
         allDay: true,
-        notes: task.description ?? '',
+        notes,
         location,
         ...(Platform.OS === 'android' ? { timeZone: 'UTC', endTimeZone: 'UTC' } : {}),
     };
@@ -558,6 +573,14 @@ async function syncTaskToCalendar(task: Task, target: CalendarPushTarget): Promi
     });
 }
 
+function getCalendarPushTasks(tasks: Task[]): Task[] {
+    const projectedAtIso = new Date().toISOString();
+    return tasks.flatMap((task) => {
+        const projectedTask = createProjectedRecurringTask(task, projectedAtIso);
+        return projectedTask ? [task, projectedTask] : [task];
+    });
+}
+
 // MARK: - Full sync
 
 export const runFullCalendarSync = async (): Promise<void> => {
@@ -568,17 +591,18 @@ export const runFullCalendarSync = async (): Promise<void> => {
     if (!target) return;
 
     const { tasks } = useTaskStore.getState();
+    const calendarTasks = getCalendarPushTasks(tasks as Task[]);
 
     // Sync all tasks currently in the store
     const results = await Promise.allSettled(
-        tasks.map((task) => syncTaskToCalendar(task, target))
+        calendarTasks.map((task) => syncTaskToCalendar(task, target))
     );
 
     // Reconcile: remove stale calendar_sync entries for tasks that are no
     // longer in the store or that should not have an event (completed between
     // sessions, archived, etc.)
     const activeEventIds = new Set(
-        tasks.filter((t) => !shouldRemoveFromCalendar(t)).map((t) => t.id)
+        calendarTasks.filter((task) => !shouldRemoveFromCalendar(task)).map((task) => task.id)
     );
     const syncedEntries = await getAllCalendarSyncEntries(PLATFORM);
     const staleEntries = syncedEntries.filter((e) => !activeEventIds.has(e.taskId));
@@ -588,7 +612,7 @@ export const runFullCalendarSync = async (): Promise<void> => {
     void logInfo('Full calendar sync complete', {
         scope: 'calendar-push',
         extra: {
-            total: String(tasks.length),
+            total: String(calendarTasks.length),
             failed: String(failed),
             stale: String(staleEntries.length),
         },
@@ -619,12 +643,27 @@ const runPartialCalendarSync = async (taskIds: string[]): Promise<void> => {
     if (!target) return;
 
     const { _tasksById } = useTaskStore.getState();
-    const targets = taskIds
-        .map((id) => _tasksById.get(id))
-        .filter((task): task is Task => !!task);
+    const targets: Task[] = [];
+    const removedIds: string[] = [];
 
-    // Also handle tasks that were removed from the store entirely.
-    const removedIds = taskIds.filter((id) => !_tasksById.has(id));
+    for (const id of taskIds) {
+        if (isProjectedRecurringTaskId(id)) {
+            removedIds.push(id);
+            continue;
+        }
+        const task = _tasksById.get(id);
+        if (!task) {
+            removedIds.push(id, getProjectedRecurringTaskId(id));
+            continue;
+        }
+        targets.push(task);
+        const projectedTask = createProjectedRecurringTask(task);
+        if (projectedTask) {
+            targets.push(projectedTask);
+        } else {
+            removedIds.push(getProjectedRecurringTaskId(task.id));
+        }
+    }
 
     await Promise.allSettled([
         ...targets.map((t) => syncTaskToCalendar(t, target)),
@@ -666,7 +705,9 @@ export const startCalendarPushSync = (): (() => void) => {
                     prev.title !== task.title ||
                     prev.description !== task.description ||
                     prev.location !== task.location ||
-                    prev.timeEstimate !== task.timeEstimate
+                    prev.timeEstimate !== task.timeEstimate ||
+                    prev.recurrence !== task.recurrence ||
+                    prev.showFutureRecurrence !== task.showFutureRecurrence
                 ) {
                     changedIds.push(task.id);
                 }
