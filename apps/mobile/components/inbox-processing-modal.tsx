@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { X } from 'lucide-react-native';
 import { tFallback } from '@mindwtr/core';
 
@@ -251,15 +251,22 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
             </TouchableOpacity>
           </View>
 
-          <View style={styles.stepContainer}>
-            <ScrollView
-              ref={processingScrollRef}
-              style={styles.singlePageScroll}
-              contentContainerStyle={styles.singlePageContent}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
-            >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={0}
+            style={styles.keyboardAvoidingContainer}
+          >
+            <View style={styles.stepContainer}>
+              <ScrollView
+                ref={processingScrollRef}
+                style={styles.singlePageScroll}
+                contentContainerStyle={styles.singlePageContent}
+                automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
               <InboxTitleSection
                 t={t}
                 tc={tc}
@@ -500,24 +507,25 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                   {tFallback(t, 'inbox.tapNextHint', 'Tap "Next task" at the bottom to apply your choices and move on.')}
                 </Text>
               </View>
-            </ScrollView>
+              </ScrollView>
 
-            <View style={[styles.bottomActionBar, { borderTopColor: tc.border, paddingBottom: Math.max(insets.bottom, 10) }]}>
-              <TouchableOpacity
-                style={[
-                  styles.bottomNextButton,
-                  { backgroundColor: tc.tint },
-                  isDelegateConfirmationDisabled && { opacity: 0.5 },
-                ]}
-                disabled={isDelegateConfirmationDisabled}
-                onPress={handleNextTask}
-              >
-                <Text style={styles.bottomNextButtonText}>
-                  {tFallback(t, 'inbox.nextTask', 'Next task →')}
-                </Text>
-              </TouchableOpacity>
+              <View style={[styles.bottomActionBar, { borderTopColor: tc.border, paddingBottom: Math.max(insets.bottom, 10) }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.bottomNextButton,
+                    { backgroundColor: tc.tint },
+                    isDelegateConfirmationDisabled && { opacity: 0.5 },
+                  ]}
+                  disabled={isDelegateConfirmationDisabled}
+                  onPress={handleNextTask}
+                >
+                  <Text style={styles.bottomNextButtonText}>
+                    {tFallback(t, 'inbox.nextTask', 'Next task →')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
       {aiModal && (

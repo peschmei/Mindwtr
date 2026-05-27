@@ -155,6 +155,9 @@ export const styles = StyleSheet.create({
   stepContainer: {
     flex: 1,
   },
+  keyboardAvoidingContainer: {
+    flex: 1,
+  },
   stepContent: {
     flex: 1,
   },

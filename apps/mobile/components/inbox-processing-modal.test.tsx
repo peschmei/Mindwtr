@@ -1,6 +1,7 @@
 import React from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { act, create } from 'react-test-renderer';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { InboxProcessingModal } from './inbox-processing-modal';
 
@@ -66,6 +67,14 @@ const storeState = {
   updateTask,
   deleteTask,
   addProject,
+};
+const originalPlatformOs = Platform.OS;
+
+const setPlatform = (os: typeof Platform.OS) => {
+  Object.defineProperty(Platform, 'OS', {
+    configurable: true,
+    value: os,
+  });
 };
 
 vi.mock('@mindwtr/core', () => {
@@ -232,6 +241,10 @@ describe('InboxProcessingModal', () => {
     clarifyTask.mockClear();
   });
 
+  afterEach(() => {
+    setPlatform(originalPlatformOs);
+  });
+
   const findNodeWithText = (root: ReturnType<typeof create>['root'], text: string) => {
     return root.find((node) => {
       const children = node.props?.children;
@@ -264,6 +277,23 @@ describe('InboxProcessingModal', () => {
     }
     return node;
   };
+
+  it('keeps the processing form keyboard-aware on iOS', () => {
+    setPlatform('ios');
+    const onClose = vi.fn();
+    let tree: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<InboxProcessingModal visible onClose={onClose} />);
+    });
+
+    expect(tree!.root.findByType(KeyboardAvoidingView).props.behavior).toBe('padding');
+    const processingScroll = tree!.root.findByType(ScrollView);
+
+    expect(processingScroll.props.automaticallyAdjustKeyboardInsets).toBe(true);
+    expect(processingScroll.props.keyboardDismissMode).toBe('interactive');
+    expect(processingScroll.props.keyboardShouldPersistTaps).toBe('handled');
+  });
 
   it('replaces the header next action with skip and saves edits before advancing', () => {
     mockSettings.features = undefined;
