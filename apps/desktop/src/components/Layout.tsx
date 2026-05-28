@@ -102,6 +102,7 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
     const lastSyncAt = settings?.lastSyncAt;
     const lastSyncStatus = settings?.lastSyncStatus;
     const lastSyncError = settings?.lastSyncError?.trim();
+    const lastSyncStats = settings?.lastSyncStats;
 
     // Compute sync freshness bucket on a 60-second timer instead of every render
     // to prevent idle re-render flicker from Date.now() changing each frame.
@@ -128,13 +129,38 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
         'settings.syncConflictNotice',
         'Sync conflict resolved with last-write-wins. Open sync settings to review the details.'
     );
+    const syncConflictToastKey = useMemo(() => {
+        if (lastSyncStatus !== 'conflict') return null;
+        if (!lastSyncStats) return `${lastSyncAt ?? 'unknown'}:${lastSyncStatus}`;
+        const conflictEntities = [
+            ['tasks', lastSyncStats.tasks],
+            ['projects', lastSyncStats.projects],
+            ['sections', lastSyncStats.sections],
+            ['areas', lastSyncStats.areas],
+        ] as const;
+        const countParts = conflictEntities.map(([name, stats]) => `${name}:${stats.conflicts || 0}`);
+        const conflictIds = conflictEntities
+            .flatMap(([, stats]) => stats.conflictIds || [])
+            .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+            .sort();
+        const conflictSamples = conflictEntities
+            .flatMap(([name, stats]) => (stats.conflictSamples || []).map((sample) => [
+                name,
+                sample.id,
+                sample.winner,
+                (sample.reasons || []).join('+'),
+                sample.localComparableHash,
+                sample.incomingComparableHash,
+            ].join(':')))
+            .sort();
+        return `${countParts.join('|')}:ids:${conflictIds.join(',')}:samples:${conflictSamples.join(',')}`;
+    }, [lastSyncAt, lastSyncStats, lastSyncStatus]);
     useEffect(() => {
-        if (lastSyncStatus !== 'conflict') return;
-        const toastKey = `${lastSyncAt ?? 'unknown'}:${lastSyncStatus}`;
-        if (shownConflictToastKeyRef.current === toastKey) return;
-        shownConflictToastKeyRef.current = toastKey;
+        if (lastSyncStatus !== 'conflict' || !syncConflictToastKey) return;
+        if (shownConflictToastKeyRef.current === syncConflictToastKey) return;
+        shownConflictToastKeyRef.current = syncConflictToastKey;
         showToast(syncConflictNotice, 'info', 6000);
-    }, [lastSyncAt, lastSyncStatus, showToast, syncConflictNotice]);
+    }, [lastSyncStatus, showToast, syncConflictNotice, syncConflictToastKey]);
 
     const syncFreshnessDotClass = syncStatus.inFlight
         ? 'bg-emerald-400'

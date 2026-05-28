@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, waitFor } from '@testing-library/react';
-import { useTaskStore } from '@mindwtr/core';
+import { useTaskStore, type MergeStats } from '@mindwtr/core';
 
 import { LanguageProvider } from '../contexts/language-context';
 import { KeybindingProvider } from '../contexts/keybinding-context';
@@ -13,6 +13,53 @@ const initialTaskState = useTaskStore.getState();
 const initialUiState = useUiStore.getState();
 const initialObsidianState = useObsidianStore.getState();
 const onNavigate = vi.fn();
+
+const createMergeStats = (conflictIds: string[] = []): MergeStats => {
+    const emptyStats = {
+        localTotal: 0,
+        incomingTotal: 0,
+        mergedTotal: 0,
+        localOnly: 0,
+        incomingOnly: 0,
+        conflicts: 0,
+        resolvedUsingLocal: 0,
+        resolvedUsingIncoming: 0,
+        deletionsWon: 0,
+        conflictIds: [],
+        maxClockSkewMs: 0,
+        invalidTimestamps: 0,
+        timestampAdjustments: 0,
+        timestampAdjustmentIds: [],
+        futureTimestampClamps: 0,
+        futureTimestampClampIds: [],
+        conflictReasonCounts: {},
+        conflictSamples: [],
+    };
+    return {
+        tasks: {
+            ...emptyStats,
+            conflicts: conflictIds.length,
+            conflictIds,
+            conflictSamples: conflictIds.map((id) => ({
+                id,
+                winner: 'local',
+                reasons: ['content'],
+                hasRevision: true,
+                timeDiffMs: 0,
+                localUpdatedAt: '2026-04-22T12:00:00.000Z',
+                incomingUpdatedAt: '2026-04-22T12:00:00.000Z',
+                localRev: 1,
+                incomingRev: 1,
+                localComparableHash: `local-${id}`,
+                incomingComparableHash: `incoming-${id}`,
+                diffKeys: ['title'],
+            })),
+        },
+        projects: { ...emptyStats },
+        sections: { ...emptyStats },
+        areas: { ...emptyStats },
+    };
+};
 
 const renderLayout = () => render(
     <LanguageProvider>
@@ -140,6 +187,57 @@ describe('Layout sync conflict surface', () => {
             'info',
             6000,
         );
+    });
+
+    it('does not repeat the same conflict toast when only the sync timestamp changes', async () => {
+        const showToast = vi.fn();
+        act(() => {
+            useUiStore.setState((state) => ({
+                ...state,
+                showToast,
+            }));
+            useTaskStore.setState((state) => ({
+                ...state,
+                settings: {
+                    ...state.settings,
+                    lastSyncAt: '2026-04-22T12:00:00.000Z',
+                    lastSyncStatus: 'conflict',
+                    lastSyncStats: createMergeStats(['task-1']),
+                },
+            }));
+        });
+
+        renderLayout();
+
+        expect(showToast).toHaveBeenCalledTimes(1);
+
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                settings: {
+                    ...state.settings,
+                    lastSyncAt: '2026-04-22T12:01:00.000Z',
+                    lastSyncStatus: 'conflict',
+                    lastSyncStats: createMergeStats(['task-1']),
+                },
+            }));
+        });
+
+        await waitFor(() => expect(showToast).toHaveBeenCalledTimes(1));
+
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                settings: {
+                    ...state.settings,
+                    lastSyncAt: '2026-04-22T12:02:00.000Z',
+                    lastSyncStatus: 'conflict',
+                    lastSyncStats: createMergeStats(['task-2']),
+                },
+            }));
+        });
+
+        await waitFor(() => expect(showToast).toHaveBeenCalledTimes(2));
     });
 });
 
