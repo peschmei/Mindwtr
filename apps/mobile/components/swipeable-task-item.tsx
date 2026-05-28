@@ -19,6 +19,7 @@ import { ArrowRight, Check, RotateCcw, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { ThemeColors } from '../hooks/use-theme-colors';
 import { useToast } from '../contexts/toast-context';
+import { presentProjectNextActionPrompt } from './project-next-action-prompt';
 import { SwipeableTaskItemContent } from './swipeable-task-item/SwipeableTaskItemContent';
 import { ProjectNextActionPromptModal } from './swipeable-task-item/ProjectNextActionPromptModal';
 import { SwipeableTaskItemStatusMenu } from './swipeable-task-item/SwipeableTaskItemStatusMenu';
@@ -143,10 +144,16 @@ export function SwipeableTaskItem({
         const taskLookup = storeState._tasksById instanceof Map ? storeState._tasksById : null;
         const allTasks = Array.isArray(storeState._allTasks) ? storeState._allTasks : storeState.tasks;
         const allProjects = Array.isArray(storeState._allProjects) ? storeState._allProjects : storeState.projects;
-        const completedTask = taskLookup?.get(completedTaskId)
+        const latestTask = taskLookup?.get(completedTaskId)
             ?? allTasks.find((candidate) => candidate.id === completedTaskId)
-            ?? { ...task, status: 'done' as TaskStatus };
-        const promptData = getProjectNextActionPromptData(completedTask, allTasks, allProjects);
+            ?? task;
+        const completedTask = { ...latestTask, status: 'done' as TaskStatus };
+        const globalPromptResult = presentProjectNextActionPrompt(completedTask);
+        if (globalPromptResult !== null) return;
+        const promptTasks = allTasks.some((candidate) => candidate.id === completedTaskId)
+            ? allTasks.map((candidate) => (candidate.id === completedTaskId ? completedTask : candidate))
+            : [...allTasks, completedTask];
+        const promptData = getProjectNextActionPromptData(completedTask, promptTasks, allProjects);
         if (!promptData) return;
         setProjectNextActionTitle('');
         setProjectNextActionPrompt({

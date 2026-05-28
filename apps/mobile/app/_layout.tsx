@@ -35,6 +35,7 @@ import { useRootLayoutExternalCapture } from '@/hooks/root-layout/use-root-layou
 import { useRootLayoutNotificationOpenHandler } from '@/hooks/root-layout/use-root-layout-notification-open-handler';
 import { useRootLayoutStartup } from '@/hooks/root-layout/use-root-layout-startup';
 import { useRootLayoutSyncEffects } from '@/hooks/root-layout/use-root-layout-sync-effects';
+import { ProjectNextActionPromptProvider } from '@/components/project-next-action-prompt';
 import { ThemedAlertProvider } from '@/components/themed-alert';
 import { applyAndroidSystemBars } from '@/lib/android-system-bars';
 
@@ -136,7 +137,9 @@ function RootLayoutContent() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: tc.bg }}>
       <ToastProvider>
         <ThemedAlertProvider>
-          <RootLayoutContentInner />
+          <ProjectNextActionPromptProvider>
+            <RootLayoutContentInner />
+          </ProjectNextActionPromptProvider>
         </ThemedAlertProvider>
       </ToastProvider>
     </GestureHandlerRootView>
