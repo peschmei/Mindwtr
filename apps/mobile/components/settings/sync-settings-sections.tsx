@@ -430,6 +430,7 @@ export function SyncDiagnosticsCard({
               value={analyticsHeartbeatEnabled}
               onValueChange={toggleAnalyticsHeartbeat}
               trackColor={{ false: '#767577', true: '#3B82F6' }}
+              thumbColor={analyticsHeartbeatEnabled ? '#F8FAFC' : '#F4F4F5'}
             />
           </View>
         )}

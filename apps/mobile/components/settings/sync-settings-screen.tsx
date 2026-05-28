@@ -223,7 +223,6 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
                 { text: t('settings.analyticsHeartbeatKeepEnabled'), style: 'cancel' },
                 {
                     text: t('settings.analyticsHeartbeatDisableConfirm'),
-                    style: 'destructive',
                     onPress: saveSetting,
                 },
             ],
