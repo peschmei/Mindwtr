@@ -391,7 +391,7 @@ export const runFullDesktopCalendarPushSync = async (): Promise<void> => {
 };
 
 let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingSyncTaskIds = new Set<string>();
+const pendingSyncTaskIds = new Set<string>();
 
 export const scheduleDesktopCalendarPushSyncDebounced = (taskIds: string[]): void => {
     taskIds.forEach((id) => pendingSyncTaskIds.add(id));

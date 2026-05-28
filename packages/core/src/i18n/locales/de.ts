@@ -296,6 +296,8 @@ export const deOverrides: Record<string, string> = {
         'recurrence.strategyFluidDesc': 'Fällig nach Abschluss (z.B. Wäsche)',
         'recurrence.afterCompletion': 'Nach Abschluß wiederholen',
         'recurrence.afterCompletionShort': 'Nach Abschluß',
+        'recurrence.showFutureInCalendar': 'Nächste Wiederholung im Kalender anzeigen',
+        'recurrence.showFutureInCalendarHint': 'Nur Planungsvorschau; die nächste echte Aufgabe wird erst erstellt, wenn diese abgeschlossen wird.',
         
         // Inbox (Mobile)
         'inbox.title': 'Posteingang',
@@ -386,6 +388,8 @@ export const deOverrides: Record<string, string> = {
         'calendar.events': 'Termine',
         'calendar.allDay': 'Ganzer Tag',
         'calendar.deadline': 'Frist',
+        'calendar.projectedRecurrence': 'Vorschau',
+        'calendar.projectedRecurrenceDescription': 'Nur Planungsvorschau. Schließen Sie die aktuelle wiederkehrende Aufgabe ab, um die echte nächste Aufgabe zu erstellen.',
         'calendar.unschedule': 'Aus dem Kalender löschen',
         'calendar.changeTime': 'Zeit ändern',
         'calendar.noTasks': 'Keine Aufgaben für diesen Tag',
