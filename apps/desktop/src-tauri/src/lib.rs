@@ -99,8 +99,8 @@ use sync::{
 };
 use ui::{
     acknowledge_close_request, apply_global_quick_add_shortcut, consume_quick_add_pending,
-    create_quick_add_window, quit_app, set_global_quick_add_shortcut, set_tray_visible, show_main,
-    show_quick_add_window,
+    create_quick_add_window, get_system_theme_preference, quit_app, set_global_quick_add_shortcut,
+    set_tray_visible, show_main, show_quick_add_window,
 };
 
 #[cfg(test)]
@@ -961,6 +961,7 @@ pub fn run() {
             append_log_line,
             clear_log_file,
             consume_quick_add_pending,
+            get_system_theme_preference,
             set_global_quick_add_shortcut,
             is_windows_store_install,
             get_install_source,

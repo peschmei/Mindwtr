@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     applyNativeTheme,
     applyThemeMode,
+    coerceSystemThemePreference,
     resolveDesktopThemeMode,
+    watchSystemThemeCommandPreference,
     watchNativeSystemThemePreference,
     watchSystemThemePreference,
 } from './theme';
@@ -145,6 +147,70 @@ describe('watchSystemThemePreference', () => {
 
         expect(removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
         expect(listeners.size).toBe(0);
+    });
+});
+
+describe('coerceSystemThemePreference', () => {
+    it('keeps only supported native theme values', () => {
+        expect(coerceSystemThemePreference('dark')).toBe('dark');
+        expect(coerceSystemThemePreference('light')).toBe('light');
+        expect(coerceSystemThemePreference('system')).toBeNull();
+        expect(coerceSystemThemePreference(null)).toBeNull();
+    });
+});
+
+describe('watchSystemThemeCommandPreference', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+    });
+
+    it('polls the native command fallback and forwards changed theme values', async () => {
+        const themes = ['dark', 'dark', 'light'];
+        const invoke = vi.fn(async () => themes.shift() ?? 'light');
+        const onChange = vi.fn();
+
+        const stopWatching = watchSystemThemeCommandPreference(
+            async () => ({ invoke }),
+            onChange,
+            undefined,
+            1000,
+        );
+        await flushMicrotasks();
+
+        expect(invoke).toHaveBeenCalledWith('get_system_theme_preference');
+        expect(onChange).toHaveBeenCalledWith('dark');
+
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(onChange).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(onChange).toHaveBeenNthCalledWith(2, 'light');
+
+        stopWatching();
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(invoke).toHaveBeenCalledTimes(3);
+    });
+
+    it('reports command load failures as watch errors', async () => {
+        const error = new Error('missing invoke');
+        const onError = vi.fn();
+
+        watchSystemThemeCommandPreference(
+            async () => {
+                throw error;
+            },
+            vi.fn(),
+            onError,
+            1000,
+        );
+        await flushMicrotasks();
+
+        expect(onError).toHaveBeenCalledWith('watch', error);
     });
 });
 

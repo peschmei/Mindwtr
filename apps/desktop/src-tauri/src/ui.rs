@@ -2,6 +2,74 @@ use crate::*;
 
 const QUICK_ADD_WINDOW_WIDTH: f64 = 620.0;
 const QUICK_ADD_WINDOW_HEIGHT: f64 = 420.0;
+const GNOME_INTERFACE_SCHEMA: &str = "org.gnome.desktop.interface";
+const GNOME_COLOR_SCHEME_KEY: &str = "color-scheme";
+const GNOME_GTK_THEME_KEY: &str = "gtk-theme";
+
+fn normalize_gsettings_output(value: &str) -> String {
+    value
+        .trim()
+        .trim_matches('\'')
+        .trim_matches('"')
+        .trim()
+        .to_ascii_lowercase()
+}
+
+fn parse_gnome_color_scheme(value: &str) -> Option<&'static str> {
+    match normalize_gsettings_output(value).as_str() {
+        "prefer-dark" => Some("dark"),
+        "default" | "prefer-light" => Some("light"),
+        _ => None,
+    }
+}
+
+fn parse_gnome_gtk_theme(value: &str) -> Option<&'static str> {
+    let normalized = normalize_gsettings_output(value);
+    if normalized.contains("dark") {
+        Some("dark")
+    } else if normalized.is_empty() {
+        None
+    } else {
+        Some("light")
+    }
+}
+
+fn resolve_gnome_system_theme_preference(
+    color_scheme: Option<&str>,
+    gtk_theme: Option<&str>,
+) -> Option<&'static str> {
+    color_scheme
+        .and_then(parse_gnome_color_scheme)
+        .or_else(|| gtk_theme.and_then(parse_gnome_gtk_theme))
+}
+
+#[cfg(target_os = "linux")]
+fn read_gsettings_value(schema: &str, key: &str) -> Option<String> {
+    let output = Command::new("gsettings")
+        .args(["get", schema, key])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    String::from_utf8(output.stdout)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+#[cfg(not(target_os = "linux"))]
+fn read_gsettings_value(_schema: &str, _key: &str) -> Option<String> {
+    None
+}
+
+#[tauri::command]
+pub(crate) fn get_system_theme_preference() -> Option<String> {
+    let color_scheme = read_gsettings_value(GNOME_INTERFACE_SCHEMA, GNOME_COLOR_SCHEME_KEY);
+    let gtk_theme = read_gsettings_value(GNOME_INTERFACE_SCHEMA, GNOME_GTK_THEME_KEY);
+    resolve_gnome_system_theme_preference(color_scheme.as_deref(), gtk_theme.as_deref())
+        .map(str::to_string)
+}
 
 #[tauri::command]
 pub(crate) fn consume_quick_add_pending(
@@ -272,6 +340,34 @@ pub(crate) fn show_quick_add_window(app: &tauri::AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_gnome_color_scheme_values() {
+        assert_eq!(parse_gnome_color_scheme("'prefer-dark'"), Some("dark"));
+        assert_eq!(parse_gnome_color_scheme("'prefer-light'"), Some("light"));
+        assert_eq!(parse_gnome_color_scheme("'default'"), Some("light"));
+        assert_eq!(parse_gnome_color_scheme("'unknown'"), None);
+    }
+
+    #[test]
+    fn falls_back_to_gtk_theme_when_color_scheme_is_missing() {
+        assert_eq!(
+            resolve_gnome_system_theme_preference(None, Some("'Adwaita-dark'")),
+            Some("dark")
+        );
+        assert_eq!(
+            resolve_gnome_system_theme_preference(None, Some("'Adwaita'")),
+            Some("light")
+        );
+    }
+
+    #[test]
+    fn prefers_color_scheme_over_gtk_theme() {
+        assert_eq!(
+            resolve_gnome_system_theme_preference(Some("'prefer-dark'"), Some("'Adwaita'")),
+            Some("dark")
+        );
+    }
 
     #[test]
     fn centered_quick_add_position_uses_monitor_work_area() {

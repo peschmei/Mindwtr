@@ -38,6 +38,7 @@ import {
     applyThemeMode,
     resolveDesktopThemeMode,
     resolveNativeTheme,
+    watchSystemThemeCommandPreference,
     watchNativeSystemThemePreference,
     watchSystemThemePreference,
 } from './lib/theme';
@@ -196,10 +197,20 @@ function App() {
                 void logError(error, { scope: 'theme', step });
             }
         );
+        const stopWatchingCommandTheme = watchSystemThemeCommandPreference(
+            () => import('@tauri-apps/api/core'),
+            (theme) => {
+                applyThemeMode('system', theme);
+            },
+            (step, error) => {
+                void logError(error, { scope: 'theme', step: `command:${step}` });
+            }
+        );
 
         return () => {
             stopWatchingSystemTheme();
             stopWatchingNativeTheme();
+            stopWatchingCommandTheme();
         };
     }, [getActiveThemeMode, hasHydratedSettings]);
 
