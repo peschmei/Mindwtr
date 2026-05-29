@@ -178,7 +178,7 @@ export function TaskEditFormTab({
             UIManager.measureInWindow(scrollHandle, (_sx, scrollY, _sw, scrollH) => {
                 if (!Number.isFinite(scrollY) || !Number.isFinite(scrollH)) return;
                 const topPadding = 12;
-                const bottomPadding = Platform.OS === 'ios' ? 44 : 12;
+                const bottomPadding = Platform.OS === 'ios' ? 44 : 96;
                 const visibleTop = scrollY + topPadding;
                 const keyboardTop = keyboardTopRef.current;
                 const visibleBottom = Math.min(scrollY + scrollH - bottomPadding, keyboardTop - bottomPadding);
@@ -201,6 +201,17 @@ export function TaskEditFormTab({
         });
     }, []);
 
+    const scheduleScrollHandleIntoView = React.useCallback((targetHandle: number) => {
+        const scrollIntoView = () => scrollHandleIntoView(targetHandle);
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(scrollIntoView);
+        } else {
+            setTimeout(scrollIntoView, 0);
+        }
+        setTimeout(scrollIntoView, 180);
+        setTimeout(scrollIntoView, 360);
+    }, [scrollHandleIntoView]);
+
     const ensureInputVisible = React.useCallback((targetInput?: number | string) => {
         const normalizedHandle = typeof targetInput === 'number'
             ? targetInput
@@ -212,10 +223,8 @@ export function TaskEditFormTab({
             scrollDownForKeyboard(Platform.OS === 'ios' ? 140 : 96);
             return;
         }
-        requestAnimationFrame(() => {
-            scrollHandleIntoView(normalizedHandle);
-        });
-    }, [scrollDownForKeyboard, scrollHandleIntoView]);
+        scheduleScrollHandleIntoView(normalizedHandle);
+    }, [scheduleScrollHandleIntoView, scrollDownForKeyboard]);
 
     React.useEffect(() => {
         if (!registerScrollToEnd) return;

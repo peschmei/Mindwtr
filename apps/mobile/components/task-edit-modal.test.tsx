@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import renderer, { act } from 'react-test-renderer';
 
 import { TaskEditModal } from './task-edit-modal';
+import { MarkdownFormatToolbar } from './markdown-format-toolbar';
 import { syncTaskEditPagerPosition } from './task-edit/task-edit-modal.utils';
 
 vi.mock('@mindwtr/core', async () => {
@@ -521,6 +522,46 @@ describe('TaskEditModal', () => {
 
     expect(descriptionInput.props.spellCheck).toBe(true);
     expect(descriptionInput.props.autoCorrect).toBe(true);
+
+    act(() => {
+      descriptionTree!.unmount();
+      tree!.unmount();
+    });
+  });
+
+  it('keeps the mobile description Markdown toolbar attached to the keyboard', () => {
+    let tree: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'inbox',
+            description: 'A note',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+        />
+      );
+    });
+
+    const formTab = tree!.root.findAll((node) => typeof node.props.renderField === 'function')[0];
+    let descriptionTree: renderer.ReactTestRenderer;
+    act(() => {
+      descriptionTree = renderer.create(formTab.props.renderField('description'));
+    });
+
+    const toolbar = descriptionTree!.root.findByType(MarkdownFormatToolbar);
+
+    expect(toolbar.props.placement).toBeUndefined();
+    expect(toolbar.props.visible).toBe(false);
 
     act(() => {
       descriptionTree!.unmount();

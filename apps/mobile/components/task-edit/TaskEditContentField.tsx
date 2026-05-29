@@ -50,6 +50,7 @@ export function TaskEditContentField({
     titleDraft,
     visibleAttachments,
 }: TaskEditContentFieldProps) {
+    const descriptionToolbarInteractionUntilRef = React.useRef(0);
     const inputStyle = { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text };
     const combinedText = `${titleDraft ?? ''}\n${descriptionDraft ?? ''}`.trim();
     const resolvedDirection = resolveAutoTextDirection(combinedText, language);
@@ -104,7 +105,20 @@ export function TaskEditContentField({
                                     setIsDescriptionInputFocused(true);
                                     handleInputFocus(event.nativeEvent.target);
                                 }}
-                                onBlur={() => setIsDescriptionInputFocused(false)}
+                                onBlur={() => {
+                                    const preserveFocus = descriptionToolbarInteractionUntilRef.current > Date.now();
+                                    if (preserveFocus) {
+                                        requestAnimationFrame(() => {
+                                            descriptionInputRef.current?.focus();
+                                        });
+                                        return;
+                                    }
+                                    setTimeout(() => {
+                                        if (!descriptionInputRef.current?.isFocused?.()) {
+                                            setIsDescriptionInputFocused(false);
+                                        }
+                                    }, 0);
+                                }}
                                 onChangeText={handleDescriptionChange}
                                 onKeyPress={handleDescriptionKeyPress}
                                 onSelectionChange={(event) => setDescriptionSelection(event.nativeEvent.selection)}
@@ -123,11 +137,14 @@ export function TaskEditContentField({
                                 inputRef={descriptionInputRef}
                                 t={t}
                                 tc={tc}
-                                visible
+                                visible={isDescriptionInputFocused}
                                 canUndo={descriptionUndoDepth > 0}
                                 onUndo={handleDescriptionUndo}
                                 onApplyAction={handleDescriptionApplyAction}
-                                placement="inline"
+                                onInteractionStart={() => {
+                                    descriptionToolbarInteractionUntilRef.current = Date.now() + 300;
+                                    setIsDescriptionInputFocused(true);
+                                }}
                             />
                         </>
                     )}

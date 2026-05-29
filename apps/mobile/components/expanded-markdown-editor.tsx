@@ -560,12 +560,11 @@ export function ExpandedMarkdownEditor({
                                     inputRef={inputRef}
                                     t={t}
                                     tc={tc}
-                                    visible
+                                    visible={isInputFocused}
                                     canUndo={canUndo}
                                     onUndo={onUndo}
                                     onApplyAction={handleApplyAction}
                                     onInteractionStart={handleToolbarInteractionStart}
-                                    placement="inline"
                                 />
                             </View>
                         ) : (
