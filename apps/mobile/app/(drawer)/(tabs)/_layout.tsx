@@ -1,7 +1,7 @@
 import { Link, Tabs, useRouter } from 'expo-router';
 import { CommonActions } from '@react-navigation/native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Search, Inbox, ArrowRightCircle, Calendar, Circle, ClipboardCheck, Folder, Menu, Mic, Plus } from 'lucide-react-native';
+import { Search, Inbox, Calendar, Circle, ClipboardCheck, Folder, Menu, Mic, Plus, Target } from 'lucide-react-native';
 import { Animated, Dimensions, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -682,7 +682,7 @@ export default function TabLayout() {
         options={{
           title: t('tab.next'),
           tabBarIcon: ({ color, focused }) => (
-            <ArrowRightCircle size={focused ? 26 : 24} color={color} strokeWidth={2} opacity={focused ? 1 : 0.8} />
+            <Target size={focused ? 26 : 24} color={color} strokeWidth={2} opacity={focused ? 1 : 0.8} />
           ),
         }}
       />
