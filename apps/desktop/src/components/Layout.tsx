@@ -20,6 +20,7 @@ import {
     Clock3,
     BookOpen,
     AlertTriangle,
+    Plus,
     type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -375,6 +376,12 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
         window.dispatchEvent(new CustomEvent('mindwtr:open-search'));
     };
 
+    const triggerInboxCapture = () => {
+        window.dispatchEvent(new CustomEvent('mindwtr:quick-add', {
+            detail: { initialProps: { status: 'inbox' } },
+        }));
+    };
+
     const savedSearches = settings?.savedSearches || [];
 
     const toggleSidebar = () => {
@@ -509,6 +516,21 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                             <span className="flex-1 text-left">{t('search.placeholder') || 'Search...'}</span>
                             <span className="text-xs text-muted-foreground">{searchShortcutHint}</span>
                         </>
+                    )}
+                </button>
+
+                <button
+                    onClick={triggerInboxCapture}
+                    className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2 mb-4 rounded-md text-sm font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-primary/40",
+                        isCollapsed && "justify-center px-2"
+                    )}
+                    title={tFallback(t, 'nav.addTask', 'Add Task')}
+                    aria-label={tFallback(t, 'nav.addTask', 'Add Task')}
+                >
+                    <Plus className="w-4 h-4" />
+                    {!isCollapsed && (
+                        <span className="flex-1 text-left">{tFallback(t, 'nav.addTask', 'Add Task')}</span>
                     )}
                 </button>
 
