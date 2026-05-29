@@ -163,8 +163,9 @@ describe('MarkdownText', () => {
       && flattenStyle(node.props.style).backgroundColor === '#1f2937'
     ))[0];
 
-    expect(flattenText(tree.toJSON())).toContain('Run bun test before release.');
+    expect(flattenText(tree.toJSON()).replace(/\u2006/g, '')).toContain('Run bun test before release.');
     expect(inlineCode).toBeTruthy();
+    expect(flattenText(inlineCode.children as renderer.ReactTestRendererNode[])).toBe('\u2006bun test\u2006');
     expect(flattenStyle(inlineCode.props.style).backgroundColor).toBe('#1f2937');
   });
 

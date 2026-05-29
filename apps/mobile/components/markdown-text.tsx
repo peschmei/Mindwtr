@@ -15,6 +15,7 @@ const ORDERED_LIST_RE = /^(\s*)(\d+)([.)])\s+(.+)$/;
 const HEADING_RE = /^(#{1,3})\s+(.+)$/;
 const HORIZONTAL_RULE_RE = /^(?:-{3,}|\*{3,}|_{3,})$/;
 const FENCED_CODE_RE = /^```.*$/;
+const INLINE_CODE_EDGE_SPACE = '\u2006';
 
 const writeClipboardText = (text: string) => {
   void Clipboard.setStringAsync(text).catch(() => undefined);
@@ -94,13 +95,14 @@ function renderInline(
   const nodes: (string | React.ReactElement | null)[] = parseInlineMarkdown(text).map((token, index) => {
     if (token.type === 'text') return token.text;
     if (token.type === 'code') {
+      const paddedText = token.text ? `${INLINE_CODE_EDGE_SPACE}${token.text}${INLINE_CODE_EDGE_SPACE}` : token.text;
       return (
         <Text
           key={`${keyPrefix}-code-${index}`}
           testID="markdown-inline-code"
           style={[styles.code, { backgroundColor: tc.cardBg, color: tc.text }]}
         >
-          {token.text}
+          {paddedText}
         </Text>
       );
     }
