@@ -68,7 +68,7 @@ const renderActionLabel = (
         case 'code':
             return <Ionicons name="code-slash-outline" size={iconSize} color={color} />;
         case 'italic':
-            return <FontAwesome name="italic" size={Math.max(14, Math.round(iconSize * 0.72))} color={color} />;
+            return <FontAwesome name="italic" size={Math.max(12, Math.round(iconSize * 0.64))} color={color} />;
         default:
             return (
                 <Text

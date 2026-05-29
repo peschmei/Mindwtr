@@ -80,6 +80,7 @@ describe('MarkdownFormatToolbar', () => {
         ));
 
         expect(italicIcons).toHaveLength(1);
+        expect(italicIcons[0].props.size).toBe(13);
     });
 
     it('keeps keyboard placement hidden until the keyboard inset is known', () => {
