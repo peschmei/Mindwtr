@@ -3,7 +3,6 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { generateUUID, getAttachmentDisplayTitle, resolveAutoTextDirection } from '@mindwtr/core';
 
-import { MarkdownFormatToolbar } from '../markdown-format-toolbar';
 import { MarkdownReferenceAutocomplete } from '../markdown-reference-autocomplete';
 import { MarkdownText } from '../markdown-text';
 import { getControlledTextInputSelection } from '../text-input-selection';
@@ -22,14 +21,12 @@ export function TaskEditContentField({
     descriptionDraft,
     descriptionInputRef,
     descriptionSelection,
-    descriptionUndoDepth,
+    descriptionToolbarInteractionUntilRef,
     downloadAttachment,
     editedTask,
     fieldId,
-    handleDescriptionApplyAction,
     handleDescriptionChange,
     handleDescriptionKeyPress,
-    handleDescriptionUndo,
     handleInputFocus,
     handleResetChecklist,
     isDescriptionInputFocused,
@@ -50,7 +47,6 @@ export function TaskEditContentField({
     titleDraft,
     visibleAttachments,
 }: TaskEditContentFieldProps) {
-    const descriptionToolbarInteractionUntilRef = React.useRef(0);
     const inputStyle = { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text };
     const combinedText = `${titleDraft ?? ''}\n${descriptionDraft ?? ''}`.trim();
     const resolvedDirection = resolveAutoTextDirection(combinedText, language);
@@ -130,21 +126,6 @@ export function TaskEditContentField({
                                 placeholderTextColor={tc.secondaryText}
                                 accessibilityLabel={t('taskEdit.descriptionLabel')}
                                 accessibilityHint={t('taskEdit.descriptionPlaceholder')}
-                            />
-                            <MarkdownFormatToolbar
-                                selection={descriptionSelection}
-                                onSelectionChange={setDescriptionSelection}
-                                inputRef={descriptionInputRef}
-                                t={t}
-                                tc={tc}
-                                visible={isDescriptionInputFocused}
-                                canUndo={descriptionUndoDepth > 0}
-                                onUndo={handleDescriptionUndo}
-                                onApplyAction={handleDescriptionApplyAction}
-                                onInteractionStart={() => {
-                                    descriptionToolbarInteractionUntilRef.current = Date.now() + 300;
-                                    setIsDescriptionInputFocused(true);
-                                }}
                             />
                         </>
                     )}

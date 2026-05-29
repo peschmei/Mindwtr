@@ -75,9 +75,14 @@ export function useTaskDescriptionEditor({
     const restoreDescriptionSelection = React.useCallback((selection: MarkdownSelection) => {
         pendingDescriptionSelectionRef.current = selection;
         const applySelection = () => {
+            descriptionInputRef.current?.focus?.();
             descriptionInputRef.current?.setNativeProps?.({ selection });
         };
-        requestAnimationFrame(applySelection);
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(applySelection);
+        } else {
+            setTimeout(applySelection, 0);
+        }
         const applyDelayedSelection = (shouldClearPending: boolean) => {
             applySelection();
             if (
@@ -92,8 +97,11 @@ export function useTaskDescriptionEditor({
             applyDelayedSelection(false);
         }, 40);
         setTimeout(() => {
-            applyDelayedSelection(true);
+            applyDelayedSelection(false);
         }, 140);
+        setTimeout(() => {
+            applyDelayedSelection(true);
+        }, 300);
     }, []);
 
     React.useEffect(() => {

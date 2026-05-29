@@ -8,6 +8,7 @@ import {
     Text,
     TextInput,
     View,
+    type LayoutChangeEvent,
 } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import {
@@ -28,6 +29,7 @@ const TOOLBAR_OUTER_PADDING = 16;
 const TOOLBAR_FIXED_CHROME = 18;
 const TOOLBAR_ACTION_GAP = 2;
 const MIN_RESIZED_WINDOW_DELTA = 48;
+const RESIZED_WINDOW_TOLERANCE = 32;
 
 const getWindowWidth = () => {
     const width = Dimensions.get('window').width;
@@ -46,6 +48,16 @@ type MarkdownFormatToolbarProps = {
     onApplyAction: (actionId: MarkdownToolbarActionId, selection: MarkdownSelection) => MarkdownToolbarResult | void;
     onInteractionStart?: () => void;
     placement?: 'keyboard' | 'inline';
+};
+
+type KeyboardInsetSnapshot = {
+    windowHeight: number;
+    screenHeight: number;
+    keyboardInset: number;
+    keyboardTop?: number;
+    resizedWindowDelta: number;
+    windowAlreadyEndsAtKeyboardTop: boolean;
+    windowAndKeyboardFitScreen: boolean;
 };
 
 const renderActionLabel = (
@@ -100,6 +112,8 @@ export function MarkdownFormatToolbar({
     const [windowWidth, setWindowWidth] = React.useState(getWindowWidth);
     const [toolbarBottomOffset, setToolbarBottomOffset] = React.useState(0);
     const baselineWindowHeightRef = React.useRef(Dimensions.get('window').height);
+    const overlayHeightRef = React.useRef<number | null>(null);
+    const lastKeyboardSnapshotRef = React.useRef<KeyboardInsetSnapshot | null>(null);
     const suppressPressUntilRef = React.useRef(0);
 
     React.useEffect(() => {
@@ -139,6 +153,33 @@ export function MarkdownFormatToolbar({
         width: buttonSize,
     }), [buttonSize]);
 
+    const resolveKeyboardBottomOffset = React.useCallback((snapshot: KeyboardInsetSnapshot) => {
+        const overlayHeight = overlayHeightRef.current;
+        const hasKeyboardInset = snapshot.keyboardInset > 0;
+        const hasKeyboardTop = typeof snapshot.keyboardTop === 'number' && Number.isFinite(snapshot.keyboardTop);
+        const hasScreenHeight = Number.isFinite(snapshot.screenHeight) && snapshot.screenHeight > 0;
+        const hasOverlayHeight = typeof overlayHeight === 'number' && Number.isFinite(overlayHeight) && overlayHeight > 0;
+        const overlayAlreadyEndsAtKeyboardTop = hasKeyboardInset
+            && hasOverlayHeight
+            && hasKeyboardTop
+            && overlayHeight <= (snapshot.keyboardTop ?? 0) + RESIZED_WINDOW_TOLERANCE;
+        const overlayAndKeyboardFitScreen = hasKeyboardInset
+            && hasOverlayHeight
+            && hasScreenHeight
+            && overlayHeight + snapshot.keyboardInset <= snapshot.screenHeight + RESIZED_WINDOW_TOLERANCE;
+        const isWindowAlreadyAboveKeyboard = Platform.OS === 'android'
+            && hasKeyboardInset
+            && (
+                snapshot.windowAlreadyEndsAtKeyboardTop
+                || snapshot.windowAndKeyboardFitScreen
+                || overlayAlreadyEndsAtKeyboardTop
+                || overlayAndKeyboardFitScreen
+                || snapshot.resizedWindowDelta >= Math.max(MIN_RESIZED_WINDOW_DELTA, snapshot.keyboardInset * 0.5)
+            );
+
+        return isWindowAlreadyAboveKeyboard ? 0 : snapshot.keyboardInset;
+    }, []);
+
     React.useEffect(() => {
         if (placement !== 'keyboard') return;
         if (typeof Keyboard?.addListener !== 'function') return;
@@ -167,14 +208,31 @@ export function MarkdownFormatToolbar({
 
             baselineWindowHeightRef.current = Math.max(baselineWindowHeightRef.current, windowHeight);
             const resizedWindowDelta = Math.max(0, baselineWindowHeightRef.current - windowHeight);
-            const isWindowAlreadyAboveKeyboard = Platform.OS === 'android'
-                && resizedWindowDelta >= Math.max(MIN_RESIZED_WINDOW_DELTA, keyboardInset * 0.5);
-
-            setToolbarBottomOffset(isWindowAlreadyAboveKeyboard ? 0 : keyboardInset);
+            const hasKeyboardInset = keyboardInset > 0;
+            const hasKeyboardTop = typeof keyboardTop === 'number' && Number.isFinite(keyboardTop);
+            const hasScreenHeight = Number.isFinite(screenHeight) && screenHeight > 0;
+            const windowAlreadyEndsAtKeyboardTop = hasKeyboardInset
+                && hasKeyboardTop
+                && windowHeight <= keyboardTop + RESIZED_WINDOW_TOLERANCE;
+            const windowAndKeyboardFitScreen = hasKeyboardInset
+                && hasScreenHeight
+                && windowHeight + keyboardInset <= screenHeight + RESIZED_WINDOW_TOLERANCE;
+            const snapshot = {
+                windowHeight,
+                screenHeight,
+                keyboardInset,
+                keyboardTop,
+                resizedWindowDelta,
+                windowAlreadyEndsAtKeyboardTop,
+                windowAndKeyboardFitScreen,
+            };
+            lastKeyboardSnapshotRef.current = snapshot;
+            setToolbarBottomOffset(resolveKeyboardBottomOffset(snapshot));
         };
 
         const resetKeyboardInset = () => {
             baselineWindowHeightRef.current = Dimensions.get('window').height;
+            lastKeyboardSnapshotRef.current = null;
             setToolbarBottomOffset(0);
         };
 
@@ -187,7 +245,7 @@ export function MarkdownFormatToolbar({
             changeListener.remove();
             hideListener.remove();
         };
-    }, [placement]);
+    }, [placement, resolveKeyboardBottomOffset]);
 
     const restoreSelection = React.useCallback((nextSelection?: MarkdownSelection) => {
         if (!nextSelection) return;
@@ -240,6 +298,15 @@ export function MarkdownFormatToolbar({
     if (!visible) {
         return null;
     }
+
+    const handleOverlayLayout = (event: LayoutChangeEvent) => {
+        const { height } = event.nativeEvent.layout;
+        overlayHeightRef.current = height;
+        const snapshot = lastKeyboardSnapshotRef.current;
+        if (snapshot) {
+            setToolbarBottomOffset(resolveKeyboardBottomOffset(snapshot));
+        }
+    };
 
     const toolbarContent = (
         <View style={styles.row}>
@@ -327,8 +394,8 @@ export function MarkdownFormatToolbar({
     }
 
     return (
-        <KeyboardAccessoryPortal>
-            <View pointerEvents="box-none" style={styles.overlay}>
+        <KeyboardAccessoryPortal renderFallback={false}>
+            <View pointerEvents="box-none" style={styles.overlay} onLayout={handleOverlayLayout}>
                 <View
                     style={[
                         styles.floatingBar,

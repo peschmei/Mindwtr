@@ -300,7 +300,11 @@ export function ExpandedMarkdownEditor({
                 inputRef.current?.setNativeProps?.({ selection: targetSelection });
             }
         };
-        requestAnimationFrame(focusInput);
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(focusInput);
+        } else {
+            setTimeout(focusInput, 0);
+        }
         const applyDelayedFocus = (shouldClearPending: boolean) => {
             focusInput();
             if (
@@ -316,8 +320,11 @@ export function ExpandedMarkdownEditor({
             applyDelayedFocus(false);
         }, 40);
         setTimeout(() => {
-            applyDelayedFocus(true);
+            applyDelayedFocus(false);
         }, 140);
+        setTimeout(() => {
+            applyDelayedFocus(true);
+        }, 300);
     }, []);
     const handleToolbarInteractionStart = React.useCallback(() => {
         toolbarInteractionUntilRef.current = Date.now() + 300;

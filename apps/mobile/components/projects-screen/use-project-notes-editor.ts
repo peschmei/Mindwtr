@@ -98,18 +98,33 @@ export function useProjectNotesEditor({
   const restoreSelectedProjectNotesSelection = useCallback((selection: MarkdownSelection) => {
     pendingSelectedProjectNotesSelectionRef.current = selection;
     const applySelection = () => {
+      selectedProjectNotesInputRef.current?.focus?.();
       selectedProjectNotesInputRef.current?.setNativeProps?.({ selection });
     };
-    requestAnimationFrame(applySelection);
-    setTimeout(() => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(applySelection);
+    } else {
+      setTimeout(applySelection, 0);
+    }
+    const applyDelayedSelection = (shouldClearPending: boolean) => {
       applySelection();
       if (
-        pendingSelectedProjectNotesSelectionRef.current
+        shouldClearPending
+        && pendingSelectedProjectNotesSelectionRef.current
         && selectionsEqual(pendingSelectedProjectNotesSelectionRef.current, selection)
       ) {
         pendingSelectedProjectNotesSelectionRef.current = null;
       }
+    };
+    setTimeout(() => {
+      applyDelayedSelection(false);
     }, 40);
+    setTimeout(() => {
+      applyDelayedSelection(false);
+    }, 140);
+    setTimeout(() => {
+      applyDelayedSelection(true);
+    }, 300);
   }, []);
 
   const handleSelectedProjectNotesChange = useCallback((text: string) => {

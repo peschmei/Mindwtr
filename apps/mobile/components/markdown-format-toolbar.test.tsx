@@ -4,6 +4,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { MARKDOWN_TOOLBAR_ACTIONS } from '@mindwtr/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { KeyboardAccessoryHost } from './keyboard-accessory-host';
 import { MarkdownFormatToolbar } from './markdown-format-toolbar';
 
 vi.mock('@expo/vector-icons', () => ({
@@ -64,6 +65,12 @@ const extractFloatingBarBottom = (tree: ReactTestRenderer) => {
     return styleWithBottom?.bottom;
 };
 
+const renderKeyboardToolbar = (props: Partial<React.ComponentProps<typeof MarkdownFormatToolbar>> = {}) => (
+    <KeyboardAccessoryHost>
+        <MarkdownFormatToolbar {...baseProps} {...props} />
+    </KeyboardAccessoryHost>
+);
+
 describe('MarkdownFormatToolbar', () => {
     afterEach(() => {
         Object.defineProperty(Platform, 'OS', {
@@ -116,7 +123,7 @@ describe('MarkdownFormatToolbar', () => {
     it('renders keyboard placement immediately when the input is focused', () => {
         let tree: ReactTestRenderer | undefined;
         act(() => {
-            tree = create(<MarkdownFormatToolbar {...baseProps} />);
+            tree = create(renderKeyboardToolbar());
         });
 
         expect(tree!.root.findAllByType(Pressable)).toHaveLength(MARKDOWN_TOOLBAR_ACTIONS.length + 1);
@@ -139,7 +146,7 @@ describe('MarkdownFormatToolbar', () => {
 
         let tree: ReactTestRenderer | undefined;
         act(() => {
-            tree = create(<MarkdownFormatToolbar {...baseProps} />);
+            tree = create(renderKeyboardToolbar());
         });
 
         act(() => {
@@ -147,6 +154,53 @@ describe('MarkdownFormatToolbar', () => {
         });
 
         expect(extractFloatingBarBottom(tree!)).toBe(320);
+    });
+
+    it('moves Android toolbar back to the resized overlay edge when layout shrinks after keyboard show', () => {
+        setPlatform('android');
+        vi.spyOn(Dimensions, 'get').mockImplementation(((dimension: string) => ({
+            width: 360,
+            height: dimension === 'window' ? 792 : 792,
+            scale: 3,
+            fontScale: 1,
+        })) as any);
+        const listeners = new Map<string, (event?: unknown) => void>();
+        vi.spyOn(Keyboard, 'addListener').mockImplementation(((eventName: string, listener: (event?: unknown) => void) => {
+            listeners.set(eventName, listener);
+            return { remove: () => listeners.delete(eventName) };
+        }) as any);
+
+        let tree: ReactTestRenderer | undefined;
+        act(() => {
+            tree = create(renderKeyboardToolbar());
+        });
+
+        act(() => {
+            listeners.get('keyboardDidShow')?.({ endCoordinates: { height: 255, screenY: 521 } });
+        });
+        expect(extractFloatingBarBottom(tree!)).toBe(255);
+
+        const toolbarOverlay = tree!.root.findAll((node) => (
+            node.props.pointerEvents === 'box-none'
+            && typeof node.props.onLayout === 'function'
+            && node.props.style?.justifyContent === 'flex-end'
+        ))[0];
+        expect(toolbarOverlay).toBeDefined();
+
+        act(() => {
+            toolbarOverlay.props.onLayout({
+                nativeEvent: {
+                    layout: {
+                        x: 0,
+                        y: 0,
+                        width: 360,
+                        height: 481,
+                    },
+                },
+            });
+        });
+
+        expect(extractFloatingBarBottom(tree!)).toBe(0);
     });
 
     it('keeps Android toolbar at the resized window edge when the root is already above the keyboard', () => {
@@ -166,10 +220,36 @@ describe('MarkdownFormatToolbar', () => {
 
         let tree: ReactTestRenderer | undefined;
         act(() => {
-            tree = create(<MarkdownFormatToolbar {...baseProps} />);
+            tree = create(renderKeyboardToolbar());
         });
 
         windowHeight = 524;
+        act(() => {
+            listeners.get('keyboardDidShow')?.({ endCoordinates: { height: 320, screenY: 524 } });
+        });
+
+        expect(extractFloatingBarBottom(tree!)).toBe(0);
+    });
+
+    it('keeps Android toolbar at the resized window edge when mounted after the keyboard opens', () => {
+        setPlatform('android');
+        vi.spyOn(Dimensions, 'get').mockImplementation(((dimension: string) => ({
+            width: 390,
+            height: dimension === 'window' ? 524 : 844,
+            scale: 3,
+            fontScale: 1,
+        })) as any);
+        const listeners = new Map<string, (event?: unknown) => void>();
+        vi.spyOn(Keyboard, 'addListener').mockImplementation(((eventName: string, listener: (event?: unknown) => void) => {
+            listeners.set(eventName, listener);
+            return { remove: () => listeners.delete(eventName) };
+        }) as any);
+
+        let tree: ReactTestRenderer | undefined;
+        act(() => {
+            tree = create(renderKeyboardToolbar());
+        });
+
         act(() => {
             listeners.get('keyboardDidShow')?.({ endCoordinates: { height: 320, screenY: 524 } });
         });

@@ -21,6 +21,7 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useToast } from '@/contexts/toast-context';
 import { ExpandedMarkdownEditor } from './expanded-markdown-editor';
 import { KeyboardAccessoryHost } from './keyboard-accessory-host';
+import { MarkdownFormatToolbar } from './markdown-format-toolbar';
 import { styles } from './task-edit/task-edit-modal.styles';
 import { TaskEditFieldRenderer } from './task-edit/TaskEditFieldRenderer';
 import { useTaskDescriptionEditor } from './task-edit/use-task-description-editor';
@@ -97,6 +98,7 @@ function TaskEditModalInner({
     const prioritiesEnabled = settings.features?.priorities !== false;
     const timeEstimatesEnabled = settings.features?.timeEstimates !== false;
     const resetCopilotStateRef = useRef<() => void>(() => {});
+    const descriptionToolbarInteractionUntilRef = useRef(0);
     const {
         aiModal,
         baseTaskRef,
@@ -583,13 +585,11 @@ function TaskEditModalInner({
         descriptionInputRef: descriptionEditor.descriptionInputRef,
         descriptionSelection: descriptionEditor.descriptionSelection,
         setDescriptionSelection: descriptionEditor.setDescriptionSelection,
-        descriptionUndoDepth: descriptionEditor.descriptionUndoDepth,
+        descriptionToolbarInteractionUntilRef,
         isDescriptionInputFocused: descriptionEditor.isDescriptionInputFocused,
         setIsDescriptionInputFocused: descriptionEditor.setIsDescriptionInputFocused,
         handleDescriptionChange: descriptionEditor.handleDescriptionChange,
         handleDescriptionKeyPress: descriptionEditor.handleDescriptionKeyPress,
-        handleDescriptionUndo: descriptionEditor.handleDescriptionUndo,
-        handleDescriptionApplyAction: descriptionEditor.handleDescriptionApplyAction,
         applyDescriptionResult: descriptionEditor.applyDescriptionResult,
         applyQuickDate,
         openDescriptionExpandedEditor: descriptionEditor.openDescriptionExpandedEditor,
@@ -835,6 +835,26 @@ function TaskEditModalInner({
                         retryAudioTranscription={retryAudioTranscription}
                         toggleAudioPlayback={toggleAudioPlayback}
                         DEFAULT_PROJECT_COLOR={DEFAULT_PROJECT_COLOR}
+                    />
+                    <MarkdownFormatToolbar
+                        selection={descriptionEditor.descriptionSelection}
+                        onSelectionChange={descriptionEditor.setDescriptionSelection}
+                        inputRef={descriptionEditor.descriptionInputRef}
+                        t={t}
+                        tc={tc}
+                        visible={
+                            descriptionEditor.isDescriptionInputFocused
+                            && editTab === 'task'
+                            && !showDescriptionPreview
+                            && !descriptionEditor.descriptionExpanded
+                        }
+                        canUndo={descriptionEditor.descriptionUndoDepth > 0}
+                        onUndo={descriptionEditor.handleDescriptionUndo}
+                        onApplyAction={descriptionEditor.handleDescriptionApplyAction}
+                        onInteractionStart={() => {
+                            descriptionToolbarInteractionUntilRef.current = Date.now() + 300;
+                            descriptionEditor.setIsDescriptionInputFocused(true);
+                        }}
                     />
                 </SafeAreaView>
             </KeyboardAccessoryHost>

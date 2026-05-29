@@ -7,6 +7,7 @@ type KeyboardAccessoryHostValue = {
 };
 
 const KeyboardAccessoryHostContext = React.createContext<KeyboardAccessoryHostValue | null>(null);
+const activeHosts: KeyboardAccessoryHostValue[] = [];
 
 const styles = StyleSheet.create({
     container: {
@@ -40,6 +41,14 @@ export function KeyboardAccessoryHost({ children }: { children: React.ReactNode 
 
     const value = React.useMemo(() => ({ mount, unmount }), [mount, unmount]);
 
+    React.useEffect(() => {
+        activeHosts.push(value);
+        return () => {
+            const index = activeHosts.lastIndexOf(value);
+            if (index !== -1) activeHosts.splice(index, 1);
+        };
+    }, [value]);
+
     return (
         <KeyboardAccessoryHostContext.Provider value={value}>
             <View style={styles.container}>
@@ -54,11 +63,19 @@ export function KeyboardAccessoryHost({ children }: { children: React.ReactNode 
     );
 }
 
-export function KeyboardAccessoryPortal({ children }: { children: React.ReactNode }) {
-    const host = React.useContext(KeyboardAccessoryHostContext);
+export function KeyboardAccessoryPortal({
+    children,
+    renderFallback = true,
+}: {
+    children: React.ReactNode;
+    renderFallback?: boolean;
+}) {
+    const contextHost = React.useContext(KeyboardAccessoryHostContext);
+    const activeHost = activeHosts[activeHosts.length - 1] ?? null;
+    const host = contextHost ?? activeHost ?? null;
     const portalKeyRef = React.useRef(`keyboard-accessory-${nextPortalId++}`);
 
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
         if (!host) return;
         host.mount(portalKeyRef.current, children);
         return () => host.unmount(portalKeyRef.current);
@@ -68,5 +85,5 @@ export function KeyboardAccessoryPortal({ children }: { children: React.ReactNod
         return null;
     }
 
-    return <>{children}</>;
+    return renderFallback ? <>{children}</> : null;
 }

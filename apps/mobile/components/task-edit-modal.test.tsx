@@ -548,6 +548,7 @@ describe('TaskEditModal', () => {
           }}
           onClose={vi.fn()}
           onSave={vi.fn()}
+          defaultTab="task"
         />
       );
     });
@@ -558,10 +559,21 @@ describe('TaskEditModal', () => {
       descriptionTree = renderer.create(formTab.props.renderField('description'));
     });
 
-    const toolbar = descriptionTree!.root.findByType(MarkdownFormatToolbar);
+    const descriptionInput = descriptionTree!.root.findByProps({
+      accessibilityLabel: 'taskEdit.descriptionLabel',
+    });
 
-    expect(toolbar.props.placement).toBeUndefined();
-    expect(toolbar.props.visible).toBe(false);
+    act(() => {
+      descriptionInput.props.onFocus({ nativeEvent: { target: 1 } });
+    });
+
+    const inlineToolbars = descriptionTree!.root.findAllByType(MarkdownFormatToolbar);
+    const modalToolbars = tree!.root.findAllByType(MarkdownFormatToolbar);
+    const visibleModalToolbars = modalToolbars.filter((toolbar) => toolbar.props.visible);
+
+    expect(inlineToolbars).toHaveLength(0);
+    expect(visibleModalToolbars).toHaveLength(1);
+    expect(visibleModalToolbars[0].props.placement).toBeUndefined();
 
     act(() => {
       descriptionTree!.unmount();

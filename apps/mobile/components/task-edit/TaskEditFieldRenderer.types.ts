@@ -17,7 +17,6 @@ import type {
     TaskStatus,
     TimeEstimate,
     MarkdownSelection,
-    MarkdownToolbarActionId,
     MarkdownToolbarResult,
 } from '@mindwtr/core';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
@@ -57,13 +56,11 @@ export type TaskEditFieldRendererProps = {
     descriptionInputRef: React.RefObject<TextInput | null>;
     descriptionSelection: MarkdownSelection;
     setDescriptionSelection: (selection: MarkdownSelection) => void;
-    descriptionUndoDepth: number;
+    descriptionToolbarInteractionUntilRef: React.MutableRefObject<number>;
     isDescriptionInputFocused: boolean;
     setIsDescriptionInputFocused: React.Dispatch<React.SetStateAction<boolean>>;
     handleDescriptionChange: (text: string) => void;
     handleDescriptionKeyPress: (event: any) => void;
-    handleDescriptionUndo: () => MarkdownSelection | undefined;
-    handleDescriptionApplyAction: (actionId: MarkdownToolbarActionId, selection: MarkdownSelection) => MarkdownToolbarResult;
     applyDescriptionResult: (result: MarkdownToolbarResult) => void;
     openDescriptionExpandedEditor: () => void;
     downloadAttachment: (attachment: Attachment) => void | Promise<void>;
