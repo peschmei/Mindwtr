@@ -87,6 +87,7 @@ export function ContextsView() {
   const contextSourceTasks = tasks.filter((task) => (
     !task.deletedAt
     && task.status !== 'archived'
+    && task.status !== 'done'
     && isTaskInActiveProject(task, projectById)
     && taskMatchesAreaFilter(task, resolvedAreaFilter, projectById, areaById)
   ));

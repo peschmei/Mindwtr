@@ -87,6 +87,43 @@ describe('ContextsView', () => {
         expect(getByText('Plan launch')).toBeInTheDocument();
     });
 
+    it('hides done tasks from the default context filter while keeping the Done status available', () => {
+        const tasks = [
+            makeTask('active-office', {
+                title: 'Active office task',
+                contexts: ['@Office'],
+            }),
+            makeTask('done-office', {
+                title: 'Done office task',
+                status: 'done',
+                contexts: ['@Office'],
+            }),
+        ];
+        useTaskStore.setState({
+            tasks,
+            _allTasks: tasks,
+            projects: [],
+            areas: [],
+            settings: {},
+        });
+
+        const { getAllByRole, getByRole, getByText, queryByText } = renderContextsView();
+
+        expect(getByRole('button', { name: '@Office (1)' })).toBeInTheDocument();
+        expect(getByText('Active office task')).toBeInTheDocument();
+        expect(queryByText('Done office task')).not.toBeInTheDocument();
+
+        const doneStatusButton = getAllByRole('button', { name: 'Done' }).find(
+            (button) => button.getAttribute('aria-pressed') === 'false'
+        );
+        expect(doneStatusButton).toBeTruthy();
+
+        fireEvent.click(doneStatusButton!);
+
+        expect(getByText('Done office task')).toBeInTheDocument();
+        expect(queryByText('Active office task')).not.toBeInTheDocument();
+    });
+
     it('applies task token navigation while the context view is mounted', () => {
         const { getByRole, getByText } = renderContextsView();
 
