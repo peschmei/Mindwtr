@@ -259,7 +259,6 @@ pub(crate) fn create_quick_add_window(app: &tauri::AppHandle) -> Result<(), Stri
     .inner_size(QUICK_ADD_WINDOW_WIDTH, QUICK_ADD_WINDOW_HEIGHT)
     .resizable(false)
     .decorations(false)
-    .transparent(true)
     .shadow(false)
     .always_on_top(true)
     .skip_taskbar(true)
