@@ -30,7 +30,7 @@
           "完全离线可用，无需互联网连接",
           "完全开源，安全透明"
         ],
-        "ReleaseNotes": "• 任务位置现在可编辑、筛选，并可用位置运算符搜索。\n• Markdown 任务描述会保留空行，编辑也更一致。\n• 日历安排、项目顺序推进、日期选择器、快速添加位置和 WebView 缩放更可靠。",
+        "ReleaseNotes": "• 改进 Markdown、清单编辑和任务摘要显示。\n• 新增可折叠项目面板，并让选中状态和任务搜索更清楚。\n• Windows 深色窗口、快速添加、项目下拉框、托盘恢复和同步冲突提示更可靠。",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",
@@ -82,7 +82,7 @@
           "No internet connection required to function",
           "Open source and transparent"
         ],
-        "ReleaseNotes": "• Task locations are now editable, filterable, and searchable with location operators.\n• Markdown task descriptions preserve blank lines and editing is more consistent.\n• Calendar scheduling, project sequencing, date pickers, quick add positioning, and WebView zoom are more reliable.",
+        "ReleaseNotes": "• Improved Markdown, checklist editing, and task description snippets.\n• Added a collapsible project panel with clearer selected states and task search matches.\n• Windows dark chrome, quick add, project dropdowns, tray restore, and sync conflict toasts are more reliable.",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",
@@ -131,7 +131,7 @@
           "Offline nutzbar ohne staendige Internetverbindung",
           "Open Source und transparent"
         ],
-        "ReleaseNotes": "• Aufgabenorte sind jetzt bearbeitbar, filterbar und ueber Ortsoperatoren durchsuchbar.\n• Markdown-Aufgabenbeschreibungen bewahren Leerzeilen und lassen sich konsistenter bearbeiten.\n• Kalenderplanung, Projektsequenzen, Datumsauswahl, Schnellhinzufuegen-Position und WebView-Zoom sind zuverlaessiger.",
+        "ReleaseNotes": "• Markdown, Checklisten-Bearbeitung und Aufgabenbeschreibungsausschnitte verbessert.\n• Einklappbares Projektpanel mit klareren Auswahlzustaenden und Aufgabensuchtreffern hinzugefuegt.\n• Windows-Dunkelmodus-Fenster, Schnellhinzufuegen, Projektauswahl, Tray-Wiederherstellung und Sync-Konfliktmeldungen sind zuverlaessiger.",
         "Images": [],
         "RecommendedHardware": [],
         "MinimumHardware": [],
@@ -160,7 +160,7 @@
           "No requiere conexión a internet para funcionar",
           "Código abierto y transparente"
         ],
-        "ReleaseNotes": "• Las ubicaciones de tareas se pueden editar, filtrar y buscar con operadores de ubicacion.\n• Las descripciones Markdown conservan lineas en blanco y la edicion es mas consistente.\n• Calendario, secuencias de proyectos, selector de fecha, posicion de entrada rapida y zoom WebView son mas fiables.",
+        "ReleaseNotes": "• Mejoran Markdown, la edicion de listas y los fragmentos de descripcion de tareas.\n• Se agrega un panel de proyectos plegable con estados seleccionados y busqueda de tareas mas claros.\n• Ventana oscura de Windows, entrada rapida, selector de proyectos, restauracion desde bandeja y avisos de sync son mas fiables.",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",

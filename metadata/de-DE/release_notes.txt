@@ -1,3 +1,3 @@
-- Aufgabenorte koennen bearbeitet, gefiltert und gesucht werden.
-- Markdown-Bearbeitung verbessert mit Leerzeilen-Vorschau und Codeblock-Kopie.
-- Kalenderplanung, Focus-Sequenzen und Unchanged-Sync-Pruefungen sind zuverlaessiger.
+- Aufgabenlisten-Filter und klarere Markdown-Aufgabenausschnitte hinzugefuegt.
+- Kalenderplanung mit Apple-Kalender-Push und Vorschauen der naechsten Wiederholung verbessert.
+- Markdown, Checklisten, Siri-Erfassung, Projekt-Prompts und Sync-Wiederholungen sind zuverlaessiger.

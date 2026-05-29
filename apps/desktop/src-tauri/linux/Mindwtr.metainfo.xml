@@ -88,6 +88,25 @@
   <url type="bugtracker">https://github.com/dongdongbh/Mindwtr/issues</url>
   <url type="vcs-browser">https://github.com/dongdongbh/Mindwtr</url>
   <releases>
+    <release version="0.9.6" date="2026-05-29">
+      <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.6</url>
+      <description>
+        <p>Mindwtr 0.9.6 improves desktop planning, recurrence previews, project navigation, Markdown editing, and Linux desktop integration.</p>
+        <p xml:lang="de">Mindwtr 0.9.6 verbessert Desktop-Planung, Wiederholungsvorschauen, Projektnavigation, Markdown-Bearbeitung und die Linux-Desktop-Integration.</p>
+        <ul>
+          <li>Added planning-only next recurrence previews in Calendar and synced that setting reliably.</li>
+          <li xml:lang="de">Planungsbezogene Vorschauen fuer die naechste Wiederholung im Kalender hinzugefuegt und diese Einstellung zuverlaessig synchronisiert.</li>
+          <li>Added a collapsible project panel and clearer selected task metadata and status pills.</li>
+          <li xml:lang="de">Ein einklappbares Projektpanel sowie klarere ausgewaehlte Metadaten- und Status-Pills fuer Aufgaben hinzugefuegt.</li>
+          <li>Improved Markdown and checklist editing with list-aware shortcuts, native spellcheck, inline previews, and steadier cursor handling.</li>
+          <li xml:lang="de">Markdown- und Checklisten-Bearbeitung mit listenbewussten Kuerzeln, nativer Rechtschreibpruefung, Inline-Vorschauen und stabilerer Cursorbehandlung verbessert.</li>
+          <li>Made Linux desktop integration more reliable with Flatpak tray behavior and GNOME system theme polling.</li>
+          <li xml:lang="de">Linux-Desktop-Integration mit Flatpak-Tray-Verhalten und GNOME-Systemdesign-Abfrage zuverlaessiger gemacht.</li>
+          <li>Reduced duplicate sync conflict toasts and improved diagnostics copy.</li>
+          <li xml:lang="de">Doppelte Sync-Konfliktmeldungen reduziert und Diagnose-Texte verbessert.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.5" date="2026-05-25">
       <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.5</url>
       <description>

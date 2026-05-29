@@ -1,3 +1,3 @@
-- Las ubicaciones de tareas ahora se pueden editar, filtrar y buscar.
-- Markdown mejora con vista de lineas en blanco y copia de bloques de codigo.
-- Calendario, secuencias de Focus y comprobaciones sin cambios son mas fiables.
+- Se agregan filtros de listas y fragmentos Markdown de tareas mas claros.
+- Mejora la planificacion de calendario con envio a Apple Calendar y vista de proxima repeticion.
+- Markdown, listas, captura con Siri, avisos de proyecto y reintentos de sync son mas fiables.

@@ -1,3 +1,3 @@
-- Added task location editing, filtering, and search.
-- Improved Markdown editing with blank-line previews and code-block copy.
-- Calendar scheduling, Focus sequencing, and unchanged-sync checks are more reliable.
+- Added task-list filters and clearer Markdown task snippets.
+- Improved Calendar planning with Apple Calendar push and next recurrence previews.
+- Markdown, checklist, Siri capture, project prompts, and sync retry behavior are more reliable.
