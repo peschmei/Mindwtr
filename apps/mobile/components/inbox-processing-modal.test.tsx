@@ -287,7 +287,10 @@ describe('InboxProcessingModal', () => {
       tree = create(<InboxProcessingModal visible onClose={onClose} />);
     });
 
-    expect(tree!.root.findByType(KeyboardAvoidingView).props.behavior).toBe('padding');
+    const keyboardAvoidingView = tree!.root.findByType(KeyboardAvoidingView);
+    expect(keyboardAvoidingView.props.behavior).toBe('padding');
+    expect(keyboardAvoidingView.props.keyboardVerticalOffset).toBe(48);
+
     const processingScroll = tree!.root.findByType(ScrollView);
 
     expect(processingScroll.props.automaticallyAdjustKeyboardInsets).toBe(true);

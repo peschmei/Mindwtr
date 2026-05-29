@@ -21,6 +21,8 @@ type InboxProcessingModalProps = {
   onClose: () => void;
 };
 
+const IOS_KEYBOARD_FOOTER_OFFSET = 48;
+
 export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalProps) {
   const {
     actionabilityChoice,
@@ -253,7 +255,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
 
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={0}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? IOS_KEYBOARD_FOOTER_OFFSET : 0}
             style={styles.keyboardAvoidingContainer}
           >
             <View style={styles.stepContainer}>
