@@ -926,6 +926,7 @@ export function createNextRecurringTask(
         status: newStatus,
         priority: task.priority,
         energyLevel: task.energyLevel,
+        assignedTo: task.assignedTo,
         startTime: nextStartTime,
         dueDate: nextDueDate,
         recurrence: nextRecurrence,

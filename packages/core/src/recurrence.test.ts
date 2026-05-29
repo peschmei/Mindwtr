@@ -682,13 +682,14 @@ describe('recurrence', () => {
         expect(next?.showFutureRecurrence).toBe(true);
     });
 
-    it('keeps priority and energy level on recurring task instances', () => {
+    it('keeps priority, energy level, and assignee on recurring task instances', () => {
         const task: Task = {
             id: 't13',
             title: 'High focus recurring',
             status: 'done',
             priority: 'urgent',
             energyLevel: 'high',
+            assignedTo: 'Ada',
             tags: [],
             contexts: [],
             dueDate: '2025-01-01T09:00:00.000Z',
@@ -700,5 +701,6 @@ describe('recurrence', () => {
         const next = createNextRecurringTask(task, '2025-01-01T10:00:00.000Z', 'done');
         expect(next?.priority).toBe('urgent');
         expect(next?.energyLevel).toBe('high');
+        expect(next?.assignedTo).toBe('Ada');
     });
 });
