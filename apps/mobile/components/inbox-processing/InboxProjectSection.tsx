@@ -71,7 +71,10 @@ export function InboxProjectSection({
     const noAreaSelected = !selectedAreaId;
 
     return (
-      <>
+      <View style={styles.projectFieldGroup}>
+        <Text style={[styles.projectFieldLabel, { color: tc.secondaryText }]}>
+          {t('taskEdit.areaLabel')}
+        </Text>
         {currentArea && (
           <TouchableOpacity
             style={[styles.projectChip, { backgroundColor: currentArea.color || tc.tint }]}
@@ -116,7 +119,7 @@ export function InboxProjectSection({
             );
           })}
         </View>
-      </>
+      </View>
     );
   };
 

@@ -389,6 +389,7 @@ describe('InboxProcessingModal', () => {
 
     const root = tree!.root;
 
+    expect(findNodesWithText(root, 'taskEdit.areaLabel').length).toBeGreaterThan(0);
     expect(findNodesWithText(root, 'Work Project').length).toBeGreaterThan(0);
     expect(findNodesWithText(root, 'Home Project').length).toBeGreaterThan(0);
 
