@@ -294,6 +294,7 @@ export const TaskItem = memo(function TaskItem({
         applyCustomRecurrence,
     } = useTaskItemRecurrence({
         task,
+        editStartTime,
         editDueDate,
         editRecurrence,
         editRecurrenceRRule,

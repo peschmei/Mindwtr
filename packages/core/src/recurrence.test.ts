@@ -624,6 +624,31 @@ describe('recurrence', () => {
         expect(projected?.updatedAt).toBe('2025-05-27T12:00:00.000Z');
     });
 
+    it('projects a start-only monthly nth-weekday recurrence into the calendar preview', () => {
+        const task: Task = {
+            id: 't-projected-first-thursday',
+            title: 'First Thursday planning',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            startTime: '2026-06-04T09:00',
+            recurrence: {
+                rule: 'monthly',
+                strategy: 'strict',
+                byDay: ['1TH'],
+                rrule: 'FREQ=MONTHLY;BYDAY=1TH',
+            },
+            showFutureRecurrence: true,
+            createdAt: '2026-06-01T00:00:00.000Z',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+        };
+
+        const projected = createProjectedRecurringTask(task, '2026-06-30T12:00:00.000Z');
+
+        expect(projected?.startTime).toBe('2026-07-02T09:00');
+        expect(projected?.dueDate).toBeUndefined();
+    });
+
     it('does not project recurring tasks unless the calendar preview is enabled', () => {
         const task: Task = {
             id: 't-projected-disabled',

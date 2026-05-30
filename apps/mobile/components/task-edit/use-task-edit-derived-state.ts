@@ -44,6 +44,10 @@ const REFERENCE_HIDDEN_FIELDS = new Set<TaskEditorFieldId>([
     'checklist',
 ]);
 
+export const getMonthlyRecurrenceAnchorDate = (editedTask: Partial<Task>, task: Task | null): Date => (
+    safeParseDate(editedTask.dueDate || editedTask.startTime || task?.dueDate || task?.startTime) ?? new Date()
+);
+
 type UseTaskEditDerivedStateArgs = {
     task: Task | null;
     editedTask: Partial<Task>;
@@ -102,8 +106,8 @@ export function useTaskEditDerivedState({
         return parsed.interval && parsed.interval > 0 ? parsed.interval : 1;
     }, [recurrenceRRuleValue, recurrenceRuleValue]);
     const monthlyAnchorDate = useMemo(
-        () => safeParseDate(editedTask.dueDate ?? task?.dueDate) ?? new Date(),
-        [editedTask.dueDate, task?.dueDate]
+        () => getMonthlyRecurrenceAnchorDate(editedTask, task),
+        [editedTask.dueDate, editedTask.startTime, task?.dueDate, task?.startTime]
     );
     const monthlyWeekdayCode = WEEKDAY_ORDER[monthlyAnchorDate.getDay()] as RecurrenceWeekday;
     const monthlyPattern = useMemo<'date' | 'custom'>(() => {
