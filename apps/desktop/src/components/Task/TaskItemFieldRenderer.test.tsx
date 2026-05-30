@@ -655,6 +655,31 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         expect(collapsedTextarea).not.toHaveFocus();
     });
 
+    it('scrolls the description textarea to keep a continued list marker visible', async () => {
+        const { getByRole } = render(<DescriptionHarness />);
+        const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
+        const list = Array.from({ length: 20 }, (_, index) => `- item ${index + 1}`).join('\n');
+
+        Object.defineProperty(textarea, 'clientHeight', {
+            configurable: true,
+            value: 48,
+        });
+        Object.defineProperty(textarea, 'scrollHeight', {
+            configurable: true,
+            value: 600,
+        });
+        textarea.scrollTop = 360;
+
+        fireEvent.change(textarea, { target: { value: list } });
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        fireEvent.keyDown(textarea, { key: 'Enter' });
+
+        await waitFor(() => {
+            expect(textarea).toHaveValue(`${list}\n- `);
+            expect(textarea.scrollTop).toBeGreaterThan(360);
+        });
+    });
+
     it('switches the description preview back to focused editing when clicked', async () => {
         const { getByRole, queryByRole } = render(<DescriptionPreviewHarness />);
 

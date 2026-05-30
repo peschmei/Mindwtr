@@ -703,10 +703,13 @@ export function TaskItemFieldRenderer({
             const target = textarea.isConnected ? textarea : descriptionTextareaRef.current;
             if (!target) return;
             const scrollSnapshot = captureScrollSnapshot(target);
+            const surroundingScrollSnapshot = scrollSnapshot.filter(
+                (snapshot) => snapshot.kind === 'window' || snapshot.target !== target,
+            );
             focusElementWithoutScroll(target, scrollSnapshot);
             target.setSelectionRange(selection.start, selection.end);
             keepTextareaSelectionVisible(target);
-            restoreScrollSnapshotSoon(scrollSnapshot);
+            restoreScrollSnapshotSoon(surroundingScrollSnapshot);
         });
     };
     const handleDescriptionUndo = () => {
