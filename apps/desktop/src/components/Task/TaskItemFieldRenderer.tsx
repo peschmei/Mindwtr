@@ -778,7 +778,10 @@ export function TaskItemFieldRenderer({
             if (lowerKey !== 'z') return;
             if (descriptionUndoRef.current.length === 0) return;
             event.preventDefault();
-            handleDescriptionUndo();
+            const restoredSelection = handleDescriptionUndo();
+            if (restoredSelection) {
+                restoreDescriptionTextareaSelection(eventTextarea, restoredSelection);
+            }
             return;
         }
 

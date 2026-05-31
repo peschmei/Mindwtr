@@ -609,6 +609,34 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         });
     });
 
+    it('restores the description caret after Ctrl+Z undo', async () => {
+        const { getByRole } = render(<DescriptionHarness />);
+        const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
+        const original = 'Line one\nLine two\nLine three';
+        const insertionPoint = original.indexOf('Line three');
+
+        fireEvent.change(textarea, { target: { value: original } });
+        textarea.setSelectionRange(insertionPoint, insertionPoint);
+        fireEvent.select(textarea);
+        fireEvent.change(textarea, {
+            target: {
+                value: `${original.slice(0, insertionPoint)}extra ${original.slice(insertionPoint)}`,
+            },
+        });
+        const selectionSpy = vi.spyOn(HTMLTextAreaElement.prototype, 'setSelectionRange');
+
+        try {
+            fireEvent.keyDown(textarea, { key: 'z', ctrlKey: true });
+
+            await waitFor(() => {
+                expect(textarea).toHaveValue(original);
+                expect(selectionSpy).toHaveBeenCalledWith(insertionPoint, insertionPoint);
+            });
+        } finally {
+            selectionSpy.mockRestore();
+        }
+    });
+
     it('keeps the description textarea height stable when focused', () => {
         const { getByRole } = render(<DescriptionHarness />);
         const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
