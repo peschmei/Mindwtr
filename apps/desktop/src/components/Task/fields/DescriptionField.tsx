@@ -8,6 +8,7 @@ import { MarkdownFormatToolbar } from '../../MarkdownFormatToolbar';
 import { MarkdownReferenceAutocompleteMenu, useMarkdownReferenceAutocomplete } from '../../MarkdownReferenceAutocomplete';
 import { RichMarkdown } from '../../RichMarkdown';
 import { AutosizeTextarea } from '../../ui/AutosizeTextarea';
+import { taskEditorLabelClassName } from '../task-editor-label';
 
 type DescriptionFieldProps = {
     t: (key: string) => string;
@@ -81,7 +82,7 @@ export function DescriptionField({
     return (
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-                <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.descriptionLabel')}</label>
+                <label className={taskEditorLabelClassName}>{t('taskEdit.descriptionLabel')}</label>
                 <div className="flex items-center gap-2">
                     <button
                         type="button"

@@ -51,6 +51,8 @@ const t = (key: string) => {
         'taskEdit.locationLabel': 'Location',
         'taskEdit.locationPlaceholder': 'Add location',
         'taskEdit.recurrenceLabel': 'Recurrence',
+        'taskEdit.checklist': 'Checklist',
+        'attachments.title': 'Attachments',
         'recurrence.none': 'None',
         'recurrence.daily': 'Daily',
         'recurrence.weekly': 'Weekly',
@@ -205,6 +207,27 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         fireEvent.change(input, { target: { value: 'Home' } });
 
         expect(handlers.setEditLocation).toHaveBeenCalledWith('Home');
+    });
+
+    it.each([
+        ['dueDate' as const, 'Due Date'],
+        ['status' as const, 'Status'],
+        ['description' as const, 'Description'],
+        ['recurrence' as const, 'Recurrence'],
+        ['attachments' as const, 'Attachments'],
+        ['checklist' as const, 'Checklist'],
+        ['location' as const, 'Location'],
+    ])('uses stronger weight for the %s field label without changing label size', (fieldId, label) => {
+        const { getByText } = render(
+            <TaskItemFieldRenderer
+                fieldId={fieldId}
+                data={createData()}
+                handlers={createHandlers()}
+            />
+        );
+
+        expect(getByText(label)).toHaveClass('text-xs', 'font-semibold');
+        expect(getByText(label)).not.toHaveClass('font-medium');
     });
 
     it.each([

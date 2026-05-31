@@ -34,6 +34,7 @@ import { useMarkdownReferenceAutocomplete } from '../MarkdownReferenceAutocomple
 import { AttachmentsField } from './TaskForm/AttachmentsField';
 import { ChecklistField } from './TaskForm/ChecklistField';
 import { normalizeDateInputValue } from './task-item-helpers';
+import { taskEditorLabelClassName } from './task-editor-label';
 import { DescriptionField } from './fields/DescriptionField';
 import { RecurrenceField } from './fields/RecurrenceField';
 import {
@@ -321,7 +322,7 @@ export function DateField({
 
     return (
         <div className="relative flex flex-col gap-1" ref={rootRef}>
-            <label className="text-xs text-muted-foreground font-medium">{label}</label>
+            <label className={taskEditorLabelClassName}>{label}</label>
             <div className="flex w-full max-w-[min(22rem,100%)] items-center gap-2">
                 <div className="relative min-w-0 flex-1">
                     <input
@@ -1152,7 +1153,7 @@ export function TaskItemFieldRenderer({
         case 'location':
             return (
                 <div className="flex flex-col gap-1">
-                    <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.locationLabel')}</label>
+                    <label className={taskEditorLabelClassName}>{t('taskEdit.locationLabel')}</label>
                     <input
                         type="text"
                         aria-label={t('task.aria.location')}

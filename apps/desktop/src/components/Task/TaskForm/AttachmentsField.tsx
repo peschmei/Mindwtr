@@ -3,6 +3,7 @@ import type { Attachment } from '@mindwtr/core';
 import { getAttachmentDisplayTitle } from '../../../lib/attachment-utils';
 import { isImageAttachment } from '../task-item-attachment-utils';
 import { AttachmentImage } from '../AttachmentImage';
+import { taskEditorLabelClassName } from '../task-editor-label';
 
 type AttachmentsFieldProps = {
     t: (key: string) => string;
@@ -38,7 +39,7 @@ export function AttachmentsField({
     return (
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-                <label className="text-xs text-muted-foreground font-medium">{t('attachments.title')}</label>
+                <label className={taskEditorLabelClassName}>{t('attachments.title')}</label>
                 <div className="flex items-center gap-2">
                     <button
                         type="button"

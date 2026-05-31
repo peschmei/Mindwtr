@@ -2,6 +2,7 @@ import { useRef, type KeyboardEvent } from 'react';
 import type { TaskEnergyLevel, TaskPriority, TaskStatus, TimeEstimate } from '@mindwtr/core';
 
 import { cn } from '../../../lib/utils';
+import { taskEditorLabelClassName } from '../task-editor-label';
 
 type PillOption<TValue extends string> = {
     value: TValue;
@@ -54,7 +55,7 @@ function PillOptionField<TValue extends string>({
 
     return (
         <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground font-medium">{label}</label>
+            <label className={taskEditorLabelClassName}>{label}</label>
             <div role="group" aria-label={ariaLabel} className="flex flex-wrap gap-1.5">
                 {options.map((option, index) => {
                     const isActive = value === option.value;
@@ -101,7 +102,7 @@ function ToggleTokenField({
 }) {
     return (
         <div className="flex flex-col gap-1 w-full">
-            <label className="text-xs text-muted-foreground font-medium">{label}</label>
+            <label className={taskEditorLabelClassName}>{label}</label>
             <input
                 type="text"
                 aria-label={ariaLabel}
@@ -236,7 +237,7 @@ export function AssignedToField({
 }) {
     return (
         <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.assignedTo')}</label>
+            <label className={taskEditorLabelClassName}>{t('taskEdit.assignedTo')}</label>
             <input
                 type="text"
                 value={value}
@@ -260,7 +261,7 @@ export function TimeEstimateField({
 }) {
     return (
         <div className="flex flex-col gap-1 w-full">
-            <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.timeEstimateLabel')}</label>
+            <label className={taskEditorLabelClassName}>{t('taskEdit.timeEstimateLabel')}</label>
             <select
                 value={value}
                 aria-label={t('task.aria.timeEstimate')}

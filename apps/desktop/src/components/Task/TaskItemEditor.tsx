@@ -16,6 +16,7 @@ import { ProjectSelector } from '../ui/ProjectSelector';
 import { SectionSelector } from '../ui/SectionSelector';
 import { TaskInput } from './TaskInput';
 import { cn } from '../../lib/utils';
+import { taskEditorLabelClassName } from './task-editor-label';
 
 interface TaskItemEditorProps {
     t: (key: string) => string;
@@ -366,7 +367,7 @@ export function TaskItemEditor({
             <div className="flex flex-wrap gap-4">
                 {showAreaField && (
                     <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.areaLabel')}</label>
+                        <label className={taskEditorLabelClassName}>{t('taskEdit.areaLabel')}</label>
                         <AreaSelector
                             areas={sortedAreas}
                             value={editAreaId}
@@ -383,7 +384,7 @@ export function TaskItemEditor({
                 )}
                 {showProjectField && (
                     <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <label className="text-xs text-muted-foreground font-medium">{t('projects.title')}</label>
+                        <label className={taskEditorLabelClassName}>{t('projects.title')}</label>
                         <ProjectSelector
                             projects={filteredProjects}
                             allProjects={sortedProjects}
@@ -402,7 +403,7 @@ export function TaskItemEditor({
                 )}
                 {showSectionField && (
                     <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.sectionLabel')}</label>
+                        <label className={taskEditorLabelClassName}>{t('taskEdit.sectionLabel')}</label>
                         <SectionSelector
                             sections={sections}
                             value={editSectionId}

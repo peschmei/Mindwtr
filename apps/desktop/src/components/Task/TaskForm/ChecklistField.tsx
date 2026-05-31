@@ -9,6 +9,7 @@ import {
     type Task,
 } from '@mindwtr/core';
 import { cn } from '../../../lib/utils';
+import { taskEditorLabelClassName } from '../task-editor-label';
 import {
     captureScrollSnapshot,
     focusElementWithoutScroll,
@@ -138,7 +139,7 @@ export function ChecklistField({
 
     return (
         <div className="flex flex-col gap-2 w-full pt-2 border-t border-border/50">
-            <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.checklist')}</label>
+            <label className={taskEditorLabelClassName}>{t('taskEdit.checklist')}</label>
             <div className="space-y-2 pr-3">
                 {(checklistDraft || []).map((item, index) => (
                     <div key={item.id || index} className="flex items-center gap-2 group/item">

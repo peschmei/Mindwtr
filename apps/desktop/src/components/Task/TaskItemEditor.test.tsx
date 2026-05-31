@@ -10,7 +10,20 @@ const translations: Record<string, string> = {
     'taskEdit.schedulingEmpty': 'No scheduling fields',
     'taskEdit.organizationEmpty': 'No organization fields',
     'taskEdit.detailsEmpty': 'No details fields',
+    'areas.create': 'Create area',
+    'areas.search': 'Search areas',
+    'common.noMatches': 'No matches',
+    'projects.addSection': 'Add section',
+    'projects.create': 'Create project',
+    'projects.search': 'Search projects',
+    'projects.title': 'Projects',
+    'sections.search': 'Search sections',
+    'taskEdit.areaLabel': 'Area',
     'taskEdit.locationLabel': 'Location',
+    'taskEdit.noAreaOption': 'No Area',
+    'taskEdit.noProjectOption': 'No Project',
+    'taskEdit.noSectionOption': 'No Section',
+    'taskEdit.sectionLabel': 'Section',
     'taskEdit.titleLabel': 'Task title',
     'task.aria.location': 'Location',
     'taskEdit.locationPlaceholder': 'Add location',
@@ -156,6 +169,22 @@ describe('TaskItemEditor', () => {
             'text-foreground',
             'focus-visible:ring-2'
         );
+    });
+
+    it('uses stronger weight for organization field labels without changing label size', () => {
+        const { getByText } = render(
+            <TaskItemEditor
+                {...baseProps}
+                showAreaField
+                showProjectField
+                showSectionField
+            />
+        );
+
+        ['Area', 'Projects', 'Section'].forEach((label) => {
+            expect(getByText(label)).toHaveClass('text-xs', 'font-semibold');
+            expect(getByText(label)).not.toHaveClass('font-medium');
+        });
     });
 
     it('does not show a delete action without an edit-mode delete handler', () => {

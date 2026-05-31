@@ -3,6 +3,7 @@ import { buildRRuleString, parseRRuleString, tFallback, type RecurrenceByDay, ty
 import { cn } from '../../../lib/utils';
 import { WeekdaySelector } from '../TaskForm/WeekdaySelector';
 import type { MonthlyRecurrenceInfo } from '../TaskItemFieldRenderer';
+import { taskEditorLabelClassName } from '../task-editor-label';
 
 type RecurrenceFieldProps = {
     t: (key: string) => string;
@@ -50,7 +51,7 @@ export function RecurrenceField({
 }: RecurrenceFieldProps) {
     return (
         <div className="flex flex-col gap-1 w-full">
-            <label className="text-xs text-muted-foreground font-medium">{t('taskEdit.recurrenceLabel')}</label>
+            <label className={taskEditorLabelClassName}>{t('taskEdit.recurrenceLabel')}</label>
             <select
                 value={editRecurrence}
                 aria-label={t('task.aria.recurrence')}
