@@ -1895,11 +1895,19 @@ export class SyncService {
             });
             const stats = syncResult.stats;
             let mergedData = syncResult.data;
+            const remotePersistedPayloadFingerprint = computeSyncPayloadFingerprint(mergedData);
+            let canRecordFastSyncState = true;
+            const markFastSyncStateUnsafeIfRemotePayloadChanged = () => {
+                if (computeSyncPayloadFingerprint(mergedData) !== remotePersistedPayloadFingerprint) {
+                    canRecordFastSyncState = false;
+                }
+            };
             await persistExternalCalendars(mergedData);
             SyncService.logSyncMergeSummary(stats);
             ensureLocalSnapshotFresh();
 
             mergedData = await SyncService.runPostMergeAttachmentPhase(context, mergedData, helpers);
+            markFastSyncStateUnsafeIfRemotePayloadChanged();
 
             await cleanupAttachmentTempFiles(getAttachmentCleanupDeps());
 
@@ -1909,10 +1917,13 @@ export class SyncService {
                 ensureLocalSnapshotFresh();
                 ensureNetworkStillAvailable();
                 mergedData = await cleanupOrphanedAttachments(mergedData, context.backend, getAttachmentCleanupDeps());
+                markFastSyncStateUnsafeIfRemotePayloadChanged();
                 await persistLocalDataWithTracking(mergedData);
             }
 
-            await SyncService.recordFastSyncState(context, mergedData, helpers);
+            if (canRecordFastSyncState) {
+                await SyncService.recordFastSyncState(context, mergedData, helpers);
+            }
 
             // 7. Refresh UI Store
             setStep('refresh');

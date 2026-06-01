@@ -722,4 +722,74 @@ describe('SyncService orchestration', () => {
             postMergeSpy.mockRestore();
         }
     });
+
+    it('does not record fast-sync state after post-remote attachment phases change the sync payload', async () => {
+        const syncedData: AppData = {
+            tasks: [{
+                id: 'task-1',
+                title: 'Before cleanup',
+                status: 'next',
+                tags: [],
+                contexts: [],
+                createdAt: '2026-04-01T00:00:00.000Z',
+                updatedAt: '2026-04-01T00:00:00.000Z',
+            }],
+            projects: [],
+            sections: [],
+            areas: [],
+            settings: {},
+        };
+        const storeState = {
+            lastDataChangeAt: 0,
+            settings: {},
+            fetchData: vi.fn(async () => undefined),
+            updateSettings: vi.fn(async () => undefined),
+            setError: vi.fn(),
+        };
+        const prepareSpy = vi.spyOn(SyncService as any, 'prepareSyncExecutionContext').mockImplementation(
+            async (...args: unknown[]) => {
+                const context = args[0] as Record<string, unknown>;
+                context.backend = 'file';
+                context.fileBaseDir = '';
+            }
+        );
+        const preSyncSpy = vi.spyOn(SyncService as any, 'runPreSyncAttachmentPhase').mockResolvedValue(undefined);
+        const postMergeSpy = vi.spyOn(SyncService as any, 'runPostMergeAttachmentPhase').mockImplementation(
+            async (...args: unknown[]) => ({
+                ...(args[1] as AppData),
+                tasks: [{
+                    ...(args[1] as AppData).tasks[0],
+                    title: 'After cleanup',
+                }],
+            })
+        );
+        const recordFastSyncSpy = vi.spyOn(SyncService as any, 'recordFastSyncState').mockResolvedValue(undefined);
+
+        try {
+            __syncServiceTestUtils.setDependenciesForTests({
+                flushPendingSave: vi.fn(async () => undefined),
+                getStoreState: () => storeState as any,
+                performSyncCycle: vi.fn(async () => ({
+                    data: syncedData,
+                    status: 'success' as const,
+                    stats: {
+                        tasks: {},
+                        projects: {},
+                        sections: {},
+                        areas: {},
+                    } as any,
+                })),
+            });
+
+            const result = await SyncService.performSync();
+
+            expect(result.success).toBe(true);
+            expect(recordFastSyncSpy).not.toHaveBeenCalled();
+        } finally {
+            prepareSpy.mockRestore();
+            preSyncSpy.mockRestore();
+            postMergeSpy.mockRestore();
+            recordFastSyncSpy.mockRestore();
+        }
+    });
 });

@@ -449,6 +449,45 @@ describe('mobile sync-service runtime', () => {
     }));
   });
 
+  it('does not cache fast-sync state when attachment cleanup changes the sync payload after remote write', async () => {
+    const dataWithDeletedAttachment: AppData = {
+      ...emptyData,
+      tasks: [{
+        id: 'task-1',
+        title: 'Task with deleted file',
+        status: 'next',
+        tags: [],
+        contexts: [],
+        createdAt: '2026-04-01T00:00:00.000Z',
+        updatedAt: '2026-04-01T00:00:00.000Z',
+        attachments: [{
+          id: 'attachment-1',
+          kind: 'file',
+          title: 'Old file',
+          uri: 'file://document/old-file.txt',
+          createdAt: '2026-04-01T00:00:00.000Z',
+          updatedAt: '2026-04-01T00:00:00.000Z',
+          deletedAt: '2026-04-01T00:00:00.000Z',
+        }],
+      }],
+    };
+    coreMocks.webdavGetJson.mockResolvedValue(remoteChangedData);
+    coreMocks.performSyncCycle.mockImplementation(async (io: any) => {
+      await io.readLocal();
+      await io.readRemote();
+      await io.writeRemote(dataWithDeletedAttachment);
+      await io.writeLocal(dataWithDeletedAttachment);
+      return { status: 'success', stats: emptyStats, data: dataWithDeletedAttachment };
+    });
+
+    const result = await syncServiceModule.performMobileSync();
+
+    expect(result).toEqual({ success: true, stats: emptyStats });
+    const lastSaved = storageMocks.saveData.mock.calls.at(-1)?.[0] as AppData | undefined;
+    expect(lastSaved?.tasks[0]?.attachments).toEqual([]);
+    expect(asyncStorageMocks.setItem.mock.calls.some(([key]) => key === '@mindwtr_fast_sync_state_v1')).toBe(false);
+  });
+
   it('reports Dropbox as unavailable in FOSS builds instead of falling through to self-hosted config', async () => {
     asyncStorageMocks.getItem.mockImplementation(async (key: string) => {
       const values: Record<string, string | null> = {
