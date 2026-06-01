@@ -42,7 +42,9 @@ export type InboxProcessingQuickPanelProps = {
     setDelegateFollowUp: (value: string) => void;
     onSendDelegateRequest: () => void;
     selectedContexts: string[];
+    contextsDraft: string;
     selectedTags: string[];
+    tagsDraft: string;
     selectedEnergyLevel?: Task['energyLevel'];
     setSelectedEnergyLevel: (value: Task['energyLevel']) => void;
     selectedAssignedTo: string;
@@ -130,7 +132,9 @@ export function InboxProcessingQuickPanel({
     setDelegateFollowUp,
     onSendDelegateRequest,
     selectedContexts,
+    contextsDraft,
     selectedTags,
+    tagsDraft,
     selectedEnergyLevel,
     setSelectedEnergyLevel,
     selectedAssignedTo,
@@ -606,7 +610,7 @@ export function InboxProcessingQuickPanel({
                                         <label className="text-[11px] text-muted-foreground font-medium">{t('taskEdit.contextsLabel')}</label>
                                         <input
                                             aria-label={t('taskEdit.contextsLabel')}
-                                            value={selectedContexts.join(', ')}
+                                            value={contextsDraft}
                                             onChange={(event) => onContextsInputChange(event.target.value)}
                                             placeholder={t('taskEdit.contextsPlaceholder')}
                                             className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
@@ -637,7 +641,7 @@ export function InboxProcessingQuickPanel({
                                         <label className="text-[11px] text-muted-foreground font-medium">{t('taskEdit.tagsLabel')}</label>
                                         <input
                                             aria-label={t('taskEdit.tagsLabel')}
-                                            value={selectedTags.join(', ')}
+                                            value={tagsDraft}
                                             onChange={(event) => onTagsInputChange(event.target.value)}
                                             placeholder={t('taskEdit.tagsPlaceholder')}
                                             className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"

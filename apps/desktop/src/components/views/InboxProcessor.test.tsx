@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { AppData, Area, Project, Task } from '@mindwtr/core';
 
 import { InboxProcessor } from './InboxProcessor';
@@ -534,6 +535,78 @@ describe('InboxProcessor', () => {
                     startTime: '2026-03-23',
                     dueDate: '2026-03-24',
                     reviewAt: '2026-03-25',
+                }),
+            );
+        });
+    });
+
+    it('keeps quick context and tag inputs editable while typing multiple tokens', async () => {
+        const user = userEvent.setup();
+        const { getByRole, getByLabelText, updateTask } = renderInboxProcessor({
+            gtd: {
+                taskEditor: {
+                    hidden: [],
+                },
+            },
+        });
+
+        fireEvent.click(getByRole('button', { name: /process\.btn/i }));
+        fireEvent.click(getByRole('button', { name: 'process.modeQuick' }));
+
+        const contextsInput = getByLabelText('taskEdit.contextsLabel') as HTMLInputElement;
+        const tagsInput = getByLabelText('taskEdit.tagsLabel') as HTMLInputElement;
+        await user.type(contextsInput, '@home, @desk');
+        await user.type(tagsInput, '#deep, #writing');
+
+        expect(contextsInput.value).toBe('@home, @desk');
+        expect(tagsInput.value).toBe('#deep, #writing');
+
+        fireEvent.click(getByRole('button', { name: 'process.next' }));
+
+        await waitFor(() => {
+            expect(updateTask).toHaveBeenCalledWith(
+                'task-1',
+                expect.objectContaining({
+                    status: 'next',
+                    contexts: ['@home', '@desk'],
+                    tags: ['#deep', '#writing'],
+                }),
+            );
+        });
+    });
+
+    it('adds multiple custom contexts and tags from guided processing inputs', async () => {
+        const user = userEvent.setup();
+        const { getAllByRole, getByPlaceholderText, getByRole, getByText, updateTask } = renderInboxProcessor({
+            gtd: {
+                taskEditor: {
+                    hidden: [],
+                },
+            },
+        });
+
+        fireEvent.click(getByRole('button', { name: /process\.btn/i }));
+        fireEvent.click(getByText('process.refineNext'));
+        fireEvent.click(getByText('process.yesActionable'));
+        fireEvent.click(getByText('process.moreThanOneStepNo'));
+        fireEvent.click(getByText('process.takesLonger'));
+        fireEvent.click(getByText('process.doIt'));
+
+        await user.type(getByPlaceholderText('@home'), '@home, @desk');
+        fireEvent.click(getAllByRole('button', { name: '+' })[0]);
+        await user.type(getByPlaceholderText('#deep-work'), '#deep, #writing');
+        fireEvent.click(getAllByRole('button', { name: '+' })[1]);
+
+        fireEvent.click(getByRole('button', { name: /process\.next/ }));
+        fireEvent.click(getByRole('button', { name: /process\.noProject/ }));
+
+        await waitFor(() => {
+            expect(updateTask).toHaveBeenCalledWith(
+                'task-1',
+                expect.objectContaining({
+                    status: 'next',
+                    contexts: ['@home', '@desk'],
+                    tags: ['#deep', '#writing'],
                 }),
             );
         });

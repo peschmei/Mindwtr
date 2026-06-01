@@ -55,7 +55,9 @@ export function useInboxProcessingState({
     const [quickTwoMinuteChoice, setQuickTwoMinuteChoice] = useState<QuickTwoMinuteChoice>('no');
     const [quickExecutionChoice, setQuickExecutionChoice] = useState<QuickExecutionChoice>('defer');
     const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
+    const [contextsDraft, setContextsDraft] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [tagsDraft, setTagsDraft] = useState('');
     const [selectedEnergyLevel, setSelectedEnergyLevel] = useState<TaskEnergyLevel | undefined>(undefined);
     const [selectedAssignedTo, setSelectedAssignedTo] = useState('');
     const [selectedPriority, setSelectedPriority] = useState<TaskPriority | undefined>(undefined);
@@ -190,7 +192,9 @@ export function useInboxProcessingState({
         setQuickTwoMinuteChoice('no');
         setQuickExecutionChoice('defer');
         setSelectedContexts([]);
+        setContextsDraft('');
         setSelectedTags([]);
+        setTagsDraft('');
         setSelectedEnergyLevel(undefined);
         setSelectedAssignedTo('');
         setSelectedPriority(undefined);
@@ -226,8 +230,12 @@ export function useInboxProcessingState({
         setQuickActionability('actionable');
         setQuickTwoMinuteChoice('no');
         setQuickExecutionChoice('defer');
-        setSelectedContexts(task.contexts ?? []);
-        setSelectedTags(task.tags ?? []);
+        const taskContexts = task.contexts ?? [];
+        const taskTags = task.tags ?? [];
+        setSelectedContexts(taskContexts);
+        setContextsDraft(taskContexts.join(', '));
+        setSelectedTags(taskTags);
+        setTagsDraft(taskTags.join(', '));
         setSelectedEnergyLevel(task.energyLevel);
         setSelectedAssignedTo(task.assignedTo ?? '');
         setSelectedPriority(task.priority);
@@ -418,8 +426,12 @@ export function useInboxProcessingState({
         setQuickExecutionChoice,
         selectedContexts,
         setSelectedContexts,
+        contextsDraft,
+        setContextsDraft,
         selectedTags,
         setSelectedTags,
+        tagsDraft,
+        setTagsDraft,
         selectedEnergyLevel,
         setSelectedEnergyLevel,
         selectedAssignedTo,

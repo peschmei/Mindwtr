@@ -21,6 +21,8 @@ import {
 } from './inbox-processing-utils';
 import { useInboxProcessingState } from './useInboxProcessingState';
 
+const formatTokenListInput = (tokens: string[]): string => tokens.join(', ');
+
 type UseInboxProcessingControllerParams = {
     t: (key: string) => string;
     tasks: Task[];
@@ -74,8 +76,12 @@ export function useInboxProcessingController({
         setQuickExecutionChoice,
         selectedContexts,
         setSelectedContexts,
+        contextsDraft,
+        setContextsDraft,
         selectedTags,
         setSelectedTags,
+        tagsDraft,
+        setTagsDraft,
         selectedEnergyLevel,
         setSelectedEnergyLevel,
         selectedAssignedTo,
@@ -210,12 +216,30 @@ export function useInboxProcessingController({
         setIsProcessing(false);
         setProcessingTask(null);
         setSelectedContexts([]);
+        setContextsDraft('');
         setSelectedTags([]);
+        setTagsDraft('');
         setSelectedEnergyLevel(undefined);
         setSelectedAssignedTo('');
         setSelectedPriority(undefined);
         setSelectedTimeEstimate(undefined);
-    }, [hydrateProcessingTask, processingTask?.id, tasks, setIsProcessing, skippedIds, projectMap, matchesAreaFilter]);
+    }, [
+        hydrateProcessingTask,
+        matchesAreaFilter,
+        processingTask?.id,
+        projectMap,
+        setContextsDraft,
+        setIsProcessing,
+        setSelectedAssignedTo,
+        setSelectedContexts,
+        setSelectedEnergyLevel,
+        setSelectedPriority,
+        setSelectedTags,
+        setSelectedTimeEstimate,
+        setTagsDraft,
+        skippedIds,
+        tasks,
+    ]);
 
     const handleSkip = useCallback(() => {
         if (processingTask) {
@@ -450,42 +474,49 @@ export function useInboxProcessingController({
         window.open(mailto);
     }, [delegateWho, processingDescription, processingTask, processingTitle]);
 
+    const updateSelectedContexts = useCallback((contexts: string[]) => {
+        setSelectedContexts(contexts);
+        setContextsDraft(formatTokenListInput(contexts));
+    }, [setContextsDraft, setSelectedContexts]);
+
+    const updateSelectedTags = useCallback((tags: string[]) => {
+        setSelectedTags(tags);
+        setTagsDraft(formatTokenListInput(tags));
+    }, [setSelectedTags, setTagsDraft]);
+
     const toggleTag = useCallback((tag: string) => {
-        setSelectedTags((prev) =>
-            prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]
-        );
-    }, []);
+        const nextTags = selectedTags.includes(tag)
+            ? selectedTags.filter((item) => item !== tag)
+            : [...selectedTags, tag];
+        updateSelectedTags(nextTags);
+    }, [selectedTags, updateSelectedTags]);
 
     const toggleContext = useCallback((ctx: string) => {
         if (ctx.startsWith('#')) {
             toggleTag(ctx);
             return;
         }
-        setSelectedContexts((prev) =>
-            prev.includes(ctx) ? prev.filter((item) => item !== ctx) : [...prev, ctx]
-        );
-    }, [toggleTag]);
+        const nextContexts = selectedContexts.includes(ctx)
+            ? selectedContexts.filter((item) => item !== ctx)
+            : [...selectedContexts, ctx];
+        updateSelectedContexts(nextContexts);
+    }, [selectedContexts, toggleTag, updateSelectedContexts]);
 
     const addCustomContext = useCallback(() => {
-        const trimmed = customContext.trim();
-        if (!trimmed) return;
-        const raw = trimmed.replace(/^@/, '');
-        const ctx = `@${raw.replace(/^@/, '').trim()}`;
-        if (ctx.length > 1 && !selectedContexts.includes(ctx)) {
-            setSelectedContexts((prev) => [...prev, ctx]);
+        const contexts = parseTokenListInput(customContext, '@');
+        if (contexts.length > 0) {
+            updateSelectedContexts(Array.from(new Set([...selectedContexts, ...contexts])));
         }
         setCustomContext('');
-    }, [customContext, selectedContexts]);
+    }, [customContext, selectedContexts, setCustomContext, updateSelectedContexts]);
 
     const addCustomTag = useCallback(() => {
-        const trimmed = customTag.trim();
-        if (!trimmed) return;
-        const tag = `#${trimmed.replace(/^#+/, '').trim()}`;
-        if (tag.length > 1 && !selectedTags.includes(tag)) {
-            setSelectedTags((prev) => [...prev, tag]);
+        const tags = parseTokenListInput(customTag, '#');
+        if (tags.length > 0) {
+            updateSelectedTags(Array.from(new Set([...selectedTags, ...tags])));
         }
         setCustomTag('');
-    }, [customTag, selectedTags]);
+    }, [customTag, selectedTags, setCustomTag, updateSelectedTags]);
 
     const handleSetProject = useCallback((projectId: string | null) => {
         if (!processingTask) return;
@@ -536,8 +567,10 @@ export function useInboxProcessingController({
 
     const handleDefer = useCallback(() => {
         if (showOrganizationStep) {
-            setSelectedContexts(processingTask?.contexts ?? []);
-            setSelectedTags(processingTask?.tags ?? []);
+            const taskContexts = processingTask?.contexts ?? [];
+            const taskTags = processingTask?.tags ?? [];
+            updateSelectedContexts(taskContexts);
+            updateSelectedTags(taskTags);
             goToStep('context');
             return;
         }
@@ -559,6 +592,8 @@ export function useInboxProcessingController({
         selectedProjectId,
         showOrganizationStep,
         showProjectStep,
+        updateSelectedContexts,
+        updateSelectedTags,
     ]);
 
     const handleConvertToProject = useCallback(async () => {
@@ -626,12 +661,14 @@ export function useInboxProcessingController({
     }, [getInitialGuidedStep, goToStep]);
 
     const handleContextsInputChange = useCallback((value: string) => {
+        setContextsDraft(value);
         setSelectedContexts(parseTokenListInput(value, '@'));
-    }, []);
+    }, [setContextsDraft, setSelectedContexts]);
 
     const handleTagsInputChange = useCallback((value: string) => {
+        setTagsDraft(value);
         setSelectedTags(parseTokenListInput(value, '#'));
-    }, []);
+    }, [setSelectedTags, setTagsDraft]);
 
     const handleQuickSubmit = useCallback(async () => {
         handleScheduleTimeCommit();
@@ -706,7 +743,9 @@ export function useInboxProcessingController({
             setDelegateFollowUp,
             onSendDelegateRequest: handleSendDelegateRequest,
             selectedContexts,
+            contextsDraft,
             selectedTags,
+            tagsDraft,
             selectedEnergyLevel,
             setSelectedEnergyLevel,
             selectedAssignedTo,
