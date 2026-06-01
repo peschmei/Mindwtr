@@ -29,6 +29,15 @@ const baseProps = {
 };
 
 describe('SettingsCalendarPage', () => {
+    it('links to the calendar integration guide on the wiki', () => {
+        const { getByRole } = render(<SettingsCalendarPage {...baseProps} />);
+
+        expect(getByRole('link', { name: /Calendar integration guide/ })).toHaveAttribute(
+            'href',
+            'https://github.com/dongdongbh/Mindwtr/wiki/Calendar-Integration',
+        );
+    });
+
     it('offers a local ICS file picker when available', () => {
         const onChooseLocalCalendarFile = vi.fn();
         const { getByRole } = render(

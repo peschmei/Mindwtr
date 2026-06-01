@@ -1,11 +1,12 @@
 import '../polyfills';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Platform, SafeAreaView, StatusBar, Text, View } from 'react-native';
 import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
@@ -37,7 +38,17 @@ import { useRootLayoutStartup } from '@/hooks/root-layout/use-root-layout-startu
 import { useRootLayoutSyncEffects } from '@/hooks/root-layout/use-root-layout-sync-effects';
 import { ProjectNextActionPromptProvider } from '@/components/project-next-action-prompt';
 import { ThemedAlertProvider } from '@/components/themed-alert';
+import { MobileOnboardingFlow } from '@/components/MobileOnboardingFlow';
 import { applyAndroidSystemBars } from '@/lib/android-system-bars';
+import { isCloudKitAvailable } from '@/lib/cloudkit-sync';
+import {
+  readMobileOnboardingDismissed,
+  shouldOpenMobileFirstRunOnboarding,
+  subscribeMobileOnboardingEvent,
+  writeMobileOnboardingDismissed,
+} from '@/lib/mobile-onboarding-events';
+import { SYNC_BACKEND_KEY } from '@/lib/sync-constants';
+import { coerceSupportedBackend, resolveBackend } from '@/lib/sync-service-utils';
 
 let coreLoggerBridgeInstalled = false;
 
@@ -164,8 +175,17 @@ function RootLayoutContentInner() {
   const settingsLanguage = useTaskStore((state) => state.settings?.language);
   const settingsDateFormat = useTaskStore((state) => state.settings?.dateFormat);
   const settingsTimeFormat = useTaskStore((state) => state.settings?.timeFormat);
+  const seedGettingStarted = useTaskStore((state) => state.seedGettingStarted);
+  const visibleDataCount = useTaskStore((state) => (
+    state.tasks.length + state.projects.length + state.sections.length + state.areas.length
+  ));
   const firstRenderLogged = useRef(false);
   const { selectedAreaIdForNewTasks } = useMobileAreaFilter();
+  const [mobileOnboardingDismissed, setMobileOnboardingDismissed] = useState(false);
+  const [mobileOnboardingDismissalLoaded, setMobileOnboardingDismissalLoaded] = useState(false);
+  const [mobileOnboardingOpen, setMobileOnboardingOpen] = useState(false);
+  const [mobileOnboardingBusy, setMobileOnboardingBusy] = useState(false);
+  const [mobileOnboardingError, setMobileOnboardingError] = useState<string | null>(null);
 
   const resolveText = useCallback((key: string, fallback: string) => (
     translateWithFallback(t, key, fallback)
@@ -271,6 +291,138 @@ function RootLayoutContentInner() {
       systemLocale: getDeviceLocale(),
     });
   }, [language, settingsDateFormat, settingsLanguage, settingsTimeFormat]);
+
+  useEffect(() => {
+    let cancelled = false;
+    readMobileOnboardingDismissed()
+      .then((dismissed) => {
+        if (cancelled) return;
+        setMobileOnboardingDismissed(dismissed);
+      })
+      .finally(() => {
+        if (!cancelled) setMobileOnboardingDismissalLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => subscribeMobileOnboardingEvent(() => {
+    setMobileOnboardingBusy(false);
+    setMobileOnboardingError(null);
+    setMobileOnboardingOpen(true);
+  }), []);
+
+  useEffect(() => {
+    if (
+      !mobileOnboardingDismissalLoaded
+      || !dataReady
+      || mobileOnboardingDismissed
+      || visibleDataCount > 0
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    AsyncStorage.getItem(SYNC_BACKEND_KEY)
+      .then((rawBackend) => {
+        if (cancelled) return;
+        const syncBackend = coerceSupportedBackend(resolveBackend(rawBackend), isCloudKitAvailable());
+        if (shouldOpenMobileFirstRunOnboarding({
+          dataReady,
+          dismissed: mobileOnboardingDismissed,
+          syncBackend,
+          visibleDataCount,
+        })) {
+          setMobileOnboardingOpen(true);
+        }
+      })
+      .catch((error) => {
+        void logError(error, { scope: 'onboarding', extra: { step: 'readMobileSyncBackend' } });
+        if (cancelled) return;
+        if (shouldOpenMobileFirstRunOnboarding({
+          dataReady,
+          dismissed: mobileOnboardingDismissed,
+          syncBackend: 'off',
+          visibleDataCount,
+        })) {
+          setMobileOnboardingOpen(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dataReady,
+    mobileOnboardingDismissalLoaded,
+    mobileOnboardingDismissed,
+    visibleDataCount,
+  ]);
+
+  const dismissMobileOnboarding = useCallback(() => {
+    void writeMobileOnboardingDismissed();
+    setMobileOnboardingDismissed(true);
+    setMobileOnboardingOpen(false);
+    setMobileOnboardingError(null);
+  }, []);
+
+  const openOnboardingSync = useCallback(() => {
+    setMobileOnboardingOpen(false);
+    setMobileOnboardingError(null);
+    router.push({
+      pathname: '/settings',
+      params: { settingsScreen: 'sync', onboardingHandoff: '1' },
+    } as never);
+  }, [router]);
+
+  const openOnboardingImport = useCallback(() => {
+    setMobileOnboardingOpen(false);
+    setMobileOnboardingError(null);
+    router.push({
+      pathname: '/settings',
+      params: { settingsScreen: 'data', onboardingHandoff: '1' },
+    } as never);
+  }, [router]);
+
+  const startFreshOnboarding = useCallback(() => {
+    if (mobileOnboardingBusy) return;
+    setMobileOnboardingBusy(true);
+    setMobileOnboardingError(null);
+    seedGettingStarted()
+      .then((result) => {
+        if (!result.id) {
+          setMobileOnboardingError('Getting Started was not created. Try again or import your data instead.');
+          showToast({
+            message: 'Getting Started was not created.',
+            tone: 'info',
+          });
+          return;
+        }
+        dismissMobileOnboarding();
+        router.push({ pathname: '/projects-screen', params: { projectId: result.id } } as never);
+        showToast({
+          message: 'Getting Started is ready in Projects.',
+          tone: 'success',
+        });
+      })
+      .catch((error) => {
+        setMobileOnboardingError('Failed to create Getting Started onboarding. Try again, or use Import/Sync instead.');
+        showToast({
+          message: 'Failed to create Getting Started onboarding.',
+          tone: 'error',
+        });
+        void logError(error, { scope: 'onboarding', extra: { step: 'seedGettingStarted' } });
+      })
+      .finally(() => setMobileOnboardingBusy(false));
+  }, [
+    dismissMobileOnboarding,
+    mobileOnboardingBusy,
+    router,
+    seedGettingStarted,
+    showToast,
+  ]);
+
   useEffect(() => {
     if (!isFirstPaintReady) return;
     markStartupPhase('js.shell_ready');
@@ -374,6 +526,15 @@ function RootLayoutContentInner() {
         <StatusBar
           barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor={tc.bg}
+        />
+        <MobileOnboardingFlow
+          busy={mobileOnboardingBusy}
+          error={mobileOnboardingError}
+          isOpen={mobileOnboardingOpen}
+          onOpenImport={openOnboardingImport}
+          onOpenSync={openOnboardingSync}
+          onSkip={dismissMobileOnboarding}
+          onStartFresh={startFreshOnboarding}
         />
       </NavigationThemeProvider>
     </QuickCaptureProvider>

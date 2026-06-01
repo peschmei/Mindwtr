@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Pressable, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ChevronRight, type LucideIcon } from 'lucide-react-native';
+import { ChevronRight, ExternalLink as ExternalLinkIcon, type LucideIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -90,6 +90,42 @@ export function MenuItem({
                 )}
                 <ChevronRight color={tc.secondaryText} size={20} strokeWidth={2.2} />
             </View>
+        </TouchableOpacity>
+    );
+}
+
+export function SettingsGuideLink({
+    description = 'Opens the guide in your browser.',
+    style,
+    testID,
+    title,
+    url,
+}: {
+    description?: string;
+    style?: StyleProp<ViewStyle>;
+    testID?: string;
+    title: string;
+    url: string;
+}) {
+    const tc = useThemeColors();
+
+    return (
+        <TouchableOpacity
+            accessibilityHint="Opens an external guide in your browser."
+            accessibilityLabel={`${title}. ${description}`}
+            accessibilityRole="link"
+            activeOpacity={0.72}
+            onPress={() => {
+                void Linking.openURL(url);
+            }}
+            style={[
+                styles.guideLinkInline,
+                style,
+            ]}
+            testID={testID}
+        >
+            <Text style={[styles.guideLinkLabel, { color: tc.tint }]}>{title}</Text>
+            <ExternalLinkIcon color={tc.tint} size={15} strokeWidth={2.2} />
         </TouchableOpacity>
     );
 }

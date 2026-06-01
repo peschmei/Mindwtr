@@ -9,6 +9,13 @@ import { GtdSettingsScreen } from './gtd-settings-screen';
 const updateSettings = vi.fn().mockResolvedValue(undefined);
 const showToast = vi.fn();
 
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  default: {
+    getItem: vi.fn(async () => null),
+    setItem: vi.fn(async () => undefined),
+  },
+}));
+
 type MockStoreState = {
   settings: AppData['settings'];
   updateSettings: typeof updateSettings;
@@ -279,5 +286,15 @@ describe('GtdSettingsScreen task editor layout', () => {
     expect(onNavigate).toHaveBeenCalledWith('gtd-pomodoro');
     expect(onNavigate).toHaveBeenCalledWith('gtd-capture');
     expect(onNavigate).toHaveBeenCalledWith('gtd-inbox');
+  });
+
+  it('keeps the temporary manual onboarding trigger hidden by default', () => {
+    let tree!: renderer.ReactTestRenderer;
+
+    renderer.act(() => {
+      tree = renderer.create(<GtdSettingsScreen onNavigate={vi.fn()} screen="gtd" />);
+    });
+
+    expect(tree.root.findAllByProps({ testID: 'mobile-onboarding-test-trigger' })).toHaveLength(0);
   });
 });

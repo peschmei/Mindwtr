@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { safeFormatDate } from '@mindwtr/core';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 
 import { cn } from '../../../lib/utils';
+
+const OBSIDIAN_INTEGRATION_GUIDE_URL = 'https://github.com/dongdongbh/Mindwtr/wiki/Obsidian-Integration';
 
 type Labels = {
     obsidianVault: string;
@@ -95,18 +97,29 @@ export function SettingsObsidianSection({
     return (
         <div className="bg-card border border-border rounded-lg">
             <div className="p-4 flex items-start justify-between gap-4">
-                <button
-                    type="button"
-                    onClick={() => setOpen((prev) => !prev)}
-                    aria-expanded={open}
-                    className="flex-1 text-left flex items-center justify-between gap-4"
-                >
-                    <div className="min-w-0">
-                        <div className="text-sm font-medium">{t.obsidianVault}</div>
-                        <p className="text-xs text-muted-foreground mt-1">{t.obsidianVaultDesc}</p>
-                    </div>
-                    {open ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-                </button>
+                <div className="min-w-0 flex-1 space-y-2">
+                    <button
+                        type="button"
+                        onClick={() => setOpen((prev) => !prev)}
+                        aria-expanded={open}
+                        className="w-full text-left flex items-center justify-between gap-4"
+                    >
+                        <div className="min-w-0">
+                            <div className="text-sm font-medium">{t.obsidianVault}</div>
+                            <p className="text-xs text-muted-foreground mt-1">{t.obsidianVaultDesc}</p>
+                        </div>
+                        {open ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                    </button>
+                    <a
+                        href={OBSIDIAN_INTEGRATION_GUIDE_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                        Obsidian integration guide
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    </a>
+                </div>
                 <button
                     type="button"
                     role="switch"

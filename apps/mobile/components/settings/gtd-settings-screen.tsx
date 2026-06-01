@@ -18,6 +18,7 @@ import {
     type TaskEditorPresetId,
 } from '@/components/task-edit/task-edit-modal.utils';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { dispatchMobileOnboardingEvent } from '@/lib/mobile-onboarding-events';
 import { logSettingsError } from '@/lib/settings-utils';
 import { useToast } from '@/contexts/toast-context';
 import {
@@ -52,6 +53,8 @@ type GtdScreen =
 
 type PomodoroSettings = NonNullable<GtdSettings['pomodoro']>;
 type InboxProcessingSettings = NonNullable<GtdSettings['inboxProcessing']>;
+
+const SHOW_TEMP_ONBOARDING_TRIGGER = false;
 
 export function GtdSettingsScreen({
     onNavigate,
@@ -494,6 +497,26 @@ export function GtdSettingsScreen({
                             { testID: 'gtd-nav-inbox' }
                         )}
                     </View>
+
+                    {SHOW_TEMP_ONBOARDING_TRIGGER ? (
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            activeOpacity={0.75}
+                            onPress={dispatchMobileOnboardingEvent}
+                            style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}
+                            testID="mobile-onboarding-test-trigger"
+                        >
+                            <View style={styles.settingRow}>
+                                <View style={styles.settingInfo}>
+                                    <Text style={[styles.settingLabel, { color: tc.text }]}>Temporary onboarding test</Text>
+                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
+                                        Opens the mobile first-run onboarding flow so you can test Sync, Import, and Start fresh.
+                                    </Text>
+                                </View>
+                                <Text style={[styles.linkText, { color: tc.tint }]}>Open</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ) : null}
                 </ScrollView>
             </SafeAreaView>
         );

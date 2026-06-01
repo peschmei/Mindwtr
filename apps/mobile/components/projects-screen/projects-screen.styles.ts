@@ -97,7 +97,11 @@ export const projectsScreenStyles = StyleSheet.create({
         marginRight: 12,
     },
     projectDetailScroll: {
+        flexGrow: 1,
         paddingBottom: 24,
+    },
+    projectDetailRoot: {
+        flex: 1,
     },
     completedToggleButton: {
         minHeight: 34,

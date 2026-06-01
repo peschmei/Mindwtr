@@ -37,8 +37,10 @@ import { maskCalendarUrl } from '@/lib/settings-utils';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
-import { SettingsTopBar } from './settings.shell';
+import { SettingsGuideLink, SettingsTopBar } from './settings.shell';
 import { styles } from './settings.styles';
+
+const CALENDAR_INTEGRATION_GUIDE_URL = 'https://github.com/dongdongbh/Mindwtr/wiki/Calendar-Integration';
 
 type CollapsibleSettingHeaderProps = {
     title: string;
@@ -736,6 +738,13 @@ export function CalendarSettingsScreen() {
                     {tr('settings.calendarMobile.icsSubscriptions')}
                 </Text>
                 <Text style={[styles.description, { color: tc.secondaryText }]}>{t('settings.calendarDesc')}</Text>
+
+                <SettingsGuideLink
+                    title="Calendar setup guide"
+                    description="Setup notes for device calendars, push-to-calendar, and ICS subscriptions."
+                    url={CALENDAR_INTEGRATION_GUIDE_URL}
+                    testID="calendar-guide-link"
+                />
 
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
                     <View style={styles.inputGroup}>

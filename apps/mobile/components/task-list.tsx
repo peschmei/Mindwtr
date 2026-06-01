@@ -975,6 +975,7 @@ function TaskListComponent({
         isHighlighted={item.id === highlightTaskId}
         hideStatusBadge={hideStatusBadgeForList}
         hideChecklistProgress={hideChecklistProgressForList}
+        hideProjectMeta={Boolean(projectId)}
         onProjectPress={projectId ? undefined : openProjectScreen}
         onContextPress={openContextsScreen}
         onTagPress={openContextsScreen}
@@ -1015,6 +1016,7 @@ function TaskListComponent({
               disableSwipe
               interactionDisabled
               hideChecklistProgress={hideChecklistProgressForList}
+              hideProjectMeta={Boolean(projectId)}
             />
           </ErrorBoundary>
         </View>

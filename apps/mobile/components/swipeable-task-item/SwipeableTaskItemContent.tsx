@@ -24,6 +24,7 @@ interface SwipeableTaskItemContentProps {
     checklistProgress: { completed: number; percent: number; total: number } | null;
     hideChecklistProgress: boolean;
     hideContexts: boolean;
+    hideProjectMeta: boolean;
     hideStatusBadge: boolean;
     isDark: boolean;
     isHighlighted: boolean;
@@ -60,6 +61,7 @@ export function SwipeableTaskItemContent({
     checklistProgress,
     hideChecklistProgress,
     hideContexts,
+    hideProjectMeta,
     hideStatusBadge,
     isDark,
     isHighlighted,
@@ -187,7 +189,7 @@ export function SwipeableTaskItemContent({
         );
     };
 
-    if (project) {
+    if (!hideProjectMeta && project) {
         addMetaPart(
             renderMetaItem({
                 key: 'project',

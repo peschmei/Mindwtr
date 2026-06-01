@@ -1191,6 +1191,12 @@ describe('TaskStore', () => {
         ]);
         expect(starterTasks.every((task) => task.status === 'next')).toBe(true);
         expect(starterTasks.every((task) => task.taskMode === 'list')).toBe(true);
+        expect(starterTasks.every((task) => task.checklist?.length === 3)).toBe(true);
+        expect(starterTasks[0].checklist?.map((item) => item.title)).toEqual([
+            'Open Inbox',
+            'Tap Process Inbox',
+            'Clarify one sample item into a next action or project',
+        ]);
         expect(starterTasks[3].checklist?.map((item) => item.title)).toContain('Open Settings -> Sync');
         expect(starterTasks[2].isFocusedToday).toBe(true);
 
@@ -1290,6 +1296,56 @@ describe('TaskStore', () => {
             'Import tasks from another app',
             'Run your first weekly review',
         ]);
+    });
+
+    it('repairs duplicated getting started lessons from older seed copy', async () => {
+        const existingProject = createStoreProject('starter-project', {
+            title: 'Getting Started',
+        });
+        const legacyProcessTask = createStoreTask('legacy-process', {
+            title: 'Process your first inbox item',
+            status: 'next',
+            projectId: existingProject.id,
+            order: 0,
+            orderNum: 0,
+        });
+        const currentProcessTask = createStoreTask('current-process', {
+            title: 'Start here: process your first inbox item',
+            status: 'next',
+            taskMode: 'list',
+            projectId: existingProject.id,
+            order: 1,
+            orderNum: 1,
+            checklist: [
+                { id: 'check-1', title: 'Open Inbox', isCompleted: true },
+            ],
+        });
+        useTaskStore.setState({
+            tasks: [legacyProcessTask, currentProcessTask],
+            projects: [existingProject],
+            _allTasks: [legacyProcessTask, currentProcessTask],
+            _allProjects: [existingProject],
+        });
+
+        const result = await useTaskStore.getState().seedGettingStarted();
+        await flushPendingSave();
+
+        expect(result).toEqual({ success: true, id: existingProject.id });
+        const visibleStarterTasks = useTaskStore.getState().tasks
+            .filter((task) => task.projectId === existingProject.id)
+            .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+        expect(visibleStarterTasks.map((task) => task.title)).toEqual([
+            'Start here: process your first inbox item',
+            'Try quick capture with a context and date',
+            "Star up to 3 tasks for Today's Focus",
+            'Set up sync across your devices',
+            'Import tasks from another app',
+            'Run your first weekly review',
+        ]);
+        expect(visibleStarterTasks.filter((task) => task.title === 'Start here: process your first inbox item')).toHaveLength(1);
+        expect(visibleStarterTasks[0].checklist?.[0]?.isCompleted).toBe(true);
+        expect(visibleStarterTasks.every((task) => task.checklist?.length === 3)).toBe(true);
+        expect(useTaskStore.getState()._allTasks.find((task) => task.id === legacyProcessTask.id)?.deletedAt).toBeTruthy();
     });
 
     it('supports a basic task lifecycle', async () => {

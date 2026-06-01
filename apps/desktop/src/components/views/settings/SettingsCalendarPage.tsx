@@ -1,7 +1,10 @@
 import type { SystemCalendarPermissionStatus, SystemCalendarPushTarget } from '../../../lib/system-calendar';
 import type { ExternalCalendarSubscription } from '@mindwtr/core';
+import { ExternalLink } from 'lucide-react';
 
 import { cn } from '../../../lib/utils';
+
+const CALENDAR_INTEGRATION_GUIDE_URL = 'https://github.com/dongdongbh/Mindwtr/wiki/Calendar-Integration';
 
 type Labels = {
     calendar: string;
@@ -179,6 +182,15 @@ export function SettingsCalendarPage({
                     <div className="text-sm font-medium">{t.calendar}</div>
                     <p className="text-xs text-muted-foreground">{t.calendarDesc}</p>
                 </div>
+                <a
+                    href={CALENDAR_INTEGRATION_GUIDE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                    Calendar integration guide
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
 
                 <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1">

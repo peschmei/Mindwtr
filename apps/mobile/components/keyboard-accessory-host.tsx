@@ -20,7 +20,13 @@ const styles = StyleSheet.create({
 
 let nextPortalId = 0;
 
-export function KeyboardAccessoryHost({ children }: { children: React.ReactNode }) {
+export function KeyboardAccessoryHost({
+    backgroundColor,
+    children,
+}: {
+    backgroundColor?: string;
+    children: React.ReactNode;
+}) {
     const [nodes, setNodes] = React.useState<Array<{ key: string; node: React.ReactNode }>>([]);
 
     const mount = React.useCallback((key: string, node: React.ReactNode) => {
@@ -51,7 +57,7 @@ export function KeyboardAccessoryHost({ children }: { children: React.ReactNode 
 
     return (
         <KeyboardAccessoryHostContext.Provider value={value}>
-            <View style={styles.container}>
+            <View style={[styles.container, backgroundColor ? { backgroundColor } : null]}>
                 {children}
                 <View pointerEvents="box-none" style={styles.overlay}>
                     {nodes.map((entry) => (

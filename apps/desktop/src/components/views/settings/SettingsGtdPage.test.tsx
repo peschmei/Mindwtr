@@ -9,7 +9,7 @@ describe('SettingsGtdPage', () => {
         const updateSettings = vi.fn().mockResolvedValue(undefined);
         const showSaved = vi.fn();
 
-        const { getByRole } = render(
+        const { getByRole, queryByText } = render(
             <SettingsGtdPage
                 t={labelFallback.en}
                 language="en"
@@ -20,6 +20,7 @@ describe('SettingsGtdPage', () => {
             />
         );
 
+        expect(queryByText('Temporary onboarding test')).not.toBeInTheDocument();
         fireEvent.click(getByRole('button', { name: /task editor layout/i }));
         fireEvent.click(getByRole('button', { name: /pop-up/i }));
 

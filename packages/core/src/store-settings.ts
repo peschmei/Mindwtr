@@ -129,12 +129,179 @@ const normalizeAreaForLoad = (area: Area, fallbackOrder: number, nowIso: string)
 };
 
 type StarterTaskTemplate = {
+    key: StarterTaskKey;
     title: string;
     description: string;
     checklist: string[];
     contexts?: string[];
     tags?: string[];
     isFocusedToday?: boolean;
+};
+
+type StarterTaskKey =
+    | 'process-inbox'
+    | 'quick-capture'
+    | 'focus'
+    | 'weekly-review'
+    | 'sync'
+    | 'import';
+
+const normalizeStarterTaskTitle = (title: string): string => title.trim().toLowerCase();
+
+const STARTER_TASK_TEMPLATES: StarterTaskTemplate[] = [
+    {
+        key: 'process-inbox',
+        title: 'Start here: process your first inbox item',
+        description: 'Turn one loose thought into a clear next action, project, or someday item.',
+        checklist: [
+            'Open Inbox',
+            'Tap Process Inbox',
+            'Clarify one sample item into a next action or project',
+        ],
+    },
+    {
+        key: 'quick-capture',
+        title: 'Try quick capture with a context and date',
+        description: 'Capture a task and light structure in one line.',
+        checklist: [
+            'Tap the capture button',
+            'Try: Call Alex @phone /due:tomorrow',
+            'Keep dates for real deadlines or ticklers',
+        ],
+        contexts: ['@computer'],
+    },
+    {
+        key: 'focus',
+        title: "Star up to 3 tasks for Today's Focus",
+        description: 'Pick the few actions you can commit to now.',
+        checklist: [
+            'Open Focus',
+            'Use the star to pick your top actions',
+            'Defer an action when it should hide until later',
+        ],
+        contexts: ['@computer'],
+        isFocusedToday: true,
+    },
+    {
+        key: 'sync',
+        title: 'Set up sync across your devices',
+        description: 'Choose one sync method when you want desktop and mobile to share data.',
+        checklist: [
+            'Open Settings -> Sync',
+            'Choose Dropbox, iCloud, WebDAV, File Sync, or self-hosted',
+            'Run Test connection when available, then Sync now',
+        ],
+    },
+    {
+        key: 'import',
+        title: 'Import tasks from another app',
+        description: 'Bring in existing tasks before you reorganize them in Mindwtr.',
+        checklist: [
+            'Open Settings -> Data',
+            'Import Todoist, DGT GTD, OmniFocus, or a backup file',
+            'Review imported items from Inbox',
+        ],
+    },
+    {
+        key: 'weekly-review',
+        title: 'Run your first weekly review',
+        description: 'Refresh your lists so the system stays trustworthy.',
+        checklist: [
+            'Open Review',
+            'Clarify Inbox items',
+            'Promote the next few actions and leave the rest quiet',
+        ],
+    },
+];
+
+const STARTER_TASK_KEY_BY_TITLE = new Map<string, StarterTaskKey>([
+    ...STARTER_TASK_TEMPLATES.map((template): [string, StarterTaskKey] => [
+        normalizeStarterTaskTitle(template.title),
+        template.key,
+    ]),
+    ['process your first inbox item', 'process-inbox'],
+]);
+
+const getStarterTaskKey = (task: Task): StarterTaskKey | null =>
+    STARTER_TASK_KEY_BY_TITLE.get(normalizeStarterTaskTitle(task.title)) ?? null;
+
+const getStarterTaskSortValue = (task: Task): number => {
+    if (Number.isFinite(task.order)) return task.order as number;
+    if (Number.isFinite(task.orderNum)) return task.orderNum as number;
+    return Number.MAX_SAFE_INTEGER;
+};
+
+const buildStarterChecklist = (
+    template: StarterTaskTemplate,
+    existingChecklist: Task['checklist']
+): Task['checklist'] => {
+    if (template.checklist.length === 0) return undefined;
+    const existingByTitle = new Map(
+        (existingChecklist ?? []).map((item) => [normalizeStarterTaskTitle(item.title), item])
+    );
+    return template.checklist.map((title, index) => {
+        const existingItem = existingByTitle.get(normalizeStarterTaskTitle(title)) ?? existingChecklist?.[index];
+        return {
+            id: existingItem?.id ?? uuidv4(),
+            title,
+            isCompleted: existingItem?.isCompleted ?? false,
+        };
+    });
+};
+
+const arrayShallowEqual = (left: readonly string[] = [], right: readonly string[] = []): boolean =>
+    left.length === right.length && left.every((value, index) => value === right[index]);
+
+const checklistShallowEqual = (left: Task['checklist'], right: Task['checklist']): boolean => {
+    const leftItems = left ?? [];
+    const rightItems = right ?? [];
+    return leftItems.length === rightItems.length && leftItems.every((item, index) => {
+        const other = rightItems[index];
+        return Boolean(other)
+            && item.id === other.id
+            && item.title === other.title
+            && item.isCompleted === other.isCompleted;
+    });
+};
+
+const normalizeExistingStarterTask = (
+    task: Task,
+    template: StarterTaskTemplate,
+    order: number,
+    nowIso: string,
+    deviceId?: string
+): Task => {
+    const nextChecklist = buildStarterChecklist(template, task.checklist);
+    const nextTaskMode = template.checklist.length > 0 ? 'list' : 'task';
+    const nextIsFocusedToday = task.isFocusedToday === undefined ? template.isFocusedToday : task.isFocusedToday;
+    const changed =
+        task.title !== template.title
+        || task.taskMode !== nextTaskMode
+        || task.description !== template.description
+        || task.order !== order
+        || task.orderNum !== order
+        || task.isFocusedToday !== nextIsFocusedToday
+        || !arrayShallowEqual(task.tags, template.tags ?? [])
+        || !arrayShallowEqual(task.contexts, template.contexts ?? [])
+        || !checklistShallowEqual(task.checklist, nextChecklist);
+
+    if (!changed) return task;
+
+    return {
+        ...task,
+        title: template.title,
+        taskMode: nextTaskMode,
+        tags: template.tags ?? [],
+        contexts: template.contexts ?? [],
+        checklist: nextChecklist,
+        description: template.description,
+        order,
+        orderNum: order,
+        isFocusedToday: nextIsFocusedToday,
+        updatedAt: nowIso,
+        rev: nextRevision(task.rev),
+        ...(deviceId ? { revBy: deviceId } : {}),
+    };
 };
 
 const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string): Pick<AppData, 'projects' | 'tasks'> => {
@@ -153,77 +320,20 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
         createdAt: nowIso,
         updatedAt: nowIso,
     };
-    const starterTasks: StarterTaskTemplate[] = [
-        {
-            title: 'Start here: process your first inbox item',
-            description: 'Inbox is for capture. Processing turns loose thoughts into next actions, someday items, projects, or reference.',
-            checklist: [
-                'Open Inbox',
-                'Tap Process Inbox',
-                'Clarify one sample item into a next action or project',
-            ],
-        },
-        {
-            title: 'Try quick capture with a context and date',
-            description: 'Quick Add can capture the task and light structure in one line.',
-            checklist: [
-                'Tap the capture button',
-                'Try: Call Alex @phone /due:tomorrow',
-                'Keep dates for real deadlines or ticklers',
-            ],
-            contexts: ['@computer'],
-        },
-        {
-            title: "Star up to 3 tasks for Today's Focus",
-            description: 'Focus is for the few actions you can commit to now. Everything else can stay as a normal next action.',
-            checklist: [
-                'Open Focus',
-                'Use the star to pick your top actions',
-                'Defer an action when it should hide until later',
-            ],
-            contexts: ['@computer'],
-            isFocusedToday: true,
-        },
-        {
-            title: 'Set up sync across your devices',
-            description: 'Sync is optional. Choose one method so desktop and mobile share the same trusted system.',
-            checklist: [
-                'Open Settings -> Sync',
-                'Choose Dropbox for the easiest cloud setup, iCloud for Apple-only devices, or WebDAV/Self-hosted for custom storage',
-                'Run Test connection when available, then Sync now',
-            ],
-        },
-        {
-            title: 'Import tasks from another app',
-            description: 'If you already have a system, import first so the rest of setup happens around real work.',
-            checklist: [
-                'Open Settings -> Data',
-                'Import Todoist, DGT GTD, OmniFocus, Apple Reminders, or a backup file',
-                'Review imported items from Inbox',
-            ],
-        },
-        {
-            title: 'Run your first weekly review',
-            description: 'Reflect keeps the system trustworthy without turning every task into an alarm.',
-            checklist: [
-                'Open Review',
-                'Clarify Inbox items',
-                'Promote the next few actions and leave the rest quiet',
-            ],
-        },
-    ];
-    const tasks: Task[] = starterTasks.map((template, index) => ({
+    const tasks: Task[] = STARTER_TASK_TEMPLATES.map((template, index) => ({
         id: uuidv4(),
         title: template.title,
         status: 'next',
-        taskMode: 'list',
+        taskMode: template.checklist.length > 0 ? 'list' : 'task',
         tags: template.tags ?? [],
         contexts: template.contexts ?? [],
-        checklist: template.checklist.map((title) => ({
-            id: uuidv4(),
-            title,
-            isCompleted: false,
-        })),
+        ...(template.checklist.length > 0 ? {
+            checklist: template.checklist.map((title) => ({
+                id: uuidv4(),
+                title,
+                isCompleted: false,
+            })),
+        } : {}),
         description: template.description,
         projectId,
         order: index,
@@ -308,6 +418,42 @@ export const createSettingsActions = ({
                 ...starterTemplateProject,
                 order: maxProjectOrder + 1,
             };
+            const starterTasksByKey = new Map<StarterTaskKey, Task[]>();
+            for (const task of state._allTasks) {
+                if (task.deletedAt || task.projectId !== starterProject.id) continue;
+                const starterKey = getStarterTaskKey(task);
+                if (!starterKey) continue;
+                const tasksForKey = starterTasksByKey.get(starterKey) ?? [];
+                tasksForKey.push(task);
+                starterTasksByKey.set(starterKey, tasksForKey);
+            }
+            const starterTaskUpdates = new Map<string, Task>();
+            const existingStarterKeys = new Set<StarterTaskKey>();
+            for (const [index, template] of STARTER_TASK_TEMPLATES.entries()) {
+                const candidates = (starterTasksByKey.get(template.key) ?? [])
+                    .slice()
+                    .sort((left, right) => getStarterTaskSortValue(left) - getStarterTaskSortValue(right));
+                if (candidates.length === 0) continue;
+
+                existingStarterKeys.add(template.key);
+                const currentTitle = normalizeStarterTaskTitle(template.title);
+                const preferredCandidate = candidates.find((task) => normalizeStarterTaskTitle(task.title) === currentTitle)
+                    ?? candidates[0];
+                const normalizedTask = normalizeExistingStarterTask(preferredCandidate, template, index, nowIso, deviceState.deviceId);
+                if (normalizedTask !== preferredCandidate) {
+                    starterTaskUpdates.set(preferredCandidate.id, normalizedTask);
+                }
+                for (const duplicate of candidates) {
+                    if (duplicate.id === preferredCandidate.id) continue;
+                    starterTaskUpdates.set(duplicate.id, {
+                        ...duplicate,
+                        deletedAt: duplicate.deletedAt ?? nowIso,
+                        updatedAt: nowIso,
+                        rev: nextRevision(duplicate.rev),
+                        ...(deviceState.deviceId ? { revBy: deviceState.deviceId } : {}),
+                    });
+                }
+            }
             const activeTaskTitleKey = (task: Task) => `${task.status}:${task.projectId ?? ''}:${task.title.trim().toLowerCase()}`;
             const existingActiveTaskKeys = new Set(
                 state._allTasks
@@ -319,15 +465,22 @@ export const createSettingsActions = ({
                     ...task,
                     projectId: task.projectId === starterTemplateProject.id ? starterProject.id : task.projectId,
                 }))
-                .filter((task) => !existingActiveTaskKeys.has(activeTaskTitleKey(task)));
+                .filter((task) => {
+                    const starterKey = task.projectId === starterProject.id ? getStarterTaskKey(task) : null;
+                    if (starterKey && existingStarterKeys.has(starterKey)) return false;
+                    return !existingActiveTaskKeys.has(activeTaskTitleKey(task));
+                });
 
             projectId = starterProject.id;
-            if (existingProject && tasksToAdd.length === 0 && !deviceState.updated) {
+            if (existingProject && tasksToAdd.length === 0 && starterTaskUpdates.size === 0 && !deviceState.updated) {
                 return state;
             }
 
             const nextProjects = existingProject ? state._allProjects : [...state._allProjects, starterProject];
-            const nextTasks = tasksToAdd.length > 0 ? [...state._allTasks, ...tasksToAdd] : state._allTasks;
+            const repairedTasks = starterTaskUpdates.size > 0
+                ? state._allTasks.map((task) => starterTaskUpdates.get(task.id) ?? task)
+                : state._allTasks;
+            const nextTasks = tasksToAdd.length > 0 ? [...repairedTasks, ...tasksToAdd] : repairedTasks;
 
             snapshot = buildSaveSnapshot(state, {
                 tasks: nextTasks,

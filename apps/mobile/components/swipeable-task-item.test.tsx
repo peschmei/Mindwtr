@@ -450,6 +450,46 @@ describe('SwipeableTaskItem', () => {
     expect(onTagPress).toHaveBeenCalledWith('#urgent');
   });
 
+  it('can hide project meta when the task is already shown inside that project', () => {
+    storeState.projects = [
+      { id: 'project-1', title: 'Mindwtr', areaId: undefined },
+    ];
+
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(
+        <SwipeableTaskItem
+          task={{
+            id: 'task-1',
+            title: 'Plan release',
+            status: 'next',
+            projectId: 'project-1',
+            contexts: ['@work'],
+            tags: [],
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          } as any}
+          isDark={false}
+          tc={{
+            taskItemBg: '#111111',
+            border: '#222222',
+            text: '#ffffff',
+            secondaryText: '#999999',
+            tint: '#3b82f6',
+            warning: '#f59e0b',
+          } as any}
+          onPress={vi.fn()}
+          onStatusChange={vi.fn()}
+          onDelete={vi.fn()}
+          hideProjectMeta
+        />
+      );
+    });
+
+    expect(() => tree.root.find((node) => node.props.accessibilityLabel === 'Open project Mindwtr')).toThrow();
+    expect(hasText(tree, '@work')).toBe(true);
+  });
+
   it('hides stale task age when the appearance setting is off by default', () => {
     let tree!: renderer.ReactTestRenderer;
     renderer.act(() => {

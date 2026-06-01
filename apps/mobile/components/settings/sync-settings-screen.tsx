@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -49,8 +50,11 @@ import { SyncSelfHostedBackendPanel } from './sync-settings-selfhosted-panel';
 import { SyncWebDavBackendPanel } from './sync-settings-webdav-panel';
 import { useSyncSettingsBackupActions } from './use-sync-settings-backup-actions';
 import { useSyncSettingsTransportActions, type CloudKitAccountStatus } from './use-sync-settings-transport-actions';
-import { SettingsTopBar } from './settings.shell';
+import { SettingsGuideLink, SettingsTopBar } from './settings.shell';
 import { styles } from './settings.styles';
+
+const DATA_AND_SYNC_GUIDE_URL = 'https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync';
+const IMPORT_GUIDE_URL = `${DATA_AND_SYNC_GUIDE_URL}#imports-and-migrations`;
 
 type SettingsScreenMode = 'sync' | 'data';
 type VisibleSyncBackendOption = 'off' | 'file' | 'dropbox' | 'webdav' | 'selfhosted' | 'cloudkit';
@@ -60,7 +64,14 @@ type VisibleSyncBackendGroup = {
     title: string;
 };
 
-function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
+function SyncSettingsView({
+    mode,
+    onboardingHandoff = false,
+}: {
+    mode: SettingsScreenMode;
+    onboardingHandoff?: boolean;
+}) {
+    const router = useRouter();
     const tc = useThemeColors();
     const { showToast } = useToast();
     const { tr, t } = useSettingsLocalization();
@@ -72,6 +83,7 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
         areas,
         settings,
         addTask,
+        seedGettingStarted,
         updateSettings,
     } = useTaskStore();
     const extraConfig = Constants.expoConfig?.extra as MobileExtraConfig | undefined;
@@ -90,6 +102,7 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
     const [syncOptionsOpen, setSyncOptionsOpen] = useState(false);
     const [syncHistoryExpanded, setSyncHistoryExpanded] = useState(false);
     const [backupAction, setBackupAction] = useState<null | 'export' | 'restore' | 'import' | 'snapshot'>(null);
+    const [gettingStartedBusy, setGettingStartedBusy] = useState(false);
     const [recoverySnapshots, setRecoverySnapshots] = useState<string[]>([]);
     const [recoverySnapshotsOpen, setRecoverySnapshotsOpen] = useState(false);
     const [isLoadingRecoverySnapshots, setIsLoadingRecoverySnapshots] = useState(false);
@@ -423,12 +436,87 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
         supportsNativeICloudSync,
         t,
     });
+    const isGettingStartedActionBusy = gettingStartedBusy || isBackupBusy || isSyncing;
     const isScheduledBackgroundSyncBackend = syncBackend === 'webdav' || syncBackend === 'cloud' || syncBackend === 'cloudkit';
     const cloudKitStatusDetails = getCloudKitStatusDetails(cloudKitAccountStatus);
     const isCloudSyncSelected = syncBackend === 'cloud' || syncBackend === 'cloudkit';
     const isSelfHostedSyncSelected = syncBackend === 'cloud' && (cloudProvider === 'selfhosted' || isFossBuild);
     const isDropboxSyncSelected = syncBackend === 'cloud' && cloudProvider === 'dropbox' && !isFossBuild;
     const isCloudKitSyncSelected = syncBackend === 'cloudkit' && cloudProvider === 'cloudkit' && supportsNativeICloudSync;
+    const addGettingStartedContent = useCallback((options?: { openProject?: boolean }) => {
+        if (isGettingStartedActionBusy) return;
+        setGettingStartedBusy(true);
+        seedGettingStarted()
+            .then((result) => {
+                if (!result.id) {
+                    showToast({
+                        message: 'Getting Started content was not created.',
+                        tone: 'info',
+                    });
+                    return;
+                }
+                if (options?.openProject) {
+                    router.push({ pathname: '/projects-screen', params: { projectId: result.id } } as never);
+                }
+                showToast({
+                    message: 'Getting Started content is ready in Projects.',
+                    tone: 'success',
+                    actionLabel: options?.openProject ? undefined : t('common.open'),
+                    onAction: options?.openProject
+                        ? undefined
+                        : () => {
+                            router.push({ pathname: '/projects-screen', params: { projectId: result.id } } as never);
+                        },
+                });
+            })
+            .catch((error) => {
+                logSettingsError(error);
+                showToast({
+                    message: 'Failed to add Getting Started content.',
+                    tone: 'error',
+                });
+            })
+            .finally(() => setGettingStartedBusy(false));
+    }, [isGettingStartedActionBusy, router, seedGettingStarted, showToast, t]);
+
+    const handleAddGettingStartedContent = useCallback((options?: { openProject?: boolean }) => {
+        addGettingStartedContent(options);
+    }, [addGettingStartedContent]);
+    const onboardingHandoffCard = onboardingHandoff ? (
+        <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginBottom: 12 }]}>
+            <View style={styles.settingRowColumn}>
+                <Text style={[styles.settingLabel, { color: tc.text }]}>Continue setup</Text>
+                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
+                    When you are done here, you can still add the guided Getting Started project and sample inbox items.
+                </Text>
+                <TouchableOpacity
+                    accessibilityRole="button"
+                    activeOpacity={0.78}
+                    disabled={isGettingStartedActionBusy}
+                    onPress={() => handleAddGettingStartedContent({ openProject: true })}
+                    style={[
+                        styles.backendOption,
+                        {
+                            alignSelf: 'flex-start',
+                            backgroundColor: isGettingStartedActionBusy ? tc.filterBg : tc.tint,
+                            borderColor: isGettingStartedActionBusy ? tc.border : tc.tint,
+                            marginTop: 12,
+                        },
+                    ]}
+                    testID="mobile-onboarding-start-fresh-handoff"
+                >
+                    <Text
+                        style={[
+                            styles.backendOptionText,
+                            { color: isGettingStartedActionBusy ? tc.secondaryText : '#FFFFFF' },
+                        ]}
+                    >
+                        {gettingStartedBusy ? t('common.loading') : 'Start fresh'}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    ) : null;
     const getBackendOptionLabel = useCallback((option: VisibleSyncBackendOption): string => {
         switch (option) {
             case 'off':
@@ -514,6 +602,7 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
         <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['bottom']}>
             <SettingsTopBar title={mode === 'sync' ? t('settings.sync') : dataLabel} />
             <ScrollView style={styles.scrollView} contentContainerStyle={scrollContentStyle}>
+                {onboardingHandoffCard}
                 {mode === 'sync' ? (
                     <>
                         <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginBottom: 12 }]}>
@@ -578,6 +667,13 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
                                 )}
                             </View>
                         </View>
+
+                        <SettingsGuideLink
+                            title="Data & Sync setup guide"
+                            description="Setup notes for Dropbox, iCloud, WebDAV, File Sync, and recovery."
+                            url={DATA_AND_SYNC_GUIDE_URL}
+                            testID="sync-guide-link"
+                        />
 
                         {syncBackend === 'off' && (
                             <View style={[styles.helpBox, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
@@ -702,6 +798,13 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
                     </>
                 ) : (
                     <>
+                        <SettingsGuideLink
+                            title="Import setup guide"
+                            description="Supported Todoist, DGT GTD, OmniFocus, Apple Reminders, and backup import paths."
+                            url={IMPORT_GUIDE_URL}
+                            testID="import-guide-link"
+                        />
+
                         <SyncBackupSection
                             backupAction={backupAction}
                             handleBackup={() => void handleBackup()}
@@ -715,6 +818,29 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
                             t={t}
                             tc={tc}
                         />
+
+                        <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 16 }]}>
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                activeOpacity={0.75}
+                                disabled={isGettingStartedActionBusy}
+                                onPress={() => handleAddGettingStartedContent()}
+                                style={[styles.settingRow, { opacity: isGettingStartedActionBusy ? 0.58 : 1 }]}
+                                testID="mobile-add-getting-started-content"
+                            >
+                                <View style={styles.settingInfo}>
+                                    <Text style={[styles.settingLabel, { color: tc.text }]}>
+                                        Add Getting Started content
+                                    </Text>
+                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
+                                        Re-add the guided starter project and sample inbox items without duplicating existing starter content.
+                                    </Text>
+                                </View>
+                                <Text style={[styles.linkText, { color: isGettingStartedActionBusy ? tc.secondaryText : tc.tint }]}>
+                                    {gettingStartedBusy ? t('common.loading') : t('common.add')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
 
                         <AppleRemindersImportSection
                             addTask={addTask}
@@ -764,10 +890,10 @@ function SyncSettingsView({ mode }: { mode: SettingsScreenMode }) {
     );
 }
 
-export function SyncSettingsScreen() {
-    return <SyncSettingsView mode="sync" />;
+export function SyncSettingsScreen({ onboardingHandoff = false }: { onboardingHandoff?: boolean }) {
+    return <SyncSettingsView mode="sync" onboardingHandoff={onboardingHandoff} />;
 }
 
-export function DataSettingsScreen() {
-    return <SyncSettingsView mode="data" />;
+export function DataSettingsScreen({ onboardingHandoff = false }: { onboardingHandoff?: boolean }) {
+    return <SyncSettingsView mode="data" onboardingHandoff={onboardingHandoff} />;
 }

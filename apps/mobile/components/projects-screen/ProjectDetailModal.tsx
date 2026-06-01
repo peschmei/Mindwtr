@@ -91,15 +91,17 @@ type ProjectDetailModalProps = {
 };
 
 function ProjectDetailScrollFrame({
+    backgroundColor,
     children,
     reorderMode,
 }: {
+    backgroundColor: string;
     children: React.ReactNode;
     reorderMode: boolean;
 }) {
     const scrollProps = {
-        style: { flex: 1 },
-        contentContainerStyle: styles.projectDetailScroll,
+        style: [{ flex: 1 }, { backgroundColor }],
+        contentContainerStyle: [styles.projectDetailScroll, { backgroundColor }],
         keyboardShouldPersistTaps: 'always' as const,
     };
 
@@ -236,14 +238,15 @@ export function ProjectDetailModal({
             visible={overlayVisible}
             animationType="slide"
             presentationStyle={presentationStyle}
+            transparent={false}
             allowSwipeDismissal
             onRequestClose={closeProjectDetail}
         >
             {/* Android Modal content needs its own gesture root; the screen root does not cover Modal.
                 https://docs.swmansion.com/react-native-gesture-handler/docs/fundamentals/installation/#android */}
             <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardAccessoryHost>
-                    <SafeAreaView style={{ flex: 1, backgroundColor: tc.bg }} edges={safeAreaEdges}>
+                <KeyboardAccessoryHost backgroundColor={tc.bg}>
+                    <SafeAreaView style={[styles.projectDetailRoot, { backgroundColor: tc.bg }]} edges={safeAreaEdges}>
                         {selectedProject ? (
                             <>
                                 <View style={modalHeaderStyle}>
@@ -292,7 +295,10 @@ export function ProjectDetailModal({
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
-                                <ProjectDetailScrollFrame reorderMode={projectTaskReorderMode}>
+                                <ProjectDetailScrollFrame
+                                    backgroundColor={tc.bg}
+                                    reorderMode={projectTaskReorderMode}
+                                >
                                 <View style={[styles.statusBlock, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
                                     <View style={styles.statusActionsRow}>
                                         <Text style={[styles.statusLabel, { color: tc.secondaryText }]}>{t('projects.statusLabel')}</Text>
