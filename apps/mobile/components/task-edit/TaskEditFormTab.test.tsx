@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
+import { Dimensions, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -269,5 +269,54 @@ describe('TaskEditFormTab keyboard handling', () => {
 
     expect(locationInput?.props.value).toBe('field:location');
     expect(renderField).toHaveBeenCalledWith('location');
+  });
+
+  it('keeps empty detail fields collapsed by default', () => {
+    const renderField = vi.fn((fieldId) => (
+      <TextInput accessibilityLabel={fieldId} value={`field:${fieldId}`} />
+    ));
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditFormTab
+          {...baseProps}
+          detailsFields={['description', 'checklist']}
+          renderField={renderField}
+        />
+      );
+    });
+
+    const detailsHeader = tree.root.findAllByType(Pressable)
+      .find((pressable) => pressable.props.accessibilityLabel === 'taskEdit.details');
+    const renderedInputs = tree.root.findAllByType(TextInput);
+
+    expect(detailsHeader?.props.accessibilityState).toMatchObject({ expanded: false });
+    expect(renderedInputs.some((input) => input.props.accessibilityLabel === 'description')).toBe(false);
+    expect(renderedInputs.some((input) => input.props.accessibilityLabel === 'checklist')).toBe(false);
+  });
+
+  it('opens details when a collapsed detail section contains task data', () => {
+    const renderField = vi.fn((fieldId) => (
+      <TextInput accessibilityLabel={fieldId} value={`field:${fieldId}`} />
+    ));
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditFormTab
+          {...baseProps}
+          editedTask={{ description: 'Notes' }}
+          detailsFields={['description']}
+          renderField={renderField}
+        />
+      );
+    });
+
+    const detailsHeader = tree.root.findAllByType(Pressable)
+      .find((pressable) => pressable.props.accessibilityLabel === 'taskEdit.details');
+
+    expect(detailsHeader?.props.accessibilityState).toMatchObject({ expanded: true });
+    expect(renderField).toHaveBeenCalledWith('description');
   });
 });

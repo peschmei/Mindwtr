@@ -47,14 +47,30 @@ export function TaskEditOrganizationField({
         styles.statusChip,
         { backgroundColor: active ? tc.tint : tc.filterBg, borderColor: active ? tc.tint : tc.border },
     ]);
-    const getStatusTextStyle = (active: boolean) => ([
+    const getStatusTextStyle = (active: boolean, compact = false) => ([
         styles.statusText,
+        compact ? styles.statusTextCompact : null,
         { color: active ? '#fff' : tc.secondaryText },
     ]);
     const getStatusLabel = (status: string) => {
         const key = `status.${status}` as const;
         return translateWithFallback(t, key, status);
     };
+    const renderCompactPicker = (label: string, value: string, onPress: () => void) => (
+        <View style={styles.formGroup}>
+            <TouchableOpacity
+                style={[styles.compactFieldRow, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
+                onPress={onPress}
+                accessibilityRole="button"
+                accessibilityLabel={`${label}: ${value}`}
+            >
+                <Text style={[styles.compactFieldLabel, { color: tc.secondaryText }]}>{label}</Text>
+                <Text style={[styles.compactFieldValue, { color: tc.tint }]} numberOfLines={1}>
+                    {value}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
 
     switch (fieldId) {
         case 'status':
@@ -67,8 +83,17 @@ export function TaskEditOrganizationField({
                                 key={status}
                                 style={[styles.statusChipCompact, ...getStatusChipStyle(editedTask.status === status)]}
                                 onPress={() => setEditedTask((prev) => ({ ...prev, status }))}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: editedTask.status === status }}
+                                accessibilityLabel={`${t('taskEdit.statusLabel')}: ${getStatusLabel(status)}`}
                             >
-                                <Text style={getStatusTextStyle(editedTask.status === status)}>
+                                <Text
+                                    style={getStatusTextStyle(editedTask.status === status, true)}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                    adjustsFontSizeToFit
+                                    minimumFontScale={0.8}
+                                >
                                     {getStatusLabel(status)}
                                 </Text>
                             </TouchableOpacity>
@@ -77,6 +102,13 @@ export function TaskEditOrganizationField({
                 </View>
             );
         case 'project':
+            if (!editedTask.projectId) {
+                return renderCompactPicker(
+                    t('taskEdit.projectLabel'),
+                    t('taskEdit.noProjectOption'),
+                    () => setShowProjectPicker(true)
+                );
+            }
             return (
                 <View style={styles.formGroup}>
                     <Text style={[styles.label, { color: tc.secondaryText }]}>{t('taskEdit.projectLabel')}</Text>
@@ -130,6 +162,13 @@ export function TaskEditOrganizationField({
         }
         case 'area':
             if (editedTask.projectId) return null;
+            if (!editedTask.areaId) {
+                return renderCompactPicker(
+                    t('taskEdit.areaLabel'),
+                    t('taskEdit.noAreaOption'),
+                    () => setShowAreaPicker(true)
+                );
+            }
             return (
                 <View style={styles.formGroup}>
                     <Text style={[styles.label, { color: tc.secondaryText }]}>{t('taskEdit.areaLabel')}</Text>

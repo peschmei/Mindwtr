@@ -273,6 +273,9 @@ export function TaskEditFormTab({
             }
         }).length;
     };
+    const schedulingFilledCount = countFilledFields(schedulingFields);
+    const organizationFilledCount = countFilledFields(organizationFields);
+    const detailsFilledCount = countFilledFields(detailsFields);
 
     return (
         <View style={[styles.tabPage, { width: containerWidth || '100%' }]}>
@@ -377,8 +380,8 @@ export function TaskEditFormTab({
                     <CollapsibleSection
                         resetKey={`${formResetKey ?? 'task'}:scheduling`}
                         title={t('taskEdit.scheduling')}
-                        badge={countFilledFields(schedulingFields)}
-                        defaultExpanded={sectionOpenDefaults.scheduling || countFilledFields(schedulingFields) > 0}
+                        badge={schedulingFilledCount}
+                        defaultExpanded={sectionOpenDefaults.scheduling || schedulingFilledCount > 0}
                     >
                         {schedulingFields.length === 0 ? (
                             <View style={[styles.emptySectionHint, { borderColor: tc.border, backgroundColor: tc.filterBg }]}>
@@ -396,8 +399,8 @@ export function TaskEditFormTab({
                     <CollapsibleSection
                         resetKey={`${formResetKey ?? 'task'}:organization`}
                         title={t('taskEdit.organization')}
-                        badge={countFilledFields(organizationFields)}
-                        defaultExpanded={sectionOpenDefaults.organization || countFilledFields(organizationFields) > 0}
+                        badge={organizationFilledCount}
+                        defaultExpanded={sectionOpenDefaults.organization || organizationFilledCount > 0}
                     >
                         {organizationFields.length === 0 ? (
                             <View style={[styles.emptySectionHint, { borderColor: tc.border, backgroundColor: tc.filterBg }]}>
@@ -415,13 +418,8 @@ export function TaskEditFormTab({
                     <CollapsibleSection
                         resetKey={`${formResetKey ?? 'task'}:details`}
                         title={t('taskEdit.details')}
-                        badge={countFilledFields(detailsFields)}
-                        defaultExpanded={
-                            sectionOpenDefaults.details
-                            || countFilledFields(detailsFields) > 0
-                            || detailsFields.includes('description')
-                            || detailsFields.includes('checklist')
-                        }
+                        badge={detailsFilledCount}
+                        defaultExpanded={sectionOpenDefaults.details || detailsFilledCount > 0}
                     >
                         {detailsFields.length === 0 ? (
                             <View style={[styles.emptySectionHint, { borderColor: tc.border, backgroundColor: tc.filterBg }]}>

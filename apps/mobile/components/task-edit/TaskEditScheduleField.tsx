@@ -601,6 +601,28 @@ export function TaskEditScheduleField({
             const parsed = editedTask.dueDate ? safeParseDate(editedTask.dueDate) : null;
             const hasTime = hasTimeComponent(editedTask.dueDate);
             const timeOnly = hasTime && parsed ? safeFormatDate(parsed, 'HH:mm') : '';
+            if (!editedTask.dueDate) {
+                const notSetLabel = t('common.notSet');
+                return (
+                    <View style={styles.formGroup}>
+                        <TouchableOpacity
+                            style={[styles.compactFieldRow, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
+                            onPress={() => openDatePicker('due')}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('taskEdit.dueDateLabel')}: ${notSetLabel}`}
+                        >
+                            <Text style={[styles.compactFieldLabel, { color: tc.secondaryText }]}>
+                                {t('taskEdit.dueDateLabel')}
+                            </Text>
+                            <Text style={[styles.compactFieldValue, { color: tc.tint }]} numberOfLines={1}>
+                                {notSetLabel}
+                            </Text>
+                        </TouchableOpacity>
+                        {renderQuickDateChips('due', parsed)}
+                        {renderInlineIOSDatePicker(['due'])}
+                    </View>
+                );
+            }
             return (
                 <View style={styles.formGroup}>
                     <Text style={[styles.label, { color: tc.secondaryText }]}>{t('taskEdit.dueDateLabel')}</Text>

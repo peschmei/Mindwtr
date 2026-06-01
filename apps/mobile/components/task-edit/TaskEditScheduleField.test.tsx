@@ -16,7 +16,15 @@ const styles = {
     statusContainer: {},
     statusChip: {},
     statusText: {},
+    dateRow: {},
+    dateBtn: {},
     dateIssueText: {},
+    flex1: {},
+    clearDateBtn: {},
+    clearDateText: {},
+    compactFieldRow: {},
+    compactFieldLabel: {},
+    compactFieldValue: {},
     customRow: {},
     modalLabel: {},
     customInput: {},
@@ -38,6 +46,8 @@ const tc = {
 
 const t = (key: string) => ({
     'common.notSet': 'Not set',
+    'taskEdit.dueDateLabel': 'Due Date',
+    'taskEdit.startDateLabel': 'Start Date',
     'task.dateIssue.startAfterDue': 'Starts after due date',
     'taskEdit.recurrenceLabel': 'Recurrence',
     'recurrence.none': 'None',
@@ -57,6 +67,53 @@ afterEach(() => {
 });
 
 describe('TaskEditScheduleField', () => {
+    it('renders an unset due date as a compact action row', () => {
+        const setShowDatePicker = vi.fn();
+
+        let tree!: renderer.ReactTestRenderer;
+        act(() => {
+            tree = renderer.create(
+                <TaskEditScheduleField {...({
+                    customWeekdays: [],
+                    dailyInterval: 1,
+                    editedTask: {},
+                    fieldId: 'dueDate',
+                    formatDate: (value?: string) => value ?? '',
+                    formatDueDate: (value?: string) => value ?? 'Not set',
+                    getSafePickerDateValue: () => new Date('2026-04-28T09:20:00'),
+                    monthlyPattern: 'date',
+                    onDateChange: vi.fn(),
+                    openCustomRecurrence: vi.fn(),
+                    pendingDueDate: null,
+                    pendingStartDate: null,
+                    recurrenceOptions: [],
+                    recurrenceRRuleValue: '',
+                    recurrenceRuleValue: '',
+                    recurrenceStrategyValue: 'strict',
+                    recurrenceWeekdayButtons: [],
+                    setCustomWeekdays: vi.fn(),
+                    setEditedTask: vi.fn(),
+                    setShowDatePicker,
+                    showDatePicker: null,
+                    styles,
+                    t,
+                    task: null,
+                    tc,
+                } as any)}
+                />
+            );
+        });
+
+        const compactButton = tree.root.findByProps({ accessibilityLabel: 'Due Date: Not set' });
+        expect(compactButton.props.accessibilityRole).toBe('button');
+
+        act(() => {
+            compactButton.props.onPress();
+        });
+
+        expect(setShowDatePicker).toHaveBeenCalledWith('due');
+    });
+
     it('formats start dates with the configured app date and time format', () => {
         configureDateFormatting({ language: 'en', dateFormat: 'ymd', timeFormat: '24h', systemLocale: 'en-US' });
 
