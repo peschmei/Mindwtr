@@ -75,7 +75,7 @@ import {
   type LocalApiServerStatus,
 } from "../../lib/local-api-server";
 
-type SettingsPage =
+export type SettingsPage =
   | "main"
   | "gtd"
   | "manage"
@@ -199,9 +199,13 @@ const maskCalendarUrl = (url: string): string => {
   return `${protocol}${host}/${suffix}`;
 };
 
-export function SettingsView() {
+type SettingsViewProps = {
+  initialPage?: SettingsPage;
+};
+
+export function SettingsView({ initialPage }: SettingsViewProps = {}) {
   const perf = usePerformanceMonitor("SettingsView");
-  const [page, setPage] = useState<SettingsPage>("main");
+  const [page, setPage] = useState<SettingsPage>(initialPage ?? "main");
   const { language, setLanguage, t: translate } = useLanguage();
   const {
     style: keybindingStyle,
@@ -273,6 +277,11 @@ export function SettingsView() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }, []);
+
+  useEffect(() => {
+    if (!initialPage) return;
+    setPage(initialPage);
+  }, [initialPage]);
 
   const applyLocalApiStatus = useCallback((status: LocalApiServerStatus) => {
     setLocalApiStatus(status);

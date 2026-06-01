@@ -341,4 +341,18 @@ describe('SettingsView', () => {
         expect(calendarHookTracker.mounts).toBe(1);
         expect(calendarHookTracker.unmounts).toBe(0);
     });
+
+    it('opens an initial settings page when requested', async () => {
+        const { getByText } = render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="settings" onNavigate={() => undefined}>
+                    <SettingsView initialPage="sync" />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        await waitFor(() => {
+            expect(getByText('sync-page')).toBeInTheDocument();
+        });
+    });
 });

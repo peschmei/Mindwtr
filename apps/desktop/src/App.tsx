@@ -14,6 +14,7 @@ import { SearchView } from './components/views/SearchView';
 import { addBreadcrumb, useTaskStore, configureDateFormatting, flushPendingSave, isSupportedLanguage, translateWithFallback } from '@mindwtr/core';
 import { GlobalSearch } from './components/GlobalSearch';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { DesktopOnboardingFlow } from './components/DesktopOnboardingFlow';
 import { useLanguage } from './contexts/language-context';
 import { KeybindingProvider } from './contexts/keybinding-context';
 import { QuickAddModal } from './components/QuickAddModal';
@@ -55,6 +56,7 @@ import { subscribeNavigateEvent } from './lib/navigation-events';
 import { QUICK_ADD_SAVED_EVENT } from './lib/quick-add-saved-event';
 import { useUiStore } from './store/ui-store';
 import { useObsidianStore } from './store/obsidian-store';
+import type { SettingsPage } from './components/views/SettingsView';
 
 const ProjectsView = import.meta.env.DEV
     ? ProjectsViewEager
@@ -65,13 +67,40 @@ const SettingsView = lazy(wrapSettingsOpenImport(
 ));
 
 const DEFAULT_DESKTOP_VIEW = 'agenda';
+const DESKTOP_ONBOARDING_STORAGE_KEY = 'mindwtr:desktop:first-run-onboarding:v1';
+
+const readDesktopOnboardingDismissed = () => {
+    if (typeof window === 'undefined') return true;
+    try {
+        return window.localStorage.getItem(DESKTOP_ONBOARDING_STORAGE_KEY) === 'dismissed';
+    } catch {
+        return false;
+    }
+};
+
+const writeDesktopOnboardingDismissed = () => {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(DESKTOP_ONBOARDING_STORAGE_KEY, 'dismissed');
+    } catch {
+        // If localStorage is unavailable, keep the in-memory dismissal for this session.
+    }
+};
 
 function App() {
     const [currentView, setCurrentView] = useState(DEFAULT_DESKTOP_VIEW);
     const [activeView, setActiveView] = useState(DEFAULT_DESKTOP_VIEW);
+    const [settingsInitialPage, setSettingsInitialPage] = useState<SettingsPage | undefined>();
+    const [desktopOnboardingDismissed, setDesktopOnboardingDismissed] = useState(readDesktopOnboardingDismissed);
+    const [desktopOnboardingOpen, setDesktopOnboardingOpen] = useState(false);
+    const [desktopOnboardingBusy, setDesktopOnboardingBusy] = useState(false);
     const [, startTransition] = useTransition();
     const fetchData = useTaskStore((state) => state.fetchData);
+    const seedGettingStarted = useTaskStore((state) => state.seedGettingStarted);
     const isLoading = useTaskStore((state) => state.isLoading);
+    const visibleDataCount = useTaskStore((state) => (
+        state.tasks.length + state.projects.length + state.sections.length + state.areas.length
+    ));
     const setError = useTaskStore((state) => state.setError);
     const isFlatpak = isFlatpakRuntime();
     const windowDecorations = useTaskStore((state) => state.settings?.window?.decorations);
@@ -629,7 +658,7 @@ function App() {
             case 'review':
                 return <ReviewView />;
             case 'settings':
-                return <SettingsView />;
+                return <SettingsView initialPage={settingsInitialPage} />;
             case 'archived':
                 return <ArchiveView />;
             case 'trash':
@@ -641,6 +670,9 @@ function App() {
 
     const handleViewChange = useCallback((view: string) => {
         const nextView = view === 'obsidian' && !useObsidianStore.getState().config.enabled ? 'settings' : view;
+        if (nextView !== 'settings') {
+            setSettingsInitialPage(undefined);
+        }
         setCurrentView(nextView);
         if (nextView === 'settings') {
             beginSettingsOpenTrace('handleViewChange');
@@ -656,6 +688,55 @@ function App() {
         if (isObsidianEnabled || currentView !== 'obsidian') return;
         handleViewChange('settings');
     }, [currentView, handleViewChange, isObsidianEnabled]);
+
+    useEffect(() => {
+        if (!hasHydratedSettings || isLoading || desktopOnboardingDismissed || visibleDataCount > 0) return;
+        let cancelled = false;
+        SyncService.getSyncBackend()
+            .then((backend) => {
+                if (cancelled) return;
+                if (backend !== 'off') return;
+                setDesktopOnboardingOpen(true);
+            })
+            .catch((error) => {
+                void logError(error, { scope: 'onboarding', step: 'readSyncBackend' });
+                if (!cancelled) setDesktopOnboardingOpen(true);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [desktopOnboardingDismissed, hasHydratedSettings, isLoading, visibleDataCount]);
+
+    const dismissDesktopOnboarding = useCallback(() => {
+        writeDesktopOnboardingDismissed();
+        setDesktopOnboardingDismissed(true);
+        setDesktopOnboardingOpen(false);
+    }, []);
+
+    const openSettingsPage = useCallback((page: SettingsPage) => {
+        dismissDesktopOnboarding();
+        setSettingsInitialPage(page);
+        handleViewChange('settings');
+    }, [dismissDesktopOnboarding, handleViewChange]);
+
+    const handleStartFreshOnboarding = useCallback(() => {
+        setDesktopOnboardingBusy(true);
+        seedGettingStarted()
+            .then((result) => {
+                dismissDesktopOnboarding();
+                showToast(
+                    result.id
+                        ? 'Getting Started is ready in Projects.'
+                        : 'Getting Started was not created.',
+                    result.id ? 'success' : 'info'
+                );
+            })
+            .catch((error) => {
+                showToast('Failed to create Getting Started onboarding.', 'error');
+                void logError(error, { scope: 'onboarding', step: 'seedGettingStarted' });
+            })
+            .finally(() => setDesktopOnboardingBusy(false));
+    }, [dismissDesktopOnboarding, seedGettingStarted, showToast]);
 
     const LoadingFallback = ({ view }: { view: string }) => {
         useEffect(() => {
@@ -737,6 +818,14 @@ function App() {
                                 void logError(error, { scope: 'app', step: 'close-quit' });
                             });
                         }}
+                    />
+                    <DesktopOnboardingFlow
+                        isOpen={desktopOnboardingOpen}
+                        busy={desktopOnboardingBusy}
+                        onOpenSync={() => openSettingsPage('sync')}
+                        onOpenImport={() => openSettingsPage('data')}
+                        onStartFresh={handleStartFreshOnboarding}
+                        onSkip={dismissDesktopOnboarding}
                     />
                     {externalSyncChange && (
                         <div
