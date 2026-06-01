@@ -155,25 +155,7 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
     };
     const starterTasks: StarterTaskTemplate[] = [
         {
-            title: 'Import tasks from another app',
-            description: 'If you already have a system, import first so the rest of setup happens around real work.',
-            checklist: [
-                'Open Settings -> Data',
-                'Import Todoist, DGT GTD, OmniFocus, Apple Reminders, or a backup file',
-                'Review imported items from Inbox',
-            ],
-        },
-        {
-            title: 'Set up sync across your devices',
-            description: 'Sync is optional. Choose one method so desktop and mobile share the same trusted system.',
-            checklist: [
-                'Open Settings -> Sync',
-                'Choose Dropbox for the easiest cloud setup, File for a synced folder, or WebDAV/Self-hosted for custom storage',
-                'Run Test connection when available, then Sync now',
-            ],
-        },
-        {
-            title: 'Process your first inbox item',
+            title: 'Start here: process your first inbox item',
             description: 'Inbox is for capture. Processing turns loose thoughts into next actions, someday items, projects, or reference.',
             checklist: [
                 'Open Inbox',
@@ -201,6 +183,24 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
             ],
             contexts: ['@computer'],
             isFocusedToday: true,
+        },
+        {
+            title: 'Set up sync across your devices',
+            description: 'Sync is optional. Choose one method so desktop and mobile share the same trusted system.',
+            checklist: [
+                'Open Settings -> Sync',
+                'Choose Dropbox for the easiest cloud setup, iCloud for Apple-only devices, or WebDAV/Self-hosted for custom storage',
+                'Run Test connection when available, then Sync now',
+            ],
+        },
+        {
+            title: 'Import tasks from another app',
+            description: 'If you already have a system, import first so the rest of setup happens around real work.',
+            checklist: [
+                'Open Settings -> Data',
+                'Import Todoist, DGT GTD, OmniFocus, Apple Reminders, or a backup file',
+                'Review imported items from Inbox',
+            ],
         },
         {
             title: 'Run your first weekly review',

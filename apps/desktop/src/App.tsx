@@ -57,7 +57,7 @@ import { shouldOpenDesktopFirstRunOnboarding, subscribeDesktopOnboardingEvent } 
 import { QUICK_ADD_SAVED_EVENT } from './lib/quick-add-saved-event';
 import { useUiStore } from './store/ui-store';
 import { useObsidianStore } from './store/obsidian-store';
-import type { SettingsPage } from './components/views/SettingsView';
+import type { SettingsOnboardingHintPage, SettingsPage } from './components/views/SettingsView';
 
 const ProjectsView = import.meta.env.DEV
     ? ProjectsViewEager
@@ -92,6 +92,9 @@ function App() {
     const [currentView, setCurrentView] = useState(DEFAULT_DESKTOP_VIEW);
     const [activeView, setActiveView] = useState(DEFAULT_DESKTOP_VIEW);
     const [settingsInitialPage, setSettingsInitialPage] = useState<SettingsPage | undefined>();
+    const [settingsOnboardingHintPage, setSettingsOnboardingHintPage] = useState<
+        SettingsOnboardingHintPage | undefined
+    >();
     const [desktopOnboardingDismissed, setDesktopOnboardingDismissed] = useState(readDesktopOnboardingDismissed);
     const [desktopOnboardingOpen, setDesktopOnboardingOpen] = useState(false);
     const [desktopOnboardingBusy, setDesktopOnboardingBusy] = useState(false);
@@ -660,7 +663,12 @@ function App() {
             case 'review':
                 return <ReviewView />;
             case 'settings':
-                return <SettingsView initialPage={settingsInitialPage} />;
+                return (
+                    <SettingsView
+                        initialPage={settingsInitialPage}
+                        onboardingHintPage={settingsOnboardingHintPage}
+                    />
+                );
             case 'archived':
                 return <ArchiveView />;
             case 'trash':
@@ -674,6 +682,7 @@ function App() {
         const nextView = view === 'obsidian' && !useObsidianStore.getState().config.enabled ? 'settings' : view;
         if (nextView !== 'settings') {
             setSettingsInitialPage(undefined);
+            setSettingsOnboardingHintPage(undefined);
         }
         setCurrentView(nextView);
         if (nextView === 'settings') {
@@ -730,9 +739,10 @@ function App() {
         setDesktopOnboardingOpen(false);
     }, []);
 
-    const openSettingsPage = useCallback((page: SettingsPage) => {
+    const openSettingsPage = useCallback((page: SettingsOnboardingHintPage) => {
         dismissDesktopOnboarding();
         setSettingsInitialPage(page);
+        setSettingsOnboardingHintPage(page);
         handleViewChange('settings');
     }, [dismissDesktopOnboarding, handleViewChange]);
 
@@ -748,6 +758,7 @@ function App() {
                     return;
                 }
                 dismissDesktopOnboarding();
+                useUiStore.getState().setProjectView({ selectedProjectId: result.id });
                 handleViewChange('projects');
                 showToast('Getting Started is ready in Projects.', 'success');
             })

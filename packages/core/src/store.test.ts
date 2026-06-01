@@ -1182,17 +1182,17 @@ describe('TaskStore', () => {
             .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
 
         expect(starterTasks.map((task) => task.title)).toEqual([
-            'Import tasks from another app',
-            'Set up sync across your devices',
-            'Process your first inbox item',
+            'Start here: process your first inbox item',
             'Try quick capture with a context and date',
             "Star up to 3 tasks for Today's Focus",
+            'Set up sync across your devices',
+            'Import tasks from another app',
             'Run your first weekly review',
         ]);
         expect(starterTasks.every((task) => task.status === 'next')).toBe(true);
         expect(starterTasks.every((task) => task.taskMode === 'list')).toBe(true);
-        expect(starterTasks[1].checklist?.map((item) => item.title)).toContain('Open Settings -> Sync');
-        expect(starterTasks[4].isFocusedToday).toBe(true);
+        expect(starterTasks[3].checklist?.map((item) => item.title)).toContain('Open Settings -> Sync');
+        expect(starterTasks[2].isFocusedToday).toBe(true);
 
         const sampleInboxTasks = state.tasks
             .filter((task) => task.status === 'inbox')
@@ -1283,11 +1283,11 @@ describe('TaskStore', () => {
                 .filter((task) => task.projectId === existingProject.id)
                 .map((task) => task.title)
         ).toEqual([
-            'Import tasks from another app',
-            'Set up sync across your devices',
-            'Process your first inbox item',
+            'Start here: process your first inbox item',
             'Try quick capture with a context and date',
             "Star up to 3 tasks for Today's Focus",
+            'Set up sync across your devices',
+            'Import tasks from another app',
             'Run your first weekly review',
         ]);
     });

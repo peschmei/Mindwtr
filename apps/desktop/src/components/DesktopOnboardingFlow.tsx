@@ -98,7 +98,7 @@ export function DesktopOnboardingFlow({
                                 {busy ? 'Starting...' : 'Start fresh'}
                             </span>
                             <span className="mt-0.5 block text-xs text-primary-foreground/80">
-                                Add the Getting Started project and a few sample inbox items.
+                                Add a guided Getting Started project and two sample inbox items.
                             </span>
                         </span>
                     </button>

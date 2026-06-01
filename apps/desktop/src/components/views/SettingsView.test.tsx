@@ -270,9 +270,11 @@ vi.mock('./settings/useCalendarSettings', () => ({
 }));
 
 import { SettingsView } from './SettingsView';
+import { isDesktopOnboardingHandoffHintDismissed } from '../../lib/desktop-onboarding-events';
 
 describe('SettingsView', () => {
     beforeEach(async () => {
+        window.localStorage.clear();
         calendarHookTracker.mounts = 0;
         calendarHookTracker.unmounts = 0;
         calendarHookUseEffect = (await import('react')).useEffect;
@@ -354,5 +356,25 @@ describe('SettingsView', () => {
         await waitFor(() => {
             expect(getByText('sync-page')).toBeInTheDocument();
         });
+    });
+
+    it('shows and dismisses a local onboarding handoff hint for settings destinations', async () => {
+        const { getByLabelText, getByText, queryByText } = render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="settings" onNavigate={() => undefined}>
+                    <SettingsView initialPage="sync" onboardingHintPage="sync" />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        await waitFor(() => {
+            expect(getByText('Recommended sync path')).toBeInTheDocument();
+        });
+
+        fireEvent.click(getByLabelText('Dismiss onboarding hint'));
+
+        expect(queryByText('Recommended sync path')).not.toBeInTheDocument();
+        expect(isDesktopOnboardingHandoffHintDismissed('sync')).toBe(true);
+        expect(isDesktopOnboardingHandoffHintDismissed('data')).toBe(false);
     });
 });

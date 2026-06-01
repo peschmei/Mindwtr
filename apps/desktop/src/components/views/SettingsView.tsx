@@ -20,6 +20,7 @@ import {
   RefreshCw,
   SlidersHorizontal,
   Sparkles,
+  X,
 } from "lucide-react";
 import {
   resolveDateLocaleTag,
@@ -74,6 +75,11 @@ import {
   setLocalApiServerConfig,
   type LocalApiServerStatus,
 } from "../../lib/local-api-server";
+import {
+  dismissDesktopOnboardingHandoffHint,
+  isDesktopOnboardingHandoffHintDismissed,
+  type DesktopOnboardingHandoffPage,
+} from "../../lib/desktop-onboarding-events";
 
 export type SettingsPage =
   | "main"
@@ -86,6 +92,8 @@ export type SettingsPage =
   | "ai"
   | "advanced"
   | "about";
+
+export type SettingsOnboardingHintPage = DesktopOnboardingHandoffPage;
 
 const SettingsMainPage = lazy(
   wrapSettingsOpenImport("page-chunk:main", () =>
@@ -201,11 +209,23 @@ const maskCalendarUrl = (url: string): string => {
 
 type SettingsViewProps = {
   initialPage?: SettingsPage;
+  onboardingHintPage?: SettingsOnboardingHintPage;
 };
 
-export function SettingsView({ initialPage }: SettingsViewProps = {}) {
+export function SettingsView({ initialPage, onboardingHintPage }: SettingsViewProps = {}) {
   const perf = usePerformanceMonitor("SettingsView");
   const [page, setPage] = useState<SettingsPage>(initialPage ?? "main");
+  const [dismissedOnboardingHintPages, setDismissedOnboardingHintPages] = useState<
+    Set<SettingsOnboardingHintPage>
+  >(() => {
+    const dismissed = new Set<SettingsOnboardingHintPage>();
+    (["sync", "data"] as SettingsOnboardingHintPage[]).forEach((hintPage) => {
+      if (isDesktopOnboardingHandoffHintDismissed(hintPage)) {
+        dismissed.add(hintPage);
+      }
+    });
+    return dismissed;
+  });
   const { language, setLanguage, t: translate } = useLanguage();
   const {
     style: keybindingStyle,
@@ -671,6 +691,35 @@ export function SettingsView({ initialPage }: SettingsViewProps = {}) {
         return t.general;
     }
   }, [language, page, t]);
+  const activeOnboardingHintPage =
+    onboardingHintPage === page && !dismissedOnboardingHintPages.has(onboardingHintPage)
+      ? onboardingHintPage
+      : undefined;
+  const onboardingHintContent = useMemo(() => {
+    if (activeOnboardingHintPage === "sync") {
+      return {
+        title: "Recommended sync path",
+        body: "Dropbox is easiest for most cross-platform setups. Apple-only users can use iCloud. Use WebDAV or self-hosted if you already know you need custom storage.",
+      };
+    }
+    if (activeOnboardingHintPage === "data") {
+      return {
+        title: "Import before organizing",
+        body: "Pick the app you exported from, then use the Import guide for file formats and mappings. Imports add data; sync is configured separately.",
+      };
+    }
+    return null;
+  }, [activeOnboardingHintPage]);
+  const dismissOnboardingHint = useCallback(() => {
+    if (!activeOnboardingHintPage) return;
+    dismissDesktopOnboardingHandoffHint(activeOnboardingHintPage);
+    setDismissedOnboardingHintPages((current) => {
+      if (current.has(activeOnboardingHintPage)) return current;
+      const next = new Set(current);
+      next.add(activeOnboardingHintPage);
+      return next;
+    });
+  }, [activeOnboardingHintPage]);
 
   const navItems = useMemo<
     Array<{
@@ -1282,6 +1331,28 @@ export function SettingsView({ initialPage }: SettingsViewProps = {}) {
                     </h2>
                   </div>
                 </header>
+                {onboardingHintContent ? (
+                  <div
+                    className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"
+                    role="note"
+                  >
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium">{onboardingHintContent.title}</div>
+                      <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                        {onboardingHintContent.body}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={dismissOnboardingHint}
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                      aria-label="Dismiss onboarding hint"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                ) : null}
                 <Suspense fallback={<PageFallback currentPage={page} />}>
                   {renderPage()}
                 </Suspense>

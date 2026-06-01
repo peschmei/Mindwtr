@@ -4,6 +4,7 @@ import { useTaskStore } from '@mindwtr/core';
 import App from './App';
 import { LanguageProvider } from './contexts/language-context';
 import { dispatchDesktopOnboardingEvent } from './lib/desktop-onboarding-events';
+import { useUiStore } from './store/ui-store';
 
 const renderWithProviders = (ui: React.ReactElement) => {
     return render(
@@ -44,6 +45,11 @@ describe('App', () => {
             isLoading: false,
             error: null,
         }));
+        useUiStore.setState((state) => ({
+            ...state,
+            projectView: { selectedProjectId: null },
+            toasts: [],
+        }));
     });
 
     it('renders Focus by default', () => {
@@ -71,5 +77,8 @@ describe('App', () => {
         });
         expect(useTaskStore.getState().projects.some((project) => project.title === 'Getting Started')).toBe(true);
         expect(useTaskStore.getState().tasks).toHaveLength(8);
+        expect(useUiStore.getState().projectView.selectedProjectId).toBe(
+            useTaskStore.getState().projects.find((project) => project.title === 'Getting Started')?.id
+        );
     });
 });
