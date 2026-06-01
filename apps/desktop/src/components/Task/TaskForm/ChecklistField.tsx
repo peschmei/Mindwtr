@@ -102,14 +102,14 @@ function SortableChecklistRow({
             title={dragLabel}
             onClick={(event) => event.stopPropagation()}
             className={cn(
-                'absolute -left-6 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-md',
-                'border border-transparent text-muted-foreground/70 opacity-0 transition-all',
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md',
+                'border border-transparent text-muted-foreground opacity-100 transition-all',
                 'hover:border-border/70 hover:bg-muted/70 hover:text-foreground',
                 'focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary/30',
-                'focus-visible:opacity-100 group-hover/item:opacity-100 cursor-grab active:cursor-grabbing touch-none',
+                'focus-visible:opacity-100 cursor-grab active:cursor-grabbing touch-none',
             )}
         >
-            <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
         </button>
     ) : null;
 
