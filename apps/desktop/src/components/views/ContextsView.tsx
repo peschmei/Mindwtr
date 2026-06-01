@@ -14,6 +14,7 @@ import {
 } from '@mindwtr/core';
 import { AtSign, ChevronDown, ChevronRight, Filter, Hash, Tag, type LucideIcon } from 'lucide-react';
 import { TokenPickerModal } from '../TokenPickerModal';
+import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
 import { ListBulkActions } from './list/ListBulkActions';
 import { cn } from '../../lib/utils';
 import { useLanguage } from '../../contexts/language-context';
@@ -173,6 +174,9 @@ export function ContextsView() {
     const filteredTasks = normalizedSearchQuery
         ? contextFilteredTasks.filter((task) => task.title.toLowerCase().includes(normalizedSearchQuery))
         : contextFilteredTasks;
+    const filteredTaskIds = filteredTasks.map((task) => task.id);
+    const selectedVisibleCount = filteredTaskIds.filter((id) => multiSelectedIds.has(id)).length;
+    const allVisibleTasksSelected = filteredTaskIds.length > 0 && selectedVisibleCount === filteredTaskIds.length;
     const shouldVirtualize = filteredTasks.length > LIST_VIRTUALIZATION_THRESHOLD;
     const handleVirtualRowMeasure = useCallback((id: string, height: number) => {
         if (rowHeightsRef.current.get(id) === height) return;
@@ -219,6 +223,14 @@ export function ContextsView() {
             else next.add(taskId);
             return next;
         });
+    };
+
+    const selectAllVisibleTasks = () => {
+        setMultiSelectedIds(new Set(filteredTaskIds));
+    };
+
+    const clearTaskSelection = () => {
+        setMultiSelectedIds(new Set());
     };
 
     const selectedIdsArray = useMemo(() => Array.from(multiSelectedIds), [multiSelectedIds]);
@@ -570,6 +582,19 @@ export function ContextsView() {
                                 className="w-full text-sm px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                             />
                         </div>
+
+                        {selectionMode && (
+                            <div className="mb-4">
+                                <BulkSelectionToolbar
+                                    selectionCount={selectedIdsArray.length}
+                                    totalCount={filteredTasks.length}
+                                    allSelected={allVisibleTasksSelected}
+                                    onSelectAll={selectAllVisibleTasks}
+                                    onClearSelection={clearTaskSelection}
+                                    t={t}
+                                />
+                            </div>
+                        )}
 
                         {selectionMode && selectedIdsArray.length > 0 && (
                             <div className="mb-4">

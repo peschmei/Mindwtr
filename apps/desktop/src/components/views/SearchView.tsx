@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
 import { checkBudget } from '../../config/performanceBudgets';
 import { ListBulkActions } from './list/ListBulkActions';
+import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
 import { PromptModal } from '../PromptModal';
 import { cn } from '../../lib/utils';
 import { resolveAreaFilter, taskMatchesAreaFilter } from '../../lib/area-filter';
@@ -128,6 +129,22 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
         setMultiSelectedIds(new Set());
     }, []);
 
+    const filteredTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
+    const selectedVisibleCount = useMemo(
+        () => filteredTaskIds.filter((id) => multiSelectedIds.has(id)).length,
+        [filteredTaskIds, multiSelectedIds],
+    );
+    const allVisibleTasksSelected = filteredTaskIds.length > 0 && selectedVisibleCount === filteredTaskIds.length;
+
+    useEffect(() => {
+        setMultiSelectedIds((prev) => {
+            const visible = new Set(filteredTaskIds);
+            const next = new Set(Array.from(prev).filter((id) => visible.has(id)));
+            if (next.size === prev.size) return prev;
+            return next;
+        });
+    }, [filteredTaskIds]);
+
     const toggleMultiSelect = useCallback((taskId: string) => {
         setMultiSelectedIds((prev) => {
             const next = new Set(prev);
@@ -135,6 +152,14 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
             else next.add(taskId);
             return next;
         });
+    }, []);
+
+    const selectAllVisibleTasks = useCallback(() => {
+        setMultiSelectedIds(new Set(filteredTaskIds));
+    }, [filteredTaskIds]);
+
+    const clearTaskSelection = useCallback(() => {
+        setMultiSelectedIds(new Set());
     }, []);
 
     const selectedIdsArray = useMemo(() => Array.from(multiSelectedIds), [multiSelectedIds]);
@@ -234,16 +259,28 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
                 )}
             </header>
 
-            {selectionMode && selectedIdsArray.length > 0 && (
-                <ListBulkActions
-                    selectionCount={selectedIdsArray.length}
-                    onMoveToStatus={handleBatchMove}
-                    onAddTag={handleBatchAddTag}
-                    onAddContext={handleBatchAddContext}
-                    onRemoveContext={handleBatchRemoveContext}
-                    onDelete={handleBatchDelete}
-                    t={t}
-                />
+            {selectionMode && (
+                <div className="space-y-3">
+                    <BulkSelectionToolbar
+                        selectionCount={selectedIdsArray.length}
+                        totalCount={filteredTasks.length}
+                        allSelected={allVisibleTasksSelected}
+                        onSelectAll={selectAllVisibleTasks}
+                        onClearSelection={clearTaskSelection}
+                        t={t}
+                    />
+                    {selectedIdsArray.length > 0 && (
+                        <ListBulkActions
+                            selectionCount={selectedIdsArray.length}
+                            onMoveToStatus={handleBatchMove}
+                            onAddTag={handleBatchAddTag}
+                            onAddContext={handleBatchAddContext}
+                            onRemoveContext={handleBatchRemoveContext}
+                            onDelete={handleBatchDelete}
+                            t={t}
+                        />
+                    )}
+                </div>
             )}
 
             {filteredTasks.length === 0 && query && (

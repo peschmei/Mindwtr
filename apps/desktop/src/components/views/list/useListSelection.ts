@@ -88,11 +88,14 @@ type UseListSelectionResult = {
     handleConfirmTagPrompt: (value: string) => Promise<void>;
     handleSelectIndex: (index: number) => void;
     isBatchDeleting: boolean;
+    allVisibleTasksSelected: boolean;
+    clearTaskSelection: () => void;
     multiSelectedIds: Set<string>;
     pendingBatchDeleteIds: string[];
     pendingDeleteTask: Task | null;
     selectedIdsArray: string[];
     selectedIndex: number;
+    selectAllVisibleTasks: () => void;
     selectionMode: boolean;
     setContextPromptOpen: (open: boolean) => void;
     setPendingBatchDeleteIds: (taskIds: string[]) => void;
@@ -184,6 +187,21 @@ export function useListSelection({
     }, []);
 
     const selectedIdsArray = useMemo(() => Array.from(multiSelectedIds), [multiSelectedIds]);
+    const filteredTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
+    const selectedVisibleCount = useMemo(
+        () => filteredTaskIds.filter((id) => multiSelectedIds.has(id)).length,
+        [filteredTaskIds, multiSelectedIds],
+    );
+    const allVisibleTasksSelected = filteredTaskIds.length > 0 && selectedVisibleCount === filteredTaskIds.length;
+
+    useEffect(() => {
+        setMultiSelectedIds((prev) => {
+            const visible = new Set(filteredTaskIds);
+            const next = new Set(Array.from(prev).filter((id) => visible.has(id)));
+            if (next.size === prev.size) return prev;
+            return next;
+        });
+    }, [filteredTaskIds]);
 
     useEffect(() => {
         const filterKey = [
@@ -406,6 +424,14 @@ export function useListSelection({
         });
     }, []);
 
+    const selectAllVisibleTasks = useCallback(() => {
+        setMultiSelectedIds(new Set(filteredTaskIds));
+    }, [filteredTaskIds]);
+
+    const clearTaskSelection = useCallback(() => {
+        setMultiSelectedIds(new Set());
+    }, []);
+
     const handleSelectIndex = useCallback((index: number) => {
         if (!selectionMode) setSelectedIndex(index);
     }, [selectionMode]);
@@ -565,11 +591,14 @@ export function useListSelection({
         handleConfirmTagPrompt,
         handleSelectIndex,
         isBatchDeleting,
+        allVisibleTasksSelected,
+        clearTaskSelection,
         multiSelectedIds,
         pendingBatchDeleteIds,
         pendingDeleteTask,
         selectedIdsArray,
         selectedIndex,
+        selectAllVisibleTasks,
         selectionMode,
         setContextPromptOpen,
         setPendingBatchDeleteIds,

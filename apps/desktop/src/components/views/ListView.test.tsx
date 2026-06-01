@@ -205,6 +205,33 @@ describe('ListView', () => {
     });
   });
 
+  it('selects and clears all visible tasks from the shared list toolbar', async () => {
+    useTaskStore.setState({
+      tasks: [
+        makeTask('1', { title: 'First visible task' }),
+        makeTask('2', { title: 'Second visible task' }),
+      ],
+      lastDataChangeAt: 1,
+    });
+
+    const { getAllByRole, getByRole } = renderListView();
+
+    fireEvent.click(getByRole('button', { name: 'Select' }));
+    fireEvent.click(getByRole('button', { name: 'Select All' }));
+
+    await waitFor(() => {
+      expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+        (checkbox as HTMLInputElement).checked
+      ))).toEqual([true, true]);
+    });
+
+    fireEvent.click(getByRole('button', { name: 'Clear' }));
+
+    expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+      (checkbox as HTMLInputElement).checked
+    ))).toEqual([false, false]);
+  });
+
   it('does not scroll back to the selected row after a background refresh', async () => {
     const scrollIntoViewMock = vi.fn();
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {

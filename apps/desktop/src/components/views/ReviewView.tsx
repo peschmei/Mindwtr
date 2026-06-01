@@ -4,6 +4,7 @@ import { ReviewHeader } from './review/ReviewHeader';
 import { ReviewFiltersBar } from './review/ReviewFiltersBar';
 import { ReviewBulkActions } from './review/ReviewBulkActions';
 import { ReviewTaskList } from './review/ReviewTaskList';
+import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
 import { DailyReviewGuideModal } from './review/DailyReviewModal';
 import { WeeklyReviewGuideModal } from './review/WeeklyReviewModal';
 
@@ -147,6 +148,12 @@ export function ReviewView() {
     }, [filterStatus, normalizedSearchQuery, projects, sortBy, tasks, resolvedAreaFilter, projectMapById, areaById]);
 
     const selectedIdsArray = useMemo(() => Array.from(multiSelectedIds), [multiSelectedIds]);
+    const filteredTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
+    const selectedVisibleCount = useMemo(
+        () => filteredTaskIds.filter((id) => multiSelectedIds.has(id)).length,
+        [filteredTaskIds, multiSelectedIds],
+    );
+    const allVisibleTasksSelected = filteredTaskIds.length > 0 && selectedVisibleCount === filteredTaskIds.length;
 
     const bulkStatuses: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'reference', 'done'];
 
@@ -159,6 +166,15 @@ export function ReviewView() {
         exitSelectionMode();
     }, [filterStatus, exitSelectionMode]);
 
+    useEffect(() => {
+        setMultiSelectedIds((prev) => {
+            const visible = new Set(filteredTaskIds);
+            const next = new Set(Array.from(prev).filter((id) => visible.has(id)));
+            if (next.size === prev.size) return prev;
+            return next;
+        });
+    }, [filteredTaskIds]);
+
     const toggleMultiSelect = useCallback((taskId: string) => {
         if (!selectionMode) setSelectionMode(true);
         setMultiSelectedIds(prev => {
@@ -168,6 +184,15 @@ export function ReviewView() {
             return next;
         });
     }, [selectionMode]);
+
+    const selectAllVisibleTasks = useCallback(() => {
+        setSelectionMode(true);
+        setMultiSelectedIds(new Set(filteredTaskIds));
+    }, [filteredTaskIds]);
+
+    const clearTaskSelection = useCallback(() => {
+        setMultiSelectedIds(new Set());
+    }, []);
 
     const handleBatchMove = useCallback(async (newStatus: TaskStatus) => {
         if (selectedIdsArray.length === 0) return;
@@ -240,16 +265,26 @@ export function ReviewView() {
                 />
 
                 {selectionMode && (
-                    <ReviewBulkActions
-                        selectionCount={selectedIdsArray.length}
-                        moveToStatus={moveToStatus}
-                        onMoveToStatus={handleBatchMove}
-                        onChangeMoveToStatus={setMoveToStatus}
-                        onAddTag={handleBatchAddTag}
-                        onDelete={handleBatchDelete}
-                        statusOptions={bulkStatuses}
-                        t={t}
-                    />
+                    <div className="space-y-3">
+                        <BulkSelectionToolbar
+                            selectionCount={selectedIdsArray.length}
+                            totalCount={filteredTasks.length}
+                            allSelected={allVisibleTasksSelected}
+                            onSelectAll={selectAllVisibleTasks}
+                            onClearSelection={clearTaskSelection}
+                            t={t}
+                        />
+                        <ReviewBulkActions
+                            selectionCount={selectedIdsArray.length}
+                            moveToStatus={moveToStatus}
+                            onMoveToStatus={handleBatchMove}
+                            onChangeMoveToStatus={setMoveToStatus}
+                            onAddTag={handleBatchAddTag}
+                            onDelete={handleBatchDelete}
+                            statusOptions={bulkStatuses}
+                            t={t}
+                        />
+                    </div>
                 )}
 
                 <ReviewTaskList

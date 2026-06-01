@@ -105,6 +105,33 @@ describe('ReviewView', () => {
         expect(useUiStore.getState().listOptions.showDetails).toBe(false);
     });
 
+    it('selects and clears all visible review tasks', () => {
+        const tasks = [
+            makeTask('review-1', { title: 'First review task' }),
+            makeTask('review-2', { title: 'Second review task' }),
+        ];
+        useTaskStore.setState({
+            tasks,
+            _allTasks: tasks,
+            lastDataChangeAt: 1,
+        });
+
+        const { getAllByRole, getByRole } = renderWithProviders(<ReviewView />);
+
+        fireEvent.click(getByRole('button', { name: 'Select' }));
+        fireEvent.click(getByRole('button', { name: 'Select All' }));
+
+        expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+            (checkbox as HTMLInputElement).checked
+        ))).toEqual([true, true]);
+
+        fireEvent.click(getByRole('button', { name: 'Clear' }));
+
+        expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+            (checkbox as HTMLInputElement).checked
+        ))).toEqual([false, false]);
+    });
+
     it('navigates through the wizard steps', () => {
         const { getByText, getAllByText, queryByText } = renderWithProviders(<ReviewView />);
 

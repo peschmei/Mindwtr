@@ -11,6 +11,7 @@ import { DEFAULT_AREA_COLOR } from '@mindwtr/core';
 import { AlertTriangle, Folder } from 'lucide-react';
 
 import { ListBulkActions } from './ListBulkActions';
+import { BulkSelectionToolbar } from './BulkSelectionToolbar';
 import { ListFiltersPanel } from './ListFiltersPanel';
 import { ListHeader } from './ListHeader';
 import { ListQuickAdd } from './ListQuickAdd';
@@ -44,6 +45,7 @@ type ListControlsPanelProps = {
     onChangeSelectedWaitingPerson: (value: string) => void;
     onChangeSortBy: (value: TaskSortBy) => void;
     onClearFilters: () => void;
+    onClearSelection: () => void;
     onClearSelectedWaitingPerson: () => void;
     onCreateProject: (title: string) => Promise<string | null>;
     onDeleteSelection: () => Promise<void>;
@@ -54,6 +56,7 @@ type ListControlsPanelProps = {
     onRemoveContext: () => void;
     onResetCopilot: () => void;
     onSubmitQuickAdd: (event: FormEvent) => void;
+    onSelectAllVisible: () => void;
     onToggleDetails: () => void;
     onToggleEstimate: (estimate: TimeEstimate) => void;
     onToggleFiltersOpen: () => void;
@@ -68,6 +71,7 @@ type ListControlsPanelProps = {
     quickAddValue: string;
     searchQuery: string;
     selectedCount: number;
+    allVisibleTasksSelected: boolean;
     selectedPriorities: TaskPriority[];
     selectedTimeEstimates: TimeEstimate[];
     selectedTokens: string[];
@@ -117,6 +121,7 @@ export function ListControlsPanel({
     onChangeSelectedWaitingPerson,
     onChangeSortBy,
     onClearFilters,
+    onClearSelection,
     onClearSelectedWaitingPerson,
     onCreateProject,
     onDeleteSelection,
@@ -127,6 +132,7 @@ export function ListControlsPanel({
     onRemoveContext,
     onResetCopilot,
     onSubmitQuickAdd,
+    onSelectAllVisible,
     onToggleDetails,
     onToggleEstimate,
     onToggleFiltersOpen,
@@ -141,6 +147,7 @@ export function ListControlsPanel({
     quickAddValue,
     searchQuery,
     selectedCount,
+    allVisibleTasksSelected,
     selectedPriorities,
     selectedTimeEstimates,
     selectedTokens,
@@ -195,19 +202,31 @@ export function ListControlsPanel({
                 </div>
             )}
 
-            {selectionMode && selectedCount > 0 && (
-                <ListBulkActions
-                    selectionCount={selectedCount}
-                    onMoveToStatus={onMoveToStatus}
-                    onAssignArea={onAssignArea}
-                    areaOptions={areaOptions}
-                    onAddTag={onAddTag}
-                    onAddContext={onAddContext}
-                    onRemoveContext={onRemoveContext}
-                    onDelete={onDeleteSelection}
-                    isDeleting={isBatchDeleting}
-                    t={t}
-                />
+            {selectionMode && (
+                <div className="space-y-3">
+                    <BulkSelectionToolbar
+                        selectionCount={selectedCount}
+                        totalCount={taskCount}
+                        allSelected={allVisibleTasksSelected}
+                        onSelectAll={onSelectAllVisible}
+                        onClearSelection={onClearSelection}
+                        t={t}
+                    />
+                    {selectedCount > 0 && (
+                        <ListBulkActions
+                            selectionCount={selectedCount}
+                            onMoveToStatus={onMoveToStatus}
+                            onAssignArea={onAssignArea}
+                            areaOptions={areaOptions}
+                            onAddTag={onAddTag}
+                            onAddContext={onAddContext}
+                            onRemoveContext={onRemoveContext}
+                            onDelete={onDeleteSelection}
+                            isDeleting={isBatchDeleting}
+                            t={t}
+                        />
+                    )}
+                </div>
             )}
 
             {isNextView && nextCount > NEXT_WARNING_THRESHOLD && (

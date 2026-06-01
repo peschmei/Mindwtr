@@ -503,11 +503,14 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         handleConfirmTagPrompt,
         handleSelectIndex,
         isBatchDeleting,
+        allVisibleTasksSelected,
+        clearTaskSelection,
         multiSelectedIds,
         pendingBatchDeleteIds,
         pendingDeleteTask,
         selectedIdsArray,
         selectedIndex,
+        selectAllVisibleTasks,
         selectionMode,
         setContextPromptOpen,
         setPendingBatchDeleteIds,
@@ -742,6 +745,9 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                     isProcessing={isProcessing}
                     isBatchDeleting={isBatchDeleting}
                     selectedCount={selectedIdsArray.length}
+                    allVisibleTasksSelected={allVisibleTasksSelected}
+                    onSelectAllVisible={selectAllVisibleTasks}
+                    onClearSelection={clearTaskSelection}
                     onMoveToStatus={handleBatchMove}
                     onAssignArea={handleBatchAssignArea}
                     areaOptions={bulkAreaOptions}

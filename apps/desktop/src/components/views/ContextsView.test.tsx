@@ -135,4 +135,44 @@ describe('ContextsView', () => {
         expect(getByText('Plan launch')).toBeInTheDocument();
         expect(window.localStorage.getItem(CONTEXTS_VIEW_STATE_STORAGE_KEY)).toContain('"selectedContext":"#ERP"');
     });
+
+    it('selects and clears all visible tasks in context selection mode', () => {
+        const { getAllByRole, getByRole } = renderContextsView();
+
+        fireEvent.click(getByRole('button', { name: 'Select' }));
+
+        expect(getByRole('button', { name: 'Select All' })).toBeEnabled();
+        expect(getByRole('button', { name: 'Clear' })).toBeDisabled();
+
+        fireEvent.click(getByRole('button', { name: 'Select All' }));
+
+        expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+            (checkbox as HTMLInputElement).checked
+        ))).toEqual([true, true]);
+        expect(getByRole('button', { name: 'Select All' })).toBeDisabled();
+        expect(getByRole('button', { name: 'Clear' })).toBeEnabled();
+
+        fireEvent.click(getByRole('button', { name: 'Clear' }));
+
+        expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+            (checkbox as HTMLInputElement).checked
+        ))).toEqual([false, false]);
+    });
+
+    it('selects all only within the current context search results', () => {
+        const { getAllByRole, getByPlaceholderText, getByRole, getByText, queryByText } = renderContextsView();
+
+        fireEvent.change(getByPlaceholderText('Search...'), {
+            target: { value: 'Plan' },
+        });
+        expect(getByText('Plan launch')).toBeInTheDocument();
+        expect(queryByText('Write brief')).not.toBeInTheDocument();
+
+        fireEvent.click(getByRole('button', { name: 'Select' }));
+        fireEvent.click(getByRole('button', { name: 'Select All' }));
+
+        expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+            (checkbox as HTMLInputElement).checked
+        ))).toEqual([true]);
+    });
 });
