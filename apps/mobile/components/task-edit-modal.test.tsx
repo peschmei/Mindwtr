@@ -309,6 +309,61 @@ describe('TaskEditModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('saves clearing a project and moving the task to an area in one edit', () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    let tree: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'next',
+            projectId: 'project-1',
+            sectionId: 'section-1',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={onClose}
+          onSave={onSave}
+        />
+      );
+    });
+
+    const formTab = tree!.root.findAll((node) =>
+      typeof node.props.setEditedTask === 'function'
+      && typeof node.props.renderField === 'function'
+    )[0];
+    act(() => {
+      formTab.props.setEditedTask((prev: any) => ({
+        ...prev,
+        projectId: undefined,
+        sectionId: undefined,
+        areaId: 'area-1',
+      }));
+    });
+
+    const header = tree!.root.find((node) =>
+      typeof node.props.onDone === 'function'
+      && typeof node.props.onDelete === 'function'
+    );
+    act(() => {
+      header.props.onDone();
+    });
+
+    expect(onSave).toHaveBeenCalledWith('t1', expect.objectContaining({
+      projectId: undefined,
+      sectionId: undefined,
+      areaId: 'area-1',
+    }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('does not prompt after reopening a task that was just saved', () => {
     const onClose = vi.fn();
     const onSave = vi.fn();

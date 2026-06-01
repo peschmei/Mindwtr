@@ -43,6 +43,8 @@ const t = (key: string) => ({
     'taskEdit.noProjectOption': 'No Project',
     'taskEdit.areaLabel': 'Area',
     'taskEdit.noAreaOption': 'No Area',
+    'taskEdit.sectionLabel': 'Section',
+    'taskEdit.noSectionOption': 'No Section',
     'taskEdit.statusLabel': 'Status',
     'common.clear': 'Clear',
 }[key] ?? key);
@@ -118,5 +120,32 @@ describe('TaskEditOrganizationField', () => {
         });
 
         expect(setShowAreaPicker).toHaveBeenCalledWith(true);
+    });
+
+    it('hides section after clearing the task project', () => {
+        let tree!: renderer.ReactTestRenderer;
+        act(() => {
+            tree = renderer.create(
+                <TaskEditOrganizationField
+                    {...(baseProps as any)}
+                    fieldId="section"
+                    editedTask={{ projectId: undefined, sectionId: undefined }}
+                    task={{
+                        id: 'task-1',
+                        title: 'Task',
+                        status: 'next',
+                        projectId: 'project-1',
+                        sectionId: 'section-1',
+                        tags: [],
+                        contexts: [],
+                        createdAt: '2026-04-01T00:00:00.000Z',
+                        updatedAt: '2026-04-01T00:00:00.000Z',
+                    }}
+                    projectSections={[{ id: 'section-1', projectId: 'project-1', title: 'Planning' }]}
+                />
+            );
+        });
+
+        expect(tree.toJSON()).toBeNull();
     });
 });

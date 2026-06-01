@@ -22,6 +22,7 @@ import {
 import {
     DEFAULT_TASK_EDITOR_ORDER,
     DEFAULT_TASK_EDITOR_VISIBLE,
+    getEditedTaskValue,
     getTaskEditorSectionAssignments,
     getTaskEditorSectionOpenDefaults,
     STATUS_OPTIONS,
@@ -77,7 +78,7 @@ export function useTaskEditDerivedState({
     visibleAttachmentsLength,
     t,
 }: UseTaskEditDerivedStateArgs) {
-    const activeProjectId = editedTask.projectId ?? task?.projectId;
+    const activeProjectId = getEditedTaskValue(editedTask, task, 'projectId');
     const projectFilterAreaId =
         typeof editedTask.areaId === 'string' && editedTask.areaId.trim().length > 0
             ? editedTask.areaId
@@ -202,11 +203,11 @@ export function useTaskEditDerivedState({
             case 'status':
                 return (editedTask.status ?? task?.status) !== 'inbox';
             case 'project':
-                return Boolean(editedTask.projectId ?? task?.projectId);
+                return Boolean(getEditedTaskValue(editedTask, task, 'projectId'));
             case 'section':
-                return Boolean(editedTask.sectionId ?? task?.sectionId);
+                return Boolean(getEditedTaskValue(editedTask, task, 'sectionId'));
             case 'area':
-                return Boolean(editedTask.areaId ?? task?.areaId);
+                return Boolean(getEditedTaskValue(editedTask, task, 'areaId'));
             case 'priority':
                 if (!prioritiesEnabled) return false;
                 return Boolean(editedTask.priority ?? task?.priority);

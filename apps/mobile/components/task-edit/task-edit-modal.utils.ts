@@ -1,5 +1,5 @@
 import { Dimensions } from 'react-native';
-import { type TaskEditorFieldId, type TaskEditorSectionId, type TaskEditorSettings, type TaskStatus } from '@mindwtr/core';
+import { type Task, type TaskEditorFieldId, type TaskEditorSectionId, type TaskEditorSettings, type TaskStatus } from '@mindwtr/core';
 import { logError, logWarn } from '../../lib/app-log';
 
 export const STATUS_OPTIONS: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'reference', 'done'];
@@ -37,6 +37,16 @@ export const isValidLinkUri = (value: string): boolean => {
         return false;
     }
 };
+
+export const getEditedTaskValue = <K extends keyof Task>(
+    editedTask: Partial<Task>,
+    task: Task | null | undefined,
+    key: K
+): Task[K] | undefined => (
+    Object.prototype.hasOwnProperty.call(editedTask, key)
+        ? editedTask[key]
+        : task?.[key]
+);
 
 export const QUICK_TOKEN_LIMIT = 6;
 

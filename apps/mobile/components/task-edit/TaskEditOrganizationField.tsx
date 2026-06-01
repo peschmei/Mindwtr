@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { translateWithFallback } from '@mindwtr/core';
 
 import type { TaskEditFieldRendererProps } from './TaskEditFieldRenderer.types';
+import { getEditedTaskValue } from './task-edit-modal.utils';
 
 type OrganizationFieldId =
     | 'status'
@@ -101,8 +102,9 @@ export function TaskEditOrganizationField({
                     </View>
                 </View>
             );
-        case 'project':
-            if (!editedTask.projectId) {
+        case 'project': {
+            const projectId = getEditedTaskValue(editedTask, task, 'projectId');
+            if (!projectId) {
                 return renderCompactPicker(
                     t('taskEdit.projectLabel'),
                     t('taskEdit.noProjectOption'),
@@ -118,10 +120,10 @@ export function TaskEditOrganizationField({
                             onPress={() => setShowProjectPicker(true)}
                         >
                             <Text style={{ color: tc.text }}>
-                                {projects.find((project) => project.id === editedTask.projectId)?.title || t('taskEdit.noProjectOption')}
+                                {projects.find((project) => project.id === projectId)?.title || t('taskEdit.noProjectOption')}
                             </Text>
                         </TouchableOpacity>
-                        {!!editedTask.projectId && (
+                        {!!projectId && (
                             <TouchableOpacity
                                 style={[styles.clearDateBtn, { borderColor: tc.border, backgroundColor: tc.filterBg }]}
                                 onPress={() => setEditedTask((prev) => ({ ...prev, projectId: undefined, sectionId: undefined }))}
@@ -132,8 +134,9 @@ export function TaskEditOrganizationField({
                     </View>
                 </View>
             );
+        }
         case 'section': {
-            const projectId = editedTask.projectId ?? task?.projectId;
+            const projectId = getEditedTaskValue(editedTask, task, 'projectId');
             if (!projectId) return null;
             const section = projectSections.find((item) => item.id === editedTask.sectionId);
             return (
@@ -160,9 +163,10 @@ export function TaskEditOrganizationField({
                 </View>
             );
         }
-        case 'area':
-            if (editedTask.projectId) return null;
-            if (!editedTask.areaId) {
+        case 'area': {
+            const areaId = getEditedTaskValue(editedTask, task, 'areaId');
+            if (getEditedTaskValue(editedTask, task, 'projectId')) return null;
+            if (!areaId) {
                 return renderCompactPicker(
                     t('taskEdit.areaLabel'),
                     t('taskEdit.noAreaOption'),
@@ -178,10 +182,10 @@ export function TaskEditOrganizationField({
                             onPress={() => setShowAreaPicker(true)}
                         >
                             <Text style={{ color: tc.text }}>
-                                {areas.find((area) => area.id === editedTask.areaId)?.name || t('taskEdit.noAreaOption')}
+                                {areas.find((area) => area.id === areaId)?.name || t('taskEdit.noAreaOption')}
                             </Text>
                         </TouchableOpacity>
-                        {!!editedTask.areaId && (
+                        {!!areaId && (
                             <TouchableOpacity
                                 style={[styles.clearDateBtn, { borderColor: tc.border, backgroundColor: tc.filterBg }]}
                                 onPress={() => setEditedTask((prev) => ({ ...prev, areaId: undefined }))}
@@ -192,6 +196,7 @@ export function TaskEditOrganizationField({
                     </View>
                 </View>
             );
+        }
         case 'priority':
             if (!prioritiesEnabled) return null;
             return (

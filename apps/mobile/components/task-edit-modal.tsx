@@ -38,7 +38,7 @@ import {
 } from './task-edit/recurrence-utils';
 import { getAssignedToSuggestions } from './task-metadata-suggestions';
 import { useTaskEditCopilot } from './task-edit/use-task-edit-copilot';
-import { logTaskError } from './task-edit/task-edit-modal.utils';
+import { getEditedTaskValue, logTaskError } from './task-edit/task-edit-modal.utils';
 import {
     parseTokenList,
     replaceTrailingToken,
@@ -344,8 +344,8 @@ function TaskEditModalInner({
     const isReference = (editedTask.status ?? task?.status) === 'reference';
 
     useEffect(() => {
-        const projectId = editedTask.projectId ?? task?.projectId;
-        const sectionId = editedTask.sectionId ?? task?.sectionId;
+        const projectId = getEditedTaskValue(editedTask, task, 'projectId');
+        const sectionId = getEditedTaskValue(editedTask, task, 'sectionId');
         if (!sectionId) return;
         if (!projectId) {
             setEditedTask(prev => ({ ...prev, sectionId: undefined }));

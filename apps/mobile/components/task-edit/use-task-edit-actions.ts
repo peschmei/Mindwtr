@@ -27,7 +27,7 @@ import {
 import type { AIResponseAction } from '../ai-response-modal';
 import { buildAIConfig, isAIKeyRequired, loadAIKey } from '../../lib/ai-config';
 import { areTaskFieldValuesEqual } from './task-edit-modal.helpers';
-import { logTaskError, logTaskWarn } from './task-edit-modal.utils';
+import { getEditedTaskValue, logTaskError, logTaskWarn } from './task-edit-modal.utils';
 import { applyMarkdownChecklistToTask, parseTokenList } from './task-edit-token-utils';
 import { buildRecurrenceValue } from './recurrence-utils';
 
@@ -312,14 +312,14 @@ export function useTaskEditActions({
             : undefined;
 
         const baseTask = baseTaskRef.current ?? task;
-        const nextProjectId = updates.projectId ?? baseTask.projectId;
+        const nextProjectId = getEditedTaskValue(updates, baseTask, 'projectId');
         if (nextProjectId) {
             updates.areaId = undefined;
         } else {
             updates.sectionId = undefined;
         }
         if (nextProjectId) {
-            const nextSectionId = updates.sectionId ?? baseTask.sectionId;
+            const nextSectionId = getEditedTaskValue(updates, baseTask, 'sectionId');
             if (nextSectionId) {
                 const isValid = sections.some((section) =>
                     section.id === nextSectionId && section.projectId === nextProjectId && !section.deletedAt
