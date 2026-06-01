@@ -210,9 +210,10 @@ const maskCalendarUrl = (url: string): string => {
 type SettingsViewProps = {
   initialPage?: SettingsPage;
   onboardingHintPage?: SettingsOnboardingHintPage;
+  onResumeOnboarding?: () => void;
 };
 
-export function SettingsView({ initialPage, onboardingHintPage }: SettingsViewProps = {}) {
+export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboarding }: SettingsViewProps = {}) {
   const perf = usePerformanceMonitor("SettingsView");
   const [page, setPage] = useState<SettingsPage>(initialPage ?? "main");
   const [dismissedOnboardingHintPages, setDismissedOnboardingHintPages] = useState<
@@ -1343,6 +1344,15 @@ export function SettingsView({ initialPage, onboardingHintPage }: SettingsViewPr
                         {onboardingHintContent.body}
                       </div>
                     </div>
+                    {onResumeOnboarding ? (
+                      <button
+                        type="button"
+                        onClick={onResumeOnboarding}
+                        className="shrink-0 rounded-md border border-primary/30 bg-background/50 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10"
+                      >
+                        Continue setup
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={dismissOnboardingHint}

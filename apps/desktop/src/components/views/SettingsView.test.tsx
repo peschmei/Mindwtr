@@ -359,10 +359,15 @@ describe('SettingsView', () => {
     });
 
     it('shows and dismisses a local onboarding handoff hint for settings destinations', async () => {
+        const onResumeOnboarding = vi.fn();
         const { getByLabelText, getByText, queryByText } = render(
             <LanguageProvider>
                 <KeybindingProvider currentView="settings" onNavigate={() => undefined}>
-                    <SettingsView initialPage="sync" onboardingHintPage="sync" />
+                    <SettingsView
+                        initialPage="sync"
+                        onboardingHintPage="sync"
+                        onResumeOnboarding={onResumeOnboarding}
+                    />
                 </KeybindingProvider>
             </LanguageProvider>
         );
@@ -370,6 +375,9 @@ describe('SettingsView', () => {
         await waitFor(() => {
             expect(getByText('Recommended sync path')).toBeInTheDocument();
         });
+
+        fireEvent.click(getByText('Continue setup'));
+        expect(onResumeOnboarding).toHaveBeenCalledTimes(1);
 
         fireEvent.click(getByLabelText('Dismiss onboarding hint'));
 

@@ -667,6 +667,7 @@ function App() {
                     <SettingsView
                         initialPage={settingsInitialPage}
                         onboardingHintPage={settingsOnboardingHintPage}
+                        onResumeOnboarding={resumeDesktopOnboarding}
                     />
                 );
             case 'archived':
@@ -739,12 +740,19 @@ function App() {
         setDesktopOnboardingOpen(false);
     }, []);
 
+    const resumeDesktopOnboarding = useCallback(() => {
+        setDesktopOnboardingBusy(false);
+        setDesktopOnboardingError(null);
+        setDesktopOnboardingDismissed(false);
+        setDesktopOnboardingOpen(true);
+    }, []);
+
     const openSettingsPage = useCallback((page: SettingsOnboardingHintPage) => {
-        dismissDesktopOnboarding();
+        setDesktopOnboardingOpen(false);
         setSettingsInitialPage(page);
         setSettingsOnboardingHintPage(page);
         handleViewChange('settings');
-    }, [dismissDesktopOnboarding, handleViewChange]);
+    }, [handleViewChange]);
 
     const handleStartFreshOnboarding = useCallback(() => {
         if (desktopOnboardingBusy) return;
@@ -795,12 +803,9 @@ function App() {
 
     useEffect(() => {
         return subscribeDesktopOnboardingEvent(() => {
-            setDesktopOnboardingBusy(false);
-            setDesktopOnboardingError(null);
-            setDesktopOnboardingDismissed(false);
-            setDesktopOnboardingOpen(true);
+            resumeDesktopOnboarding();
         });
-    }, []);
+    }, [resumeDesktopOnboarding]);
 
     return (
         <ErrorBoundary>

@@ -81,4 +81,19 @@ describe('App', () => {
             useTaskStore.getState().projects.find((project) => project.title === 'Getting Started')?.id
         );
     });
+
+    it('does not mark onboarding dismissed when routing to sync setup', async () => {
+        const { getByRole, queryByRole } = renderWithProviders(<App />);
+
+        act(() => {
+            dispatchDesktopOnboardingEvent();
+        });
+
+        fireEvent.click(getByRole('button', { name: /set up sync/i }));
+
+        await waitFor(() => {
+            expect(queryByRole('dialog', { name: /welcome to mindwtr/i })).not.toBeInTheDocument();
+        });
+        expect(window.localStorage.getItem('mindwtr:desktop:first-run-onboarding:v1')).not.toBe('dismissed');
+    });
 });
