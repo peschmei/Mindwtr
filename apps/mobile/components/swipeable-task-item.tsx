@@ -35,6 +35,7 @@ export interface SwipeableTaskItemProps {
     onStatusChange: (status: TaskStatus) => void | Promise<unknown>;
     onDelete: () => void | Promise<void>;
     onLongPressAction?: () => void;
+    onLongPressActionLabel?: string;
     /** Hide context tags (useful when viewing a specific context) */
     hideContexts?: boolean;
     /** Multi-select mode for bulk actions */
@@ -91,6 +92,7 @@ export function SwipeableTaskItem({
     onStatusChange,
     onDelete,
     onLongPressAction,
+    onLongPressActionLabel,
     hideContexts = false,
     selectionMode = false,
     isMultiSelected = false,
@@ -297,11 +299,14 @@ export function SwipeableTaskItem({
     };
 
     const leftAction = getLeftAction();
+    const longPressAccessibilityHint = onLongPressAction && onLongPressActionLabel
+        ? ` Long press for ${onLongPressActionLabel.toLowerCase()}.`
+        : '';
     const swipeAccessibilityHint = interactionDisabled
         ? tFallback(t, 'projects.taskOrder', 'Task order')
         : selectionMode || disableSwipe
-        ? 'Double tap to edit task details. Additional actions are available in the accessibility actions menu.'
-        : `Double tap to edit task details. Swipe right to ${leftAction.label.toLowerCase()} and swipe left to delete. Additional actions are available in the accessibility actions menu.`;
+        ? `Double tap to edit task details.${longPressAccessibilityHint} Additional actions are available in the accessibility actions menu.`
+        : `Double tap to edit task details. Swipe right to ${leftAction.label.toLowerCase()} and swipe left to delete.${longPressAccessibilityHint} Additional actions are available in the accessibility actions menu.`;
 
     const renderLeftActions = () => {
         const LeftIcon = leftAction.action === 'inbox' ? RotateCcw : leftAction.action === 'done' ? Check : ArrowRight;
@@ -412,6 +417,9 @@ export function SwipeableTaskItem({
         ...(!selectionMode
             ? [
                 { name: 'changeStatus', label: leftAction.label },
+                ...(onLongPressAction && onLongPressActionLabel
+                    ? [{ name: 'longPressAction', label: onLongPressActionLabel }]
+                    : []),
                 { name: 'delete', label: t('common.delete') || 'Delete' },
             ]
             : []),
@@ -426,6 +434,10 @@ export function SwipeableTaskItem({
         if (selectionMode) return;
         if (actionName === 'changeStatus') {
             handleStatusChange(leftAction.action);
+            return;
+        }
+        if (actionName === 'longPressAction' && onLongPressAction) {
+            onLongPressAction();
             return;
         }
         if (actionName === 'delete') {

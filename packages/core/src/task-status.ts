@@ -1,5 +1,6 @@
 import type { Task, TaskStatus } from './types';
 import { normalizeRecurrenceForLoad } from './recurrence';
+import { safeParseDate } from './date';
 
 export const TASK_STATUS_VALUES: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'reference', 'done', 'archived'];
 export const TASK_STATUS_SET = new Set<TaskStatus>(TASK_STATUS_VALUES);
@@ -18,6 +19,13 @@ const LEGACY_STATUS_MAP: Record<string, TaskStatus> = {
     pending: 'next',
     'in-progress': 'next',
     doing: 'next',
+};
+
+const isFutureStart = (task: Pick<Task, 'startTime'>, now: Date): boolean => {
+    const start = safeParseDate(task.startTime);
+    if (!start) return false;
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    return start > endOfToday;
 };
 
 export function normalizeTaskStatus(value: unknown): TaskStatus {
@@ -100,6 +108,8 @@ export function normalizeTaskForLoad(task: Task, nowIso: string = new Date().toI
 
     if (normalizedStatus === 'done' || normalizedStatus === 'archived') {
         next.completedAt = task.completedAt || task.updatedAt || nowIso;
+        next.isFocusedToday = false;
+    } else if (next.isFocusedToday && isFutureStart(next, new Date(nowIso))) {
         next.isFocusedToday = false;
     } else if (task.completedAt) {
         next.completedAt = undefined;

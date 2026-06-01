@@ -21,6 +21,7 @@ import { logWarn } from './logger';
 import { generateUUID as uuidv4 } from './uuid';
 import { normalizeRecurrenceForLoad } from './recurrence';
 import { normalizeFocusTaskLimit } from './focus-utils';
+import { isTaskFutureStart } from './task-utils';
 
 const stripAttachmentRemoteMetadata = (attachments: Task['attachments']): Task['attachments'] =>
     attachments?.map((attachment) => (
@@ -234,6 +235,12 @@ const normalizeTaskUpdateForStore = ({
             ...adjustedUpdates,
             order: normalizedOrder,
             orderNum: normalizedOrder,
+        };
+    }
+    if (hasOwnField(updates, 'startTime') && isTaskFutureStart({ startTime: adjustedUpdates.startTime })) {
+        adjustedUpdates = {
+            ...adjustedUpdates,
+            isFocusedToday: false,
         };
     }
     if (!Object.prototype.hasOwnProperty.call(updates, 'projectId')) {

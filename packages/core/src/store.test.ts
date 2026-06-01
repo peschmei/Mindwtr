@@ -325,6 +325,22 @@ describe('TaskStore', () => {
         expect(useTaskStore.getState()._tasksById.get(taskIds[3])?.isFocusedToday).toBe(true);
     });
 
+    it('clears today focus when a focused task is deferred to a future start date', async () => {
+        vi.setSystemTime(new Date('2026-05-02T10:00:00.000Z'));
+        const { addTask, updateTask } = useTaskStore.getState();
+        const result = await addTask('Focused later', { status: 'next', isFocusedToday: true });
+        expect(result.success).toBe(true);
+        const taskId = result.id;
+        expect(taskId).toBeTruthy();
+
+        await expect(updateTask(taskId!, { startTime: '2026-05-03' })).resolves.toEqual({ success: true });
+
+        const task = useTaskStore.getState()._tasksById.get(taskId!);
+        expect(task?.startTime).toBe('2026-05-03');
+        expect(task?.isFocusedToday).toBe(false);
+        expect(useTaskStore.getState().getDerivedState().focusedCount).toBe(0);
+    });
+
     it('stamps the GTD sync time when the focus limit changes', async () => {
         vi.setSystemTime(new Date('2026-03-21T12:00:00.000Z'));
 

@@ -1,11 +1,13 @@
 import React from 'react';
 import { Alert, SectionList, TextInput, View } from 'react-native';
 import { act, create } from 'react-test-renderer';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '@mindwtr/core';
 
 import FocusScreen from '../app/(drawer)/(tabs)/focus';
 import { SwipeableTaskItem } from '@/components/swipeable-task-item';
+
+const showToastMock = vi.hoisted(() => vi.fn());
 
 const makeTask = (id: string, overrides: Partial<Task> = {}): Task => ({
   id,
@@ -60,8 +62,16 @@ beforeEach(() => {
   ];
   storeState.projects = [];
   storeState.settings = { appearance: {}, features: {} };
+  storeState.updateTask.mockReset();
+  storeState.updateTask.mockResolvedValue({ success: true });
+  storeState.deleteTask.mockClear();
   storeState.updateSettings.mockClear();
   storeState.highlightTaskId = null;
+  showToastMock.mockClear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 vi.mock('@mindwtr/core', async (importOriginal) => {
@@ -113,6 +123,17 @@ vi.mock('../contexts/language-context', () => ({
         'taskEdit.locationPlaceholder': 'e.g. Office',
       }[key] ?? key),
   }),
+}));
+
+vi.mock('../contexts/toast-context', () => ({
+  useToast: () => ({
+    showToast: showToastMock,
+    dismissToast: vi.fn(),
+  }),
+}));
+
+vi.mock('@react-native-community/datetimepicker', () => ({
+  default: (props: any) => React.createElement('DateTimePicker', props),
 }));
 
 vi.mock('@/hooks/use-theme-colors', () => ({
@@ -215,6 +236,126 @@ describe('FocusScreen', () => {
         node.props.accessibilityLabel === "Today's Focus" && typeof node.props.onPress === 'function'
       )
     ).not.toThrow();
+  });
+
+  it('defers a focused task from the row action and offers undo', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 2, 10, 0, 0, 0));
+    const alertSpy = vi.spyOn(Alert, 'alert');
+    storeState.tasks = [
+      makeTask('focused-next', {
+        title: 'Focused next',
+        isFocusedToday: true,
+      }),
+      makeTask('plain-next', { title: 'Plain next' }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const focusedRow = tree.root.findAllByType(SwipeableTaskItem).find((node) => node.props.task.id === 'focused-next');
+    expect(focusedRow?.props.onLongPressAction).toBeTypeOf('function');
+
+    act(() => {
+      focusedRow?.props.onLongPressAction();
+    });
+
+    const buttons = alertSpy.mock.calls[0]?.[2] as Array<{ text?: string; onPress?: () => void }>;
+    const tomorrow = buttons.find((button) => button.text === 'Tomorrow');
+    expect(tomorrow?.onPress).toBeTypeOf('function');
+
+    await act(async () => {
+      tomorrow?.onPress?.();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateTask).toHaveBeenCalledWith('focused-next', {
+      startTime: '2026-05-03',
+      isFocusedToday: false,
+    });
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Focused next',
+      actionLabel: 'Undo',
+      onAction: expect.any(Function),
+    }));
+
+    const toast = showToastMock.mock.calls[0]?.[0] as { onAction?: () => Promise<void> | void };
+    await act(async () => {
+      await toast.onAction?.();
+    });
+
+    expect(storeState.updateTask).toHaveBeenLastCalledWith('focused-next', {
+      startTime: undefined,
+      isFocusedToday: true,
+    });
+    vi.useRealTimers();
+  });
+
+  it('defers an unstarred next action without writing a focus flag', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 2, 10, 0, 0, 0));
+    const alertSpy = vi.spyOn(Alert, 'alert');
+    storeState.tasks = [
+      makeTask('plain-next', { title: 'Plain next' }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const row = tree.root.findAllByType(SwipeableTaskItem).find((node) => node.props.task.id === 'plain-next');
+    expect(row?.props.onLongPressAction).toBeTypeOf('function');
+
+    act(() => {
+      row?.props.onLongPressAction();
+    });
+
+    const buttons = alertSpy.mock.calls[0]?.[2] as Array<{ text?: string; onPress?: () => void }>;
+    const nextWeek = buttons.find((button) => button.text === 'Next week');
+    expect(nextWeek?.onPress).toBeTypeOf('function');
+
+    await act(async () => {
+      nextWeek?.onPress?.();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateTask).toHaveBeenCalledWith('plain-next', {
+      startTime: '2026-05-09',
+    });
+
+    const toast = showToastMock.mock.calls[0]?.[0] as { onAction?: () => Promise<void> | void };
+    await act(async () => {
+      await toast.onAction?.();
+    });
+
+    expect(storeState.updateTask).toHaveBeenLastCalledWith('plain-next', {
+      startTime: undefined,
+    });
+    vi.useRealTimers();
+  });
+
+  it('does not offer defer on due-dated Focus rows', () => {
+    storeState.tasks = [
+      makeTask('due-next', {
+        title: 'Due next',
+        dueDate: '2000-01-01',
+      }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const row = tree.root.findAllByType(SwipeableTaskItem).find((node) => node.props.task.id === 'due-next');
+    expect(row?.props.onLongPressAction).toBeUndefined();
+    expect(row?.props.onLongPressActionLabel).toBeUndefined();
   });
 
   it('bounds SectionList rendering for larger Focus lists', () => {

@@ -14,6 +14,7 @@ import {
     safeFormatDate,
     safeParseDate,
     safeParseDueDate,
+    shouldShowTaskForStart,
     sortTasksBy,
     type ExternalCalendarEvent,
     type Task,
@@ -61,6 +62,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
     const sortBy = (settings?.taskSortBy ?? 'default') as TaskSortBy;
     const includeFocusStep = settings.gtd?.dailyReview?.includeFocusStep !== false;
     const focusTaskLimit = normalizeFocusTaskLimit(settings.gtd?.focusTaskLimit);
+    const showFutureStarts = settings?.appearance?.showFutureStarts === true;
     const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
 
     const today = useMemo(() => new Date(), []);
@@ -137,8 +139,12 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
     );
 
     const focusedTasks = useMemo(
-        () => activeTasks.filter((task) => task.isFocusedToday && task.status !== 'done'),
-        [activeTasks],
+        () => activeTasks.filter((task) => (
+            task.isFocusedToday
+            && task.status !== 'done'
+            && shouldShowTaskForStart(task, { showFutureStarts })
+        )),
+        [activeTasks, showFutureStarts],
     );
 
     const focusCandidates = useMemo(() => {
@@ -149,7 +155,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
             if (!byId.has(task.id)) byId.set(task.id, task);
         };
         activeTasks.forEach((task) => {
-            if (task.isFocusedToday) addCandidate(task);
+            if (task.isFocusedToday && shouldShowTaskForStart(task, { showFutureStarts })) addCandidate(task);
             const due = safeParseDueDate(task.dueDate);
             if (due && (due < now || due.toDateString() === todayStr)) {
                 addCandidate(task);
@@ -166,7 +172,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
             }
         });
         return sortTasksBy(Array.from(byId.values()), sortBy);
-    }, [activeTasks, sortBy]);
+    }, [activeTasks, showFutureStarts, sortBy]);
 
     const dueTodayTasks = useMemo(() => {
         const dueToday = activeTasks.filter((task) => {

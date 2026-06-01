@@ -10,7 +10,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams } from 'expo-router';
 import { BookmarkPlus, SlidersHorizontal, X } from 'lucide-react-native';
 
@@ -48,6 +50,7 @@ import { SwipeableTaskItem } from '@/components/swipeable-task-item';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useTheme } from '../../../contexts/theme-context';
 import { useLanguage } from '../../../contexts/language-context';
+import { useToast } from '../../../contexts/toast-context';
 import { TaskEditModal } from '@/components/task-edit-modal';
 import { PomodoroPanel } from '@/components/pomodoro-panel';
 import {
@@ -71,6 +74,8 @@ const DEFAULT_FOCUS_SORT_BY: SortField = 'default';
 const FOCUS_LIST_INITIAL_RENDER_COUNT = 12;
 const FOCUS_LIST_BATCH_RENDER_COUNT = 12;
 const FOCUS_LIST_WINDOW_SIZE = 5;
+
+type TaskActionResult = { success?: boolean; error?: unknown } | void;
 
 type FocusFilterChip = {
   id: string;
@@ -99,6 +104,30 @@ type FocusSection = {
   totalCount: number;
   expanded: boolean;
   type: FocusSectionType;
+};
+
+const getStartDateOffset = (days: number): Date => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const formatDateOnly = (date: Date): string => safeFormatDate(date, 'yyyy-MM-dd');
+
+const getActionFailureMessage = (result: unknown): string | null => {
+  if (!result || typeof result !== 'object') return null;
+  const actionResult = result as { error?: unknown; success?: unknown };
+  if (actionResult.success !== false) return null;
+  return typeof actionResult.error === 'string' && actionResult.error.trim().length > 0
+    ? actionResult.error.trim()
+    : 'Task update failed';
+};
+
+const getUnknownErrorMessage = (error: unknown): string | undefined => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string' && error.trim().length > 0) return error.trim();
+  return undefined;
 };
 
 function filterSelectionStable<T>(current: T[], predicate: (item: T) => boolean): T[] {
@@ -186,10 +215,13 @@ export default function FocusScreen() {
   const { tasks, projects, settings, updateTask, deleteTask, updateSettings, highlightTaskId, setHighlightTask } = useTaskStore();
   const { isDark } = useTheme();
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const tc = useThemeColors();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [deferPickerTask, setDeferPickerTask] = useState<Task | null>(null);
+  const [deferPickerDate, setDeferPickerDate] = useState<Date>(() => getStartDateOffset(1));
   const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<TaskPriority[]>([]);
@@ -367,6 +399,100 @@ export default function FocusScreen() {
         : resolveText('agenda.futureStartsHiddenMany', '{count} tasks hidden (future start)'));
     return template.replace('{count}', String(count));
   }, [resolveText]);
+  const showTaskUpdateError = useCallback((message?: string) => {
+    showToast({
+      title: resolveText('common.error', 'Error'),
+      message: message || resolveText('task.updateFailed', 'Could not update task.'),
+      tone: 'error',
+      durationMs: 4200,
+    });
+  }, [resolveText, showToast]);
+  const deferTaskUntil = useCallback((task: Task, selectedDate: Date) => {
+    const startDate = new Date(selectedDate);
+    startDate.setHours(0, 0, 0, 0);
+    const startTime = formatDateOnly(startDate);
+    const previousStartTime = task.startTime;
+    const previousFocused = task.isFocusedToday === true;
+    const deferUpdates: Partial<Task> = {
+      startTime,
+      ...(previousFocused ? { isFocusedToday: false } : {}),
+    };
+
+    void Promise.resolve(updateTask(task.id, deferUpdates))
+      .then((result: TaskActionResult) => {
+        const failure = getActionFailureMessage(result);
+        if (failure) {
+          showTaskUpdateError(failure);
+          return;
+        }
+        showToast({
+          title: task.title,
+          message: `${resolveText('review.startTime', 'Defer until')} ${safeFormatDate(startDate, 'PP', startTime)}`,
+          tone: 'info',
+          actionLabel: resolveText('common.undo', 'Undo'),
+          onAction: async () => {
+            const undoUpdates: Partial<Task> = {
+              startTime: previousStartTime,
+              ...(previousFocused ? { isFocusedToday: true } : {}),
+            };
+            const undoResult = await updateTask(task.id, undoUpdates);
+            const undoFailure = getActionFailureMessage(undoResult);
+            if (undoFailure) throw new Error(undoFailure);
+          },
+          durationMs: 5200,
+        });
+      })
+      .catch((error) => showTaskUpdateError(getUnknownErrorMessage(error)));
+  }, [resolveText, showTaskUpdateError, showToast, updateTask]);
+  const openDeferDatePicker = useCallback((task: Task) => {
+    setDeferPickerDate(getStartDateOffset(1));
+    setDeferPickerTask(task);
+  }, []);
+  const openDeferMenu = useCallback((task: Task) => {
+    Alert.alert(
+      resolveText('review.startTime', 'Defer until'),
+      task.title,
+      [
+        {
+          text: resolveText('quickDate.tomorrow', 'Tomorrow'),
+          onPress: () => deferTaskUntil(task, getStartDateOffset(1)),
+        },
+        {
+          text: resolveText('quickDate.nextWeek', 'Next week'),
+          onPress: () => deferTaskUntil(task, getStartDateOffset(7)),
+        },
+        {
+          text: resolveText('recurrence.custom', 'Custom...'),
+          onPress: () => openDeferDatePicker(task),
+        },
+        { text: resolveText('common.cancel', 'Cancel'), style: 'cancel' },
+      ],
+      { cancelable: true },
+    );
+  }, [deferTaskUntil, openDeferDatePicker, resolveText]);
+  const closeDeferDatePicker = useCallback(() => {
+    setDeferPickerTask(null);
+  }, []);
+  const confirmPickedDeferDate = useCallback(() => {
+    const task = deferPickerTask;
+    setDeferPickerTask(null);
+    if (task) deferTaskUntil(task, deferPickerDate);
+  }, [deferPickerDate, deferPickerTask, deferTaskUntil]);
+  const handleDeferDateChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setDeferPickerTask(null);
+      return;
+    }
+    if (!selectedDate) return;
+    const nextDate = new Date(selectedDate);
+    nextDate.setHours(0, 0, 0, 0);
+    setDeferPickerDate(nextDate);
+    if (Platform.OS !== 'ios') {
+      const task = deferPickerTask;
+      setDeferPickerTask(null);
+      if (task) deferTaskUntil(task, nextDate);
+    }
+  }, [deferPickerTask, deferTaskUntil]);
   useEffect(() => {
     if (activeSavedFilterId && !activeSavedFilter) {
       setActiveSavedFilterId(null);
@@ -991,6 +1117,8 @@ export default function FocusScreen() {
       );
     }
 
+    const canDeferTask = !item.task.dueDate && (item.task.isFocusedToday === true || item.task.status === 'next');
+
     return (
       <View
         style={[
@@ -1008,6 +1136,8 @@ export default function FocusScreen() {
           isHighlighted={item.task.id === highlightTaskId}
           showFocusToggle
           hideStatusBadge
+          onLongPressAction={canDeferTask ? () => openDeferMenu(item.task) : undefined}
+          onLongPressActionLabel={canDeferTask ? resolveText('review.startTime', 'Defer until') : undefined}
           onProjectPress={openProjectScreen}
           onContextPress={openContextsScreen}
           onTagPress={openContextsScreen}
@@ -1425,6 +1555,72 @@ export default function FocusScreen() {
           </View>
         </View>
       </Modal>
+      {deferPickerTask && Platform.OS === 'ios' ? (
+        <Modal
+          animationType="fade"
+          transparent
+          visible
+          onRequestClose={closeDeferDatePicker}
+        >
+          <View style={styles.sheetRoot}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={resolveText('common.cancel', 'Cancel')}
+              onPress={closeDeferDatePicker}
+              style={styles.sheetBackdrop}
+            />
+            <View style={[styles.sheet, styles.deferPickerSheet, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+              <View style={styles.sheetHeader}>
+                <Text style={[styles.sheetTitle, { color: tc.text }]}>
+                  {resolveText('review.startTime', 'Defer until')}
+                </Text>
+                <View style={styles.sheetHeaderActions}>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={closeDeferDatePicker}
+                    style={styles.sheetTextButton}
+                  >
+                    <Text style={[styles.sheetTextButtonText, { color: tc.secondaryText }]}>
+                      {resolveText('common.cancel', 'Cancel')}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={confirmPickedDeferDate}
+                    style={styles.sheetTextButton}
+                  >
+                    <Text style={[styles.sheetTextButtonText, { color: tc.tint }]}>
+                      {resolveText('common.done', 'Done')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text
+                numberOfLines={1}
+                style={[styles.deferPickerTaskTitle, { color: tc.secondaryText }]}
+              >
+                {deferPickerTask.title}
+              </Text>
+              <DateTimePicker
+                value={deferPickerDate}
+                mode="date"
+                display="inline"
+                minimumDate={getStartDateOffset(1)}
+                onChange={handleDeferDateChange}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+      {deferPickerTask && Platform.OS !== 'ios' ? (
+        <DateTimePicker
+          value={deferPickerDate}
+          mode="date"
+          display="default"
+          minimumDate={getStartDateOffset(1)}
+          onChange={handleDeferDateChange}
+        />
+      ) : null}
       <TaskEditModal
         visible={isModalVisible}
         task={editingTask}
@@ -1695,6 +1891,14 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 20,
     maxHeight: '78%',
+  },
+  deferPickerSheet: {
+    maxHeight: '70%',
+  },
+  deferPickerTaskTitle: {
+    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: '600',
   },
   sheetHeader: {
     flexDirection: 'row',

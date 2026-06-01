@@ -129,6 +129,20 @@ describe('sync normalization', () => {
         ]));
     });
 
+    it('clears focus flags from tasks with future start dates during merge normalization', () => {
+        const task = {
+            ...createMockTask('task-1', '2026-01-01T00:00:00.000Z'),
+            status: 'next',
+            startTime: '2026-01-03',
+            isFocusedToday: true,
+        } satisfies Task;
+
+        const normalized = normalizeTaskForSyncMerge(task, '2026-01-01T10:00:00.000Z');
+
+        expect(normalized.startTime).toBe('2026-01-03');
+        expect(normalized.isFocusedToday).toBe(false);
+    });
+
     it('does not let one-sided revBy metadata decide equal-revision conflicts', () => {
         const updatedAt = '2026-01-01T00:00:00.000Z';
         const local = mockAppData([{

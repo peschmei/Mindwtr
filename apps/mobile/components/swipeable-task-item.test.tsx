@@ -308,6 +308,54 @@ describe('SwipeableTaskItem', () => {
     }));
   });
 
+  it('exposes the long-press row action through accessibility actions', () => {
+    const onLongPressAction = vi.fn();
+
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(
+        <SwipeableTaskItem
+          task={{
+            id: 'task-1',
+            title: 'Plan release',
+            status: 'next',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          } as any}
+          isDark={false}
+          tc={{
+            taskItemBg: '#111111',
+            border: '#222222',
+            text: '#ffffff',
+            secondaryText: '#999999',
+            tint: '#3b82f6',
+            warning: '#f59e0b',
+          } as any}
+          onPress={vi.fn()}
+          onStatusChange={vi.fn()}
+          onDelete={vi.fn()}
+          onLongPressAction={onLongPressAction}
+          onLongPressActionLabel="Defer until"
+        />
+      );
+    });
+
+    const row = tree.root.find((node) => (
+      node.props.accessibilityLabel === 'Plan release. Status: Next'
+      && Array.isArray(node.props.accessibilityActions)
+    ));
+
+    expect(row.props.accessibilityActions).toEqual(expect.arrayContaining([
+      { name: 'longPressAction', label: 'Defer until' },
+    ]));
+
+    renderer.act(() => {
+      row.props.onAccessibilityAction({ nativeEvent: { actionName: 'longPressAction' } });
+    });
+
+    expect(onLongPressAction).toHaveBeenCalledTimes(1);
+  });
+
   it('navigates from project, context, and tag meta labels', () => {
     const onProjectPress = vi.fn();
     const onContextPress = vi.fn();

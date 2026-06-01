@@ -41,6 +41,11 @@ vi.mock('@mindwtr/core', () => {
     safeFormatDate: () => '2026-03-15',
     safeParseDate: parseDate,
     safeParseDueDate: parseDate,
+    shouldShowTaskForStart: (task: { startTime?: string | null }) => {
+      const start = parseDate(task.startTime);
+      if (!start) return true;
+      return start <= new Date(2026, 2, 15, 23, 59, 59, 999);
+    },
     sortTasksBy: (tasks: unknown[]) => tasks,
   };
 });
