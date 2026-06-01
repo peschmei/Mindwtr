@@ -53,6 +53,7 @@ import { saveStoredFullscreen } from './lib/window-state';
 import { installWebviewZoomShortcuts } from './lib/webview-zoom';
 import { resolveCloseBehavior } from './lib/window-behavior';
 import { subscribeNavigateEvent } from './lib/navigation-events';
+import { shouldOpenDesktopFirstRunOnboarding, subscribeDesktopOnboardingEvent } from './lib/desktop-onboarding-events';
 import { QUICK_ADD_SAVED_EVENT } from './lib/quick-add-saved-event';
 import { useUiStore } from './store/ui-store';
 import { useObsidianStore } from './store/obsidian-store';
@@ -695,12 +696,27 @@ function App() {
         SyncService.getSyncBackend()
             .then((backend) => {
                 if (cancelled) return;
-                if (backend !== 'off') return;
-                setDesktopOnboardingOpen(true);
+                if (shouldOpenDesktopFirstRunOnboarding({
+                    hasHydratedSettings,
+                    isLoading,
+                    dismissed: desktopOnboardingDismissed,
+                    visibleDataCount,
+                    syncBackend: backend,
+                })) {
+                    setDesktopOnboardingOpen(true);
+                }
             })
             .catch((error) => {
                 void logError(error, { scope: 'onboarding', step: 'readSyncBackend' });
-                if (!cancelled) setDesktopOnboardingOpen(true);
+                if (!cancelled && shouldOpenDesktopFirstRunOnboarding({
+                    hasHydratedSettings,
+                    isLoading,
+                    dismissed: desktopOnboardingDismissed,
+                    visibleDataCount,
+                    syncBackend: 'off',
+                })) {
+                    setDesktopOnboardingOpen(true);
+                }
             });
         return () => {
             cancelled = true;
@@ -760,6 +776,14 @@ function App() {
             handleViewChange(view);
         });
     }, [handleViewChange]);
+
+    useEffect(() => {
+        return subscribeDesktopOnboardingEvent(() => {
+            setDesktopOnboardingBusy(false);
+            setDesktopOnboardingDismissed(false);
+            setDesktopOnboardingOpen(true);
+        });
+    }, []);
 
     return (
         <ErrorBoundary>

@@ -5,7 +5,6 @@ import {
     normalizeFocusTaskLimit,
     sanitizePomodoroDurations,
     translateText,
-    useTaskStore,
 } from '@mindwtr/core';
 
 import type { ReactNode } from 'react';
@@ -13,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { reportError } from '../../../lib/report-error';
+import { dispatchDesktopOnboardingEvent } from '../../../lib/desktop-onboarding-events';
 import { useUiStore } from '../../../store/ui-store';
 import type { Language } from '../../../contexts/language-context';
 import {
@@ -183,7 +183,6 @@ export function SettingsGtdPage({
     const [reviewOpen, setReviewOpen] = useState(false);
     const [inboxOpen, setInboxOpen] = useState(false);
     const [taskEditorOpen, setTaskEditorOpen] = useState(false);
-    const seedGettingStarted = useTaskStore((state) => state.seedGettingStarted);
     const showToast = useUiStore((state) => state.showToast);
     const pomodoroAutoStartNoticeShownRef = useRef(false);
     const autoArchiveOptions = [0, 1, 3, 7, 14, 30, 60];
@@ -450,17 +449,8 @@ export function SettingsGtdPage({
         if (presentation === taskEditorPresentation) return;
         saveTaskEditor({ presentation });
     };
-    const handleSeedGettingStarted = () => {
-        seedGettingStarted()
-            .then((result) => {
-                showToast(
-                    result.id
-                        ? 'Getting Started onboarding is ready in Projects.'
-                        : 'Getting Started onboarding was not created.',
-                    result.id ? 'success' : 'info'
-                );
-            })
-            .catch((error) => reportError('Failed to seed getting started onboarding', error));
+    const handleOpenOnboardingFlow = () => {
+        dispatchDesktopOnboardingEvent();
     };
 
     const taskEditorSectionLabel = (sectionId: TaskEditorSectionId) => {
@@ -497,15 +487,15 @@ export function SettingsGtdPage({
                     <div className="min-w-0">
                         <div className="text-sm font-medium text-foreground">Temporary onboarding test</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                            Adds the shared Getting Started project and sample Inbox items to this desktop data set if they are missing.
+                            Opens the desktop first-run onboarding flow so you can test Sync, Import, and Start fresh.
                         </div>
                     </div>
                     <button
                         type="button"
-                        onClick={handleSeedGettingStarted}
+                        onClick={handleOpenOnboardingFlow}
                         className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-sm font-medium text-foreground hover:bg-amber-500/25 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                     >
-                        Trigger onboarding
+                        Open onboarding flow
                     </button>
                 </div>
             ) : null}
