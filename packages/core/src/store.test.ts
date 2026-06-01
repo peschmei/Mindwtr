@@ -1168,19 +1168,28 @@ describe('TaskStore', () => {
             .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
 
         expect(starterTasks.map((task) => task.title)).toEqual([
-            'Bring your tasks into Mindwtr',
-            'Pick your sync method',
-            'Make Focus your doing list',
-            'Run a weekly review',
+            'Import tasks from another app',
+            'Set up sync across your devices',
+            'Process your first inbox item',
+            'Try quick capture with a context and date',
+            "Star up to 3 tasks for Today's Focus",
+            'Run your first weekly review',
         ]);
         expect(starterTasks.every((task) => task.status === 'next')).toBe(true);
         expect(starterTasks.every((task) => task.taskMode === 'list')).toBe(true);
         expect(starterTasks[1].checklist?.map((item) => item.title)).toContain('Open Settings -> Sync');
+        expect(starterTasks[4].isFocusedToday).toBe(true);
+
+        const sampleInboxTasks = state.tasks
+            .filter((task) => task.status === 'inbox')
+            .map((task) => task.title)
+            .sort();
+        expect(sampleInboxTasks).toEqual(['Buy milk', 'Reply to Sam']);
 
         const saveCalls = (mockStorage.saveData as unknown as { mock: { calls: any[][] } }).mock.calls;
         const saved = saveCalls[saveCalls.length - 1]?.[0];
         expect(saved?.projects).toHaveLength(1);
-        expect(saved?.tasks).toHaveLength(4);
+        expect(saved?.tasks).toHaveLength(8);
     });
 
     it('does not force notifications off for existing data with legacy settings', async () => {

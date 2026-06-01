@@ -132,6 +132,9 @@ type StarterTaskTemplate = {
     title: string;
     description: string;
     checklist: string[];
+    contexts?: string[];
+    tags?: string[];
+    isFocusedToday?: boolean;
 };
 
 const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string): Pick<AppData, 'projects' | 'tasks'> => {
@@ -144,6 +147,7 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
         color: '#3B82F6',
         order: 0,
         tagIds: [],
+        supportNotes: 'These getting-started tasks are optional. Delete this project anytime when Mindwtr feels set up.',
         rev: 1,
         ...revisionMeta,
         createdAt: nowIso,
@@ -151,8 +155,8 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
     };
     const starterTasks: StarterTaskTemplate[] = [
         {
-            title: 'Bring your tasks into Mindwtr',
-            description: 'If you already use another task app, import first so the rest of your setup happens around real work.',
+            title: 'Import tasks from another app',
+            description: 'If you already have a system, import first so the rest of setup happens around real work.',
             checklist: [
                 'Open Settings -> Data',
                 'Import Todoist, DGT GTD, OmniFocus, Apple Reminders, or a backup file',
@@ -160,8 +164,8 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
             ],
         },
         {
-            title: 'Pick your sync method',
-            description: 'Sync is optional. Choose one method that matches how you want to move data between devices.',
+            title: 'Set up sync across your devices',
+            description: 'Sync is optional. Choose one method so desktop and mobile share the same trusted system.',
             checklist: [
                 'Open Settings -> Sync',
                 'Choose Dropbox for the easiest cloud setup, File for a synced folder, or WebDAV/Self-hosted for custom storage',
@@ -169,17 +173,38 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
             ],
         },
         {
-            title: 'Make Focus your doing list',
-            description: 'Focus is for actions you can commit to now. Keep Inbox for capture and processing.',
+            title: 'Process your first inbox item',
+            description: 'Inbox is for capture. Processing turns loose thoughts into next actions, someday items, projects, or reference.',
             checklist: [
-                'Move a real next action out of Inbox',
-                "Mark today's most important items for Focus when needed",
-                'Add contexts, energy, or time estimates only when they help you choose',
+                'Open Inbox',
+                'Tap Process Inbox',
+                'Clarify one sample item into a next action or project',
             ],
         },
         {
-            title: 'Run a weekly review',
-            description: 'A short review keeps your system trustworthy without turning every task into an alarm.',
+            title: 'Try quick capture with a context and date',
+            description: 'Quick Add can capture the task and light structure in one line.',
+            checklist: [
+                'Tap the capture button',
+                'Try: Call Alex @phone /due:tomorrow',
+                'Keep dates for real deadlines or ticklers',
+            ],
+            contexts: ['@computer'],
+        },
+        {
+            title: "Star up to 3 tasks for Today's Focus",
+            description: 'Focus is for the few actions you can commit to now. Everything else can stay as a normal next action.',
+            checklist: [
+                'Open Focus',
+                'Use the star to pick your top actions',
+                'Defer an action when it should hide until later',
+            ],
+            contexts: ['@computer'],
+            isFocusedToday: true,
+        },
+        {
+            title: 'Run your first weekly review',
+            description: 'Reflect keeps the system trustworthy without turning every task into an alarm.',
             checklist: [
                 'Open Review',
                 'Clarify Inbox items',
@@ -192,8 +217,8 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
         title: template.title,
         status: 'next',
         taskMode: 'list',
-        tags: [],
-        contexts: [],
+        tags: template.tags ?? [],
+        contexts: template.contexts ?? [],
         checklist: template.checklist.map((title) => ({
             id: uuidv4(),
             title,
@@ -203,13 +228,41 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
         projectId,
         order: index,
         orderNum: index,
+        isFocusedToday: template.isFocusedToday,
         rev: 1,
         ...revisionMeta,
         createdAt: nowIso,
         updatedAt: nowIso,
     }));
 
-    return { projects: [project], tasks };
+    const sampleInboxTasks: Task[] = [
+        {
+            id: uuidv4(),
+            title: 'Buy milk',
+            status: 'inbox',
+            taskMode: 'task',
+            tags: [],
+            contexts: [],
+            rev: 1,
+            ...revisionMeta,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        },
+        {
+            id: uuidv4(),
+            title: 'Reply to Sam',
+            status: 'inbox',
+            taskMode: 'task',
+            tags: [],
+            contexts: [],
+            rev: 1,
+            ...revisionMeta,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        },
+    ];
+
+    return { projects: [project], tasks: [...tasks, ...sampleInboxTasks] };
 };
 
 type SettingsActionContext = {
