@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import type { SettingsSyncPageProps } from './types';
 
 type DataTransferSectionProps = Pick<
@@ -59,6 +59,15 @@ export function DataTransferSection({
                 {t.dataTransfer}
             </h2>
             <div className="bg-card border border-border rounded-lg p-6 space-y-3">
+                <a
+                    href="https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync#imports-and-migrations"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                    Import guide
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
                 <p className="text-sm text-muted-foreground">{t.dataTransferDesc}</p>
                 <div className="space-y-2">
                     <TransferActionButton

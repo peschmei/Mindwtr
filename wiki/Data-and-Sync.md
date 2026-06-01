@@ -420,6 +420,10 @@ Before restore, Mindwtr validates the file and creates a recovery snapshot when 
 
 See [[Backup and Restore]] for the detailed flow.
 
+## Imports and Migrations
+
+Use these guides when bringing task data from another app into Mindwtr. Imports add data to Mindwtr; they do not configure sync.
+
 ### Todoist CSV / ZIP Import
 
 Mindwtr can import Todoist exports from **Settings → Data → Import from Todoist**.
