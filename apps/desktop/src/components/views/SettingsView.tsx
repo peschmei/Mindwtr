@@ -48,6 +48,7 @@ import {
   wrapSettingsOpenImport,
 } from "../../lib/settings-open-diagnostics";
 import {
+  getSettingsLabelFallback,
   labelFallback,
   labelKeyOverrides,
   type SettingsLabels,
@@ -387,10 +388,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
   const [isCleaningAttachments, setIsCleaningAttachments] = useState(false);
 
   const t = useMemo(() => {
-    const labelsFallback =
-      language === "zh" || language === "zh-Hant"
-        ? labelFallback.zh
-        : labelFallback.en;
+    const labelsFallback = getSettingsLabelFallback(language);
     const result = {} as SettingsLabels;
     (Object.keys(labelFallback.en) as Array<keyof SettingsLabels>).forEach(
       (key) => {
