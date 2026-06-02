@@ -49,7 +49,22 @@ vi.mock('./projects/ProjectsSidebar', () => ({
 }));
 
 vi.mock('./projects/ProjectWorkspace', () => ({
-    ProjectWorkspace: () => <div data-testid="project-workspace">Workspace</div>,
+    ProjectWorkspace: ({
+        projectsSidebarCollapsed,
+        onToggleProjectsSidebar,
+    }: {
+        projectsSidebarCollapsed?: boolean;
+        onToggleProjectsSidebar?: () => void;
+    }) => (
+        <div data-testid="project-workspace">
+            Workspace
+            {projectsSidebarCollapsed && onToggleProjectsSidebar && (
+                <button type="button" aria-label="Expand projects panel" onClick={onToggleProjectsSidebar}>
+                    Expand
+                </button>
+            )}
+        </div>
+    ),
 }));
 
 vi.mock('../../contexts/language-context', () => ({
@@ -311,9 +326,9 @@ describe('ProjectsView', () => {
             flushAnimationFrames();
         });
 
-        const sidebar = screen.getByTestId('projects-sidebar').parentElement?.parentElement;
-        const layout = sidebar?.parentElement;
-        expect(sidebar).toHaveStyle({ width: '304px' });
+        const sidebarFrame = screen.getByTestId('projects-sidebar').parentElement?.parentElement;
+        const layout = sidebarFrame?.parentElement;
+        expect(sidebarFrame).toHaveStyle({ width: '304px' });
         expect(layout).toHaveStyle({ maxWidth: '1344px' });
         expect(screen.getByRole('separator', { name: 'Resize projects panel' })).toBeInTheDocument();
 
@@ -322,8 +337,9 @@ describe('ProjectsView', () => {
         await waitFor(() => {
             expect(screen.queryByTestId('projects-sidebar')).not.toBeInTheDocument();
         });
-        expect(screen.getByTestId('projects-sidebar-collapsed')).toBeInTheDocument();
-        expect(sidebar).toHaveStyle({ width: '56px' });
+        expect(screen.queryByTestId('projects-sidebar-collapsed')).not.toBeInTheDocument();
+        expect(sidebarFrame).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Expand projects panel' })).toBeInTheDocument();
         expect(layout).toHaveStyle({ maxWidth: '1592px' });
         expect(screen.queryByRole('separator', { name: 'Resize projects panel' })).not.toBeInTheDocument();
         expect(window.localStorage.getItem('mindwtr:view:projects:v1')).toContain('"projectsSidebarCollapsed":true');
@@ -333,7 +349,8 @@ describe('ProjectsView', () => {
         await waitFor(() => {
             expect(screen.getByTestId('projects-sidebar')).toBeInTheDocument();
         });
-        expect(sidebar).toHaveStyle({ width: '304px' });
+        const restoredSidebarFrame = screen.getByTestId('projects-sidebar').parentElement?.parentElement;
+        expect(restoredSidebarFrame).toHaveStyle({ width: '304px' });
         expect(layout).toHaveStyle({ maxWidth: '1344px' });
         expect(screen.getByRole('separator', { name: 'Resize projects panel' })).toBeInTheDocument();
 

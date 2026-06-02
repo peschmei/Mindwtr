@@ -8,7 +8,6 @@ import {
     type KeyboardEvent as ReactKeyboardEvent,
     type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { ChevronsRight, Folder } from 'lucide-react';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { tFallback, useTaskStore, Task, type Project } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
@@ -310,7 +309,6 @@ export function ProjectsView() {
 
     const resizeSidebarLabel = tFallback(t, 'projects.resizeSidebar', 'Resize projects panel');
     const collapseProjectsSidebarLabel = tFallback(t, 'projects.collapseSidebar', 'Collapse projects panel');
-    const expandProjectsSidebarLabel = tFallback(t, 'projects.expandSidebar', 'Expand projects panel');
 
     const handleSidebarResizePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
         if (event.button !== 0) return;
@@ -563,37 +561,12 @@ export function ProjectsView() {
                     className="mx-auto flex h-full w-full min-w-0 gap-5 xl:gap-6"
                     style={{ maxWidth: `${projectsLayoutMaxWidth}px` }}
                 >
-                    <div
-                        className="relative min-h-0 flex-none transition-[width] duration-150"
-                        style={{
-                            width: `${projectsSidebarCollapsed ? PROJECTS_SIDEBAR_COLLAPSED_WIDTH : sidebarWidth}px`,
-                        }}
-                    >
-                        <div id="projects-sidebar-panel" className="h-full min-w-0">
-                            {projectsSidebarCollapsed ? (
-                                <div
-                                    data-testid="projects-sidebar-collapsed"
-                                    className="flex h-full w-full flex-col items-center gap-3 border-r border-border py-1"
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={toggleProjectsSidebarCollapsed}
-                                        className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40"
-                                        title={expandProjectsSidebarLabel}
-                                        aria-label={expandProjectsSidebarLabel}
-                                        aria-controls="projects-sidebar-panel"
-                                        aria-expanded={false}
-                                    >
-                                        <ChevronsRight className="w-4 h-4" />
-                                    </button>
-                                    <div
-                                        className="h-8 w-8 flex items-center justify-center rounded-md bg-muted/40 text-muted-foreground"
-                                        aria-hidden="true"
-                                    >
-                                        <Folder className="w-4 h-4" />
-                                    </div>
-                                </div>
-                            ) : (
+                    {!projectsSidebarCollapsed && (
+                        <div
+                            className="relative min-h-0 flex-none transition-[width] duration-150"
+                            style={{ width: `${sidebarWidth}px` }}
+                        >
+                            <div id="projects-sidebar-panel" className="h-full min-w-0">
                                 <ProjectsSidebar
                                     t={t}
                                     areaFilterLabel={areaFilterLabel ?? undefined}
@@ -634,9 +607,7 @@ export function ProjectsView() {
                                     collapseLabel={collapseProjectsSidebarLabel}
                                     onToggleCollapsed={toggleProjectsSidebarCollapsed}
                                 />
-                            )}
-                        </div>
-                        {!projectsSidebarCollapsed && (
+                            </div>
                             <div
                                 role="separator"
                                 aria-controls="projects-sidebar-panel"
@@ -667,8 +638,8 @@ export function ProjectsView() {
                                     }`}
                                 />
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                     <ProjectWorkspace
                         addProject={addProject}
@@ -705,6 +676,8 @@ export function ProjectsView() {
                         showToast={showToast}
                         sortedAreas={sortedAreas}
                         t={t}
+                        projectsSidebarCollapsed={projectsSidebarCollapsed}
+                        onToggleProjectsSidebar={toggleProjectsSidebarCollapsed}
                         onToggleShowCompletedTasks={() => setShowCompletedProjectTasks((prev) => !prev)}
                         undoNotificationsEnabled={settings?.undoNotificationsEnabled !== false}
                         updateProject={updateProject}

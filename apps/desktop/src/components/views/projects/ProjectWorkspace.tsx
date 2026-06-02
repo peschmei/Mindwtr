@@ -11,7 +11,7 @@ import {
 } from '@mindwtr/core';
 import { DndContext, PointerSensor, MeasuringStrategy, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ChevronRight, FileText, Folder, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ChevronRight, FileText, Folder, PanelLeftOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { PromptModal } from '../../PromptModal';
 import { TaskItem } from '../../TaskItem';
@@ -94,6 +94,8 @@ type ProjectWorkspaceProps = {
     showToast: ShowToast;
     sortedAreas: Area[];
     t: (key: string) => string;
+    projectsSidebarCollapsed?: boolean;
+    onToggleProjectsSidebar?: () => void;
     undoNotificationsEnabled: boolean;
     updateProject: (
         projectId: string,
@@ -155,6 +157,8 @@ export function ProjectWorkspace({
     showToast,
     sortedAreas,
     t,
+    projectsSidebarCollapsed = false,
+    onToggleProjectsSidebar,
     undoNotificationsEnabled,
     updateProject,
     updateSection,
@@ -783,6 +787,8 @@ export function ProjectWorkspace({
         if (!selectedProject?.areaId) return undefined;
         return areaById.get(selectedProject.areaId)?.name;
     })();
+    const expandProjectsSidebarLabel = resolveText('projects.expandSidebar', 'Expand projects panel');
+    const showProjectsSidebarToggle = projectsSidebarCollapsed && Boolean(onToggleProjectsSidebar);
 
     const handleAddTaskForProject = useCallback(
         async (value: string, sectionId?: string | null) => {
@@ -837,6 +843,18 @@ export function ProjectWorkspace({
                 <div className="flex h-full min-h-0 w-full max-w-none flex-col">
                     <div className="mb-4">
                         <div className="flex flex-col gap-2 sm:flex-row">
+                            {showProjectsSidebarToggle && (
+                                <button
+                                    type="button"
+                                    onClick={onToggleProjectsSidebar}
+                                    className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                    title={expandProjectsSidebarLabel}
+                                    aria-label={expandProjectsSidebarLabel}
+                                    aria-expanded={false}
+                                >
+                                    <PanelLeftOpen className="h-4 w-4" />
+                                </button>
+                            )}
                             <input
                                 type="text"
                                 data-view-filter-input
