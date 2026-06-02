@@ -910,6 +910,33 @@ export function AgendaView() {
         }
         setListOptions({ showDetails: true });
     }, [collapseAllTaskDetails, setListOptions, showListDetails]);
+    const todaysFocusSection = focusedTasks.length > 0 ? (
+        <div
+            data-testid="todays-focus-section"
+            className="rounded-xl border border-border/70 border-l-4 border-l-amber-400 bg-card/70 p-6 shadow-sm dark:border-border/60 dark:border-l-amber-400/80 dark:bg-card/60"
+        >
+            <h3 className="font-bold text-lg flex items-center gap-2 mb-4 text-foreground">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500 dark:text-amber-300 dark:fill-amber-300" />
+                {t('agenda.todaysFocus')}
+                <span className="text-sm font-normal text-muted-foreground">
+                    ({focusedCount}/{focusTaskLimit})
+                </span>
+            </h3>
+
+            <div className="divide-y divide-border/30">
+                {focusedTasks.map(task => (
+                    <StoreTaskItem
+                        key={task.id}
+                        taskId={task.id}
+                        buildFocusToggle={buildFocusToggle}
+                        showProjectBadgeInActions={false}
+                        compactMetaEnabled={showListDetails}
+                        enableDoubleClickEdit
+                    />
+                ))}
+            </div>
+        </div>
+    ) : null;
 
     return (
         <ErrorBoundary>
@@ -1054,9 +1081,10 @@ export function AgendaView() {
 
             {top3Only ? (
                 <div className="space-y-4">
+                    {todaysFocusSection}
                     <div className="space-y-2">
                         <h3 className="font-semibold">{t('agenda.top3Title')}</h3>
-                                {top3Tasks.length > 0 ? (
+                        {top3Tasks.length > 0 ? (
                             <div className="divide-y divide-border/30">
                                 {top3Tasks.map(task => (
                                     <StoreTaskItem
@@ -1085,33 +1113,7 @@ export function AgendaView() {
                 </div>
             ) : (
                 <>
-                    {focusedTasks.length > 0 && (
-                        <div
-                            data-testid="todays-focus-section"
-                            className="rounded-xl border border-border/70 border-l-4 border-l-amber-400 bg-card/70 p-6 shadow-sm dark:border-border/60 dark:border-l-amber-400/80 dark:bg-card/60"
-                        >
-                            <h3 className="font-bold text-lg flex items-center gap-2 mb-4 text-foreground">
-                                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500 dark:text-amber-300 dark:fill-amber-300" />
-                                {t('agenda.todaysFocus')}
-                                <span className="text-sm font-normal text-muted-foreground">
-                                    ({focusedCount}/{focusTaskLimit})
-                                </span>
-                            </h3>
-
-                            <div className="divide-y divide-border/30">
-                                {focusedTasks.map(task => (
-                                    <StoreTaskItem
-                                        key={task.id}
-                                        taskId={task.id}
-                                        buildFocusToggle={buildFocusToggle}
-                                        showProjectBadgeInActions={false}
-                                        compactMetaEnabled={showListDetails}
-                                        enableDoubleClickEdit
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    {todaysFocusSection}
 
                     {/* Other Sections */}
                     <div className="space-y-6">

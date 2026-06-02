@@ -78,6 +78,53 @@ describe('AgendaView', () => {
         expect(sectionClassName).not.toContain('dark:to-amber');
     });
 
+    it('keeps today focus visible when Top 3 mode is enabled', () => {
+        const task = (id: string, title: string, createdAt: string): Task => ({
+            id,
+            title,
+            status: 'next',
+            tags: [],
+            contexts: [],
+            createdAt,
+            updatedAt: createdAt,
+        });
+        const tasks = [
+            focusedTask,
+            task('top-1', 'Top task 1', '2026-02-28T09:00:00.000Z'),
+            task('top-2', 'Top task 2', '2026-02-28T10:00:00.000Z'),
+            task('top-3', 'Top task 3', '2026-02-28T11:00:00.000Z'),
+            task('top-4', 'Top task 4', '2026-02-28T12:00:00.000Z'),
+        ];
+
+        useTaskStore.setState({
+            tasks,
+            _allTasks: tasks,
+            projects: [],
+            _allProjects: [],
+            areas: [],
+            _allAreas: [],
+            settings: {},
+            error: null,
+            highlightTaskId: null,
+        });
+        useUiStore.setState((state) => ({
+            ...state,
+            listOptions: {
+                ...state.listOptions,
+                focusTop3Only: true,
+            },
+        }));
+
+        const { getByTestId, getByText, queryByText } = renderAgenda();
+
+        expect(getByTestId('todays-focus-section')).toBeInTheDocument();
+        expect(getByText('Focused task')).toBeInTheDocument();
+        expect(getByText('Top task 1')).toBeInTheDocument();
+        expect(getByText('Top task 2')).toBeInTheDocument();
+        expect(getByText('Top task 3')).toBeInTheDocument();
+        expect(queryByText('Top task 4')).not.toBeInTheDocument();
+    });
+
     it('collapses expanded task details when page details are turned off', () => {
         const nextTask: Task = {
             id: 'next-action-task',
