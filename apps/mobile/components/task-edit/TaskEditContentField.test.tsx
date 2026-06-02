@@ -226,6 +226,30 @@ describe('TaskEditContentField', () => {
     expect(handleInputFocus).toHaveBeenCalledWith(undefined);
   });
 
+  it('keeps the Android description editor in plain-text spellcheck mode', () => {
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditContentField
+          {...baseProps}
+          fieldId="description"
+        />
+      );
+    });
+
+    const input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.descriptionLabel' });
+
+    expect(input.props.spellCheck).toBe(true);
+    expect(input.props.autoCorrect).toBe(true);
+    expect(input.props.autoCapitalize).toBe('sentences');
+    expect(input.props.autoComplete).toBe('off');
+    expect(input.props.importantForAutofill).toBe('no');
+    expect(input.props.inputMode).toBe('text');
+    expect(input.props.textContentType).toBe('none');
+    expect(input.props.keyboardType).toBe('default');
+  });
+
   it('nudges Android keyboard scrolling when the inline description caret reaches the end', () => {
     const descriptionDraft = 'First line\nLast line';
     const handleInputFocus = vi.fn();

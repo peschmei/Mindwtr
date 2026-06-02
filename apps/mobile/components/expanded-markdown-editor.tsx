@@ -558,6 +558,10 @@ export function ExpandedMarkdownEditor({
                                     spellCheck={true}
                                     autoCorrect={true}
                                     autoCapitalize="sentences"
+                                    autoComplete="off"
+                                    importantForAutofill="no"
+                                    inputMode="text"
+                                    textContentType="none"
                                     keyboardType="default"
                                     accessibilityLabel={title}
                                     accessibilityHint={placeholder}

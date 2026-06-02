@@ -342,6 +342,10 @@ export function TaskEditContentField({
                                 spellCheck={true}
                                 autoCorrect={true}
                                 autoCapitalize="sentences"
+                                autoComplete="off"
+                                importantForAutofill="no"
+                                inputMode="text"
+                                textContentType="none"
                                 keyboardType="default"
                                 placeholderTextColor={tc.secondaryText}
                                 accessibilityLabel={t('taskEdit.descriptionLabel')}

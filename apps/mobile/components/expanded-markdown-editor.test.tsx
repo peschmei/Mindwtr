@@ -106,6 +106,10 @@ describe('ExpandedMarkdownEditor', () => {
     expect(input.props.spellCheck).toBe(true);
     expect(input.props.autoCorrect).toBe(true);
     expect(input.props.autoCapitalize).toBe('sentences');
+    expect(input.props.autoComplete).toBe('off');
+    expect(input.props.importantForAutofill).toBe('no');
+    expect(input.props.inputMode).toBe('text');
+    expect(input.props.textContentType).toBe('none');
     expect(input.props.keyboardType).toBe('default');
 
     act(() => {
