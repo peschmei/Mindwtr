@@ -13,6 +13,29 @@ vi.mock('../markdown-text', () => ({
   MarkdownText: (props: any) => React.createElement('MarkdownText', props),
 }));
 
+vi.mock('lucide-react-native', () => ({
+  GripVertical: (props: any) => React.createElement('GripVertical', props),
+}));
+
+vi.mock('react-native-draggable-flatlist', () => ({
+  NestableDraggableFlatList: (props: any) => React.createElement(
+    'NestableDraggableFlatList',
+    props,
+    props.data?.map((item: any, index: number) => React.createElement(
+      React.Fragment,
+      { key: props.keyExtractor?.(item, index) ?? index },
+      props.renderItem?.({
+        item,
+        index,
+        drag: () => undefined,
+        isActive: false,
+        getIndex: () => index,
+      })
+    ))
+  ),
+  ScaleDecorator: (props: any) => React.createElement('ScaleDecorator', props, props.children),
+}));
+
 const withPlatform = (os: typeof Platform.OS, run: () => void) => {
   const originalPlatformOs = Platform.OS;
   Object.defineProperty(Platform, 'OS', {
@@ -108,6 +131,25 @@ const baseProps: any = {
     input: {},
     textArea: {},
     markdownPreview: {},
+    checklistContainer: {},
+    checklistDragList: {},
+    checklistItem: {},
+    checklistItemDragging: {},
+    checklistDragHandle: {},
+    checklistDragHandleDisabled: {},
+    checkboxTouch: {},
+    checkbox: {},
+    checkboxChecked: {},
+    checkmark: {},
+    checklistInput: {},
+    completedText: {},
+    deleteBtn: {},
+    deleteBtnText: {},
+    addChecklistBtn: {},
+    addChecklistText: {},
+    checklistActions: {},
+    checklistActionButton: {},
+    checklistActionText: {},
   },
   tagInputDraft: '',
   tagTokenSuggestions: [],
@@ -141,11 +183,11 @@ const baseProps: any = {
   visibleAttachments: [],
 };
 
-const createChecklistState = () => {
+const createChecklistState = (checklist = [{ id: 'check-1', title: 'Item 1', isCompleted: false }]) => {
   let state: any = {
     id: 'task-1',
     title: 'Task',
-    checklist: [{ id: 'check-1', title: 'Item 1', isCompleted: false }],
+    checklist,
   };
   const setEditedTask = vi.fn((next: any) => {
     state = typeof next === 'function' ? next(state) : next;
@@ -264,5 +306,42 @@ describe('TaskEditContentField', () => {
     });
 
     expect(getState().checklist[0].title).toBe('~~Item 1~~');
+  });
+
+  it('persists checklist order changes from the mobile drag list', () => {
+    const checklist = [
+      { id: 'check-1', title: 'Item 1', isCompleted: false },
+      { id: 'check-2', title: 'Item 2', isCompleted: false },
+      { id: 'check-3', title: 'Item 3', isCompleted: true },
+    ];
+    const { getState, setEditedTask } = createChecklistState(checklist);
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditContentField
+          {...baseProps}
+          fieldId="checklist"
+          editedTask={getState()}
+          setEditedTask={setEditedTask}
+        />
+      );
+    });
+
+    const dragList = tree.root.findByProps({ testID: 'mobile-checklist-reorder-list' });
+
+    act(() => {
+      dragList.props.onDragEnd({
+        from: 0,
+        to: 2,
+        data: [checklist[1], checklist[2], checklist[0]],
+      });
+    });
+
+    expect(getState().checklist.map((item: any) => item.id)).toEqual([
+      'check-2',
+      'check-3',
+      'check-1',
+    ]);
   });
 });

@@ -178,7 +178,10 @@ export const styles = StyleSheet.create({
         padding: 8,
         borderWidth: 1,
         borderColor: '#e5e5e5',
-        overflow: 'hidden',
+        overflow: 'visible',
+    },
+    checklistDragList: {
+        overflow: 'visible',
     },
     checklistItem: {
         flexDirection: 'row',
@@ -186,6 +189,20 @@ export const styles = StyleSheet.create({
         paddingVertical: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',
+    },
+    checklistItemDragging: {
+        opacity: 0.86,
+    },
+    checklistDragHandle: {
+        padding: 8,
+        minWidth: 36,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 2,
+    },
+    checklistDragHandleDisabled: {
+        opacity: 0.35,
     },
     checkboxTouch: {
         padding: 8,
