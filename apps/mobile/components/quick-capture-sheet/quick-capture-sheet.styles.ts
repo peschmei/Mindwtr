@@ -165,6 +165,9 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  footerRowCompact: {
+    marginTop: 10,
+  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',

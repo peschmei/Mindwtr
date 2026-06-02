@@ -135,7 +135,7 @@ export function QuickCaptureSheetBody({
               styles.sheet,
               {
                 backgroundColor: tc.cardBg,
-                paddingBottom: Math.max(20, insetsBottom + 12),
+                paddingBottom: optionsExpanded ? Math.max(20, insetsBottom + 12) : Math.max(12, insetsBottom + 6),
                 maxHeight: sheetMaxHeight,
               },
             ]}
@@ -466,7 +466,7 @@ export function QuickCaptureSheetBody({
               </>
             )}
 
-            <View style={styles.footerRow}>
+            <View style={[styles.footerRow, !optionsExpanded && styles.footerRowCompact]}>
               <View style={styles.toggleRow}>
                 <Switch
                   value={addAnother}
