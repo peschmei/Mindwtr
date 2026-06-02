@@ -113,6 +113,60 @@ describe('applyMarkdownPairInsertion', () => {
         });
     });
 
+    it('wraps selected text in angle brackets and quotes', () => {
+        expect(
+            applyMarkdownPairInsertion('read docs', 'read <', { start: 5, end: 9 }),
+        ).toEqual({
+            value: 'read <docs>',
+            selection: { start: 6, end: 10 },
+        });
+        expect(
+            applyMarkdownPairInsertion('read docs', 'read "', { start: 5, end: 9 }),
+        ).toEqual({
+            value: 'read "docs"',
+            selection: { start: 6, end: 10 },
+        });
+        expect(
+            applyMarkdownPairInsertion('read docs', "read '", { start: 5, end: 9 }),
+        ).toEqual({
+            value: "read 'docs'",
+            selection: { start: 6, end: 10 },
+        });
+    });
+
+    it('auto-pairs opening characters at the cursor', () => {
+        expect(
+            applyMarkdownPairInsertion('read docs', 'read [docs', { start: 5, end: 5 }),
+        ).toEqual({
+            value: 'read []docs',
+            selection: { start: 6, end: 6 },
+        });
+    });
+
+    it('detects auto-pair insertions when native selection has already advanced', () => {
+        expect(
+            applyMarkdownPairInsertion('read docs', 'read [docs', { start: 6, end: 6 }),
+        ).toEqual({
+            value: 'read []docs',
+            selection: { start: 6, end: 6 },
+        });
+    });
+
+    it('moves over an existing closing pair instead of duplicating it', () => {
+        expect(
+            applyMarkdownPairInsertion('read []docs', 'read []]docs', { start: 7, end: 7 }),
+        ).toEqual({
+            value: 'read []docs',
+            selection: { start: 7, end: 7 },
+        });
+    });
+
+    it('does not auto-pair apostrophes inside words', () => {
+        expect(
+            applyMarkdownPairInsertion('dont', "don't", { start: 3, end: 3 }),
+        ).toBeNull();
+    });
+
     it('supports repeated backtick wrapping for fenced code', () => {
         const replaceSelectionWithBacktick = (value: string, selection: { start: number; end: number }) => (
             `${value.slice(0, selection.start)}\`${value.slice(selection.end)}`
@@ -157,9 +211,9 @@ describe('applyMarkdownPairInsertion', () => {
         });
     });
 
-    it('ignores normal typing without a selected range', () => {
+    it('ignores non-pair typing without a selected range', () => {
         expect(
-            applyMarkdownPairInsertion('read docs', 'read [docs', { start: 5, end: 5 }),
+            applyMarkdownPairInsertion('read docs', 'read adocs', { start: 5, end: 5 }),
         ).toBeNull();
     });
 });

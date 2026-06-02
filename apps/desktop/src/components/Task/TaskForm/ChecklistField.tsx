@@ -326,13 +326,7 @@ export function ChecklistField({
                                                     applyChecklistMarkdownResult(index, next, event.currentTarget);
                                                     return;
                                                 }
-                                                if (
-                                                    selection.start !== selection.end
-                                                    && !event.altKey
-                                                    && !event.ctrlKey
-                                                    && !event.metaKey
-                                                    && ['[', '(', '{', '`', '~'].includes(event.key)
-                                                ) {
+                                                if (!event.altKey && !event.ctrlKey && !event.metaKey && event.key.length === 1) {
                                                     const next = applyMarkdownPairInsertion(
                                                         currentValue,
                                                         `${currentValue.slice(0, selection.start)}${event.key}${currentValue.slice(selection.end)}`,

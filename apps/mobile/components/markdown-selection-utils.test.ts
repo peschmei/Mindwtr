@@ -72,16 +72,48 @@ describe('markdown selection replacement fallbacks', () => {
         expect(
             applyMarkdownPairKeyPressWithSelectionFallback(
                 'read docs',
-                '~',
+                '[',
                 { start: 5, end: 5 },
                 { start: 5, end: 9 },
             ),
         ).toEqual({
             result: {
-                value: 'read ~~docs~~',
-                selection: { start: 7, end: 11 },
+                value: 'read [docs]',
+                selection: { start: 6, end: 10 },
             },
             baseSelection: { start: 5, end: 9 },
+        });
+    });
+
+    it('wraps selected text from a mobile quote key press', () => {
+        expect(
+            applyMarkdownPairKeyPressWithSelectionFallback(
+                'read docs',
+                '"',
+                { start: 5, end: 9 },
+            ),
+        ).toEqual({
+            result: {
+                value: 'read "docs"',
+                selection: { start: 6, end: 10 },
+            },
+            baseSelection: { start: 5, end: 9 },
+        });
+    });
+
+    it('auto-pairs a mobile key press without a range selection', () => {
+        expect(
+            applyMarkdownPairKeyPressWithSelectionFallback(
+                'read docs',
+                '[',
+                { start: 5, end: 5 },
+            ),
+        ).toEqual({
+            result: {
+                value: 'read []docs',
+                selection: { start: 6, end: 6 },
+            },
+            baseSelection: { start: 5, end: 5 },
         });
     });
 
@@ -117,11 +149,27 @@ describe('markdown selection replacement fallbacks', () => {
         });
     });
 
-    it('ignores mobile key press pairing without a range selection', () => {
+    it('auto-pairs a mobile text change when native selection has already advanced', () => {
+        expect(
+            applyMarkdownPairInsertionWithSelectionFallback(
+                'read docs',
+                'read [docs',
+                { start: 6, end: 6 },
+            ),
+        ).toEqual({
+            result: {
+                value: 'read []docs',
+                selection: { start: 6, end: 6 },
+            },
+            baseSelection: { start: 6, end: 6 },
+        });
+    });
+
+    it('ignores non-pair mobile key presses without a range selection', () => {
         expect(
             applyMarkdownPairKeyPressWithSelectionFallback(
                 'read docs',
-                '[',
+                'a',
                 { start: 5, end: 5 },
             ),
         ).toBeNull();

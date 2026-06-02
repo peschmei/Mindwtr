@@ -770,9 +770,36 @@ const MARKDOWN_INSERTION_PAIRS: Record<string, string> = {
     '[': ']',
     '(': ')',
     '{': '}',
+    '<': '>',
     '`': '`',
+    "'": "'",
+    '"': '"',
     '~': '~~',
 };
+
+const MARKDOWN_AUTO_INSERTION_PAIRS: Record<string, string> = {
+    '[': ']',
+    '(': ')',
+    '{': '}',
+    '<': '>',
+    '`': '`',
+    "'": "'",
+    '"': '"',
+};
+
+const MARKDOWN_CLOSING_INSERTIONS = new Set<string>([
+    ']',
+    ')',
+    '}',
+    '>',
+    '`',
+    "'",
+    '"',
+]);
+
+const isAsciiAlphaNumeric = (value: string | undefined): boolean => (
+    typeof value === 'string' && /^[A-Za-z0-9]$/.test(value)
+);
 
 const countBackticksBefore = (value: string, index: number): number => {
     let count = 0;
@@ -816,13 +843,85 @@ const wrapSelectionInFencedCodeBlock = (
     };
 };
 
+const getCollapsedInsertionCandidates = (
+    previousValue: string,
+    nextValue: string,
+    selection: MarkdownSelection,
+): Array<{ cursor: number; insertedText: string }> => {
+    const normalizedSelection = normalizeSelection(previousValue, selection);
+    if (normalizedSelection.start !== normalizedSelection.end) return [];
+
+    const cursorCandidates = [normalizedSelection.start];
+    if (normalizedSelection.start > 0) {
+        cursorCandidates.push(normalizedSelection.start - 1);
+    }
+
+    const candidates: Array<{ cursor: number; insertedText: string }> = [];
+    for (const cursor of cursorCandidates) {
+        const before = previousValue.slice(0, cursor);
+        const after = previousValue.slice(cursor);
+        if (!nextValue.startsWith(before) || !nextValue.endsWith(after)) continue;
+
+        const insertedEnd = nextValue.length - after.length;
+        if (insertedEnd <= before.length) continue;
+        candidates.push({
+            cursor,
+            insertedText: nextValue.slice(before.length, insertedEnd),
+        });
+    }
+
+    return candidates;
+};
+
+const shouldAutoPairInsertion = (
+    previousValue: string,
+    cursor: number,
+    insertedText: string,
+): boolean => {
+    if (!MARKDOWN_AUTO_INSERTION_PAIRS[insertedText]) return false;
+    if (insertedText !== "'") return true;
+
+    return !isAsciiAlphaNumeric(previousValue[cursor - 1]) && !isAsciiAlphaNumeric(previousValue[cursor]);
+};
+
+const applyCollapsedPairInsertion = (
+    previousValue: string,
+    nextValue: string,
+    selection: MarkdownSelection,
+): MarkdownToolbarResult | null => {
+    for (const { cursor, insertedText } of getCollapsedInsertionCandidates(previousValue, nextValue, selection)) {
+        if (
+            insertedText.length === 1
+            && MARKDOWN_CLOSING_INSERTIONS.has(insertedText)
+            && previousValue[cursor] === insertedText
+        ) {
+            return {
+                value: previousValue,
+                selection: { start: cursor + 1, end: cursor + 1 },
+            };
+        }
+
+        if (!shouldAutoPairInsertion(previousValue, cursor, insertedText)) continue;
+        const suffix = MARKDOWN_AUTO_INSERTION_PAIRS[insertedText];
+        const next = `${previousValue.slice(0, cursor)}${insertedText}${suffix}${previousValue.slice(cursor)}`;
+        return {
+            value: next,
+            selection: { start: cursor + insertedText.length, end: cursor + insertedText.length },
+        };
+    }
+
+    return null;
+};
+
 export function applyMarkdownPairInsertion(
     previousValue: string,
     nextValue: string,
     selection: MarkdownSelection,
 ): MarkdownToolbarResult | null {
     const replacement = detectSelectionReplacement(previousValue, nextValue, selection);
-    if (!replacement) return null;
+    if (!replacement) {
+        return applyCollapsedPairInsertion(previousValue, nextValue, selection);
+    }
     if (replacement.insertedText === '```') {
         return wrapSelectionInFencedCodeBlock(previousValue, replacement.selection, replacement.selectedText);
     }

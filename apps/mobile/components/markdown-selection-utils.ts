@@ -79,8 +79,12 @@ export const applyMarkdownPairKeyPressWithSelectionFallback = (
 ): MarkdownSelectionReplacement | null => {
     if (!key || key.length > 1) return null;
 
-    for (const selection of getSelectionCandidates(primarySelection, fallbackSelection)) {
-        if (!isRangeSelection(selection)) continue;
+    const selections = getSelectionCandidates(primarySelection, fallbackSelection);
+    const orderedSelections = [
+        ...selections.filter(isRangeSelection),
+        ...selections.filter((selection) => !isRangeSelection(selection)),
+    ];
+    for (const selection of orderedSelections) {
         const nextValue = `${previousValue.slice(0, selection.start)}${key}${previousValue.slice(selection.end)}`;
         const result = applyMarkdownPairInsertion(previousValue, nextValue, selection);
         if (result) {

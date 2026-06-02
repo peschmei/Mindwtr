@@ -793,16 +793,8 @@ export function TaskItemFieldRenderer({
             return;
         }
 
-        if (
-            event.key === 'Tab'
-            || (
-                selection.start !== selection.end
-                && !event.altKey
-                && !event.ctrlKey
-                && !event.metaKey
-                && ['[', '(', '{', '`', '~'].includes(event.key)
-            )
-        ) {
+        const isPairInsertionKey = !event.altKey && !event.ctrlKey && !event.metaKey && event.key.length === 1;
+        if (event.key === 'Tab' || isPairInsertionKey) {
             const next = event.key === 'Tab'
                 ? applyMarkdownKeyboardShortcut(currentValue, selection, {
                     key: event.key,
