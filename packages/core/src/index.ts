@@ -403,6 +403,7 @@ export type {
 
 export {
     addCalendarMinutes,
+    buildCalendarQuickAddTaskDraft,
     buildCalendarEventTaskDraft,
     CALENDAR_TIME_ESTIMATE_OPTIONS,
     DEFAULT_CALENDAR_DAY_END_HOUR,
@@ -419,6 +420,7 @@ export {
 } from './calendar-scheduling';
 export type {
     CalendarEventTaskDraft,
+    CalendarQuickAddTaskDraft,
 } from './calendar-scheduling';
 
 export {

@@ -800,6 +800,10 @@ export const styles = StyleSheet.create({
     width: '100%',
     minHeight: 46,
   },
+  composerHelp: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
   composerResults: {
     maxHeight: 156,
   },

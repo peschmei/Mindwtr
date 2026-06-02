@@ -19,8 +19,10 @@ import {
 } from 'date-fns';
 import {
     DEFAULT_CALENDAR_DAY_START_HOUR,
+    DEFAULT_PROJECT_COLOR,
     addCalendarMinutes,
     buildCalendarEventTaskDraft,
+    buildCalendarQuickAddTaskDraft,
     createProjectedRecurringTask,
     formatCalendarDurationLabel,
     formatCalendarTimeInputValue,
@@ -198,10 +200,12 @@ const eventDayRangeForVisibleRange = (
 
 export function useDesktopCalendarController() {
     const perf = usePerformanceMonitor('CalendarView');
-    const { tasks, areas, addTask, updateTask, settings, getDerivedState } = useTaskStore(
+    const { tasks, projects, areas, addTask, addProject, updateTask, settings, getDerivedState } = useTaskStore(
         (state) => ({
+            addProject: state.addProject,
             addTask: state.addTask,
             tasks: state.tasks,
+            projects: state.projects,
             areas: state.areas,
             updateTask: state.updateTask,
             settings: state.settings,
@@ -731,7 +735,41 @@ export function useDesktopCalendarController() {
             if (selectedTaskId) {
                 await updateTask(selectedTaskId, updates);
             } else {
-                const result = await addTask(taskComposer.title.trim(), { status: 'next', ...updates });
+                const draft = buildCalendarQuickAddTaskDraft(taskComposer.title, {
+                    areas,
+                    durationMinutes,
+                    now: new Date(),
+                    projects,
+                    start,
+                });
+                if (draft.invalidDateCommands.length > 0) {
+                    setTaskComposer((prev) => prev ? {
+                        ...prev,
+                        error: `${t('quickAdd.invalidDateCommand')}: ${draft.invalidDateCommands.join(', ')}`,
+                    } : prev);
+                    return;
+                }
+                if (draft.dateCoherenceIssues.some((issue) => issue.code === 'start_after_due')) {
+                    setTaskComposer((prev) => prev ? {
+                        ...prev,
+                        error: resolveText('task.dateIssue.startAfterDue', 'Starts after due date'),
+                    } : prev);
+                    return;
+                }
+                if (!draft.title) {
+                    setTaskComposer((prev) => prev ? { ...prev, error: resolveText('calendar.taskTitleRequired', 'Enter a task title.') } : prev);
+                    return;
+                }
+                if (!draft.props.projectId && draft.projectTitle) {
+                    const created = await addProject(draft.projectTitle, DEFAULT_PROJECT_COLOR);
+                    if (!created) {
+                        setTaskComposer((prev) => prev ? { ...prev, error: resolveText('calendar.saveFailed', 'Could not save the task.') } : prev);
+                        return;
+                    }
+                    draft.props.projectId = created.id;
+                    draft.props.areaId = undefined;
+                }
+                const result = await addTask(draft.title, draft.props);
                 if (!result.success) {
                     setTaskComposer((prev) => prev ? { ...prev, error: result.error ?? resolveText('calendar.saveFailed', 'Could not save the task.') } : prev);
                     return;

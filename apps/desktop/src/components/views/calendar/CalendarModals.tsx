@@ -167,9 +167,12 @@ export function CalendarTaskComposerModal({ controller }: CalendarTaskComposerMo
                     </div>
 
                     {taskComposer.mode === 'new' ? (
-                        <label className="block space-y-1 text-sm font-medium">
-                            {resolveText('calendar.taskTitle', 'Task title')}
+                        <div className="space-y-1">
+                            <label className="block text-sm font-medium" htmlFor="calendar-task-composer-title">
+                                {resolveText('calendar.taskTitle', 'Task title')}
+                            </label>
                             <input
+                                id="calendar-task-composer-title"
                                 autoFocus
                                 type="text"
                                 value={taskComposer.title}
@@ -177,7 +180,10 @@ export function CalendarTaskComposerModal({ controller }: CalendarTaskComposerMo
                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/30"
                                 placeholder={t('calendar.addTask')}
                             />
-                        </label>
+                            <p className="text-xs font-normal text-muted-foreground">
+                                {t('quickAdd.help')}
+                            </p>
+                        </div>
                     ) : (
                         <div className="space-y-2">
                             <label className="block space-y-1 text-sm font-medium">

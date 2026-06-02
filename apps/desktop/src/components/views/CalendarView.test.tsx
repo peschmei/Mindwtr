@@ -1,6 +1,6 @@
 import { act, createEvent, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Task } from '@mindwtr/core';
+import type { Project, Task } from '@mindwtr/core';
 
 import { LanguageProvider } from '../../contexts/language-context';
 import { CalendarView } from './CalendarView';
@@ -8,14 +8,16 @@ import { combineDateAndTime } from './calendar/useDesktopCalendarController';
 import { fetchExternalCalendarEvents } from '../../lib/external-calendar-events';
 import { setCalendarTaskDragData } from '../../lib/calendar-task-drag';
 
-const storeMocks = vi.hoisted(() => ({
-    taskStoreState: {
+const storeMocks = vi.hoisted(() => {
+    const taskStoreState = {
+        addProject: vi.fn(async () => null),
         addTask: vi.fn(async () => ({ success: true, id: 'task-new' })),
         areas: [],
         deleteTask: vi.fn(async () => {}),
         getDerivedState: () => ({
-            projectMap: new Map(),
+            projectMap: new Map(taskStoreState.projects.map((project) => [project.id, project])),
         }),
+        projects: [] as Project[],
         setError: vi.fn(),
         settings: {
             diagnostics: {
@@ -25,8 +27,10 @@ const storeMocks = vi.hoisted(() => ({
         },
         tasks: [] as Task[],
         updateTask: vi.fn(async () => {}),
-    },
-}));
+    };
+
+    return { taskStoreState };
+});
 
 vi.mock('@mindwtr/core', async () => {
     const actual = await vi.importActual<typeof import('@mindwtr/core')>('@mindwtr/core');
@@ -64,6 +68,18 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
     status: 'next',
     tags: [],
     contexts: [],
+    createdAt: '2026-04-01T00:00:00.000Z',
+    updatedAt: '2026-04-01T00:00:00.000Z',
+    ...overrides,
+});
+
+const makeProject = (overrides: Partial<Project> = {}): Project => ({
+    id: 'project-1',
+    title: 'Project',
+    status: 'active',
+    color: '#94a3b8',
+    order: 0,
+    tagIds: [],
     createdAt: '2026-04-01T00:00:00.000Z',
     updatedAt: '2026-04-01T00:00:00.000Z',
     ...overrides,
@@ -126,6 +142,8 @@ describe('CalendarView', () => {
         window.history.replaceState(null, '', '/');
         window.localStorage.clear();
         storeMocks.taskStoreState.tasks = [];
+        storeMocks.taskStoreState.projects = [];
+        storeMocks.taskStoreState.addProject.mockClear();
         storeMocks.taskStoreState.addTask.mockClear();
         storeMocks.taskStoreState.addTask.mockResolvedValue({ success: true, id: 'task-new' });
         storeMocks.taskStoreState.updateTask.mockClear();
@@ -343,6 +361,36 @@ describe('CalendarView', () => {
 
         expect(screen.getByText('That time overlaps with an event. Please choose a free slot.')).toBeInTheDocument();
         expect(storeMocks.taskStoreState.addTask).not.toHaveBeenCalled();
+    });
+
+    it('parses quick-add syntax when creating a scheduled task from the calendar composer', async () => {
+        storeMocks.taskStoreState.projects = [
+            makeProject({ id: 'project-launch', title: 'Launch' }),
+        ];
+
+        renderCalendar();
+        await flushCalendarEffects();
+        await openNewTaskComposerForDay('4');
+
+        fireEvent.change(screen.getByLabelText('Task title'), {
+            target: { value: 'Draft launch note +Launch @computer #deep /note:Outline next steps' },
+        });
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+            await Promise.resolve();
+        });
+
+        expect(storeMocks.taskStoreState.addTask).toHaveBeenCalledWith('Draft launch note', expect.objectContaining({
+            contexts: ['@computer'],
+            description: 'Outline next steps',
+            projectId: 'project-launch',
+            startTime: new Date(2026, 3, 4, 8, 0).toISOString(),
+            status: 'next',
+            tags: ['#deep'],
+            timeEstimate: '30min',
+        }));
+        expect(storeMocks.taskStoreState.addProject).not.toHaveBeenCalled();
     });
 
     it('saves existing tasks from the calendar composer', async () => {

@@ -604,13 +604,18 @@ export function CalendarView() {
             </View>
 
             {calendarComposer.mode === 'new' ? (
-              <TextInput
-                style={[styles.input, styles.composerInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
-                value={calendarComposer.title}
-                onChangeText={setCalendarComposerTitle}
-                placeholder={t('calendar.addTask')}
-                placeholderTextColor={tc.secondaryText}
-              />
+              <View style={styles.composerSection}>
+                <TextInput
+                  style={[styles.input, styles.composerInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+                  value={calendarComposer.title}
+                  onChangeText={setCalendarComposerTitle}
+                  placeholder={t('calendar.addTask')}
+                  placeholderTextColor={tc.secondaryText}
+                />
+                <Text style={[styles.composerHelp, { color: tc.secondaryText }]}>
+                  {t('quickAdd.help')}
+                </Text>
+              </View>
             ) : (
               <View style={styles.composerSection}>
                 <TextInput

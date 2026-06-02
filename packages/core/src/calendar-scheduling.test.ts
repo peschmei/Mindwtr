@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     addCalendarMinutes,
     buildCalendarEventTaskDraft,
+    buildCalendarQuickAddTaskDraft,
     findFreeSlotForDay,
     formatCalendarDurationLabel,
     formatCalendarTimeInputValue,
@@ -12,7 +13,7 @@ import {
     parseCalendarTimeOnDate,
     timeEstimateToMinutes,
 } from './calendar-scheduling';
-import type { ExternalCalendarEvent, Task } from './index';
+import type { Area, ExternalCalendarEvent, Project, Task } from './index';
 
 const task = (overrides: Partial<Task>): Task => ({
     id: 'task-1',
@@ -32,6 +33,27 @@ const event = (overrides: Partial<ExternalCalendarEvent>): ExternalCalendarEvent
     start: '2026-04-26T09:00:00.000Z',
     end: '2026-04-26T10:00:00.000Z',
     allDay: false,
+    ...overrides,
+});
+
+const project = (overrides: Partial<Project>): Project => ({
+    id: 'project-1',
+    title: 'Launch',
+    status: 'active',
+    color: '#94a3b8',
+    order: 0,
+    tagIds: [],
+    createdAt: '2026-04-26T00:00:00.000Z',
+    updatedAt: '2026-04-26T00:00:00.000Z',
+    ...overrides,
+});
+
+const area = (overrides: Partial<Area>): Area => ({
+    id: 'area-1',
+    name: 'Work',
+    order: 0,
+    createdAt: '2026-04-26T00:00:00.000Z',
+    updatedAt: '2026-04-26T00:00:00.000Z',
     ...overrides,
 });
 
@@ -77,6 +99,69 @@ describe('calendar scheduling helpers', () => {
         expect(formatCalendarDurationLabel(30)).toBe('30m');
         expect(formatCalendarDurationLabel(90)).toBe('1.5h');
         expect(formatCalendarDurationLabel(120)).toBe('2h');
+    });
+
+    it('builds a quick-add draft while keeping the selected calendar slot authoritative', () => {
+        const selectedStart = new Date('2026-04-26T14:00:00.000Z');
+        const draft = buildCalendarQuickAddTaskDraft(
+            'Draft launch plan +Launch @computer #deep /note:Outline next steps /start:tomorrow /next',
+            {
+                durationMinutes: 30,
+                now: new Date('2026-04-25T10:00:00.000Z'),
+                projects: [project({ id: 'project-launch' })],
+                start: selectedStart,
+            }
+        );
+
+        expect(draft.title).toBe('Draft launch plan');
+        expect(draft.invalidDateCommands).toEqual([]);
+        expect(draft.dateCoherenceIssues).toEqual([]);
+        expect(draft.props).toEqual(expect.objectContaining({
+            contexts: ['@computer'],
+            description: 'Outline next steps',
+            projectId: 'project-launch',
+            startTime: selectedStart.toISOString(),
+            status: 'next',
+            tags: ['#deep'],
+            timeEstimate: '30min',
+        }));
+    });
+
+    it('keeps new-project intent separate for the caller to create', () => {
+        const draft = buildCalendarQuickAddTaskDraft('Plan campaign +Launch !Work', {
+            areas: [area({ id: 'area-work' })],
+            durationMinutes: 60,
+            projects: [],
+            start: new Date('2026-04-26T14:00:00.000Z'),
+        });
+
+        expect(draft.title).toBe('Plan campaign');
+        expect(draft.projectTitle).toBe('Launch');
+        expect(draft.props.areaId).toBe('area-work');
+        expect(draft.props.projectId).toBeUndefined();
+    });
+
+    it('does not assign inactive projects from calendar quick add', () => {
+        const draft = buildCalendarQuickAddTaskDraft('Plan archive +Launch', {
+            durationMinutes: 30,
+            projects: [project({ id: 'project-archived', status: 'archived' })],
+            start: new Date('2026-04-26T14:00:00.000Z'),
+        });
+
+        expect(draft.projectTitle).toBeUndefined();
+        expect(draft.props.projectId).toBeUndefined();
+    });
+
+    it('flags a quick-add due date that would be before the selected calendar slot', () => {
+        const draft = buildCalendarQuickAddTaskDraft('Review launch /due:2026-04-25', {
+            durationMinutes: 30,
+            now: new Date('2026-04-24T10:00:00.000Z'),
+            start: new Date('2026-04-26T14:00:00.000Z'),
+        });
+
+        expect(draft.dateCoherenceIssues).toEqual([
+            { code: 'start_after_due', field: 'startTime', relatedField: 'dueDate' },
+        ]);
     });
 
     it('keeps external event locations in the task location field', () => {

@@ -1,6 +1,9 @@
 import { hasTimeComponent, safeFormatDate, safeParseDate } from './date';
 import type { ExternalCalendarEvent } from './ics';
-import type { Task, TimeEstimate } from './types';
+import { parseQuickAdd } from './quick-add';
+import { isSelectableProjectForTaskAssignment } from './project-utils';
+import { getTaskDateCoherenceIssues, type TaskDateCoherenceIssue } from './task-date-coherence';
+import type { Area, Project, Task, TimeEstimate } from './types';
 
 export const DEFAULT_CALENDAR_DAY_START_HOUR = 8;
 export const DEFAULT_CALENDAR_DAY_END_HOUR = 23;
@@ -24,9 +27,25 @@ export type CalendarEventTaskDraft = {
     title: string;
 };
 
+export type CalendarQuickAddTaskDraft = {
+    dateCoherenceIssues: TaskDateCoherenceIssue[];
+    invalidDateCommands: string[];
+    projectTitle?: string;
+    props: Partial<Task>;
+    title: string;
+};
+
 type CalendarEventTaskDraftOptions = {
     calendarName?: string;
     fallbackTitle?: string;
+};
+
+type CalendarQuickAddTaskDraftOptions = {
+    areas?: Area[];
+    durationMinutes: number;
+    now?: Date;
+    projects?: Project[];
+    start: Date;
 };
 
 type CalendarSchedulingOptions = {
@@ -81,6 +100,53 @@ export function minutesToTimeEstimate(minutes: number): TimeEstimate {
 
     const nextLargest = CALENDAR_TIME_ESTIMATE_OPTIONS.find((option) => option.minutes >= normalized);
     return nextLargest?.estimate ?? '4hr+';
+}
+
+export function buildCalendarQuickAddTaskDraft(
+    input: string,
+    options: CalendarQuickAddTaskDraftOptions,
+): CalendarQuickAddTaskDraft {
+    const parsed = parseQuickAdd(input, options.projects, options.now ?? new Date(), options.areas);
+    const props: Partial<Task> = {
+        status: 'next',
+        ...parsed.props,
+        startTime: options.start.toISOString(),
+        timeEstimate: minutesToTimeEstimate(options.durationMinutes),
+    };
+
+    if (
+        props.projectId
+        && options.projects
+        && !options.projects.some((project) => (
+            project.id === props.projectId
+            && isSelectableProjectForTaskAssignment(project)
+        ))
+    ) {
+        delete props.projectId;
+    }
+
+    if (
+        props.areaId
+        && options.areas
+        && !options.areas.some((area) => area.id === props.areaId && !area.deletedAt)
+    ) {
+        delete props.areaId;
+    }
+
+    if (props.projectId) {
+        props.areaId = undefined;
+    }
+
+    return {
+        dateCoherenceIssues: getTaskDateCoherenceIssues({
+            dueDate: props.dueDate,
+            startTime: props.startTime,
+        }),
+        invalidDateCommands: parsed.invalidDateCommands ?? [],
+        projectTitle: props.projectId ? undefined : parsed.projectTitle,
+        props,
+        title: (parsed.title || input).trim(),
+    };
 }
 
 function cleanEventTaskText(value: string | undefined): string {
