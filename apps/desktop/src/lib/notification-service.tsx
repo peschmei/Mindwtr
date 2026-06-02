@@ -1,6 +1,6 @@
 import { getDailyDigestSummary, getNextScheduledAt, stripMarkdown, type Language, Task, parseTimeOfDay, getTranslationsSync, loadTranslations, loadStoredLanguageSync, safeParseDate, hasTimeComponent, getSystemDefaultLanguage } from '@mindwtr/core';
 import { useTaskStore } from '@mindwtr/core';
-import { isTauriRuntime } from './runtime';
+import { isFlatpakRuntime, isTauriRuntime } from './runtime';
 
 const notifiedAtByTask = new Map<string, string>();
 const notifiedAtByProject = new Map<string, string>();
@@ -122,13 +122,36 @@ export async function sendDesktopImmediateNotification(title: string, body?: str
     if (settings.notificationsEnabled === false) return;
     await ensurePermission();
     await loadTauriNotificationApi();
-    sendNotification(title, body);
+    await sendNotification(title, body);
 }
 
-function sendNotification(title: string, body?: string) {
-    if (tauriNotificationApi?.sendNotification) {
-        tauriNotificationApi.sendNotification({ title, body });
+async function sendFlatpakPortalNotification(title: string, body?: string): Promise<boolean> {
+    if (!isTauriRuntime() || !isFlatpakRuntime()) return false;
+
+    try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('send_flatpak_notification', {
+            title,
+            body: body?.trim() ? body : undefined,
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function sendNotification(title: string, body?: string) {
+    if (await sendFlatpakPortalNotification(title, body)) {
         return;
+    }
+
+    if (tauriNotificationApi?.sendNotification) {
+        try {
+            tauriNotificationApi.sendNotification({ title, body });
+            return;
+        } catch {
+            // Fall back to Web Notifications below.
+        }
     }
 
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -163,7 +186,7 @@ function checkDueAndNotify() {
         const key = next.toISOString();
         if (notifiedAtByTask.get(task.id) === key) return;
 
-        sendNotification(task.title, buildDesktopTaskNotificationBody(task, next, tr));
+        void sendNotification(task.title, buildDesktopTaskNotificationBody(task, next, tr));
         notifiedAtByTask.set(task.id, key);
     });
 
@@ -180,7 +203,7 @@ function checkDueAndNotify() {
             if (diffMs < 0 || diffMs > CHECK_INTERVAL_MS) return;
             const key = review.toISOString();
             if (notifiedAtByProject.get(project.id) === key) return;
-            sendNotification(project.title, tr['review.projectsStep'] ?? 'Review project');
+            void sendNotification(project.title, tr['review.projectsStep'] ?? 'Review project');
             notifiedAtByProject.set(project.id, key);
         });
     }
@@ -215,7 +238,7 @@ function checkDueAndNotify() {
                 ].join(' • ')
                 : tr['digest.noItems'];
 
-            sendNotification(tr['digest.morningTitle'], body);
+            void sendNotification(tr['digest.morningTitle'], body);
             digestSentOnByKind.set('morning', dateKey);
         }
     }
@@ -223,7 +246,7 @@ function checkDueAndNotify() {
     if (eveningEnabled) {
         const target = eveningHour * 60 + eveningMinute;
         if (nowMinutes >= target && digestSentOnByKind.get('evening') !== dateKey) {
-            sendNotification(tr['digest.eveningTitle'], tr['digest.eveningBody']);
+            void sendNotification(tr['digest.eveningTitle'], tr['digest.eveningBody']);
             digestSentOnByKind.set('evening', dateKey);
         }
     }
@@ -231,7 +254,7 @@ function checkDueAndNotify() {
     if (weeklyReviewEnabled) {
         const target = weeklyHour * 60 + weeklyMinute;
         if (now.getDay() === weeklyReviewDay && nowMinutes >= target && weeklyReviewSentOnDate !== dateKey) {
-            sendNotification(tr['digest.weeklyReviewTitle'], tr['digest.weeklyReviewBody']);
+            void sendNotification(tr['digest.weeklyReviewTitle'], tr['digest.weeklyReviewBody']);
             weeklyReviewSentOnDate = dateKey;
         }
     }

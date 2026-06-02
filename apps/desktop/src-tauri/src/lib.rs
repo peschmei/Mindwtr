@@ -167,6 +167,50 @@ const GLOBAL_QUICK_ADD_SHORTCUT_ALTERNATE_N: &str = "Control+Alt+N";
 const GLOBAL_QUICK_ADD_SHORTCUT_ALTERNATE_Q: &str = "Control+Alt+Q";
 const GLOBAL_QUICK_ADD_SHORTCUT_LEGACY: &str = "CommandOrControl+Shift+A";
 const GLOBAL_QUICK_ADD_SHORTCUT_DISABLED: &str = "disabled";
+
+#[cfg(target_os = "linux")]
+fn flatpak_notification_id() -> String {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or_default();
+    let random = rand::thread_rng().next_u32();
+    format!("mindwtr-{millis}-{random}")
+}
+
+#[cfg(target_os = "linux")]
+#[tauri::command]
+async fn send_flatpak_notification(title: String, body: Option<String>) -> Result<(), String> {
+    if !is_flatpak() {
+        return Err("Flatpak notification portal is only available inside Flatpak".to_string());
+    }
+
+    let trimmed_title = title.trim();
+    if trimmed_title.is_empty() {
+        return Err("Notification title is required".to_string());
+    }
+
+    let mut notification = ashpd::desktop::notification::Notification::new(trimmed_title)
+        .priority(ashpd::desktop::notification::Priority::Normal);
+    if let Some(body) = body.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        notification = notification.body(body);
+    }
+
+    let proxy = ashpd::desktop::notification::NotificationProxy::new()
+        .await
+        .map_err(|error| format!("Failed to connect to notification portal: {error}"))?;
+    proxy
+        .add_notification(&flatpak_notification_id(), notification)
+        .await
+        .map_err(|error| format!("Failed to send notification through portal: {error}"))
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+async fn send_flatpak_notification(_title: String, _body: Option<String>) -> Result<(), String> {
+    Err("Flatpak notification portal is only available on Linux".to_string())
+}
+
 #[cfg(target_os = "macos")]
 const MENU_HELP_DOCS_ID: &str = "help_docs";
 #[cfg(target_os = "macos")]
@@ -1254,6 +1298,7 @@ pub fn run() {
             get_install_source,
             get_launch_at_startup_enabled,
             set_launch_at_startup_enabled,
+            send_flatpak_notification,
             get_local_api_server_status,
             set_local_api_server_config,
             quit_app
