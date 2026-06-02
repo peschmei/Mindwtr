@@ -39,6 +39,7 @@ import { useRootLayoutSyncEffects } from '@/hooks/root-layout/use-root-layout-sy
 import { ProjectNextActionPromptProvider } from '@/components/project-next-action-prompt';
 import { ThemedAlertProvider } from '@/components/themed-alert';
 import { MobileOnboardingFlow } from '@/components/MobileOnboardingFlow';
+import { MobileAppLockGate } from '@/components/mobile-app-lock-gate';
 import { applyAndroidSystemBars } from '@/lib/android-system-bars';
 import { isCloudKitAvailable } from '@/lib/cloudkit-sync';
 import {
@@ -175,6 +176,7 @@ function RootLayoutContentInner() {
   const settingsLanguage = useTaskStore((state) => state.settings?.language);
   const settingsDateFormat = useTaskStore((state) => state.settings?.dateFormat);
   const settingsTimeFormat = useTaskStore((state) => state.settings?.timeFormat);
+  const mobileAppLockEnabled = useTaskStore((state) => state.settings?.security?.mobileAppLockEnabled === true);
   const seedGettingStarted = useTaskStore((state) => state.seedGettingStarted);
   const visibleDataCount = useTaskStore((state) => (
     state.tasks.length + state.projects.length + state.sections.length + state.areas.length
@@ -490,56 +492,58 @@ function RootLayoutContentInner() {
       }}
     >
       <NavigationThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
-          <Stack.Screen name="(drawer)" options={{ headerShown: false, animation: 'none' }} />
-          <Stack.Screen
-            name="daily-review"
-            options={{
-              headerShown: false,
-            }}
+        <MobileAppLockGate enabled={mobileAppLockEnabled}>
+          <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
+            <Stack.Screen name="(drawer)" options={{ headerShown: false, animation: 'none' }} />
+            <Stack.Screen
+              name="daily-review"
+              options={{
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="weekly-review"
+              options={{
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="global-search"
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+                animation: 'slide_from_bottom'
+              }}
+            />
+            <Stack.Screen
+              name="capture-modal"
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+                animation: 'slide_from_bottom'
+              }}
+            />
+            <Stack.Screen
+              name="check-focus"
+              options={{
+                headerShown: false,
+              }}
+            />
+          </Stack>
+          <MobileOnboardingFlow
+            busy={mobileOnboardingBusy}
+            error={mobileOnboardingError}
+            isOpen={mobileOnboardingOpen}
+            onOpenImport={openOnboardingImport}
+            onOpenSync={openOnboardingSync}
+            onSkip={dismissMobileOnboarding}
+            onStartFresh={startFreshOnboarding}
           />
-          <Stack.Screen
-            name="weekly-review"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="global-search"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom'
-            }}
-          />
-          <Stack.Screen
-            name="capture-modal"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom'
-            }}
-          />
-          <Stack.Screen
-            name="check-focus"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack>
+        </MobileAppLockGate>
         <StatusBar
           barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor={tc.bg}
-        />
-        <MobileOnboardingFlow
-          busy={mobileOnboardingBusy}
-          error={mobileOnboardingError}
-          isOpen={mobileOnboardingOpen}
-          onOpenImport={openOnboardingImport}
-          onOpenSync={openOnboardingSync}
-          onSkip={dismissMobileOnboarding}
-          onStartFresh={startFreshOnboarding}
         />
       </NavigationThemeProvider>
     </QuickCaptureProvider>

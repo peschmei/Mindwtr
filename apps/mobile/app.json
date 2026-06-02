@@ -134,6 +134,12 @@
           "remindersPermission": "Mindwtr needs reminders access to import your chosen Apple Reminders capture list into Inbox."
         }
       ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Mindwtr uses Face ID to unlock the app when app lock is enabled."
+        }
+      ],
       "expo-secure-store",
       "./plugins/android-app-shortcuts",
       "./plugins/android-quick-settings-tile",

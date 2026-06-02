@@ -392,6 +392,10 @@ export interface AnalyticsSettings {
     heartbeatEnabled?: boolean;
 }
 
+export interface SecuritySettings {
+    mobileAppLockEnabled?: boolean;
+}
+
 export interface FilterSettings {
     areaId?: string;
 }
@@ -434,6 +438,7 @@ export interface AppSettings extends NotificationSettings {
     lastSyncHistory?: SyncHistoryEntry[];
     diagnostics?: DiagnosticsSettings;
     analytics?: AnalyticsSettings;
+    security?: SecuritySettings;
     filters?: FilterSettings;
     deviceId?: string;
     migrations?: MigrationSettings;

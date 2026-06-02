@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import {
     coerceMobileQuickAccessView,
     MOBILE_QUICK_ACCESS_VIEWS,
 } from '@/lib/mobile-quick-access-view';
+import { authenticateWithDeviceLock, getMobileAppLockErrorKey } from '@/lib/mobile-app-lock';
 
 import { LANGUAGES } from './settings.constants';
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
@@ -29,12 +30,15 @@ export function GeneralSettingsScreen() {
     const [dateFormatPickerOpen, setDateFormatPickerOpen] = useState(false);
     const [timeFormatPickerOpen, setTimeFormatPickerOpen] = useState(false);
     const [quickAccessPickerOpen, setQuickAccessPickerOpen] = useState(false);
+    const [appLockBusy, setAppLockBusy] = useState(false);
+    const [appLockErrorKey, setAppLockErrorKey] = useState<string | null>(null);
 
     const weekStart = normalizeWeekStartSetting(settings.weekStart);
     const dateFormat = normalizeDateFormatSetting(settings.dateFormat);
     const timeFormat = normalizeTimeFormatSetting(settings.timeFormat);
     const showTaskAge = settings.appearance?.showTaskAge === true;
     const quickAccessView = coerceMobileQuickAccessView(settings.appearance?.mobileQuickAccessView);
+    const appLockEnabled = settings.security?.mobileAppLockEnabled === true;
     const themeOptions: { value: typeof themeMode; label: string }[] = [
         { value: 'system', label: t('settings.system') },
         { value: 'light', label: t('settings.light') },
@@ -77,6 +81,41 @@ export function GeneralSettingsScreen() {
         { value: '24h', label: t('settings.timeFormat24h') },
     ];
     const currentTimeFormatLabel = timeFormatOptions.find((opt) => opt.value === timeFormat)?.label ?? t('settings.timeFormatSystem');
+    const handleAppLockToggle = useCallback((value: boolean) => {
+        setAppLockErrorKey(null);
+        if (!value) {
+            updateSettings({
+                security: {
+                    ...(settings.security ?? {}),
+                    mobileAppLockEnabled: false,
+                },
+            }).catch(console.error);
+            return;
+        }
+
+        if (appLockBusy) return;
+        setAppLockBusy(true);
+        authenticateWithDeviceLock({
+            promptMessage: tr('appLock.enablePrompt'),
+            cancelLabel: tr('common.cancel'),
+            fallbackLabel: tr('appLock.useDevicePasscode'),
+        })
+            .then((result) => {
+                if (!result.success) {
+                    setAppLockErrorKey(getMobileAppLockErrorKey(result.reason));
+                    return;
+                }
+                updateSettings({
+                    security: {
+                        ...(settings.security ?? {}),
+                        mobileAppLockEnabled: true,
+                    },
+                }).catch(console.error);
+            })
+            .catch(() => setAppLockErrorKey('appLock.failed'))
+            .finally(() => setAppLockBusy(false));
+    }, [appLockBusy, settings.security, tr, updateSettings]);
+    const appLockError = appLockErrorKey ? tr(appLockErrorKey) : null;
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['bottom']}>
@@ -128,6 +167,30 @@ export function GeneralSettingsScreen() {
                         <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
                     </TouchableOpacity>
                 </View>
+
+                <Text style={[styles.sectionTitle, { color: tc.secondaryText, marginTop: 16 }]}>{tr('settings.privacy')}</Text>
+                <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
+                    <View style={styles.settingRow}>
+                        <View style={styles.settingInfo}>
+                            <Text style={[styles.settingLabel, { color: tc.text }]}>{tr('settings.mobile.appLock')}</Text>
+                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
+                                {tr('settings.mobile.appLockDesc')}
+                            </Text>
+                            {appLockError && (
+                                <Text style={[styles.settingDescription, { color: tc.danger, marginTop: 6 }]}>
+                                    {appLockError}
+                                </Text>
+                            )}
+                        </View>
+                        <Switch
+                            disabled={appLockBusy}
+                            value={appLockEnabled}
+                            onValueChange={handleAppLockToggle}
+                            trackColor={{ false: '#767577', true: '#3B82F6' }}
+                        />
+                    </View>
+                </View>
+
                 <Modal
                     transparent
                     visible={themePickerOpen}
