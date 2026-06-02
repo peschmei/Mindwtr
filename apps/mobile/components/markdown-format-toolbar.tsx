@@ -30,6 +30,7 @@ const TOOLBAR_FIXED_CHROME = 18;
 const TOOLBAR_ACTION_GAP = 2;
 const MIN_RESIZED_WINDOW_DELTA = 48;
 const RESIZED_WINDOW_TOLERANCE = 32;
+const ANDROID_KEYBOARD_EDGE_GAP = 8;
 
 const getWindowWidth = () => {
     const width = Dimensions.get('window').width;
@@ -461,7 +462,7 @@ export function MarkdownFormatToolbar({
                         style={[
                             styles.floatingBar,
                             {
-                                bottom: keyboardToolbarState.bottomOffset,
+                                bottom: keyboardToolbarState.bottomOffset + (Platform.OS === 'android' ? ANDROID_KEYBOARD_EDGE_GAP : 0),
                                 backgroundColor: tc.bg,
                                 borderTopColor: tc.border,
                             },

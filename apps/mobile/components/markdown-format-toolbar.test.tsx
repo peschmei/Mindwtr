@@ -219,7 +219,7 @@ describe('MarkdownFormatToolbar', () => {
         expect(tree!.root.findAllByType(Pressable)).toHaveLength(0);
         layoutKeyboardToolbarOverlay(tree!, 844);
 
-        expect(extractFloatingBarBottom(tree!)).toBe(320);
+        expect(extractFloatingBarBottom(tree!)).toBe(328);
     });
 
     it('moves Android toolbar back to the resized overlay edge when layout shrinks after keyboard show', () => {
@@ -248,7 +248,7 @@ describe('MarkdownFormatToolbar', () => {
         expect(tree!.root.findAllByType(Pressable)).toHaveLength(0);
         layoutKeyboardToolbarOverlay(tree!, 481, 360);
 
-        expect(extractFloatingBarBottom(tree!)).toBe(0);
+        expect(extractFloatingBarBottom(tree!)).toBe(8);
     });
 
     it('keeps Android toolbar at the resized window edge when the root is already above the keyboard', () => {
@@ -278,7 +278,7 @@ describe('MarkdownFormatToolbar', () => {
 
         layoutKeyboardToolbarOverlay(tree!, 524);
 
-        expect(extractFloatingBarBottom(tree!)).toBe(0);
+        expect(extractFloatingBarBottom(tree!)).toBe(8);
     });
 
     it('keeps Android toolbar at the resized window edge when mounted after the keyboard opens', () => {
@@ -306,7 +306,7 @@ describe('MarkdownFormatToolbar', () => {
 
         layoutKeyboardToolbarOverlay(tree!, 524);
 
-        expect(extractFloatingBarBottom(tree!)).toBe(0);
+        expect(extractFloatingBarBottom(tree!)).toBe(8);
     });
 
     it('applies toolbar actions on tap release so horizontal drags do not format text', () => {
