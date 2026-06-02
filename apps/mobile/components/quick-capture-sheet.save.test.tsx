@@ -124,6 +124,25 @@ describe('QuickCaptureSheet save handling', () => {
     showToast.mockReset();
   });
 
+  it('opens organize options collapsed for global capture', async () => {
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet
+          visible
+          openRequestId={1}
+          initialValue=""
+          onClose={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+    expect(body.props.optionsExpanded).toBe(false);
+  });
+
   it('ignores duplicate save presses while the first save is in flight', async () => {
     let resolveAddTask: ((value: unknown) => void) | null = null;
     addTask.mockImplementation(() => new Promise((resolve) => {

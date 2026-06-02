@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { Area, Project, TaskPriority } from '@mindwtr/core';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
@@ -30,6 +30,7 @@ interface QuickCaptureSheetPickersProps {
   onSubmitContextQuery: () => void;
   onSubmitProjectQuery: () => void;
   pendingStartDate: Date | null;
+  pickerLayer?: 'all' | 'date' | 'overlay';
   prioritiesEnabled: boolean;
   priorityOptions: TaskPriority[];
   projectQuery: string;
@@ -80,6 +81,7 @@ export function QuickCaptureSheetPickers({
   onSubmitContextQuery,
   onSubmitProjectQuery,
   pendingStartDate,
+  pickerLayer = 'all',
   prioritiesEnabled,
   priorityOptions,
   projectQuery,
@@ -96,9 +98,12 @@ export function QuickCaptureSheetPickers({
   t,
   tc,
 }: QuickCaptureSheetPickersProps) {
+  const showDateLayer = pickerLayer !== 'overlay';
+  const showOverlayLayer = pickerLayer !== 'date';
+
   return (
     <>
-      {showDatePicker && (
+      {showDateLayer && showDatePicker && (
         <DateTimePicker
           value={dueDate ?? new Date()}
           mode="date"
@@ -107,7 +112,7 @@ export function QuickCaptureSheetPickers({
         />
       )}
 
-      {showDueTimePicker && (
+      {showDateLayer && showDueTimePicker && (
         <DateTimePicker
           value={dueDate ?? new Date()}
           mode="time"
@@ -116,7 +121,7 @@ export function QuickCaptureSheetPickers({
         />
       )}
 
-      {startPickerMode && (
+      {showDateLayer && startPickerMode && (
         <DateTimePicker
           value={(() => {
             if (Platform.OS === 'ios') return startTime ?? new Date();
@@ -129,300 +134,253 @@ export function QuickCaptureSheetPickers({
         />
       )}
 
-      {showContextPicker && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          hardwareAccelerated={Platform.OS === 'android'}
-          navigationBarTranslucent={Platform.OS === 'android'}
-          statusBarTranslucent={Platform.OS === 'android'}
-          onRequestClose={onCloseContextPicker}
-          accessibilityViewIsModal
-        >
-          <View style={styles.overlay}>
-            <Pressable
-              style={styles.overlayBackdrop}
-              onPress={onCloseContextPicker}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.close')}
+      {showOverlayLayer && showContextPicker && (
+        <View style={styles.overlay} accessibilityViewIsModal>
+          <Pressable
+            style={styles.overlayBackdrop}
+            onPress={onCloseContextPicker}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          />
+          <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+            <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.contextsLabel')}</Text>
+            <TextInput
+              ref={contextInputRef}
+              value={contextQuery}
+              onChangeText={onContextQueryChange}
+              placeholder={t('taskEdit.contextsPlaceholder')}
+              placeholderTextColor={tc.secondaryText}
+              style={[styles.pickerInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+              onSubmitEditing={onSubmitContextQuery}
+              returnKeyType="done"
+              blurOnSubmit={false}
+              submitBehavior="submit"
             />
-            <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-              <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.contextsLabel')}</Text>
-              <TextInput
-                ref={contextInputRef}
-                value={contextQuery}
-                onChangeText={onContextQueryChange}
-                placeholder={t('taskEdit.contextsPlaceholder')}
-                placeholderTextColor={tc.secondaryText}
-                style={[styles.pickerInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
-                onSubmitEditing={onSubmitContextQuery}
-                returnKeyType="done"
-                blurOnSubmit={false}
-                submitBehavior="submit"
-              />
-              {hasAddableContextTokens && contextQuery.trim() && (
+            {hasAddableContextTokens && contextQuery.trim() && (
+              <Pressable
+                onPress={onAddContextFromQuery}
+                style={styles.pickerRow}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('common.add')}: ${contextQuery.trim()}`}
+              >
+                <Text style={[styles.pickerRowText, { color: tc.tint }]}>
+                  + {contextQuery.trim()}
+                </Text>
+              </Pressable>
+            )}
+            {contextTags.length > 0 && (
+              <View style={styles.selectedContextWrap}>
+                {contextTags.map((token) => (
+                  <Pressable
+                    key={token}
+                    onPress={() => onRemoveContext(token)}
+                    style={[styles.selectedContextChip, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('common.delete')}: ${token}`}
+                  >
+                    <Text style={[styles.selectedContextChipText, { color: tc.text }]}>{token}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            <FlatList
+              style={[styles.pickerList, { borderColor: tc.border }]}
+              accessibilityRole="list"
+              accessibilityLabel={t('taskEdit.contextsLabel')}
+              contentContainerStyle={styles.pickerListContent}
+              data={filteredContexts}
+              keyExtractor={(token) => token}
+              keyboardShouldPersistTaps="handled"
+              ListHeaderComponent={(
                 <Pressable
-                  onPress={onAddContextFromQuery}
+                  onPress={() => {
+                    onClearContexts();
+                    onCloseContextPicker();
+                  }}
                   style={styles.pickerRow}
                   accessibilityRole="button"
-                  accessibilityLabel={`${t('common.add')}: ${contextQuery.trim()}`}
+                  accessibilityLabel={t('common.clear')}
                 >
-                  <Text style={[styles.pickerRowText, { color: tc.tint }]}>
-                    + {contextQuery.trim()}
+                  <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('common.clear')}</Text>
+                </Pressable>
+              )}
+              renderItem={({ item: token }) => (
+                <Pressable
+                  onPress={() => onSelectContext(token)}
+                  style={[
+                    styles.pickerRow,
+                    contextTags.some((item) => item.toLowerCase() === token.toLowerCase())
+                      ? { backgroundColor: tc.filterBg, borderRadius: 8 }
+                      : null,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: contextTags.some((item) => item.toLowerCase() === token.toLowerCase()) }}
+                  accessibilityLabel={
+                    contextTags.some((item) => item.toLowerCase() === token.toLowerCase())
+                      ? `${t('common.delete')}: ${token}`
+                      : `${t('common.add')}: ${token}`
+                  }
+                >
+                  <Text style={[styles.pickerRowText, { color: tc.text }]}>
+                    {contextTags.some((item) => item.toLowerCase() === token.toLowerCase()) ? `✓ ${token}` : token}
                   </Text>
                 </Pressable>
               )}
-              {contextTags.length > 0 && (
-                <View style={styles.selectedContextWrap}>
-                  {contextTags.map((token) => (
-                    <Pressable
-                      key={token}
-                      onPress={() => onRemoveContext(token)}
-                      style={[styles.selectedContextChip, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${t('common.delete')}: ${token}`}
-                    >
-                      <Text style={[styles.selectedContextChipText, { color: tc.text }]}>{token}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-              <FlatList
-                style={[styles.pickerList, { borderColor: tc.border }]}
-                accessibilityRole="list"
-                accessibilityLabel={t('taskEdit.contextsLabel')}
-                contentContainerStyle={styles.pickerListContent}
-                data={filteredContexts}
-                keyExtractor={(token) => token}
-                keyboardShouldPersistTaps="handled"
-                ListHeaderComponent={(
-                  <Pressable
-                    onPress={() => {
-                      onClearContexts();
-                      onCloseContextPicker();
-                    }}
-                    style={styles.pickerRow}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('common.clear')}
-                  >
-                    <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('common.clear')}</Text>
-                  </Pressable>
-                )}
-                renderItem={({ item: token }) => (
-                  <Pressable
-                    onPress={() => onSelectContext(token)}
-                    style={[
-                      styles.pickerRow,
-                      contextTags.some((item) => item.toLowerCase() === token.toLowerCase())
-                        ? { backgroundColor: tc.filterBg, borderRadius: 8 }
-                        : null,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: contextTags.some((item) => item.toLowerCase() === token.toLowerCase()) }}
-                    accessibilityLabel={
-                      contextTags.some((item) => item.toLowerCase() === token.toLowerCase())
-                        ? `${t('common.delete')}: ${token}`
-                        : `${t('common.add')}: ${token}`
-                    }
-                  >
-                    <Text style={[styles.pickerRowText, { color: tc.text }]}>
-                      {contextTags.some((item) => item.toLowerCase() === token.toLowerCase()) ? `✓ ${token}` : token}
-                    </Text>
-                  </Pressable>
-                )}
-              />
-            </View>
+            />
           </View>
-        </Modal>
+        </View>
       )}
 
-      {showAreaPicker && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          hardwareAccelerated={Platform.OS === 'android'}
-          navigationBarTranslucent={Platform.OS === 'android'}
-          statusBarTranslucent={Platform.OS === 'android'}
-          onRequestClose={onCloseAreaPicker}
-          accessibilityViewIsModal
-        >
-          <View style={styles.overlay}>
-            <Pressable
-              style={styles.overlayBackdrop}
-              onPress={onCloseAreaPicker}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.close')}
-            />
-            <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-              <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.areaLabel')}</Text>
-              <FlatList
-                style={[styles.pickerList, { borderColor: tc.border }]}
-                accessibilityRole="list"
-                accessibilityLabel={t('taskEdit.areaLabel')}
-                contentContainerStyle={styles.pickerListContent}
-                data={areas.filter((area) => !area.deletedAt)}
-                keyExtractor={(area) => area.id}
-                keyboardShouldPersistTaps="handled"
-                ListHeaderComponent={(
-                  <Pressable
-                    onPress={() => onSelectArea(null)}
-                    style={styles.pickerRow}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('taskEdit.noAreaOption')}
-                  >
-                    <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('taskEdit.noAreaOption')}</Text>
-                  </Pressable>
-                )}
-                renderItem={({ item: area }) => (
-                  <Pressable
-                    onPress={() => onSelectArea(area.id)}
-                    style={[
-                      styles.pickerRow,
-                      selectedAreaId === area.id ? { backgroundColor: tc.filterBg, borderRadius: 8 } : null,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: selectedAreaId === area.id }}
-                    accessibilityLabel={area.name}
-                  >
-                    <Text style={[styles.pickerRowText, { color: tc.text }]}>
-                      {selectedAreaId === area.id ? `✓ ${area.name}` : area.name}
-                    </Text>
-                  </Pressable>
-                )}
-              />
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {showProjectPicker && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          hardwareAccelerated={Platform.OS === 'android'}
-          navigationBarTranslucent={Platform.OS === 'android'}
-          statusBarTranslucent={Platform.OS === 'android'}
-          onRequestClose={onCloseProjectPicker}
-          accessibilityViewIsModal
-        >
-          <View style={styles.overlay}>
-            <Pressable
-              style={styles.overlayBackdrop}
-              onPress={onCloseProjectPicker}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.close')}
-            />
-            <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-              <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.projectLabel')}</Text>
-              <TextInput
-                value={projectQuery}
-                onChangeText={onProjectQueryChange}
-                placeholder={t('projects.addPlaceholder')}
-                placeholderTextColor={tc.secondaryText}
-                style={[styles.pickerInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
-                onSubmitEditing={onSubmitProjectQuery}
-                returnKeyType="done"
-                blurOnSubmit
-              />
-              {!hasExactProjectMatch && projectQuery.trim() && (
+      {showOverlayLayer && showAreaPicker && (
+        <View style={styles.overlay} accessibilityViewIsModal>
+          <Pressable
+            style={styles.overlayBackdrop}
+            onPress={onCloseAreaPicker}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          />
+          <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+            <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.areaLabel')}</Text>
+            <FlatList
+              style={[styles.pickerList, { borderColor: tc.border }]}
+              accessibilityRole="list"
+              accessibilityLabel={t('taskEdit.areaLabel')}
+              contentContainerStyle={styles.pickerListContent}
+              data={areas.filter((area) => !area.deletedAt)}
+              keyExtractor={(area) => area.id}
+              keyboardShouldPersistTaps="handled"
+              ListHeaderComponent={(
                 <Pressable
-                  onPress={onSubmitProjectQuery}
+                  onPress={() => onSelectArea(null)}
                   style={styles.pickerRow}
                   accessibilityRole="button"
-                  accessibilityLabel={`${t('projects.create')}: ${projectQuery.trim()}`}
+                  accessibilityLabel={t('taskEdit.noAreaOption')}
                 >
-                  <Text style={[styles.pickerRowText, { color: tc.tint }]}>+ {t('projects.create')} &quot;{projectQuery.trim()}&quot;</Text>
+                  <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('taskEdit.noAreaOption')}</Text>
                 </Pressable>
               )}
-              <FlatList
-                style={[styles.pickerList, { borderColor: tc.border }]}
-                accessibilityRole="list"
-                accessibilityLabel={t('taskEdit.projectLabel')}
-                contentContainerStyle={styles.pickerListContent}
-                data={filteredProjects}
-                keyExtractor={(project) => project.id}
-                keyboardShouldPersistTaps="handled"
-                ListHeaderComponent={(
-                  <Pressable
-                    onPress={() => onSelectProject(null)}
-                    style={styles.pickerRow}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('taskEdit.noProjectOption')}
-                  >
-                    <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('taskEdit.noProjectOption')}</Text>
-                  </Pressable>
-                )}
-                renderItem={({ item: project }) => (
-                  <Pressable
-                    onPress={() => onSelectProject(project.id)}
-                    style={styles.pickerRow}
-                    accessibilityRole="button"
-                    accessibilityLabel={project.title}
-                  >
-                    <Text style={[styles.pickerRowText, { color: tc.text }]}>{project.title}</Text>
-                  </Pressable>
-                )}
-              />
-            </View>
+              renderItem={({ item: area }) => (
+                <Pressable
+                  onPress={() => onSelectArea(area.id)}
+                  style={[
+                    styles.pickerRow,
+                    selectedAreaId === area.id ? { backgroundColor: tc.filterBg, borderRadius: 8 } : null,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedAreaId === area.id }}
+                  accessibilityLabel={area.name}
+                >
+                  <Text style={[styles.pickerRowText, { color: tc.text }]}>
+                    {selectedAreaId === area.id ? `✓ ${area.name}` : area.name}
+                  </Text>
+                </Pressable>
+              )}
+            />
           </View>
-        </Modal>
+        </View>
       )}
 
-      {prioritiesEnabled && (
-        showPriorityPicker && (
-          <Modal
-            visible
-            transparent
-            animationType="fade"
-            hardwareAccelerated={Platform.OS === 'android'}
-            navigationBarTranslucent={Platform.OS === 'android'}
-            statusBarTranslucent={Platform.OS === 'android'}
-            onRequestClose={onClosePriorityPicker}
-            accessibilityViewIsModal
-          >
-            <View style={styles.overlay}>
+      {showOverlayLayer && showProjectPicker && (
+        <View style={styles.overlay} accessibilityViewIsModal>
+          <Pressable
+            style={styles.overlayBackdrop}
+            onPress={onCloseProjectPicker}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          />
+          <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+            <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.projectLabel')}</Text>
+            <TextInput
+              value={projectQuery}
+              onChangeText={onProjectQueryChange}
+              placeholder={t('projects.addPlaceholder')}
+              placeholderTextColor={tc.secondaryText}
+              style={[styles.pickerInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+              onSubmitEditing={onSubmitProjectQuery}
+              returnKeyType="done"
+              blurOnSubmit
+            />
+            {!hasExactProjectMatch && projectQuery.trim() && (
+              <Pressable
+                onPress={onSubmitProjectQuery}
+                style={styles.pickerRow}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('projects.create')}: ${projectQuery.trim()}`}
+              >
+                <Text style={[styles.pickerRowText, { color: tc.tint }]}>+ {t('projects.create')} &quot;{projectQuery.trim()}&quot;</Text>
+              </Pressable>
+            )}
+            <FlatList
+              style={[styles.pickerList, { borderColor: tc.border }]}
+              accessibilityRole="list"
+              accessibilityLabel={t('taskEdit.projectLabel')}
+              contentContainerStyle={styles.pickerListContent}
+              data={filteredProjects}
+              keyExtractor={(project) => project.id}
+              keyboardShouldPersistTaps="handled"
+              ListHeaderComponent={(
                 <Pressable
-                  style={styles.overlayBackdrop}
-                  onPress={onClosePriorityPicker}
+                  onPress={() => onSelectProject(null)}
+                  style={styles.pickerRow}
                   accessibilityRole="button"
-                  accessibilityLabel={t('common.close')}
+                  accessibilityLabel={t('taskEdit.noProjectOption')}
                 >
+                  <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('taskEdit.noProjectOption')}</Text>
                 </Pressable>
-                <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                  <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.priorityLabel')}</Text>
-                  <Pressable
-                    onPress={() => onSelectPriority(null)}
-                    style={styles.pickerRow}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('common.clear')}
-                  >
-                    <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('common.clear')}</Text>
-                  </Pressable>
-                  {priorityOptions.map((option) => (
-                    <Pressable
-                      key={option}
-                      onPress={() => onSelectPriority(option)}
-                      style={[
-                        styles.pickerRow,
-                        selectedPriority === option ? { backgroundColor: tc.filterBg, borderRadius: 8 } : null,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: selectedPriority === option }}
-                      accessibilityLabel={t(`priority.${option}`)}
-                    >
-                      <Text style={[styles.pickerRowText, { color: tc.text }]}>
-                        {selectedPriority === option ? `✓ ${t(`priority.${option}`)}` : t(`priority.${option}`)}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </Modal>
-          )
-        )}
+              )}
+              renderItem={({ item: project }) => (
+                <Pressable
+                  onPress={() => onSelectProject(project.id)}
+                  style={styles.pickerRow}
+                  accessibilityRole="button"
+                  accessibilityLabel={project.title}
+                >
+                  <Text style={[styles.pickerRowText, { color: tc.text }]}>{project.title}</Text>
+                </Pressable>
+              )}
+            />
+          </View>
+        </View>
+      )}
+
+      {showOverlayLayer && prioritiesEnabled && showPriorityPicker && (
+        <View style={styles.overlay} accessibilityViewIsModal>
+          <Pressable
+            style={styles.overlayBackdrop}
+            onPress={onClosePriorityPicker}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          />
+          <View style={[styles.pickerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+            <Text style={[styles.pickerTitle, { color: tc.text }]} accessibilityRole="header">{t('taskEdit.priorityLabel')}</Text>
+            <Pressable
+              onPress={() => onSelectPriority(null)}
+              style={styles.pickerRow}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.clear')}
+            >
+              <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('common.clear')}</Text>
+            </Pressable>
+            {priorityOptions.map((option) => (
+              <Pressable
+                key={option}
+                onPress={() => onSelectPriority(option)}
+                style={[
+                  styles.pickerRow,
+                  selectedPriority === option ? { backgroundColor: tc.filterBg, borderRadius: 8 } : null,
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: selectedPriority === option }}
+                accessibilityLabel={t(`priority.${option}`)}
+              >
+                <Text style={[styles.pickerRowText, { color: tc.text }]}>
+                  {selectedPriority === option ? `✓ ${t(`priority.${option}`)}` : t(`priority.${option}`)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
     </>
   );
 }

@@ -104,6 +104,7 @@ export function QuickCaptureSheet({
   const [showAreaPicker, setShowAreaPicker] = useState(false);
   const [priority, setPriority] = useState<TaskPriority | null>(null);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
+  const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [addAnother, setAddAnother] = useState(false);
   const projectsRef = useRef(projects);
 
@@ -231,6 +232,7 @@ export function QuickCaptureSheet({
     setShowAreaPicker(false);
     setPriority((initialProps?.priority as TaskPriority) ?? null);
     setShowPriorityPicker(false);
+    setOptionsExpanded(false);
     setShowDatePicker(false);
     setShowDueTimePicker(false);
     setStartPickerMode(null);
@@ -336,6 +338,7 @@ export function QuickCaptureSheet({
     setShowProjectPicker(false);
     setShowAreaPicker(false);
     setShowPriorityPicker(false);
+    setOptionsExpanded(false);
     setShowDatePicker(false);
     setShowDueTimePicker(false);
     setStartPickerMode(null);
@@ -589,6 +592,64 @@ export function QuickCaptureSheet({
     void startRecording();
   }, [recording, startRecording, stopRecording]);
 
+  const handleToggleOptions = useCallback(() => {
+    setOptionsExpanded((prev) => {
+      if (!prev) {
+        inputRef.current?.blur();
+        Keyboard.dismiss();
+      }
+      return !prev;
+    });
+  }, []);
+
+  const pickerProps = {
+    areas,
+    contextInputRef,
+    contextQuery,
+    contextTags,
+    dueDate,
+    filteredContexts,
+    filteredProjects,
+    hasAddableContextTokens,
+    hasExactProjectMatch,
+    onAddContextFromQuery: addContextFromQuery,
+    onClearContexts: handleClearContexts,
+    onCloseAreaPicker: () => setShowAreaPicker(false),
+    onCloseContextPicker: () => setShowContextPicker(false),
+    onClosePriorityPicker: () => setShowPriorityPicker(false),
+    onCloseProjectPicker: () => setShowProjectPicker(false),
+    onContextQueryChange: setContextQuery,
+    onDueDateChange: handleDueDateChange,
+    onDueTimeChange: handleDueTimeChange,
+    onProjectQueryChange: setProjectQuery,
+    onRemoveContext: handleRemoveContext,
+    onSelectArea: handleSelectArea,
+    onSelectContext: handleToggleContext,
+    onSelectPriority: handleSelectPriority,
+    onSelectProject: handleSelectProject,
+    onStartTimeChange: handleStartTimeChange,
+    onSubmitContextQuery: handleContextSubmit,
+    onSubmitProjectQuery: () => {
+      void submitProjectQuery();
+    },
+    pendingStartDate,
+    prioritiesEnabled,
+    priorityOptions: PRIORITY_OPTIONS,
+    projectQuery,
+    selectedAreaId,
+    selectedPriority: priority,
+    showAreaPicker,
+    showContextPicker,
+    showDatePicker,
+    showDueTimePicker,
+    showPriorityPicker,
+    showProjectPicker,
+    startPickerMode,
+    startTime,
+    t,
+    tc,
+  };
+
   return (
     <>
       <QuickCaptureSheetBody
@@ -620,9 +681,15 @@ export function QuickCaptureSheet({
           setProjectId(null);
           setSelectedAreaId(selectedAreaIdForNewTasks ?? null);
         }}
+        onToggleOptions={handleToggleOptions}
         onToggleAddAnother={setAddAnother}
         onToggleRecording={handleToggleRecording}
         onValueChange={setValue}
+        optionsExpanded={optionsExpanded}
+        hasArea={Boolean(selectedAreaId)}
+        hasContexts={contextTags.length > 0}
+        hasPriority={Boolean(priority)}
+        hasProject={Boolean(selectedProject)}
         prioritiesEnabled={prioritiesEnabled}
         priorityLabel={priorityLabel}
         projectLabel={projectLabel}
@@ -635,54 +702,10 @@ export function QuickCaptureSheet({
         tc={tc}
         value={value}
         visible={visible}
-      />
-      <QuickCaptureSheetPickers
-        areas={areas}
-        contextInputRef={contextInputRef}
-        contextQuery={contextQuery}
-        contextTags={contextTags}
-        dueDate={dueDate}
-        filteredContexts={filteredContexts}
-        filteredProjects={filteredProjects}
-        hasAddableContextTokens={hasAddableContextTokens}
-        hasExactProjectMatch={hasExactProjectMatch}
-        onAddContextFromQuery={addContextFromQuery}
-        onClearContexts={handleClearContexts}
-        onCloseAreaPicker={() => setShowAreaPicker(false)}
-        onCloseContextPicker={() => setShowContextPicker(false)}
-        onClosePriorityPicker={() => setShowPriorityPicker(false)}
-        onCloseProjectPicker={() => setShowProjectPicker(false)}
-        onContextQueryChange={setContextQuery}
-        onDueDateChange={handleDueDateChange}
-        onDueTimeChange={handleDueTimeChange}
-        onProjectQueryChange={setProjectQuery}
-        onRemoveContext={handleRemoveContext}
-        onSelectArea={handleSelectArea}
-        onSelectContext={handleToggleContext}
-        onSelectPriority={handleSelectPriority}
-        onSelectProject={handleSelectProject}
-        onStartTimeChange={handleStartTimeChange}
-        onSubmitContextQuery={handleContextSubmit}
-        onSubmitProjectQuery={() => {
-          void submitProjectQuery();
-        }}
-        pendingStartDate={pendingStartDate}
-        prioritiesEnabled={prioritiesEnabled}
-        priorityOptions={PRIORITY_OPTIONS}
-        projectQuery={projectQuery}
-        selectedAreaId={selectedAreaId}
-        selectedPriority={priority}
-        showAreaPicker={showAreaPicker}
-        showContextPicker={showContextPicker}
-        showDatePicker={showDatePicker}
-        showDueTimePicker={showDueTimePicker}
-        showPriorityPicker={showPriorityPicker}
-        showProjectPicker={showProjectPicker}
-        startPickerMode={startPickerMode}
-        startTime={startTime}
-        t={t}
-        tc={tc}
-      />
+      >
+        <QuickCaptureSheetPickers {...pickerProps} pickerLayer="overlay" />
+      </QuickCaptureSheetBody>
+      <QuickCaptureSheetPickers {...pickerProps} pickerLayer="date" />
     </>
   );
 }

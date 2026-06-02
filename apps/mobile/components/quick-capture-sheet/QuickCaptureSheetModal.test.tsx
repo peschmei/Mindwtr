@@ -79,7 +79,7 @@ describe('Quick capture modal composition', () => {
     expect(tree.root.findAllByType(Modal)).toHaveLength(0);
   });
 
-  it('only mounts the requested picker modal', () => {
+  it('renders the requested picker overlay without a nested native modal', () => {
     let tree!: ReturnType<typeof create>;
 
     act(() => {
@@ -132,10 +132,9 @@ describe('Quick capture modal composition', () => {
       );
     });
 
-    const modals = tree.root.findAllByType(Modal);
-    expect(modals).toHaveLength(1);
-    expect(modals[0]?.props.visible).toBe(true);
-    expect(modals[0]?.props.accessibilityViewIsModal).toBe(true);
+    expect(tree.root.findAllByType(Modal)).toHaveLength(0);
+    const overlays = tree.root.findAll((node) => node.props.accessibilityViewIsModal === true);
+    expect(overlays.length).toBeGreaterThan(0);
     expect(tree.root.findByType(FlatList).props.accessibilityRole).toBe('list');
     expect(tree.root.findByProps({ accessibilityRole: 'header' }).props.children).toBe('taskEdit.contextsLabel');
   });
@@ -161,6 +160,10 @@ describe('Quick capture modal composition', () => {
             dueTimeLabel="Change time"
             handleClose={vi.fn()}
             handleSave={vi.fn()}
+            hasArea={false}
+            hasContexts={false}
+            hasPriority={false}
+            hasProject={false}
             insetsBottom={0}
             inputRef={{ current: null }}
             onOpenAreaPicker={vi.fn()}
@@ -176,9 +179,11 @@ describe('Quick capture modal composition', () => {
             onResetDueTime={vi.fn()}
             onResetPriority={vi.fn()}
             onResetProject={vi.fn()}
+            onToggleOptions={vi.fn()}
             onToggleAddAnother={vi.fn()}
             onToggleRecording={vi.fn()}
             onValueChange={vi.fn()}
+            optionsExpanded={false}
             prioritiesEnabled
             priorityLabel="Priority"
             projectLabel="Project"
@@ -223,6 +228,10 @@ describe('Quick capture modal composition', () => {
           dueTimeLabel="Change time"
           handleClose={vi.fn()}
           handleSave={vi.fn()}
+          hasArea={false}
+          hasContexts={false}
+          hasPriority={false}
+          hasProject={false}
           insetsBottom={0}
           inputRef={{ current: null }}
           onOpenAreaPicker={vi.fn()}
@@ -238,9 +247,11 @@ describe('Quick capture modal composition', () => {
           onResetDueTime={vi.fn()}
           onResetPriority={vi.fn()}
           onResetProject={vi.fn()}
+          onToggleOptions={vi.fn()}
           onToggleAddAnother={vi.fn()}
           onToggleRecording={vi.fn()}
           onValueChange={vi.fn()}
+          optionsExpanded={false}
           prioritiesEnabled
           priorityLabel="Priority"
           projectLabel="Very Long Project Label"
@@ -288,6 +299,10 @@ describe('Quick capture modal composition', () => {
             dueTimeLabel="Change time"
             handleClose={vi.fn()}
             handleSave={handleSave}
+            hasArea={false}
+            hasContexts={false}
+            hasPriority={false}
+            hasProject={false}
             insetsBottom={0}
             inputRef={{ current: null }}
             onOpenAreaPicker={vi.fn()}
@@ -303,9 +318,11 @@ describe('Quick capture modal composition', () => {
             onResetDueTime={vi.fn()}
             onResetPriority={vi.fn()}
             onResetProject={vi.fn()}
+            onToggleOptions={vi.fn()}
             onToggleAddAnother={vi.fn()}
             onToggleRecording={vi.fn()}
             onValueChange={vi.fn()}
+            optionsExpanded={false}
             prioritiesEnabled
             priorityLabel="Priority"
             projectLabel="Project"
