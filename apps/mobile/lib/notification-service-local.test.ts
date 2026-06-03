@@ -13,6 +13,7 @@ const {
   mockAlarmRequestPermissions,
   mockAlarmSendNotification,
   mockAlarmScheduleAlarm,
+  mockEnsureReminderNotificationChannel,
   mockGetNextScheduledAt,
   mockHasTimeComponent,
   mockPlatform,
@@ -35,6 +36,7 @@ const {
   mockAlarmRequestPermissions: vi.fn(async () => ({ alert: true })),
   mockAlarmSendNotification: vi.fn(),
   mockAlarmScheduleAlarm: vi.fn(async () => ({ id: 99 })),
+  mockEnsureReminderNotificationChannel: vi.fn(async () => undefined),
   mockGetNextScheduledAt: vi.fn<(...args: unknown[]) => Date | null>(() => null),
   mockHasTimeComponent: vi.fn(() => false),
   mockPlatform: {
@@ -115,6 +117,10 @@ vi.mock('./app-log', () => ({
   logWarn: vi.fn(async () => undefined),
 }));
 
+vi.mock('@/modules/notification-open-intents', () => ({
+  ensureReminderNotificationChannel: mockEnsureReminderNotificationChannel,
+}));
+
 import {
   __localNotificationTestUtils,
   cancelLocalPomodoroCompletionNotification,
@@ -143,6 +149,8 @@ describe('notification-service-local', () => {
     mockAlarmSendNotification.mockReset();
     mockAlarmScheduleAlarm.mockReset();
     mockAlarmScheduleAlarm.mockResolvedValue({ id: 99 });
+    mockEnsureReminderNotificationChannel.mockReset();
+    mockEnsureReminderNotificationChannel.mockResolvedValue(undefined);
     mockGetNextScheduledAt.mockReset();
     mockGetNextScheduledAt.mockReturnValue(null);
     mockHasTimeComponent.mockReset();
@@ -198,6 +206,27 @@ describe('notification-service-local', () => {
     expect(mockAlarmRemoveAllFiredNotifications).toHaveBeenCalledTimes(1);
     expect(__localNotificationTestUtils.getAlarmMapSnapshot().size).toBe(0);
     expect(mockAsyncStorageSetItem).toHaveBeenCalledWith('mindwtr:local:alarms:v1', '{}');
+  });
+
+  it('ensures the Android reminder notification channel when permission is already granted', async () => {
+    await startLocalMobileNotifications();
+
+    expect(mockEnsureReminderNotificationChannel).toHaveBeenCalledWith(
+      'mindwtr_reminders_v2',
+      'Mindwtr reminders'
+    );
+  });
+
+  it('ensures the Android reminder notification channel after permission is granted from the runtime prompt', async () => {
+    mockPermissionsAndroidCheck.mockResolvedValue(false);
+    mockPermissionsAndroidRequest.mockResolvedValue('granted');
+
+    await startLocalMobileNotifications();
+
+    expect(mockEnsureReminderNotificationChannel).toHaveBeenCalledWith(
+      'mindwtr_reminders_v2',
+      'Mindwtr reminders'
+    );
   });
 
   it('schedules task reminders with a non-empty message body and snooze action', async () => {

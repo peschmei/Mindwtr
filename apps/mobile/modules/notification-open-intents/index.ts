@@ -12,6 +12,7 @@ type NotificationOpenPayload = {
 
 type NotificationOpenIntentsModule = {
   consumePendingOpenPayload(): Record<string, string> | null;
+  ensureReminderChannel?: (channelId: string, channelName: string) => void;
 };
 
 type AlarmNotificationModule = {
@@ -77,4 +78,9 @@ export async function consumePendingNotificationOpenPayload(): Promise<Notificat
 
   const payload = await alarmNotificationModule?.consumePendingNotificationOpenPayload?.();
   return payload ? normalizePayload(payload) : null;
+}
+
+export async function ensureReminderNotificationChannel(channelId: string, channelName: string): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  nativeModule?.ensureReminderChannel?.(channelId, channelName);
 }

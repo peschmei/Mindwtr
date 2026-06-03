@@ -20,6 +20,7 @@ import {
   hasActiveMobileNotificationFeature,
   isWeeklyReviewReminderEnabled,
 } from './mobile-notification-settings';
+import { ensureReminderNotificationChannel } from '@/modules/notification-open-intents';
 import { getDuplicateAlarmRetryFireAt } from './notification-service-local-utils';
 
 type NotificationOpenPayload = {
@@ -83,7 +84,8 @@ type NativeEmitterSubscription = {
 
 const LOCAL_ALARM_MAP_KEY = 'mindwtr:local:alarms:v1';
 const LOCAL_POMODORO_ALARM_KEY = 'mindwtr:local:pomodoro-alarm:v1';
-const LOCAL_ALARM_CHANNEL = 'mindwtr_reminders_v2';
+const LOCAL_NOTIFICATION_CHANNEL = 'mindwtr_reminders_v2';
+const LOCAL_NOTIFICATION_CHANNEL_NAME = 'Mindwtr reminders';
 const LOCAL_NOTIFICATION_COLOR = '#3b82f6';
 const LOCAL_SMALL_ICON = 'ic_launcher';
 const LOCAL_DIGEST_MORNING_KEY = 'digest:morning';
@@ -214,6 +216,14 @@ async function getAndroidNotificationPermissionStatus(): Promise<NotificationPer
   } catch (error) {
     logNotificationError('Failed to read Android notification permission', error);
     return { granted: false, canAskAgain: false };
+  }
+}
+
+async function ensureLocalReminderNotificationChannel(): Promise<void> {
+  try {
+    await ensureReminderNotificationChannel(LOCAL_NOTIFICATION_CHANNEL, LOCAL_NOTIFICATION_CHANNEL_NAME);
+  } catch (error) {
+    logNotificationError('Failed to ensure local notification channel', error);
   }
 }
 
@@ -492,7 +502,7 @@ async function scheduleAlarmForKey(api: AlarmNotificationsApi, key: string, conf
   const detailsBase: Record<string, unknown> = {
     title: config.title,
     message: normalizeNotificationMessage(config.title, config.message),
-    channel: LOCAL_ALARM_CHANNEL,
+    channel: LOCAL_NOTIFICATION_CHANNEL,
     auto_cancel: true,
     small_icon: LOCAL_SMALL_ICON,
     color: LOCAL_NOTIFICATION_COLOR,
@@ -743,12 +753,14 @@ export async function requestLocalNotificationPermission(): Promise<Notification
   if (Platform.OS === 'android') {
     const currentStatus = await getAndroidNotificationPermissionStatus();
     if (currentStatus.granted) {
+      await ensureLocalReminderNotificationChannel();
       return currentStatus;
     }
 
     try {
       const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
       if (result === PermissionsAndroid.RESULTS.GRANTED) {
+        await ensureLocalReminderNotificationChannel();
         return { granted: true, canAskAgain: true };
       }
       if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
@@ -794,7 +806,7 @@ export async function sendLocalMobileNotification(
     const details = {
       title: trimmedTitle,
       message: normalizeNotificationMessage(trimmedTitle, message),
-      channel: LOCAL_ALARM_CHANNEL,
+      channel: LOCAL_NOTIFICATION_CHANNEL,
       auto_cancel: true,
       small_icon: LOCAL_SMALL_ICON,
       color: LOCAL_NOTIFICATION_COLOR,
@@ -874,7 +886,7 @@ export async function scheduleLocalPomodoroCompletionNotification(
     const result = await api.scheduleAlarm({
       title: trimmedTitle,
       message: normalizeNotificationMessage(trimmedTitle, message),
-      channel: LOCAL_ALARM_CHANNEL,
+      channel: LOCAL_NOTIFICATION_CHANNEL,
       auto_cancel: true,
       small_icon: LOCAL_SMALL_ICON,
       color: LOCAL_NOTIFICATION_COLOR,
