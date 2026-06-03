@@ -4,6 +4,27 @@ import { act, create } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project } from '@mindwtr/core';
 
+const mockScrollTo = vi.hoisted(() => vi.fn());
+const mockFindNodeHandle = vi.hoisted(() => vi.fn(() => 9001));
+const mockMeasureInWindow = vi.hoisted(() => vi.fn());
+
+vi.mock('react-native', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('react-native')>();
+    const ReactModule = await import('react');
+    return {
+        ...actual,
+        findNodeHandle: mockFindNodeHandle,
+        ScrollView: ReactModule.forwardRef((props: any, ref) => {
+            ReactModule.useImperativeHandle(ref, () => ({ scrollTo: mockScrollTo }));
+            return ReactModule.createElement('ScrollView', props, props.children);
+        }),
+        UIManager: {
+            ...((actual as any).UIManager ?? {}),
+            measureInWindow: mockMeasureInWindow,
+        },
+    };
+});
+
 vi.mock('@react-native-community/datetimepicker', () => ({
     __esModule: true,
     default: () => null,
@@ -203,6 +224,10 @@ afterEach(() => {
         configurable: true,
         value: originalPlatformOs,
     });
+    mockScrollTo.mockReset();
+    mockFindNodeHandle.mockReset();
+    mockFindNodeHandle.mockReturnValue(9001);
+    mockMeasureInWindow.mockReset();
     taskListPropsSpy.mockClear();
     vi.restoreAllMocks();
 });
@@ -282,6 +307,61 @@ describe('ProjectDetailModal keyboard handling', () => {
         expect(tree.root.findByType(ScrollView).props.contentContainerStyle).toEqual(
             expect.arrayContaining([expect.objectContaining({ paddingBottom: 304 })])
         );
+    });
+
+    it('keeps the project quick-add row visible when Android resizes the modal before the keyboard event', () => {
+        setPlatform('android');
+        vi.spyOn(Dimensions, 'get').mockImplementation(((dimension: 'window' | 'screen') => ({
+            width: 390,
+            height: dimension === 'screen' ? 800 : 520,
+            scale: 3,
+            fontScale: 1,
+        })) as any);
+        const listeners = new Map<string, (event?: any) => void>();
+        vi.spyOn(Keyboard, 'addListener').mockImplementation(((eventName: string, listener: (event?: any) => void) => {
+            listeners.set(eventName, listener);
+            return { remove: () => listeners.delete(eventName) };
+        }) as any);
+        vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(((callback: FrameRequestCallback) => {
+            callback(0);
+            return 1;
+        }) as any);
+        const targetY = 500;
+        const targetH = 44;
+        const scrollY = 0;
+        const scrollH = 520;
+        mockMeasureInWindow.mockImplementation(((handle: number, callback: any) => {
+            if (handle === 42) {
+                callback(0, targetY, 320, targetH);
+                return;
+            }
+            callback(0, scrollY, 390, scrollH);
+        }) as any);
+        let tree!: ReturnType<typeof create>;
+
+        act(() => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps()} />);
+        });
+
+        act(() => {
+            tree.root.findByType(ScrollView).props.onScroll({ nativeEvent: { contentOffset: { y: 360 } } });
+            taskListPropsSpy.mock.calls.at(-1)?.[0].onQuickAddInputFocus(42);
+        });
+
+        expect(mockScrollTo).not.toHaveBeenCalled();
+
+        act(() => {
+            listeners.get('keyboardDidShow')?.({ endCoordinates: { screenY: 520, height: 280 } });
+        });
+
+        const visibleBottom = Math.min(scrollY + scrollH, 520);
+        const visibleHeight = visibleBottom - scrollY;
+        const bottomClearance = visibleHeight * 0.18;
+        const measuredOverlap = (targetY + targetH) - (visibleBottom - bottomClearance);
+        expect(tree.root.findByType(ScrollView).props.contentContainerStyle).toEqual(
+            expect.arrayContaining([expect.objectContaining({ paddingBottom: 304 })])
+        );
+        expect(mockScrollTo).toHaveBeenCalledWith({ y: 360 + measuredOverlap, animated: true });
     });
 });
 

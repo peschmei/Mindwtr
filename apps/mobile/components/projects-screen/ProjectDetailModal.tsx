@@ -99,6 +99,25 @@ type ProjectDetailModalProps = {
     updateProject: (id: string, updates: Partial<Project>) => void;
 };
 
+function getAndroidKeyboardFrame(event: { endCoordinates?: { screenY?: number; height?: number } }) {
+    const windowHeight = Dimensions.get('window').height;
+    const screenHeight = Dimensions.get('screen').height;
+    const endCoords = event.endCoordinates;
+    const eventScreenY = typeof endCoords?.screenY === 'number' ? endCoords.screenY : undefined;
+    const eventHeight = typeof endCoords?.height === 'number' ? endCoords.height : undefined;
+    const keyboardTop = eventScreenY ?? (typeof eventHeight === 'number' ? Math.max(0, screenHeight - eventHeight) : windowHeight);
+    const screenInset = typeof eventScreenY === 'number' ? Math.max(0, screenHeight - eventScreenY) : 0;
+    const windowInset = typeof eventScreenY === 'number' ? Math.max(0, windowHeight - eventScreenY) : 0;
+    const heightInset = typeof eventHeight === 'number' ? Math.max(0, eventHeight) : 0;
+    const inset = Math.max(screenInset, windowInset, heightInset);
+
+    return {
+        keyboardTop,
+        inset,
+        visible: inset > 0 || keyboardTop < windowHeight,
+    };
+}
+
 function ProjectDetailScrollFrame({
     backgroundColor,
     children,
@@ -277,17 +296,10 @@ export function ProjectDetailModal({
         if (Platform.OS !== 'android') return;
         if (typeof Keyboard?.addListener !== 'function') return;
         const updateKeyboardTop = (event: { endCoordinates?: { screenY?: number; height?: number } }) => {
-            const windowHeight = Dimensions.get('window').height;
-            const endCoords = event.endCoordinates;
-            let nextKeyboardTop = windowHeight;
-            if (typeof endCoords?.screenY === 'number') {
-                nextKeyboardTop = endCoords.screenY;
-            } else if (typeof endCoords?.height === 'number') {
-                nextKeyboardTop = Math.max(0, windowHeight - endCoords.height);
-            }
-            projectDetailKeyboardTopRef.current = nextKeyboardTop;
-            projectDetailKeyboardVisibleRef.current = nextKeyboardTop < windowHeight;
-            setProjectDetailKeyboardBottomInset(Math.max(0, windowHeight - nextKeyboardTop));
+            const frame = getAndroidKeyboardFrame(event);
+            projectDetailKeyboardTopRef.current = frame.keyboardTop;
+            projectDetailKeyboardVisibleRef.current = frame.visible;
+            setProjectDetailKeyboardBottomInset(frame.inset);
             const focusedInputHandle = projectDetailFocusedInputHandleRef.current;
             if (projectDetailKeyboardVisibleRef.current && focusedInputHandle) {
                 if (typeof requestAnimationFrame === 'function') {
@@ -356,6 +368,17 @@ export function ProjectDetailModal({
             setTimeout(measureAndScroll, 0);
         }
     }, []);
+
+    React.useEffect(() => {
+        if (Platform.OS !== 'android' || projectDetailKeyboardBottomInset <= 0) return;
+        const focusedInputHandle = projectDetailFocusedInputHandleRef.current;
+        if (!focusedInputHandle) return;
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => scrollProjectInputIntoView(focusedInputHandle));
+        } else {
+            setTimeout(() => scrollProjectInputIntoView(focusedInputHandle), 0);
+        }
+    }, [projectDetailKeyboardBottomInset, scrollProjectInputIntoView]);
 
     return (
         <Modal
