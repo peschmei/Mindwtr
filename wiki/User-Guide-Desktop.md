@@ -72,9 +72,11 @@ Multi-step outcomes containing related tasks.
 - **Areas of Focus** — Group projects by higher-level areas (e.g., Work, Health) to keep your sidebar organized.
 - **Project tags** — Tag projects and filter by tag
 - **Support notes** — Add planning notes and reference material
-- **Sections** — Optional task groupings inside a project (phases, milestones, sub-workstreams)
+- **Sections** — Optional task groupings inside a project (phases, milestones, sub-workstreams). Sections are headings inside one project, not subtasks or separate projects.
 - **Review date** — Set tickler dates for project review
 - **Complete/Archive** — Mark projects as done or archive them
+
+The **Project Section** field in the task editor assigns a task to one of the sections in its current project. It only has a useful value after the task belongs to a project that has sections.
 
 ### 🏷️ Contexts
 
@@ -161,6 +163,7 @@ Use checklists as templates:
 - Click a task to open a **read-only view** of all details.
 - Press **Edit** (or `e`) to switch to edit mode.
 - The editor starts minimal. Use **More options** to reveal advanced fields.
+- **Project Section** is an organizational field for tasks inside a sectioned project. Leave it blank for Inbox tasks, unassigned tasks, or projects without sections.
 - Status, Priority, and Energy Level use pill controls instead of dropdowns for faster keyboard and pointer selection.
 - Date fields include quick chips for **Today**, **Tomorrow**, **+3 days**, **Next week**, **Next month**, and **No date**.
 - In **Settings → GTD → Task Editor Layout**, choose whether the desktop editor opens as the inline side peek or a centered pop-up.

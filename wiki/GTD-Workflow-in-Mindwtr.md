@@ -145,6 +145,14 @@ Create projects for multi-step outcomes:
    - **Sequential:** Only first task shows in Focus view
    - **Parallel:** All tasks show in Focus view
 
+#### Project Sections
+
+Project Sections are subdivisions inside a single project. Use them when a project has natural phases, milestones, or workstreams and a flat task list would be hard to scan.
+
+Example: **Launch website** can have sections such as **Design**, **Development**, and **Content**. These are not separate projects and not subtasks. They are organizational headings inside one project outcome.
+
+The **Project Section** field on a task assigns that task to one of its project's sections. It is useful only after the task belongs to a project that has sections. For unassigned tasks, or projects without sections, leave the field blank.
+
 Sequential projects can use a project-wide scope or a section scope. Use section scope when a project has independent phases or workstreams: Mindwtr shows the first available task in each section instead of blocking the whole project behind one task.
 
 ### Due Dates and Reminders

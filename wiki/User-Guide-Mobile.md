@@ -435,7 +435,7 @@ Open Projects from **Menu → Projects**.
 
 - View all tasks in the project
 - Add new tasks
-- Group tasks with **Sections** inside the project
+- Group tasks with **Sections** inside the project. Sections are headings inside one project, not subtasks or separate projects.
 - Tap a task to assign a **Section** in the task editor
 - Edit project settings (name, color, notes)
 - Assign **Area of Focus** (e.g., Work, Personal)
@@ -444,6 +444,8 @@ Open Projects from **Menu → Projects**.
 - Set review date
 - Reorder project tasks with the drag handle when custom ordering is enabled
 - Complete or archive the project
+
+The **Project Section** field in the task editor assigns a task to one of the sections in its current project. It only matters after the task belongs to a project that has sections; otherwise, leave it blank.
 
 ### Sequential vs Parallel
 

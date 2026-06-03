@@ -153,6 +153,14 @@ For Horizons 3–5 (Goals, Vision, Purpose), there isn’t a dedicated entity ye
 
 If you rely on explicit Goal/Vision objects, please open an issue with your desired workflow and review cadence.
 
+### What is Project Section used for?
+
+A **Project Section** is a labeled group inside one project. Use sections to keep a longer project readable, such as **Design**, **Development**, and **Content** inside a **Launch website** project.
+
+Sections are not subtasks and not separate projects. They are just headings for tasks inside the same project outcome.
+
+The **Project Section** field on a task assigns that task to one of the sections in its current project. It only does something when the task already belongs to a project that has sections. If the task has no project, or the project has no sections, leave it blank.
+
 ### How do I enable Priority or Estimated Time?
 
 Mindwtr uses progressive disclosure, so optional fields are hidden by default.
