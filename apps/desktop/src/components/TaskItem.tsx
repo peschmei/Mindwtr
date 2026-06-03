@@ -9,6 +9,7 @@ import {
     getLocalizedWeekdayLabels,
     normalizeWeekStartSetting,
     Project,
+    type RangeSelectionOptions,
     generateUUID,
     normalizeClockTimeInput,
     syncMarkdownChecklistWithCanonical,
@@ -51,7 +52,7 @@ interface TaskItemProps {
     onSelect?: () => void;
     selectionMode?: boolean;
     isMultiSelected?: boolean;
-    onToggleSelect?: () => void;
+    onToggleSelect?: (options?: RangeSelectionOptions) => void;
     showQuickDone?: boolean;
     showStatusSelect?: boolean;
     showProjectBadgeInActions?: boolean;
@@ -1102,7 +1103,8 @@ export const TaskItem = memo(function TaskItem({
                             type="checkbox"
                             aria-label={selectAriaLabel}
                             checked={isMultiSelected}
-                            onChange={() => onToggleSelect?.()}
+                            onClick={(event) => onToggleSelect?.({ range: event.shiftKey })}
+                            onChange={() => undefined}
                             className={cn(
                                 "h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer",
                                 isCompact ? "mt-1" : "mt-1.5"

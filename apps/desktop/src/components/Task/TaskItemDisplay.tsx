@@ -1,5 +1,5 @@
 import { AlertTriangle, Calendar as CalendarIcon, Tag, Trash2, ArrowRight, Repeat, Check, Clock, Timer, Paperclip, RotateCcw, Copy, MapPin, Hourglass, Star, Zap, MoreHorizontal } from 'lucide-react';
-import type { Area, Attachment, Project, Task, TaskStatus, RecurrenceRule, RecurrenceStrategy, Language } from '@mindwtr/core';
+import type { Area, Attachment, Project, RangeSelectionOptions, Task, TaskStatus, RecurrenceRule, RecurrenceStrategy, Language } from '@mindwtr/core';
 import { DEFAULT_AREA_COLOR, getChecklistProgress, getRecurrenceCountValue, getRecurrenceUntilValue, getTaskAgeLabel, getTaskDateCoherenceIssues, getTaskStaleness, getTaskUrgency, hasTimeComponent, parseRRuleString, safeFormatDate, resolveTaskTextDirection, tFallback } from '@mindwtr/core';
 import { cn } from '../../lib/utils';
 import { getAttachmentDisplayTitle } from '../../lib/attachment-utils';
@@ -14,7 +14,7 @@ import { isImageAttachment } from './task-item-attachment-utils';
 import { AttachmentImage } from './AttachmentImage';
 
 interface TaskItemDisplayActions {
-    onToggleSelect?: () => void;
+    onToggleSelect?: (options?: RangeSelectionOptions) => void;
     onToggleView: () => void;
     onEdit: () => void;
     onDelete: () => void;
@@ -201,7 +201,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     }, []);
     const handleTitleClick = (event: MouseEvent<HTMLButtonElement>) => {
         if (selectionMode) {
-            onToggleSelect?.();
+            onToggleSelect?.({ range: event.shiftKey });
             return;
         }
         // Keyboard activation should not be delayed.

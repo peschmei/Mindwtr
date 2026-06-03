@@ -11,7 +11,9 @@ import {
     buildBulkTaskTokenUpdates,
     collectBulkTaskTokens,
     tFallback,
+    updateRangeSelection,
 } from '@mindwtr/core';
+import type { RangeSelectionOptions } from '@mindwtr/core';
 import { AtSign, ChevronDown, ChevronRight, Filter, Hash, Tag, type LucideIcon } from 'lucide-react';
 import { TokenPickerModal } from '../TokenPickerModal';
 import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
@@ -76,6 +78,7 @@ export function ContextsView() {
     const [contextsCollapsed, setContextsCollapsed] = useState(false);
     const [tagsCollapsed, setTagsCollapsed] = useState(false);
     const listScrollRef = useRef<HTMLDivElement>(null);
+    const multiSelectAnchorIdRef = useRef<string | null>(null);
     const rowHeightsRef = useRef<Map<string, number>>(new Map());
     const [measureVersion, setMeasureVersion] = useState(0);
     const [listScrollTop, setListScrollTop] = useState(0);
@@ -214,22 +217,30 @@ export function ContextsView() {
     const exitSelectionMode = () => {
         setSelectionMode(false);
         setMultiSelectedIds(new Set());
+        multiSelectAnchorIdRef.current = null;
     };
 
-    const toggleMultiSelect = (taskId: string) => {
+    const toggleMultiSelect = (taskId: string, options: RangeSelectionOptions = {}) => {
         setMultiSelectedIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(taskId)) next.delete(taskId);
-            else next.add(taskId);
-            return next;
+            const result = updateRangeSelection({
+                anchorId: multiSelectAnchorIdRef.current,
+                range: options.range,
+                selectedIds: prev,
+                targetId: taskId,
+                visibleIds: filteredTaskIds,
+            });
+            multiSelectAnchorIdRef.current = result.anchorId;
+            return result.selectedIds;
         });
     };
 
     const selectAllVisibleTasks = () => {
+        multiSelectAnchorIdRef.current = filteredTaskIds[0] ?? null;
         setMultiSelectedIds(new Set(filteredTaskIds));
     };
 
     const clearTaskSelection = () => {
+        multiSelectAnchorIdRef.current = null;
         setMultiSelectedIds(new Set());
     };
 
@@ -332,6 +343,10 @@ export function ContextsView() {
             if (next.size === prev.size) return prev;
             return next;
         });
+        const visible = new Set(filteredTasks.map((task) => task.id));
+        if (multiSelectAnchorIdRef.current && !visible.has(multiSelectAnchorIdRef.current)) {
+            multiSelectAnchorIdRef.current = null;
+        }
     }, [filteredTasks]);
 
     const removeTagLabelRaw = t('bulk.removeTag');

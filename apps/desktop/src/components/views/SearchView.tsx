@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useEffect, useState, useRef, type UIEvent } from 'react';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { shallow, useTaskStore, filterTasksBySearch, sortTasksBy, TaskStatus } from '@mindwtr/core';
-import type { TaskSortBy } from '@mindwtr/core';
+import { shallow, useTaskStore, filterTasksBySearch, sortTasksBy, TaskStatus, updateRangeSelection } from '@mindwtr/core';
+import type { RangeSelectionOptions, TaskSortBy } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
 import { Trash2 } from 'lucide-react';
 import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
@@ -52,6 +52,7 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
     const [contextPromptMode, setContextPromptMode] = useState<'add' | 'remove'>('add');
     const [contextPromptIds, setContextPromptIds] = useState<string[]>([]);
     const listScrollRef = useRef<HTMLDivElement>(null);
+    const multiSelectAnchorIdRef = useRef<string | null>(null);
     const rowHeightsRef = useRef<Map<string, number>>(new Map());
     const [measureVersion, setMeasureVersion] = useState(0);
     const [listScrollTop, setListScrollTop] = useState(0);
@@ -127,6 +128,7 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
     const exitSelectionMode = useCallback(() => {
         setSelectionMode(false);
         setMultiSelectedIds(new Set());
+        multiSelectAnchorIdRef.current = null;
     }, []);
 
     const filteredTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
@@ -143,22 +145,32 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
             if (next.size === prev.size) return prev;
             return next;
         });
+        if (multiSelectAnchorIdRef.current && !filteredTaskIds.includes(multiSelectAnchorIdRef.current)) {
+            multiSelectAnchorIdRef.current = null;
+        }
     }, [filteredTaskIds]);
 
-    const toggleMultiSelect = useCallback((taskId: string) => {
+    const toggleMultiSelect = useCallback((taskId: string, options: RangeSelectionOptions = {}) => {
         setMultiSelectedIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(taskId)) next.delete(taskId);
-            else next.add(taskId);
-            return next;
+            const result = updateRangeSelection({
+                anchorId: multiSelectAnchorIdRef.current,
+                range: options.range,
+                selectedIds: prev,
+                targetId: taskId,
+                visibleIds: filteredTaskIds,
+            });
+            multiSelectAnchorIdRef.current = result.anchorId;
+            return result.selectedIds;
         });
-    }, []);
+    }, [filteredTaskIds]);
 
     const selectAllVisibleTasks = useCallback(() => {
+        multiSelectAnchorIdRef.current = filteredTaskIds[0] ?? null;
         setMultiSelectedIds(new Set(filteredTaskIds));
     }, [filteredTaskIds]);
 
     const clearTaskSelection = useCallback(() => {
+        multiSelectAnchorIdRef.current = null;
         setMultiSelectedIds(new Set());
     }, []);
 

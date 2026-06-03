@@ -1051,6 +1051,8 @@ export const zhHans: Record<string, string> = {
         'bulk.exitSelect': '完成',
         'bulk.selected': '已选择',
         'bulk.moveTo': '移动到',
+        'bulk.selectRange': '范围',
+        'bulk.selectRangeActive': '选择终点',
         'bulk.addTag': '添加标签',
         'bulk.addContext': '添加情境',
         'bulk.removeContext': '移除情境',

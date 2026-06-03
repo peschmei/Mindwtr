@@ -1141,6 +1141,8 @@ export const en: Record<string, string> = {
         'bulk.exitSelect': 'Done',
         'bulk.selected': 'selected',
         'bulk.moveTo': 'Move to',
+        'bulk.selectRange': 'Range',
+        'bulk.selectRangeActive': 'Pick end',
         'bulk.addTag': 'Add tag',
         'bulk.addContext': 'Add context',
         'bulk.removeContext': 'Remove context',

@@ -129,6 +129,7 @@ export const styles = StyleSheet.create({
   },
   bulkActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   bulkActionButton: {

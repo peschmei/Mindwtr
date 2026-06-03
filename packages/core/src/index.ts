@@ -66,6 +66,14 @@ export type {
 } from './storage';
 
 export {
+    updateRangeSelection,
+} from './range-selection';
+export type {
+    RangeSelectionOptions,
+    RangeSelectionResult,
+} from './range-selection';
+
+export {
     applyTaskUpdates,
     flushPendingSave,
     getStorageAdapter,

@@ -232,6 +232,31 @@ describe('ListView', () => {
     ))).toEqual([false, false]);
   });
 
+  it('selects a visible range with shift-click in selection mode', async () => {
+    useTaskStore.setState({
+      tasks: [
+        makeTask('1', { title: 'First range task' }),
+        makeTask('2', { title: 'Second range task' }),
+        makeTask('3', { title: 'Third range task' }),
+        makeTask('4', { title: 'Fourth range task' }),
+      ],
+      lastDataChangeAt: 1,
+    });
+
+    const { getAllByRole, getByRole } = renderListView();
+
+    fireEvent.click(getByRole('button', { name: 'Select' }));
+    const checkboxes = getAllByRole('checkbox', { name: 'Select task' });
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[2], { shiftKey: true });
+
+    await waitFor(() => {
+      expect(getAllByRole('checkbox', { name: 'Select task' }).map((checkbox) => (
+        (checkbox as HTMLInputElement).checked
+      ))).toEqual([true, true, true, false]);
+    });
+  });
+
   it('does not scroll back to the selected row after a background refresh', async () => {
     const scrollIntoViewMock = vi.fn();
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {

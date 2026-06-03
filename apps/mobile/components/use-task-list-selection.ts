@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import { updateRangeSelection } from '@mindwtr/core';
 import type { StoreActionResult, Task, TaskStatus } from '@mindwtr/core';
 import { logError } from '../lib/app-log';
 import { getBulkActionFailureMessage } from './task-list-utils';
@@ -13,6 +14,10 @@ type UseTaskListSelectionParams = {
   restoreTask: (id: string) => Promise<void | StoreActionResult>;
   t: (key: string) => string;
   tasksById: Record<string, Task>;
+};
+
+type ToggleMultiSelectOptions = {
+  visibleTaskIds?: readonly string[];
 };
 
 export function useTaskListSelection({
@@ -31,6 +36,8 @@ export function useTaskListSelection({
   const [tagInput, setTagInput] = useState('');
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [bulkActionLabel, setBulkActionLabel] = useState('');
+  const [rangeSelectMode, setRangeSelectMode] = useState(false);
+  const rangeSelectionAnchorIdRef = useRef<string | null>(null);
 
   const selectedIdsArray = useMemo(() => Array.from(multiSelectedIds), [multiSelectedIds]);
   const hasSelection = selectedIdsArray.length > 0;
@@ -38,6 +45,8 @@ export function useTaskListSelection({
   const exitSelectionMode = useCallback(() => {
     setSelectionMode(false);
     setMultiSelectedIds(new Set());
+    setRangeSelectMode(false);
+    rangeSelectionAnchorIdRef.current = null;
   }, []);
 
   const runBulkAction = useCallback(async (label: string, action: () => Promise<void>) => {
@@ -60,15 +69,26 @@ export function useTaskListSelection({
     }
   }, [bulkActionLoading, showToast, t]);
 
-  const toggleMultiSelect = useCallback((taskId: string) => {
+  const toggleRangeSelectMode = useCallback(() => {
+    if (!hasSelection || bulkActionLoading) return;
+    setRangeSelectMode((current) => !current);
+  }, [bulkActionLoading, hasSelection]);
+
+  const toggleMultiSelect = useCallback((taskId: string, options: ToggleMultiSelectOptions = {}) => {
     if (!selectionMode) setSelectionMode(true);
     setMultiSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(taskId)) next.delete(taskId);
-      else next.add(taskId);
-      return next;
+      const result = updateRangeSelection({
+        anchorId: rangeSelectionAnchorIdRef.current,
+        range: rangeSelectMode,
+        selectedIds: prev,
+        targetId: taskId,
+        visibleIds: options.visibleTaskIds ?? [],
+      });
+      rangeSelectionAnchorIdRef.current = result.anchorId;
+      return result.selectedIds;
     });
-  }, [selectionMode]);
+    if (rangeSelectMode) setRangeSelectMode(false);
+  }, [rangeSelectMode, selectionMode]);
 
   const handleBatchMove = useCallback(async (newStatus: TaskStatus) => {
     if (!hasSelection || bulkActionLoading) return;
@@ -147,6 +167,7 @@ export function useTaskListSelection({
     handleBatchMove,
     hasSelection,
     multiSelectedIds,
+    rangeSelectMode,
     selectedIdsArray,
     selectionMode,
     setSelectionMode,
@@ -154,6 +175,7 @@ export function useTaskListSelection({
     setTagModalVisible,
     tagInput,
     tagModalVisible,
+    toggleRangeSelectMode,
     toggleMultiSelect,
   };
 }

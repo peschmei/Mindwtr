@@ -266,6 +266,7 @@ function TaskListComponent({
     handleBatchMove,
     hasSelection,
     multiSelectedIds,
+    rangeSelectMode,
     selectedIdsArray,
     selectionMode,
     setSelectionMode,
@@ -273,6 +274,7 @@ function TaskListComponent({
     setTagModalVisible,
     tagInput,
     tagModalVisible,
+    toggleRangeSelectMode,
     toggleMultiSelect,
   } = useTaskListSelection({
     batchDeleteTasks,
@@ -497,6 +499,7 @@ function TaskListComponent({
     }
     return sortTasksBy(filteredTasks, sortBy);
   }, [enableProjectReorder, filteredTasks, projectId, sortBy]);
+  const orderedTaskIds = useMemo(() => orderedTasks.map((task) => task.id), [orderedTasks]);
 
   const projectSections = useMemo(() => {
     if (!projectId) return [];
@@ -971,7 +974,7 @@ function TaskListComponent({
         onPress={() => handleEditTask(item)}
         selectionMode={enableBulkActions ? selectionMode : false}
         isMultiSelected={enableBulkActions && multiSelectedIds.has(item.id)}
-        onToggleSelect={enableBulkActions ? () => toggleMultiSelect(item.id) : undefined}
+        onToggleSelect={enableBulkActions ? () => toggleMultiSelect(item.id, { visibleTaskIds: orderedTaskIds }) : undefined}
         onStatusChange={(status) => updateTask(item.id, { status: status as TaskStatus })}
         onDelete={() => { void deleteTask(item.id); }}
         isHighlighted={item.id === highlightTaskId}
@@ -990,6 +993,7 @@ function TaskListComponent({
     highlightTaskId,
     isDark,
     multiSelectedIds,
+    orderedTaskIds,
     selectionMode,
     hideChecklistProgressForList,
     hideStatusBadgeForList,
@@ -1226,7 +1230,9 @@ function TaskListComponent({
           handleBatchDelete={handleBatchDelete}
           handleBatchMove={handleBatchMove}
           hasSelection={hasSelection}
+          onToggleRangeSelectMode={toggleRangeSelectMode}
           onOpenTagModal={() => setTagModalVisible(true)}
+          rangeSelectMode={rangeSelectMode}
           selectedCount={selectedIdsArray.length}
           t={t}
           themeColors={themeColorsMemo}

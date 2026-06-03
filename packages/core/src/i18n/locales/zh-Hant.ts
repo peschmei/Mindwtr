@@ -1051,6 +1051,8 @@ export const zhHant: Record<string, string> = {
         'bulk.exitSelect': '完成',
         'bulk.selected': '已選擇',
         'bulk.moveTo': '移動到',
+        'bulk.selectRange': '範圍',
+        'bulk.selectRangeActive': '選擇終點',
         'bulk.addTag': '添加標籤',
         'bulk.addContext': '添加情境',
         'bulk.removeContext': '移除情境',

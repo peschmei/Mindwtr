@@ -1,5 +1,6 @@
+import React from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import type { TaskStatus } from '@mindwtr/core';
+import { tFallback, type TaskStatus } from '@mindwtr/core';
 
 import { styles } from './task-list.styles';
 
@@ -7,6 +8,7 @@ type ThemeColors = {
   border: string;
   cardBg: string;
   filterBg: string;
+  onTint: string;
   secondaryText: string;
   text: string;
   tint: string;
@@ -18,7 +20,9 @@ type TaskListBulkBarProps = {
   handleBatchDelete: () => void;
   handleBatchMove: (status: TaskStatus) => void;
   hasSelection: boolean;
+  onToggleRangeSelectMode: () => void;
   onOpenTagModal: () => void;
+  rangeSelectMode: boolean;
   selectedCount: number;
   t: (key: string) => string;
   themeColors: ThemeColors;
@@ -30,11 +34,18 @@ export function TaskListBulkBar({
   handleBatchDelete,
   handleBatchMove,
   hasSelection,
+  onToggleRangeSelectMode,
   onOpenTagModal,
+  rangeSelectMode,
   selectedCount,
   t,
   themeColors,
 }: TaskListBulkBarProps) {
+  const rangeLabel = rangeSelectMode
+    ? tFallback(t, 'bulk.selectRangeActive', 'Pick end')
+    : tFallback(t, 'bulk.selectRange', 'Range');
+  const canSelectRange = hasSelection && !bulkActionLoading;
+
   return (
     <View style={[styles.bulkBar, { backgroundColor: themeColors.cardBg, borderBottomColor: themeColors.border }]}>
       <View style={styles.bulkStatusRow}>
@@ -65,6 +76,25 @@ export function TaskListBulkBar({
         ))}
       </ScrollView>
       <View style={styles.bulkActions}>
+        <TouchableOpacity
+          onPress={onToggleRangeSelectMode}
+          disabled={!canSelectRange}
+          style={[
+            styles.bulkActionButton,
+            {
+              backgroundColor: rangeSelectMode ? themeColors.tint : themeColors.filterBg,
+              opacity: canSelectRange ? 1 : 0.5,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={rangeLabel}
+          accessibilityState={{ disabled: !canSelectRange, selected: rangeSelectMode }}
+          testID="task-list-range-select-toggle"
+        >
+          <Text style={[styles.bulkActionText, { color: rangeSelectMode ? themeColors.onTint : themeColors.text }]}>
+            {rangeLabel}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={onOpenTagModal}
           disabled={!hasSelection || bulkActionLoading}

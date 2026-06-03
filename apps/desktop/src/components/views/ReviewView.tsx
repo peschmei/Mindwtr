@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { ReviewHeader } from './review/ReviewHeader';
 import { ReviewFiltersBar } from './review/ReviewFiltersBar';
@@ -8,7 +8,7 @@ import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
 import { DailyReviewGuideModal } from './review/DailyReviewModal';
 import { WeeklyReviewGuideModal } from './review/WeeklyReviewModal';
 
-import { shallow, sortTasksBy, useTaskStore, type Project, type Task, type TaskStatus, type TaskSortBy, isTaskInActiveProject } from '@mindwtr/core';
+import { shallow, sortTasksBy, updateRangeSelection, useTaskStore, type Project, type RangeSelectionOptions, type Task, type TaskStatus, type TaskSortBy, isTaskInActiveProject } from '@mindwtr/core';
 
 import { PromptModal } from '../PromptModal';
 import { useLanguage } from '../../contexts/language-context';
@@ -77,6 +77,7 @@ export function ReviewView() {
     const [showGuide, setShowGuide] = useState(false);
     const [showDailyGuide, setShowDailyGuide] = useState(false);
     const [moveToStatus, setMoveToStatus] = useState<TaskStatus | ''>('');
+    const multiSelectAnchorIdRef = useRef<string | null>(null);
     const showListDetails = useUiStore((state) => state.listOptions.showDetails);
     const setListOptions = useUiStore((state) => state.setListOptions);
     const collapseAllTaskDetails = useUiStore((state) => state.collapseAllTaskDetails);
@@ -160,6 +161,7 @@ export function ReviewView() {
     const exitSelectionMode = useCallback(() => {
         setSelectionMode(false);
         setMultiSelectedIds(new Set());
+        multiSelectAnchorIdRef.current = null;
     }, []);
 
     useEffect(() => {
@@ -173,24 +175,34 @@ export function ReviewView() {
             if (next.size === prev.size) return prev;
             return next;
         });
+        if (multiSelectAnchorIdRef.current && !filteredTaskIds.includes(multiSelectAnchorIdRef.current)) {
+            multiSelectAnchorIdRef.current = null;
+        }
     }, [filteredTaskIds]);
 
-    const toggleMultiSelect = useCallback((taskId: string) => {
+    const toggleMultiSelect = useCallback((taskId: string, options: RangeSelectionOptions = {}) => {
         if (!selectionMode) setSelectionMode(true);
         setMultiSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(taskId)) next.delete(taskId);
-            else next.add(taskId);
-            return next;
+            const result = updateRangeSelection({
+                anchorId: multiSelectAnchorIdRef.current,
+                range: options.range,
+                selectedIds: prev,
+                targetId: taskId,
+                visibleIds: filteredTaskIds,
+            });
+            multiSelectAnchorIdRef.current = result.anchorId;
+            return result.selectedIds;
         });
-    }, [selectionMode]);
+    }, [filteredTaskIds, selectionMode]);
 
     const selectAllVisibleTasks = useCallback(() => {
         setSelectionMode(true);
+        multiSelectAnchorIdRef.current = filteredTaskIds[0] ?? null;
         setMultiSelectedIds(new Set(filteredTaskIds));
     }, [filteredTaskIds]);
 
     const clearTaskSelection = useCallback(() => {
+        multiSelectAnchorIdRef.current = null;
         setMultiSelectedIds(new Set());
     }, []);
 
