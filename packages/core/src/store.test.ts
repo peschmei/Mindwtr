@@ -1694,13 +1694,13 @@ describe('TaskStore', () => {
         expect(projects[0].color).toBe('#ff0000');
     });
 
-    it('should soft-delete areas and cascade to projects/sections/tasks', async () => {
+    it('should soft-delete areas and unassign linked projects/tasks', async () => {
         const { addArea, addProject, addSection, addTask, deleteArea } = useTaskStore.getState();
         const area = await addArea('Work');
         expect(area).not.toBeNull();
         if (!area) return;
 
-        const project = await addProject('Area Project', '#123456', { areaId: area.id });
+        const project = await addProject('Area Project', '#123456', { areaId: area.id, areaTitle: 'Work' });
         expect(project).not.toBeNull();
         if (!project) return;
         const section = await addSection(project.id, 'Planning');
@@ -1713,26 +1713,27 @@ describe('TaskStore', () => {
 
         const state = useTaskStore.getState();
         expect(state.areas).toHaveLength(0);
-        expect(state.projects).toHaveLength(0);
-        expect(state.sections).toHaveLength(0);
-        expect(state.tasks).toHaveLength(0);
+        expect(state.projects).toHaveLength(1);
+        expect(state.sections).toHaveLength(1);
+        expect(state.tasks).toHaveLength(2);
         const tombstone = state._allAreas.find((item) => item.id === area.id);
         expect(tombstone?.deletedAt).toBeTruthy();
 
         const updatedProject = state._allProjects.find((item) => item.id === project.id)!;
-        expect(updatedProject.deletedAt).toBe(tombstone?.deletedAt);
-        expect(updatedProject.areaId).toBe(area.id);
+        expect(updatedProject.deletedAt).toBeUndefined();
+        expect(updatedProject.areaId).toBeUndefined();
+        expect(updatedProject.areaTitle).toBeUndefined();
         const updatedSection = state._allSections.find((item) => item.id === section.id)!;
-        expect(updatedSection.deletedAt).toBe(tombstone?.deletedAt);
+        expect(updatedSection.deletedAt).toBeUndefined();
         const updatedTask = state._allTasks.find((item) => item.title === 'Area Task')!;
-        expect(updatedTask.deletedAt).toBe(tombstone?.deletedAt);
-        expect(updatedTask.areaId).toBe(area.id);
+        expect(updatedTask.deletedAt).toBeUndefined();
+        expect(updatedTask.areaId).toBeUndefined();
         const updatedProjectTask = state._allTasks.find((item) => item.title === 'Project Task')!;
-        expect(updatedProjectTask.deletedAt).toBe(tombstone?.deletedAt);
+        expect(updatedProjectTask.deletedAt).toBeUndefined();
         expect(updatedProjectTask.projectId).toBe(project.id);
     });
 
-    it('restores an area with children deleted by the area cascade', async () => {
+    it('restores a deleted area without reassigning unassigned children', async () => {
         const { addArea, addProject, addSection, addTask, deleteArea, restoreArea } = useTaskStore.getState();
         const area = await addArea('Work');
         expect(area).not.toBeNull();
@@ -1755,10 +1756,10 @@ describe('TaskStore', () => {
         const restored = state.areas.find((item) => item.id === area.id);
         expect(restored?.deletedAt).toBeUndefined();
         const restoredProject = state.projects.find((item) => item.id === project.id);
-        expect(restoredProject?.areaId).toBe(area.id);
+        expect(restoredProject?.areaId).toBeUndefined();
         expect(restoredProject?.deletedAt).toBeUndefined();
         expect(state.sections.find((item) => item.id === section.id)?.deletedAt).toBeUndefined();
-        expect(state.tasks.find((item) => item.title === 'Area Task')?.areaId).toBe(area.id);
+        expect(state.tasks.find((item) => item.title === 'Area Task')?.areaId).toBeUndefined();
         const projectTask = state.tasks.find((item) => item.title === 'Project Task');
         expect(projectTask?.projectId).toBe(project.id);
         expect(projectTask?.sectionId).toBe(section.id);

@@ -7,6 +7,7 @@ import {
     addBreadcrumb,
     createBackupFileName,
     flushPendingSave,
+    prepareRestoredBackupDataForSync,
     serializeBackupData,
     type AppData,
     type BackupValidation,
@@ -304,7 +305,7 @@ export const restoreDataFromBackup = async (backupData: AppData): Promise<Snapsh
         await flushPendingSave();
         const currentData = await mobileStorage.getData();
         const snapshotName = await saveCurrentDataSnapshot(currentData);
-        await applyImportedData(backupData);
+        await applyImportedData(prepareRestoredBackupDataForSync(backupData));
         void logInfo('Backup restore complete', {
             scope: 'transfer',
             extra: {

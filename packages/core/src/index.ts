@@ -830,6 +830,7 @@ export {
 export {
     BACKUP_FILE_PREFIX,
     createBackupFileName,
+    prepareRestoredBackupDataForSync,
     sanitizeSerializedJsonText,
     serializeBackupData,
     validateBackupJson,

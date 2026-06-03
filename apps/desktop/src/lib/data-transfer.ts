@@ -2,6 +2,7 @@ import {
     addBreadcrumb,
     createBackupFileName,
     flushPendingSave,
+    prepareRestoredBackupDataForSync,
     serializeBackupData,
     validateBackupJson,
     type AppData,
@@ -261,7 +262,7 @@ export const restoreDesktopBackup = async (data: AppData): Promise<DesktopTransf
     try {
         await flushPendingSave();
         const snapshotName = isTauriRuntime() ? await SyncService.createDataSnapshot() : null;
-        await persistTransferredData(data);
+        await persistTransferredData(prepareRestoredBackupDataForSync(data));
         void logInfo('Backup restore complete', {
             scope: 'transfer',
             extra: {

@@ -41,7 +41,7 @@ import {
 } from './sync-signatures';
 import { purgeExpiredTombstones } from './sync-tombstones';
 import { filterNotDeleted } from './sync-helpers';
-import { nextRevision } from './sync-revision';
+import { nextRevision, SYNC_BACKUP_RESTORE_REV_BY } from './sync-revision';
 
 export type {
     ClockSkewDirection,
@@ -442,6 +442,9 @@ function mergeEntitiesWithStats<T extends MergeableEntity>(
             if (right.deletedAt && !left.deletedAt) return left;
             return chooseDeterministicWinner(left, right, signatureMemo);
         };
+        const isBackupRestoreLiveCandidate = (item: T): boolean => (
+            !item.deletedAt && item.revBy === SYNC_BACKUP_RESTORE_REV_BY
+        );
         const resolveDeleteVsLiveWinner = (
             localCandidate: T,
             incomingCandidate: T,
@@ -449,6 +452,22 @@ function mergeEntitiesWithStats<T extends MergeableEntity>(
             const localOpTime = resolveOperationTime(localCandidate, localUpdatedTime);
             const incomingOpTime = resolveOperationTime(incomingCandidate, incomingUpdatedTime);
             const operationDiff = incomingOpTime - localOpTime;
+            const restoreLiveCandidate = isBackupRestoreLiveCandidate(localCandidate)
+                ? localCandidate
+                : isBackupRestoreLiveCandidate(incomingCandidate)
+                    ? incomingCandidate
+                    : undefined;
+            if (restoreLiveCandidate) {
+                const restoreOpTime = restoreLiveCandidate === localCandidate ? localOpTime : incomingOpTime;
+                const tombstoneOpTime = restoreLiveCandidate === localCandidate ? incomingOpTime : localOpTime;
+                if (restoreOpTime >= tombstoneOpTime) {
+                    return {
+                        winner: restoreLiveCandidate,
+                        preservedLiveInAmbiguousWindow: Math.abs(operationDiff) <= DELETE_VS_LIVE_AMBIGUOUS_WINDOW_MS,
+                        operationDiffMs: operationDiff,
+                    };
+                }
+            }
             if (Math.abs(operationDiff) <= DELETE_VS_LIVE_AMBIGUOUS_WINDOW_MS) {
                 if (hasRevision && revDiff !== 0) {
                     const winner = revDiff > 0 ? normalizedLocalItem : normalizedIncomingItem;

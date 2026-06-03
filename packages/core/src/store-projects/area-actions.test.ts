@@ -51,12 +51,12 @@ describe('area actions', () => {
         return saved!;
     };
 
-    it('saves area tombstones and cascaded tombstones for sync', async () => {
+    it('saves area tombstones and unassigns linked projects and tasks for sync', async () => {
         const { addArea, addProject, addSection, addTask, deleteArea } = useTaskStore.getState();
         const area = await addArea('Work', { color: '#3b82f6' });
         expect(area).not.toBeNull();
         if (!area) return;
-        const project = await addProject('Launch', '#3b82f6', { areaId: area.id });
+        const project = await addProject('Launch', '#3b82f6', { areaId: area.id, areaTitle: 'Work' });
         expect(project).not.toBeNull();
         if (!project) return;
         const section = await addSection(project.id, 'Planning');
@@ -70,9 +70,9 @@ describe('area actions', () => {
 
         const state = useTaskStore.getState();
         expect(state.areas).toEqual([]);
-        expect(state.projects).toEqual([]);
-        expect(state.sections).toEqual([]);
-        expect(state.tasks).toEqual([]);
+        expect(state.projects.map((item) => item.id)).toEqual([project.id]);
+        expect(state.sections.map((item) => item.id)).toEqual([section.id]);
+        expect(state.tasks.map((item) => item.title).sort()).toEqual(['Area task', 'Project task']);
         const saved = latestSavedData();
         const savedArea = saved.areas.find((item) => item.id === area.id);
         expect(savedArea).toMatchObject({
@@ -81,25 +81,22 @@ describe('area actions', () => {
             updatedAt: BASE_NOW,
         });
         expect(saved.projects.find((item) => item.id === project.id)).toMatchObject({
-            areaId: area.id,
-            deletedAt: BASE_NOW,
+            areaId: undefined,
+            areaTitle: undefined,
             updatedAt: BASE_NOW,
         });
-        expect(saved.sections.find((item) => item.id === section.id)).toMatchObject({
-            deletedAt: BASE_NOW,
-            updatedAt: BASE_NOW,
-        });
+        expect(saved.projects.find((item) => item.id === project.id)?.deletedAt).toBeUndefined();
+        expect(saved.sections.find((item) => item.id === section.id)?.deletedAt).toBeUndefined();
         expect(saved.tasks.find((item) => item.title === 'Area task')).toMatchObject({
-            areaId: area.id,
-            deletedAt: BASE_NOW,
+            areaId: undefined,
             updatedAt: BASE_NOW,
         });
+        expect(saved.tasks.find((item) => item.title === 'Area task')?.deletedAt).toBeUndefined();
         expect(saved.tasks.find((item) => item.title === 'Project task')).toMatchObject({
             projectId: project.id,
             sectionId: section.id,
-            deletedAt: BASE_NOW,
-            updatedAt: BASE_NOW,
         });
+        expect(saved.tasks.find((item) => item.title === 'Project task')?.deletedAt).toBeUndefined();
     });
 
     it('restores only children deleted by the area cascade', async () => {
@@ -172,7 +169,7 @@ describe('area actions', () => {
         });
     });
 
-    it('reuses a deleted area tombstone and restores its cascade-deleted children', async () => {
+    it('reuses a deleted area tombstone without reassigning unassigned children', async () => {
         const { addArea, addProject, addSection, addTask, deleteArea } = useTaskStore.getState();
         const area = await addArea('Work');
         expect(area).not.toBeNull();
@@ -203,19 +200,27 @@ describe('area actions', () => {
             deletedAt: undefined,
             updatedAt: '2026-04-01T12:15:00.000Z',
         });
-        expect(state.projects.find((item) => item.id === project.id)).toMatchObject({
-            deletedAt: undefined,
-            color: '#ef4444',
+        const restoredProject = state.projects.find((item) => item.id === project.id);
+        expect(restoredProject).toMatchObject({
+            areaId: undefined,
+            color: '#3b82f6',
         });
+        expect(restoredProject?.deletedAt).toBeUndefined();
         expect(state.sections.find((item) => item.id === section.id)?.deletedAt).toBeUndefined();
-        expect(state.tasks.find((task) => task.id === areaTask.id)?.deletedAt).toBeUndefined();
+        const restoredAreaTask = state.tasks.find((task) => task.id === areaTask.id);
+        expect(restoredAreaTask).toMatchObject({
+            areaId: undefined,
+        });
+        expect(restoredAreaTask?.deletedAt).toBeUndefined();
         expect(state.tasks.find((task) => task.id === projectTask.id)?.deletedAt).toBeUndefined();
 
         await flushPendingSave();
         const saved = latestSavedData();
         expect(saved.projects.find((item) => item.id === project.id)?.deletedAt).toBeUndefined();
+        expect(saved.projects.find((item) => item.id === project.id)?.areaId).toBeUndefined();
         expect(saved.sections.find((item) => item.id === section.id)?.deletedAt).toBeUndefined();
         expect(saved.tasks.find((task) => task.id === areaTask.id)?.deletedAt).toBeUndefined();
+        expect(saved.tasks.find((task) => task.id === areaTask.id)?.areaId).toBeUndefined();
         expect(saved.tasks.find((task) => task.id === projectTask.id)?.deletedAt).toBeUndefined();
     });
 
