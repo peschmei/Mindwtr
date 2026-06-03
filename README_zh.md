@@ -8,6 +8,8 @@
 
 免费、开源、跨平台的 GTD 应用。本地优先，无需账号。*Mind Like Water.*
 
+项目统一使用 Mindwtr 作为正式名称；中文社区也可以亲切地简称为「如水」，呼应 *Mind Like Water*。
+
 *GTD 新手？可阅读 [15 分钟入门 GTD](https://hamberg.no/gtd)。*
 
 [立即安装](#安装) · [快速开始](https://github.com/dongdongbh/Mindwtr/wiki/Getting-Started) · [数据与同步](https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync) · [云端部署](https://github.com/dongdongbh/Mindwtr/wiki/Cloud-Deployment) · [MCP 服务器](https://github.com/dongdongbh/Mindwtr/wiki/MCP-Server)
