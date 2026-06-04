@@ -267,6 +267,11 @@ jobs:
 
           path = Path("apps/desktop/src-tauri/Entitlements.mac.plist")
           entitlements = plistlib.loads(path.read_bytes())
+          expected_values = {
+              "com.apple.application-identifier": "5X9JC5PL7T.tech.dongdongbh.mindwtr",
+              "com.apple.developer.team-identifier": "5X9JC5PL7T",
+              "com.apple.developer.icloud-container-environment": "Production",
+          }
 
           if "aps-environment" in entitlements:
               raise SystemExit("Invalid macOS entitlement: use com.apple.developer.aps-environment, not aps-environment")
@@ -291,6 +296,13 @@ jobs:
               raise SystemExit(
                   f"Invalid com.apple.developer.aps-environment in {path}: expected 'production' or unset, got {aps_env!r}"
               )
+
+          for key, expected in expected_values.items():
+              actual = entitlements.get(key)
+              if actual != expected:
+                  raise SystemExit(
+                      f"Invalid {key} in {path}: expected {expected!r}, got {actual!r}"
+                  )
 
           print(f"Validated Developer ID entitlements in {path}")
           PY
@@ -406,11 +418,26 @@ jobs:
             cat "$ENTITLEMENTS_PATH" || true
             exit 1
           fi
+          expect_entitlement_value() {
+            local key="$1"
+            local expected="$2"
+            local actual=""
+            actual="$(/usr/libexec/PlistBuddy -c "Print :${key}" "$ENTITLEMENTS_PATH" 2>/dev/null || true)"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::Signed macOS app has invalid ${key}. Expected '${expected}', got '${actual}'."
+              echo "Resolved entitlements:"
+              cat "$ENTITLEMENTS_PATH" || true
+              exit 1
+            fi
+          }
           if [ "${HAS_APPLE_PROVISIONING_PROFILE:-0}" = "1" ]; then
             if [ ! -f "$APP_PATH/Contents/embedded.provisionprofile" ]; then
               echo "::error::Signed macOS app is missing embedded.provisionprofile."
               exit 1
             fi
+            expect_entitlement_value "com.apple.application-identifier" "5X9JC5PL7T.tech.dongdongbh.mindwtr"
+            expect_entitlement_value "com.apple.developer.team-identifier" "5X9JC5PL7T"
+            expect_entitlement_value "com.apple.developer.icloud-container-environment" "Production"
             for key in \
               com.apple.developer.icloud-services \
               com.apple.developer.icloud-container-identifiers \
