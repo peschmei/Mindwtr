@@ -150,4 +150,52 @@ describe('QuickAddModal', () => {
         });
         expect(addTask).toHaveBeenCalledWith('Fast capture', expect.objectContaining({ status: 'inbox' }));
     });
+
+    it('creates a new quick-add project in the parsed area', async () => {
+        const addProject = vi.fn(async () => ({
+            id: 'project-launch',
+            title: 'Launch',
+            color: '#3b82f6',
+            order: 0,
+            status: 'active' as const,
+            tagIds: [],
+            createdAt: '2026-04-01T00:00:00.000Z',
+            updatedAt: '2026-04-01T00:00:00.000Z',
+        }));
+        const addTask = vi.fn(async () => ({ success: true, id: 'task-id' }));
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                addProject,
+                addTask,
+                areas: [{
+                    id: 'area-work',
+                    name: 'Work',
+                    color: '#3b82f6',
+                    order: 0,
+                    createdAt: '2026-04-01T00:00:00.000Z',
+                    updatedAt: '2026-04-01T00:00:00.000Z',
+                }],
+            }));
+        });
+
+        renderQuickAddModal();
+
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent('mindwtr:quick-add', {
+                detail: { initialValue: 'Plan campaign +Launch !Work' },
+            }));
+            await Promise.resolve();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(addProject).toHaveBeenCalledWith('Launch', expect.any(String), { areaId: 'area-work' });
+        });
+        expect(addTask).toHaveBeenCalledWith('Plan campaign', expect.objectContaining({
+            projectId: 'project-launch',
+            areaId: undefined,
+        }));
+    });
 });

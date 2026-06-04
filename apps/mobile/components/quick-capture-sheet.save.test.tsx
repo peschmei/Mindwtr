@@ -10,6 +10,7 @@ const {
   updateSettings,
   showToast,
   getUsedTaskTokens,
+  parseQuickAdd,
   selectStore,
 } = vi.hoisted(() => {
   const addTask = vi.fn();
@@ -17,6 +18,11 @@ const {
   const updateSettings = vi.fn();
   const showToast = vi.fn();
   const getUsedTaskTokens = vi.fn<() => string[]>(() => []);
+  const parseQuickAdd = vi.fn<(input: string) => any>((input: string) => ({
+    title: input,
+    props: {},
+    invalidDateCommands: [],
+  }));
   const storeState = {
     addTask,
     addProject,
@@ -36,22 +42,23 @@ const {
     updateSettings,
     showToast,
     getUsedTaskTokens,
+    parseQuickAdd,
     selectStore,
   };
 });
 
 vi.mock('@mindwtr/core', () => ({
   DEFAULT_PROJECT_COLOR: '#3B82F6',
+  getQuickAddProjectInitialProps: (props: any, fallbackAreaId?: string | null) => {
+    const areaId = props?.areaId || fallbackAreaId || undefined;
+    return areaId ? { areaId } : undefined;
+  },
   getUsedTaskTokens,
   hasTimeComponent: (value?: string | null) => Boolean(value && /[T\s]\d{2}:\d{2}/.test(value)),
   isSelectableProjectForTaskAssignment: (project: any) => (
     !project.deletedAt && project.status !== 'archived' && project.status !== 'completed'
   ),
-  parseQuickAdd: (input: string) => ({
-    title: input,
-    props: {},
-    invalidDateCommands: [],
-  }),
+  parseQuickAdd,
   safeFormatDate: (value: Date | string, formatStr: string) => {
     const date = value instanceof Date ? value : new Date(value);
     if (formatStr === 'p') {
@@ -152,6 +159,12 @@ describe('QuickCaptureSheet save handling', () => {
     showToast.mockReset();
     getUsedTaskTokens.mockClear();
     getUsedTaskTokens.mockReturnValue([]);
+    parseQuickAdd.mockReset();
+    parseQuickAdd.mockImplementation((input: string) => ({
+      title: input,
+      props: {},
+      invalidDateCommands: [],
+    }));
   });
 
   it('opens organize options collapsed for global capture', async () => {
@@ -332,6 +345,44 @@ describe('QuickCaptureSheet save handling', () => {
     expect(addTask).toHaveBeenCalledWith('Call the office', expect.objectContaining({
       dueDate: new Date(2026, 4, 10, 16, 15, 0, 0).toISOString(),
       status: 'inbox',
+    }));
+  });
+
+  it('creates parsed quick-add projects inside the parsed area', async () => {
+    addProject.mockResolvedValue({ id: 'project-launch' });
+    addTask.mockResolvedValue({ success: true, id: 'task-1' });
+    parseQuickAdd.mockReturnValue({
+      title: 'Plan campaign',
+      props: { areaId: 'area-work' },
+      projectTitle: 'Launch',
+      invalidDateCommands: [],
+    });
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet
+          visible
+          openRequestId={1}
+          initialValue="Plan campaign +Launch !Work"
+          onClose={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+
+    await act(async () => {
+      body.props.handleSave();
+      await Promise.resolve();
+    });
+
+    expect(addProject).toHaveBeenCalledWith('Launch', '#3B82F6', { areaId: 'area-work' });
+    expect(addTask).toHaveBeenCalledWith('Plan campaign', expect.objectContaining({
+      projectId: 'project-launch',
+      areaId: undefined,
     }));
   });
 });

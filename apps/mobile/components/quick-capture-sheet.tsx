@@ -8,6 +8,7 @@ import {
 
 import {
   DEFAULT_PROJECT_COLOR,
+  getQuickAddProjectInitialProps,
   getUsedTaskTokens,
   hasTimeComponent,
   isSelectableProjectForTaskAssignment,
@@ -236,14 +237,18 @@ export function QuickCaptureSheet({
       Keyboard.dismiss();
       return;
     }
-    const created = await addProject(title, DEFAULT_PROJECT_COLOR);
+    const created = await addProject(
+      title,
+      DEFAULT_PROJECT_COLOR,
+      getQuickAddProjectInitialProps({}, selectedAreaId)
+    );
     if (!created) return;
     setProjectId(created.id);
     setSelectedAreaId(null);
     setShowProjectPicker(false);
     setProjectQuery('');
     Keyboard.dismiss();
-  }, [addProject, projectQuery, projects]);
+  }, [addProject, projectQuery, projects, selectedAreaId]);
 
   const hasExactProjectMatch = useMemo(() => {
     if (!showProjectPicker) return false;
@@ -353,7 +358,11 @@ export function QuickCaptureSheet({
       if (existingProject && !isSelectableProjectForTaskAssignment(existingProject)) {
         return { title: finalTitle, props: initialPropsMerged, invalidDateCommands };
       }
-      const created = await addProject(projectTitle, DEFAULT_PROJECT_COLOR);
+      const created = await addProject(
+        projectTitle,
+        DEFAULT_PROJECT_COLOR,
+        getQuickAddProjectInitialProps(initialPropsMerged, selectedAreaId)
+      );
       if (!created) return { title: finalTitle, props: initialPropsMerged, invalidDateCommands };
       initialPropsMerged.projectId = created.id;
     }

@@ -13,6 +13,7 @@ import {
   sortTasksBy,
   splitCompletedTasks,
   parseQuickAdd,
+  getQuickAddProjectInitialProps,
   getUsedTaskTokens,
   createAIProvider,
   type AIProviderId,
@@ -944,7 +945,11 @@ function TaskListComponent({
         && !isSelectableProjectForTaskAssignment(project)
       ));
       if (inactiveProject) return;
-      const created = await addProject(projectTitle, DEFAULT_PROJECT_COLOR);
+      const created = await addProject(
+        projectTitle,
+        DEFAULT_PROJECT_COLOR,
+        getQuickAddProjectInitialProps(initialProps, selectedAreaIdForNewTasks)
+      );
       if (!created) return;
       initialProps.projectId = created.id;
     }
@@ -979,7 +984,11 @@ function TaskListComponent({
     if (option.kind === 'create') {
       const title = option.value.trim();
       if (title) {
-        await addProject(title, DEFAULT_PROJECT_COLOR);
+        await addProject(
+          title,
+          DEFAULT_PROJECT_COLOR,
+          getQuickAddProjectInitialProps({}, selectedAreaIdForNewTasks)
+        );
       }
     }
     if (trigger.type === 'project') {
@@ -996,7 +1005,7 @@ function TaskListComponent({
     setInputSelection({ start: caret, end: caret });
     setTypeaheadOpen(false);
     setTypeaheadIndex(0);
-  }, [addProject, newTaskTitle, trigger]);
+  }, [addProject, newTaskTitle, selectedAreaIdForNewTasks, trigger]);
 
   const handleEditTask = useCallback((task: Task) => {
     setEditingTask(task);

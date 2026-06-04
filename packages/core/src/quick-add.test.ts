@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getTaskDateCoherenceIssues } from './task-date-coherence';
-import { parseQuickAdd, parseQuickAddDateCommands } from './quick-add';
+import { getQuickAddProjectInitialProps, parseQuickAdd, parseQuickAddDateCommands } from './quick-add';
 
 describe('quick-add', () => {
     it('parses status, due, note, tags, contexts', () => {
@@ -268,6 +268,12 @@ describe('quick-add', () => {
         const explicitResult = parseQuickAdd('Plan budget /area:Personal /next', undefined, now, areas as any);
         expect(explicitResult.title).toBe('Plan budget');
         expect(explicitResult.props.areaId).toBe('a2');
+    });
+
+    it('uses parsed area before fallback area when creating a project from quick add', () => {
+        expect(getQuickAddProjectInitialProps({ areaId: 'parsed-area' }, 'fallback-area')).toEqual({ areaId: 'parsed-area' });
+        expect(getQuickAddProjectInitialProps({}, 'fallback-area')).toEqual({ areaId: 'fallback-area' });
+        expect(getQuickAddProjectInitialProps({})).toBeUndefined();
     });
 
     it('supports unicode tags and contexts', () => {

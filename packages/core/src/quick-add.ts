@@ -17,6 +17,16 @@ export interface QuickAddResult {
     detectedDate?: QuickAddDetectedDate;
 }
 
+export function getQuickAddProjectInitialProps(
+    props: Partial<Task>,
+    fallbackAreaId?: string | null
+): Pick<Project, 'areaId'> | undefined {
+    const parsedAreaId = typeof props.areaId === 'string' ? props.areaId.trim() : '';
+    const fallback = typeof fallbackAreaId === 'string' ? fallbackAreaId.trim() : '';
+    const areaId = parsedAreaId || fallback;
+    return areaId ? { areaId } : undefined;
+}
+
 export interface QuickAddDateCommandsResult {
     title: string;
     props: Pick<Partial<Task>, 'startTime' | 'dueDate' | 'reviewAt'>;

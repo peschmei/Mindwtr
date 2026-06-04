@@ -3,6 +3,7 @@ import {
     DEFAULT_PROJECT_COLOR,
     extractChecklistFromMarkdown,
     getRecurrenceCompletedOccurrencesValue,
+    getQuickAddProjectInitialProps,
     parseQuickAdd,
     parseRRuleString,
     type Area,
@@ -104,11 +105,10 @@ export function useTaskItemSubmit({
         let resolvedProjectId = parsedProps.projectId || undefined;
         if (!resolvedProjectId && projectTitle) {
             try {
-                const initialAreaId = editAreaId || undefined;
                 const created = await addProject(
                     projectTitle,
                     DEFAULT_PROJECT_COLOR,
-                    initialAreaId ? { areaId: initialAreaId } : undefined
+                    getQuickAddProjectInitialProps(parsedProps, editAreaId)
                 );
                 resolvedProjectId = created?.id;
                 if (!resolvedProjectId) {

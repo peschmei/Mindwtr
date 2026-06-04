@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   createAIProvider,
   DEFAULT_PROJECT_COLOR,
+  getQuickAddProjectInitialProps,
   getUsedTaskTokens,
   isSelectableProjectForTaskAssignment,
   parseQuickAdd,
@@ -320,7 +321,11 @@ export default function CaptureScreen() {
         if (matchedProject) {
           taskProps.projectId = matchedProject.id;
         } else {
-          const created = await addProject(requestedProjectTitle, DEFAULT_PROJECT_COLOR);
+          const created = await addProject(
+            requestedProjectTitle,
+            DEFAULT_PROJECT_COLOR,
+            getQuickAddProjectInitialProps(taskProps),
+          );
           if (!created) return;
           taskProps.projectId = created.id;
         }

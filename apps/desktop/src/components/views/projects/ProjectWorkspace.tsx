@@ -11,6 +11,7 @@ import {
     type StoreActionResult,
     type TaskStatus,
     generateUUID,
+    getQuickAddProjectInitialProps,
     parseQuickAdd,
     splitCompletedTasks,
     updateRangeSelection,
@@ -1093,7 +1094,11 @@ export function ProjectWorkspace({
             if (!props.projectId) initialProps.projectId = selectedProject.id;
 
             if (!initialProps.projectId && projectTitle) {
-                const created = await addProject(projectTitle, DEFAULT_AREA_COLOR);
+                const created = await addProject(
+                    projectTitle,
+                    DEFAULT_AREA_COLOR,
+                    getQuickAddProjectInitialProps(props, selectedProject.areaId),
+                );
                 if (!created) return;
                 initialProps.projectId = created.id;
             }
@@ -1262,7 +1267,11 @@ export function ProjectWorkspace({
                                             contexts={allTokens}
                                             areas={areas}
                                             onCreateProject={async (title) => {
-                                                const created = await addProject(title, DEFAULT_AREA_COLOR);
+                                                const created = await addProject(
+                                                    title,
+                                                    DEFAULT_AREA_COLOR,
+                                                    getQuickAddProjectInitialProps({}, selectedProject.areaId),
+                                                );
                                                 return created?.id ?? null;
                                             }}
                                             onChange={(next) => setProjectTaskTitle(next)}

@@ -27,6 +27,7 @@ import {
     formatCalendarDurationLabel,
     formatCalendarTimeInputValue,
     findFreeSlotForDay as findCalendarFreeSlotForDay,
+    getQuickAddProjectInitialProps,
     getWeekStartsOnIndex,
     isSlotFreeForDay as isCalendarSlotFreeForDay,
     isTaskInActiveProject,
@@ -767,7 +768,11 @@ export function useDesktopCalendarController() {
                     return;
                 }
                 if (!draft.props.projectId && draft.projectTitle) {
-                    const created = await addProject(draft.projectTitle, DEFAULT_PROJECT_COLOR);
+                    const created = await addProject(
+                        draft.projectTitle,
+                        DEFAULT_PROJECT_COLOR,
+                        getQuickAddProjectInitialProps(draft.props),
+                    );
                     if (!created) {
                         setTaskComposer((prev) => prev ? { ...prev, error: resolveText('calendar.saveFailed', 'Could not save the task.') } : prev);
                         return;

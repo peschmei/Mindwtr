@@ -4,6 +4,7 @@ import {
     useTaskStore,
     buildTaskUpdatesFromSpeechResult,
     flushPendingSave,
+    getQuickAddProjectInitialProps,
     parseQuickAdd,
     safeFormatDate,
     generateUUID,
@@ -620,7 +621,11 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         }
         let projectId = baseProps.projectId;
         if (!projectId && projectTitle) {
-            const created = await addProject(projectTitle, DEFAULT_PROJECT_COLOR);
+            const created = await addProject(
+                projectTitle,
+                DEFAULT_PROJECT_COLOR,
+                getQuickAddProjectInitialProps(baseProps)
+            );
             if (!created) return;
             projectId = created.id;
         }
@@ -734,7 +739,11 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
                             contexts={suggestionTokens}
                             areas={areas}
                             onCreateProject={async (title) => {
-                                const created = await addProject(title, DEFAULT_PROJECT_COLOR);
+                                const created = await addProject(
+                                    title,
+                                    DEFAULT_PROJECT_COLOR,
+                                    getQuickAddProjectInitialProps({}, selectedAreaId)
+                                );
                                 return created?.id ?? null;
                             }}
                             onChange={(next) => setValue(next)}

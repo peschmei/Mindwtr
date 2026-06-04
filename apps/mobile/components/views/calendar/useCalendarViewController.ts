@@ -24,6 +24,7 @@ import {
   findFreeSlotForDay as findCalendarFreeSlotForDay,
   getEnglishI18nValue,
   getWeekStartsOnIndex,
+  getQuickAddProjectInitialProps,
   isSlotFreeForDay as isCalendarSlotFreeForDay,
   isProjectedRecurringTask,
   isProjectedRecurringTaskId,
@@ -720,7 +721,11 @@ export function useCalendarViewController() {
           return;
         }
         if (!draft.props.projectId && draft.projectTitle) {
-          const created = await addProject(draft.projectTitle, DEFAULT_PROJECT_COLOR);
+          const created = await addProject(
+            draft.projectTitle,
+            DEFAULT_PROJECT_COLOR,
+            getQuickAddProjectInitialProps(draft.props),
+          );
           if (!created) {
             setCalendarComposer((prev) => prev ? { ...prev, error: t('calendar.saveTaskFailed') } : prev);
             return;

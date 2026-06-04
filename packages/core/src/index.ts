@@ -391,6 +391,7 @@ export type {
 } from './date';
 
 export {
+    getQuickAddProjectInitialProps,
     parseQuickAdd,
     parseQuickAddDateCommands,
 } from './quick-add';

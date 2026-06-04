@@ -5,24 +5,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CaptureScreen from '@/app/capture-modal';
 
-const { routerMocks, routeParams, storeState } = vi.hoisted(() => ({
-  routerMocks: {
-    back: vi.fn(),
-    canGoBack: vi.fn(),
-    replace: vi.fn(),
-  },
-  routeParams: {
-    current: { text: encodeURIComponent('Shared text') } as Record<string, string>,
-  },
-  storeState: {
-    addProject: vi.fn(),
-    addTask: vi.fn(),
-    projects: [] as any[],
-    tasks: [] as any[],
-    settings: { ai: { enabled: false }, features: {} },
-    areas: [] as any[],
-  },
-}));
+const { parseQuickAdd, routerMocks, routeParams, storeState } = vi.hoisted(() => {
+  const parseQuickAdd = vi.fn<(value: string) => any>((value: string) => ({ title: value, props: {}, invalidDateCommands: [] }));
+  return {
+    parseQuickAdd,
+    routerMocks: {
+      back: vi.fn(),
+      canGoBack: vi.fn(),
+      replace: vi.fn(),
+    },
+    routeParams: {
+      current: { text: encodeURIComponent('Shared text') } as Record<string, string>,
+    },
+    storeState: {
+      addProject: vi.fn(),
+      addTask: vi.fn(),
+      projects: [] as any[],
+      tasks: [] as any[],
+      settings: { ai: { enabled: false }, features: {} },
+      areas: [] as any[],
+    },
+  };
+});
 
 vi.mock('expo-router', () => ({
   useLocalSearchParams: () => routeParams.current,
@@ -32,11 +36,15 @@ vi.mock('expo-router', () => ({
 vi.mock('@mindwtr/core', () => ({
   createAIProvider: vi.fn(),
   DEFAULT_PROJECT_COLOR: '#94a3b8',
+  getQuickAddProjectInitialProps: (props: any, fallbackAreaId?: string | null) => {
+    const areaId = props?.areaId || fallbackAreaId || undefined;
+    return areaId ? { areaId } : undefined;
+  },
   getUsedTaskTokens: vi.fn(() => []),
   isSelectableProjectForTaskAssignment: vi.fn((project: any) => (
     !project.deletedAt && project.status !== 'archived' && project.status !== 'completed'
   )),
-  parseQuickAdd: vi.fn((value: string) => ({ title: value, props: {}, invalidDateCommands: [] })),
+  parseQuickAdd,
   useTaskStore: () => storeState,
 }));
 
@@ -92,6 +100,7 @@ vi.mock('@/lib/app-log', () => ({
 describe('CaptureScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    parseQuickAdd.mockImplementation((value: string) => ({ title: value, props: {}, invalidDateCommands: [] }));
     routerMocks.canGoBack.mockReturnValue(false);
     routeParams.current = { text: encodeURIComponent('Shared text') };
     storeState.addProject.mockResolvedValue(null);
@@ -251,10 +260,42 @@ describe('CaptureScreen', () => {
       await saveButton.props.onPress();
     });
 
-    expect(storeState.addProject).toHaveBeenCalledWith('Health', '#94a3b8');
+    expect(storeState.addProject).toHaveBeenCalledWith('Health', '#94a3b8', undefined);
     expect(storeState.addTask).toHaveBeenCalledWith('Call dentist', {
       status: 'inbox',
       projectId: 'project-health',
+    });
+  });
+
+  it('creates parsed quick-add projects inside the parsed area', async () => {
+    routeParams.current = {
+      initialValue: encodeURIComponent('Plan campaign +Launch !Work'),
+    };
+    parseQuickAdd.mockReturnValue({
+      title: 'Plan campaign',
+      props: { areaId: 'area-work' },
+      projectTitle: 'Launch',
+      invalidDateCommands: [],
+    });
+    storeState.addProject.mockResolvedValue({ id: 'project-launch', title: 'Launch' });
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<CaptureScreen />);
+    });
+
+    const saveButton = tree.root.findAllByType(TouchableOpacity)[2];
+
+    await act(async () => {
+      await saveButton.props.onPress();
+    });
+
+    expect(storeState.addProject).toHaveBeenCalledWith('Launch', '#94a3b8', { areaId: 'area-work' });
+    expect(storeState.addTask).toHaveBeenCalledWith('Plan campaign', {
+      status: 'inbox',
+      projectId: 'project-launch',
+      areaId: undefined,
     });
   });
 });

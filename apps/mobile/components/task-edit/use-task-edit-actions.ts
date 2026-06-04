@@ -17,6 +17,7 @@ import {
     getRecurrenceCompletedOccurrencesValue,
     parseRRuleString,
     parseQuickAdd,
+    getQuickAddProjectInitialProps,
     DEFAULT_PROJECT_COLOR,
     getUsedTaskTokens,
     isSelectableProjectForTaskAssignment,
@@ -230,7 +231,7 @@ export function useTaskEditActions({
                     const created = await addProject(
                         projectTitle,
                         DEFAULT_PROJECT_COLOR,
-                        projectFilterAreaId ? { areaId: projectFilterAreaId } : undefined,
+                        getQuickAddProjectInitialProps(parsedProps, projectFilterAreaId),
                     );
                     resolvedProjectId = created?.id;
                 }

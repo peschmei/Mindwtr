@@ -1,6 +1,6 @@
 import React, { memo, useState, useMemo, useDeferredValue, useEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { shallow, useTaskStore, TaskPriority, TimeEstimate, DEFAULT_AREA_COLOR, sortTasksBy, parseQuickAdd, matchesHierarchicalToken, safeParseDate, isTaskInActiveProject, getWaitingPerson, translateWithFallback as translateTextWithFallback } from '@mindwtr/core';
+import { shallow, useTaskStore, TaskPriority, TimeEstimate, DEFAULT_AREA_COLOR, sortTasksBy, parseQuickAdd, getQuickAddProjectInitialProps, matchesHierarchicalToken, safeParseDate, isTaskInActiveProject, getWaitingPerson, translateWithFallback as translateTextWithFallback } from '@mindwtr/core';
 import type { Task, TaskStatus } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
 import { ConfirmModal } from '../ConfirmModal';
@@ -571,8 +571,15 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
             const finalTitle = shouldApplyDetectedDate && detectedDate
                 ? detectedDate.titleWithoutDate
                 : (parsedTitle || newTaskTitle);
+            const fallbackAreaId = resolvedAreaFilter !== AREA_FILTER_ALL && resolvedAreaFilter !== AREA_FILTER_NONE
+                ? resolvedAreaFilter
+                : undefined;
             if (!initialProps.projectId && projectTitle) {
-                const created = await addProject(projectTitle, DEFAULT_AREA_COLOR);
+                const created = await addProject(
+                    projectTitle,
+                    DEFAULT_AREA_COLOR,
+                    getQuickAddProjectInitialProps(initialProps, fallbackAreaId),
+                );
                 if (!created) return;
                 initialProps.projectId = created.id;
             }
@@ -808,7 +815,14 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                     projects={projects}
                     areas={areas}
                     onCreateProject={async (title) => {
-                        const created = await addProject(title, DEFAULT_AREA_COLOR);
+                        const fallbackAreaId = resolvedAreaFilter !== AREA_FILTER_ALL && resolvedAreaFilter !== AREA_FILTER_NONE
+                            ? resolvedAreaFilter
+                            : undefined;
+                        const created = await addProject(
+                            title,
+                            DEFAULT_AREA_COLOR,
+                            getQuickAddProjectInitialProps({}, fallbackAreaId),
+                        );
                         return created?.id ?? null;
                     }}
                     onChangeQuickAdd={setNewTaskTitle}
