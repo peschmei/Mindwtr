@@ -99,7 +99,8 @@ Capture tasks from any app using the share sheet:
 1. In any app (browser, email, notes), find something you want to capture
 2. Tap the **Share** button
 3. Select **Mindwtr** from the share options
-4. The content is added to your Inbox automatically
+4. Mindwtr opens the capture screen with the shared content attached as notes
+5. Add a title, adjust any fields, and save it to your Inbox
 
 Great for:
 - Saving articles to read later

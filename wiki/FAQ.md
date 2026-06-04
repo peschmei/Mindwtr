@@ -296,7 +296,7 @@ Install from Google Play or download the APK from [GitHub Releases](https://gith
 
 ### How do I capture from other apps?
 
-Use the **share sheet**! When viewing content in any app (browser, email, notes), tap Share and select Mindwtr. The content will be added to your Inbox.
+Use the **share sheet**! When viewing content in any app (browser, email, notes), tap Share and select Mindwtr. Mindwtr opens the capture screen with the shared content in the note so you can add a title, adjust fields, and save it to your Inbox.
 
 ### Is there a widget?
 
