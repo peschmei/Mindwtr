@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { Area, Project, TaskPriority } from '@mindwtr/core';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
@@ -8,6 +8,7 @@ import { styles } from './quick-capture-sheet.styles';
 interface QuickCaptureSheetPickersProps {
   areas: Area[];
   contextInputRef: React.RefObject<TextInput | null>;
+  contextOptionsLoading: boolean;
   contextQuery: string;
   contextTags: string[];
   filteredContexts: string[];
@@ -55,6 +56,7 @@ interface QuickCaptureSheetPickersProps {
 export function QuickCaptureSheetPickers({
   areas,
   contextInputRef,
+  contextOptionsLoading,
   contextQuery,
   contextTags,
   dueDate,
@@ -204,6 +206,11 @@ export function QuickCaptureSheetPickers({
                   <Text style={[styles.pickerRowText, { color: tc.text }]}>{t('common.clear')}</Text>
                 </Pressable>
               )}
+              ListEmptyComponent={contextOptionsLoading ? (
+                <View style={styles.pickerRow}>
+                  <ActivityIndicator color={tc.tint} />
+                </View>
+              ) : null}
               renderItem={({ item: token }) => (
                 <Pressable
                   onPress={() => onSelectContext(token)}

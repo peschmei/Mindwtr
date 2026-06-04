@@ -31,6 +31,7 @@ describe('Quick capture modal composition', () => {
         <QuickCaptureSheetPickers
           areas={[]}
           contextInputRef={{ current: null }}
+          contextOptionsLoading={false}
           contextQuery=""
           contextTags={[]}
           dueDate={null}
@@ -87,6 +88,7 @@ describe('Quick capture modal composition', () => {
         <QuickCaptureSheetPickers
           areas={[]}
           contextInputRef={{ current: null }}
+          contextOptionsLoading={false}
           contextQuery=""
           contextTags={[]}
           dueDate={null}

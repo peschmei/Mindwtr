@@ -1,17 +1,48 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { QuickCaptureSheet } from './quick-capture-sheet';
 
-const addTask = vi.fn();
-const addProject = vi.fn();
-const updateSettings = vi.fn();
-const showToast = vi.fn();
+const {
+  addTask,
+  addProject,
+  updateSettings,
+  showToast,
+  getUsedTaskTokens,
+  selectStore,
+} = vi.hoisted(() => {
+  const addTask = vi.fn();
+  const addProject = vi.fn();
+  const updateSettings = vi.fn();
+  const showToast = vi.fn();
+  const getUsedTaskTokens = vi.fn<() => string[]>(() => []);
+  const storeState = {
+    addTask,
+    addProject,
+    updateSettings,
+    areas: [],
+    projects: [],
+    settings: {},
+    tasks: [],
+  };
+  const selectStore = ((selector?: (state: typeof storeState) => unknown) => (
+    selector ? selector(storeState) : storeState
+  )) as any;
+  selectStore.getState = () => storeState;
+  return {
+    addTask,
+    addProject,
+    updateSettings,
+    showToast,
+    getUsedTaskTokens,
+    selectStore,
+  };
+});
 
 vi.mock('@mindwtr/core', () => ({
   DEFAULT_PROJECT_COLOR: '#3B82F6',
-  getUsedTaskTokens: () => [],
+  getUsedTaskTokens,
   hasTimeComponent: (value?: string | null) => Boolean(value && /[T\s]\d{2}:\d{2}/.test(value)),
   isSelectableProjectForTaskAssignment: (project: any) => (
     !project.deletedAt && project.status !== 'archived' && project.status !== 'completed'
@@ -34,15 +65,8 @@ vi.mock('@mindwtr/core', () => ({
     ].join('-');
   },
   safeParseDate: () => null,
-  useTaskStore: () => ({
-    addTask,
-    addProject,
-    updateSettings,
-    areas: [],
-    projects: [],
-    settings: {},
-    tasks: [],
-  }),
+  shallow: (left: unknown, right: unknown) => left === right,
+  useTaskStore: selectStore,
 }));
 
 vi.mock('react-native', async () => {
@@ -117,11 +141,17 @@ vi.mock('./quick-capture-sheet/QuickCaptureSheetPickers', () => ({
 }));
 
 describe('QuickCaptureSheet save handling', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     addTask.mockReset();
     addProject.mockReset();
     updateSettings.mockReset();
     showToast.mockReset();
+    getUsedTaskTokens.mockClear();
+    getUsedTaskTokens.mockReturnValue([]);
   });
 
   it('opens organize options collapsed for global capture', async () => {
@@ -141,6 +171,47 @@ describe('QuickCaptureSheet save handling', () => {
     const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
     if (!body) throw new Error('QuickCaptureSheetBody not found');
     expect(body.props.optionsExpanded).toBe(false);
+    expect(getUsedTaskTokens).not.toHaveBeenCalled();
+  });
+
+  it('loads context autocomplete only after the context picker opens', async () => {
+    vi.useFakeTimers();
+    getUsedTaskTokens.mockReturnValue(['@computer']);
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet
+          visible
+          openRequestId={1}
+          initialValue=""
+          onClose={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    expect(getUsedTaskTokens).not.toHaveBeenCalled();
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+    await act(async () => {
+      body.props.onOpenContextPicker();
+      await Promise.resolve();
+    });
+
+    expect(getUsedTaskTokens).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+      await Promise.resolve();
+    });
+
+    expect(getUsedTaskTokens).toHaveBeenCalledTimes(1);
+    const pickers = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetPickers')[0];
+    if (!pickers) throw new Error('QuickCaptureSheetPickers not found');
+    expect(pickers.props.filteredContexts).toEqual(['@computer']);
+    expect(pickers.props.contextOptionsLoading).toBe(false);
   });
 
   it('ignores duplicate save presses while the first save is in flight', async () => {

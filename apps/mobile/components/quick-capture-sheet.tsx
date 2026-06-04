@@ -14,6 +14,7 @@ import {
   parseQuickAdd,
   safeFormatDate,
   safeParseDate,
+  shallow,
   type Task,
   type TaskPriority,
   useTaskStore,
@@ -44,6 +45,16 @@ const logCaptureError = (message: string, error?: unknown) => {
   void logError(err, { scope: 'capture', extra: buildCaptureExtra(message, error) });
 };
 
+const resolveInitialContextTokens = (contexts?: string[]): string[] => (
+  Array.from(
+    new Set(
+      (contexts ?? [])
+        .map((item) => normalizeContextToken(String(item || '')))
+        .filter(Boolean)
+    )
+  )
+);
+
 export function QuickCaptureSheet({
   visible,
   openRequestId,
@@ -59,7 +70,14 @@ export function QuickCaptureSheet({
   initialValue?: string;
   autoRecord?: boolean;
 }) {
-  const { addTask, addProject, updateSettings, projects, settings, tasks, areas } = useTaskStore();
+  const { addTask, addProject, updateSettings, projects, settings, areas } = useTaskStore((state) => ({
+    addTask: state.addTask,
+    addProject: state.addProject,
+    updateSettings: state.updateSettings,
+    projects: state.projects,
+    settings: state.settings,
+    areas: state.areas,
+  }), shallow);
   const { t } = useLanguage();
   const tc = useThemeColors();
   const { showToast } = useToast();
@@ -95,6 +113,8 @@ export function QuickCaptureSheet({
   const [startPickerMode, setStartPickerMode] = useState<'date' | 'time' | null>(null);
   const [pendingStartDate, setPendingStartDate] = useState<Date | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);
+  const [contextOptions, setContextOptions] = useState<string[]>([]);
+  const [contextOptionsLoading, setContextOptionsLoading] = useState(false);
   const [showContextPicker, setShowContextPicker] = useState(false);
   const [contextQuery, setContextQuery] = useState('');
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -107,12 +127,15 @@ export function QuickCaptureSheet({
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [addAnother, setAddAnother] = useState(false);
   const projectsRef = useRef(projects);
+  const contextOptionsLoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contextOptionsRequestRef = useRef(0);
 
   useEffect(() => {
     projectsRef.current = projects;
   }, [projects]);
 
   const filteredProjects = useMemo(() => {
+    if (!showProjectPicker) return [];
     const visibleProjects = projects.filter(isSelectableProjectForTaskAssignment);
     const areaFilteredProjects = selectedAreaId
       ? visibleProjects.filter((project) => project.areaId === selectedAreaId)
@@ -120,18 +143,42 @@ export function QuickCaptureSheet({
     const query = projectQuery.trim().toLowerCase();
     if (!query) return areaFilteredProjects;
     return areaFilteredProjects.filter((project) => project.title.toLowerCase().includes(query));
-  }, [projectQuery, projects, selectedAreaId]);
+  }, [projectQuery, projects, selectedAreaId, showProjectPicker]);
 
-  const contextOptions = useMemo(() => {
-    const initialContexts = initialProps?.contexts ?? [];
-    return Array.from(
-      new Set(
-        [...getUsedTaskTokens(tasks, (task) => task.contexts, { prefix: '@' }), ...initialContexts]
-          .map((item) => normalizeContextToken(String(item || '')))
-          .filter(Boolean)
-      )
-    );
-  }, [initialProps?.contexts, tasks]);
+  const clearContextOptionsLoad = useCallback(() => {
+    if (!contextOptionsLoadTimerRef.current) return;
+    clearTimeout(contextOptionsLoadTimerRef.current);
+    contextOptionsLoadTimerRef.current = null;
+  }, []);
+
+  const loadContextOptions = useCallback(() => {
+    clearContextOptionsLoad();
+    const requestId = contextOptionsRequestRef.current + 1;
+    contextOptionsRequestRef.current = requestId;
+    setContextOptionsLoading(true);
+    contextOptionsLoadTimerRef.current = setTimeout(() => {
+      contextOptionsLoadTimerRef.current = null;
+      try {
+        const currentTasks = useTaskStore.getState().tasks;
+        const nextOptions = Array.from(
+          new Set(
+            [...getUsedTaskTokens(currentTasks, (task) => task.contexts, { prefix: '@' }), ...resolveInitialContextTokens(initialProps?.contexts)]
+              .map((item) => normalizeContextToken(String(item || '')))
+              .filter(Boolean)
+          )
+        );
+        if (contextOptionsRequestRef.current === requestId) {
+          setContextOptions(nextOptions);
+        }
+      } catch (error) {
+        logCaptureWarn('Failed to load quick capture context suggestions', error);
+      } finally {
+        if (contextOptionsRequestRef.current === requestId) {
+          setContextOptionsLoading(false);
+        }
+      }
+    }, 0);
+  }, [clearContextOptionsLoad, initialProps?.contexts]);
 
   const queryContextTokens = useMemo(() => parseContextQueryTokens(contextQuery), [contextQuery]);
 
@@ -199,24 +246,23 @@ export function QuickCaptureSheet({
   }, [addProject, projectQuery, projects]);
 
   const hasExactProjectMatch = useMemo(() => {
+    if (!showProjectPicker) return false;
     if (!projectQuery.trim()) return false;
     const query = projectQuery.trim().toLowerCase();
     return projects.some((project) => project.title.toLowerCase() === query);
-  }, [projectQuery, projects]);
+  }, [projectQuery, projects, showProjectPicker]);
 
   const resetDraftState = useCallback(() => {
     setValue(initialValue ?? '');
     setDueDate(initialProps?.dueDate ? safeParseDate(initialProps.dueDate) : null);
     setDueDateHasTime(Boolean(initialProps?.dueDate && hasTimeComponent(initialProps.dueDate)));
     setStartTime(initialProps?.startTime ? safeParseDate(initialProps.startTime) : null);
-    const initialContextTokens = Array.from(
-      new Set(
-        (initialProps?.contexts ?? [])
-          .map((item) => normalizeContextToken(String(item || '')))
-          .filter(Boolean)
-      )
-    );
+    clearContextOptionsLoad();
+    contextOptionsRequestRef.current += 1;
+    const initialContextTokens = resolveInitialContextTokens(initialProps?.contexts);
     setContextTags(initialContextTokens);
+    setContextOptions(initialContextTokens);
+    setContextOptionsLoading(false);
     setContextQuery('');
     setShowContextPicker(false);
     const currentProjects = projectsRef.current;
@@ -238,7 +284,12 @@ export function QuickCaptureSheet({
     setStartPickerMode(null);
     setPendingStartDate(null);
     setAddAnother(false);
-  }, [initialProps, initialValue, selectedAreaIdForNewTasks]);
+  }, [clearContextOptionsLoad, initialProps, initialValue, selectedAreaIdForNewTasks]);
+
+  useEffect(() => () => {
+    clearContextOptionsLoad();
+    contextOptionsRequestRef.current += 1;
+  }, [clearContextOptionsLoad]);
 
   useEffect(() => {
     if (!visible) return;
@@ -324,11 +375,15 @@ export function QuickCaptureSheet({
   }, [addProject, areas, contextTags, dueDate, dueDateHasTime, initialProps, prioritiesEnabled, priority, projectId, projects, selectedAreaId, startTime, value]);
 
   const resetState = useCallback(() => {
+    clearContextOptionsLoad();
+    contextOptionsRequestRef.current += 1;
     setValue('');
     setDueDate(null);
     setDueDateHasTime(false);
     setStartTime(null);
     setContextTags([]);
+    setContextOptions([]);
+    setContextOptionsLoading(false);
     setContextQuery('');
     setShowContextPicker(false);
     setProjectId(null);
@@ -344,7 +399,7 @@ export function QuickCaptureSheet({
     setStartPickerMode(null);
     setPendingStartDate(null);
     setAddAnother(false);
-  }, [selectedAreaIdForNewTasks]);
+  }, [clearContextOptionsLoad, selectedAreaIdForNewTasks]);
 
   const finalizeClose = useCallback(() => {
     resetState();
@@ -602,9 +657,22 @@ export function QuickCaptureSheet({
     });
   }, []);
 
+  const openContextPicker = useCallback(() => {
+    setShowContextPicker(true);
+    loadContextOptions();
+  }, [loadContextOptions]);
+
+  const closeContextPicker = useCallback(() => {
+    setShowContextPicker(false);
+    clearContextOptionsLoad();
+    contextOptionsRequestRef.current += 1;
+    setContextOptionsLoading(false);
+  }, [clearContextOptionsLoad]);
+
   const pickerProps = {
     areas,
     contextInputRef,
+    contextOptionsLoading,
     contextQuery,
     contextTags,
     dueDate,
@@ -615,7 +683,7 @@ export function QuickCaptureSheet({
     onAddContextFromQuery: addContextFromQuery,
     onClearContexts: handleClearContexts,
     onCloseAreaPicker: () => setShowAreaPicker(false),
-    onCloseContextPicker: () => setShowContextPicker(false),
+    onCloseContextPicker: closeContextPicker,
     onClosePriorityPicker: () => setShowPriorityPicker(false),
     onCloseProjectPicker: () => setShowProjectPicker(false),
     onContextQueryChange: setContextQuery,
@@ -666,7 +734,7 @@ export function QuickCaptureSheet({
         insetsBottom={insets.bottom}
         inputRef={inputRef}
         onOpenAreaPicker={() => setShowAreaPicker(true)}
-        onOpenContextPicker={() => setShowContextPicker(true)}
+        onOpenContextPicker={openContextPicker}
         onOpenDueDatePicker={openDueDatePicker}
         onOpenDueTimePicker={openDueTimePicker}
         onOpenPriorityPicker={() => setShowPriorityPicker(true)}
