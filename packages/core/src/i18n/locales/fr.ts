@@ -21,7 +21,7 @@ export const frOverrides: Record<string, string> = {
         'nav.sectionFocus': 'Se concentrer',
         'nav.sectionLists': 'Listes',
         'nav.sectionOrganize': 'Organiser',
-        'quickAdd.help': 'L\'ajout rapide prend en charge /start:<when>, /due:<when>, /review:<when>, /note:<text>, /next, /area:<name> ou !Area, @context, #tag, +Project.',
+        'quickAdd.help': 'L\'ajout rapide prend en charge /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> ou !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Exemple : Appeler maman /start:tomorrow /due:tomorrow 5pm @phone #family',
         'quickAdd.placeholder': 'Ajouter une tâche… utilisez @context +Project #tag /start:tomorrow /due:tomorrow',
         'quickAdd.inputLabel': 'Saisie rapide',

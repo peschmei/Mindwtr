@@ -22,7 +22,7 @@ export const trOverrides: Record<string, string> = {
         'nav.sectionLists': 'Listeler',
         'nav.sectionOrganize': 'Organize et',
         'nav.sectionArchive': 'Arşiv',
-        'quickAdd.help': 'Hızlı ekleme /start:<when>, /due:<when>, /review:<when>, /note:<text>, /next, /area:<name> veya !Area, @context, #tag, +Project\'yi destekler.',
+        'quickAdd.help': 'Hızlı ekleme /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> veya !Area, @context, #tag, +Project\'yi destekler.',
         'quickAdd.example': 'Örnek: Annemi arayın /start:tomorrow /due:tomorrow 5pm @phone #family',
         'quickAdd.placeholder': 'Bir görev ekleyin… @context +Project #tag /start:tomorrow /due:tomorrow kullanın',
         'quickAdd.inputLabel': 'Hızlı ekleme',

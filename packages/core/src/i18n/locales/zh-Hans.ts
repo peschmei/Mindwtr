@@ -22,7 +22,7 @@ export const zhHans: Record<string, string> = {
         'nav.sectionLists': '列表',
         'nav.sectionOrganize': '整理',
         'nav.sectionArchive': '归档',
-        'quickAdd.help': '快速添加支持 /start:<when>、/due:<when>、/review:<when>、/note:<text>、/next、/area:<name> 或 !Area、@context、#tag、+Project。',
+        'quickAdd.help': '快速添加支持 /start:<when>、/due:<when>、/review:<when>、/note:<text>、/link:<url>、/next、/area:<name> 或 !Area、@context、#tag、+Project。',
         'quickAdd.example': '示例：给妈妈打电话 /start:tomorrow /due:tomorrow 5pm @phone #family',
         'quickAdd.placeholder': '添加任务… 支持 @情境 +项目 #标签 /start:tomorrow /due:tomorrow',
         'quickAdd.addAnother': '连续添加',

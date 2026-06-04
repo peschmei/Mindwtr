@@ -728,6 +728,7 @@ const PROTECTED_TOKENS = [
         '/due:<when>',
         '/review:<when>',
         '/note:<text>',
+        '/link:<url>',
         '/next',
         '/area:<name>',
         '!Area',

@@ -1,7 +1,9 @@
 import * as chrono from 'chrono-node';
 import { format, isValid, set } from 'date-fns';
-import type { Area, Project, Task, TaskStatus } from './types';
+import type { Area, Attachment, Project, Task, TaskStatus } from './types';
+import { generateUUID } from './uuid';
 import { normalizeTaskStatus } from './task-status';
+import { normalizeLinkAttachmentInput } from './attachment-link-utils';
 
 export interface QuickAddDetectedDate {
     date: string;
@@ -44,8 +46,8 @@ const STATUS_TOKENS: Record<string, TaskStatus> = {
 
 const ESCAPE_SENTINEL = '__MW_ESC__';
 const QUICK_ADD_ESCAPE_CHARS = new Set(['@', '#', '+', '/', '!']);
-const QUICK_ADD_COMMAND_BOUNDARY = String.raw`(?=\s\/(?:note:|start:|due:|review:|project:|area:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b)|$)`;
-const QUICK_ADD_INLINE_CONTROL_BOUNDARY = String.raw`(?=\s(?:[@#+!]|\/(?:note:|start:|due:|review:|project:|area:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b))|$)`;
+const QUICK_ADD_COMMAND_BOUNDARY = String.raw`(?=\s\/(?:link:|note:|start:|due:|review:|project:|area:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b)|$)`;
+const QUICK_ADD_INLINE_CONTROL_BOUNDARY = String.raw`(?=\s(?:[@#+!]|\/(?:link:|note:|start:|due:|review:|project:|area:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b))|$)`;
 const SIMPLE_TASK_TOKEN_RE = /[@#][\p{L}\p{N}_-]+/gu;
 const RICH_TASK_TOKEN_RE = new RegExp(
     String.raw`(?:^|\s)([@#](?![\s\p{L}\p{N}_-])[^@#+/!]+?)${QUICK_ADD_INLINE_CONTROL_BOUNDARY}`,
@@ -256,6 +258,47 @@ function parseDateCommandsFromWorking(
     };
 }
 
+function buildQuickAddLinkAttachment(input: string, now: Date): Attachment | null {
+    const normalized = normalizeLinkAttachmentInput(input);
+    if (!normalized.uri.trim()) return null;
+    const createdAt = now.toISOString();
+    return {
+        id: generateUUID(),
+        kind: 'link',
+        title: normalized.title,
+        uri: normalized.uri,
+        createdAt,
+        updatedAt: createdAt,
+    };
+}
+
+function parseLinkCommandsFromWorking(
+    working: string,
+    now: Date,
+): { attachments?: Attachment[]; working: string } {
+    const attachments: Attachment[] = [];
+    const linkCommandRe = new RegExp(`\\/link:([\\s\\S]*?)${QUICK_ADD_COMMAND_BOUNDARY}`, 'i');
+
+    let nextWorking = working;
+    while (true) {
+        const match = nextWorking.match(linkCommandRe);
+        if (!match) break;
+
+        const rawLink = restoreEscapes(match[1].trim());
+        const attachment = rawLink ? buildQuickAddLinkAttachment(rawLink, now) : null;
+        if (attachment) attachments.push(attachment);
+
+        const stripped = stripToken(nextWorking, match[0]);
+        if (stripped === nextWorking) break;
+        nextWorking = stripped;
+    }
+
+    return {
+        attachments: attachments.length > 0 ? attachments : undefined,
+        working: nextWorking,
+    };
+}
+
 export function parseQuickAddDateCommands(input: string, now: Date = new Date()): QuickAddDateCommandsResult {
     const protectedInput = protectEscapes(input.trim());
     const {
@@ -283,6 +326,10 @@ export function parseQuickAdd(input: string, projects?: Project[], now: Date = n
 
     const contexts = new Set<string>();
     const tags = new Set<string>();
+
+    const linkResult = parseLinkCommandsFromWorking(working, now);
+    const attachments = linkResult.attachments;
+    working = linkResult.working;
 
     const contextMatches = getQuickAddTokenMatches(working, '@');
     contextMatches.forEach((ctx) => contexts.add(ctx));
@@ -398,6 +445,7 @@ export function parseQuickAdd(input: string, projects?: Project[], now: Date = n
     if (description) props.description = description;
     if (contexts.size > 0) props.contexts = Array.from(contexts);
     if (tags.size > 0) props.tags = Array.from(tags);
+    if (attachments && attachments.length > 0) props.attachments = attachments;
     if (projectId) props.projectId = projectId;
     if (areaId) props.areaId = areaId;
 

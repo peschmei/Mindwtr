@@ -22,7 +22,7 @@ export const zhHant: Record<string, string> = {
         'nav.sectionLists': '列表',
         'nav.sectionOrganize': '整理',
         'nav.sectionArchive': '歸檔',
-        'quickAdd.help': '快速添加支持 /start:<when>、/due:<when>、/review:<when>、/note:<text>、/next、/area:<name> 或 !Area、@context、#tag、+Project。',
+        'quickAdd.help': '快速添加支持 /start:<when>、/due:<when>、/review:<when>、/note:<text>、/link:<url>、/next、/area:<name> 或 !Area、@context、#tag、+Project。',
         'quickAdd.example': '示例：給媽媽打電話 /start:tomorrow /due:tomorrow 5pm @phone #family',
         'quickAdd.placeholder': '添加任務… 支持 @情境 +項目 #標籤 /start:tomorrow /due:tomorrow',
         'quickAdd.addAnother': '連續添加',

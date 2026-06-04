@@ -33,6 +33,60 @@ describe('quick-add', () => {
         expect(result.props.status).toBe('next');
     });
 
+    it('parses a link command into a link attachment without consuming later commands', () => {
+        const now = new Date('2026-03-30T10:00:00Z');
+        const result = parseQuickAdd(
+            'Read source /link:https://example.com/docs#section /next @desk',
+            undefined,
+            now
+        );
+
+        expect(result.title).toBe('Read source');
+        expect(result.props.status).toBe('next');
+        expect(result.props.contexts).toEqual(['@desk']);
+        expect(result.props.tags).toBeUndefined();
+        expect(result.props.attachments).toEqual([
+            expect.objectContaining({
+                createdAt: now.toISOString(),
+                kind: 'link',
+                title: 'example.com/docs',
+                updatedAt: now.toISOString(),
+                uri: 'https://example.com/docs#section',
+            }),
+        ]);
+        expect(result.props.attachments?.[0]?.id).toEqual(expect.any(String));
+    });
+
+    it('keeps URI-style link commands as lightweight link attachments', () => {
+        const now = new Date('2026-03-30T10:00:00Z');
+        const result = parseQuickAdd(
+            'Email Alex /link:mailto:alex@example.com /note:Ask for the update',
+            undefined,
+            now
+        );
+
+        expect(result.title).toBe('Email Alex');
+        expect(result.props.contexts).toBeUndefined();
+        expect(result.props.description).toBe('Ask for the update');
+        expect(result.props.attachments?.[0]).toEqual(expect.objectContaining({
+            kind: 'link',
+            title: 'alex@example.com',
+            uri: 'mailto:alex@example.com',
+        }));
+    });
+
+    it('supports labeled link commands', () => {
+        const now = new Date('2026-03-30T10:00:00Z');
+        const result = parseQuickAdd('Review plan /link:Sprint Plan | https://example.com/doc', undefined, now);
+
+        expect(result.title).toBe('Review plan');
+        expect(result.props.attachments?.[0]).toEqual(expect.objectContaining({
+            kind: 'link',
+            title: 'Sprint Plan',
+            uri: 'https://example.com/doc',
+        }));
+    });
+
     it('keeps due commands date-only when no time is explicit', () => {
         const now = new Date('2025-01-01T10:00:00Z');
         const result = parseQuickAdd(
