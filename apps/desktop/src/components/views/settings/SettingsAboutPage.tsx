@@ -7,9 +7,7 @@ import { SettingsFeedbackModal, type FeedbackSubmitInput } from './SettingsFeedb
 type Labels = {
     version: string;
     installChannel: string;
-    developer: string;
     license: string;
-    website: string;
     github: string;
     documentation: string;
     sponsorProject: string;
@@ -130,22 +128,6 @@ export function SettingsAboutPage({
                         github.com/dongdongbh/Mindwtr
                         <ExternalLink className="w-3 h-3" />
                     </button>
-                </div>
-                <div className="border-t border-border/50"></div>
-                <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">{t.website}</span>
-                    <button
-                        onClick={() => onOpenLink('https://dongdongbh.tech')}
-                        className="text-primary hover:underline flex items-center gap-1"
-                    >
-                        dongdongbh.tech
-                        <ExternalLink className="w-3 h-3" />
-                    </button>
-                </div>
-                <div className="border-t border-border/50"></div>
-                <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">{t.developer}</span>
-                    <span className="font-medium">dongdongbh</span>
                 </div>
                 <div className="border-t border-border/50"></div>
                 <div className="flex justify-between items-center">

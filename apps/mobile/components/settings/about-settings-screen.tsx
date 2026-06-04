@@ -459,13 +459,6 @@ export function AboutSettingsScreen({
                         <Text style={[styles.settingLabel, { color: tc.text }]}>GitHub</Text>
                         <Text style={styles.linkText}>Mindwtr</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
-                        onPress={() => openLink('https://dongdongbh.tech')}
-                    >
-                        <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.website')}</Text>
-                        <Text style={styles.linkText}>dongdongbh.tech</Text>
-                    </TouchableOpacity>
                     <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
                         <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.license')}</Text>
                         <Text style={[styles.settingValue, { color: tc.secondaryText }]}>AGPL-3.0</Text>
