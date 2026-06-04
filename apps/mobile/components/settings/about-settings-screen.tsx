@@ -5,7 +5,10 @@ import * as Application from 'expo-application';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { submitFeedbackSubmission } from '@mindwtr/core';
 import { useToast } from '@/contexts/toast-context';
+import { getDeviceLocale } from '@/lib/analytics-heartbeat';
+import { readRecentLogText } from '@/lib/app-log';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { getPlayStoreUpdateInfoAsync } from '@/lib/play-store-updates';
 import { compareVersions, logSettingsError, logSettingsWarn } from '@/lib/settings-utils';
@@ -17,6 +20,7 @@ import {
     UPDATE_BADGE_LAST_CHECK_KEY,
     UPDATE_BADGE_LATEST_KEY,
 } from './settings.constants';
+import { FeedbackSettingsModal, type FeedbackSubmitInput } from './feedback-settings-modal';
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
 import { SettingsTopBar } from './settings.shell';
 import { styles } from './settings.styles';
@@ -36,8 +40,10 @@ export function AboutSettingsScreen({
     const isFossBuild = extraConfig?.isFossBuild === true || extraConfig?.isFossBuild === 'true';
     const isExpoGo = Constants.appOwnership === 'expo';
     const currentVersion = Constants.expoConfig?.version || '0.0.0';
+    const feedbackEndpointUrl = String(extraConfig?.feedbackEndpointUrl ?? '').trim();
     const appName = Constants.expoConfig?.name || Application.applicationName || 'Mindwtr';
     const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+    const [feedbackOpen, setFeedbackOpen] = useState(false);
     const [androidInstallerSource, setAndroidInstallerSource] = useState<'play-store' | 'sideload' | 'unknown'>(
         Platform.OS === 'android' ? 'unknown' : 'play-store'
     );
@@ -356,6 +362,33 @@ export function AboutSettingsScreen({
         }
     };
 
+    const getInstallChannel = () => {
+        if (isFossBuild) return 'fdroid';
+        if (Platform.OS === 'ios') return 'app-store';
+        if (Platform.OS === 'android') return androidInstallerSource;
+        return Platform.OS || 'mobile';
+    };
+
+    const handleSubmitFeedback = async (input: FeedbackSubmitInput) => {
+        const diagnosticsLogs = input.includeDiagnostics && input.category === 'bug'
+            ? await readRecentLogText()
+            : null;
+        await submitFeedbackSubmission(feedbackEndpointUrl, {
+            category: input.category,
+            email: input.email,
+            message: input.message,
+            metadata: {
+                appVersion: currentVersion,
+                build: Application.nativeBuildVersion ?? undefined,
+                installChannel: getInstallChannel(),
+                locale: getDeviceLocale(),
+                os: `${Platform.OS} ${String(Platform.Version ?? '')}`.trim(),
+                platform: Platform.OS,
+            },
+            diagnostics: diagnosticsLogs ? { logs: diagnosticsLogs } : undefined,
+        });
+    };
+
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['bottom']}>
             <SettingsTopBar title={t('settings.about')} />
@@ -395,6 +428,18 @@ export function AboutSettingsScreen({
                     )}
                     <TouchableOpacity
                         style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
+                        onPress={() => setFeedbackOpen(true)}
+                    >
+                        <View style={styles.settingInfo}>
+                            <Text style={[styles.settingLabel, { color: tc.text }]}>{tr('settings.feedback')}</Text>
+                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
+                                {tr('settings.feedbackDesc')}
+                            </Text>
+                        </View>
+                        <Text style={styles.linkText}>{tr('settings.feedbackSubmit')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
                         onPress={() => openLink('https://github.com/dongdongbh/Mindwtr/wiki')}
                     >
                         <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.documentation')}</Text>
@@ -427,6 +472,13 @@ export function AboutSettingsScreen({
                     </View>
                 </View>
             </ScrollView>
+            <FeedbackSettingsModal
+                visible={feedbackOpen}
+                isConfigured={Boolean(feedbackEndpointUrl)}
+                tr={tr}
+                onClose={() => setFeedbackOpen(false)}
+                onSubmit={handleSubmitFeedback}
+            />
         </SafeAreaView>
     );
 }

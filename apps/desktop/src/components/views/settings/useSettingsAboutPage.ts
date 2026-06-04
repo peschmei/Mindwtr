@@ -42,7 +42,7 @@ type UseSettingsAboutPageOptions = {
 };
 
 type UseSettingsAboutPageResult = {
-    aboutPageProps: Omit<SettingsAboutPageProps, 't'>;
+    aboutPageProps: Omit<SettingsAboutPageProps, 't' | 'feedbackConfigured' | 'onSubmitFeedback'>;
     hasUpdateBadge: boolean;
     logPath: string;
     updateModalProps: Omit<SettingsUpdateModalProps, 't'>;

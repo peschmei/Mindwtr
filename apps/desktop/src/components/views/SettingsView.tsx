@@ -28,6 +28,7 @@ import {
   safeFormatDate,
   translateText,
   translateWithFallback,
+  submitFeedbackSubmission,
   useTaskStore,
   type AppData,
 } from "@mindwtr/core";
@@ -42,7 +43,7 @@ import {
 } from "../../lib/external-calendar-source";
 import { reportError } from "../../lib/report-error";
 import { SyncService } from "../../lib/sync-service";
-import { clearLog } from "../../lib/app-log";
+import { clearLog, readRecentLogText } from "../../lib/app-log";
 import {
   markSettingsOpenTrace,
   wrapSettingsOpenImport,
@@ -82,6 +83,7 @@ import {
   isDesktopOnboardingHandoffHintDismissed,
   type DesktopOnboardingHandoffPage,
 } from "../../lib/desktop-onboarding-events";
+import type { FeedbackSubmitInput } from "./settings/SettingsFeedbackModal";
 
 export type SettingsPage =
   | "main"
@@ -96,6 +98,8 @@ export type SettingsPage =
   | "about";
 
 export type SettingsOnboardingHintPage = DesktopOnboardingHandoffPage;
+
+const FEEDBACK_ENDPOINT_URL = String(import.meta.env.VITE_FEEDBACK_ENDPOINT_URL || '').trim();
 
 const SettingsMainPage = lazy(
   wrapSettingsOpenImport("page-chunk:main", () =>
@@ -501,6 +505,24 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
   });
   const { aboutPageProps, hasUpdateBadge, logPath, updateModalProps } =
     useSettingsAboutPage({ t });
+  const handleSubmitFeedback = useCallback(async (input: FeedbackSubmitInput) => {
+    const diagnosticsLogs = input.includeDiagnostics && input.category === 'bug'
+      ? await readRecentLogText()
+      : null;
+    await submitFeedbackSubmission(FEEDBACK_ENDPOINT_URL, {
+      category: input.category,
+      email: input.email,
+      message: input.message,
+      metadata: {
+        appVersion: aboutPageProps.appVersion,
+        installChannel: aboutPageProps.installChannel ?? undefined,
+        locale: language,
+        os: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        platform: 'desktop',
+      },
+      ...(diagnosticsLogs ? { diagnostics: { logs: diagnosticsLogs } } : {}),
+    });
+  }, [aboutPageProps.appVersion, aboutPageProps.installChannel, language]);
 
   useLayoutEffect(() => {
     markSettingsOpenTrace("settings-view-layout-effect", { page });
@@ -1319,7 +1341,14 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
     }
 
     if (page === "about") {
-      return <SettingsAboutPage t={t} {...aboutPageProps} />;
+      return (
+        <SettingsAboutPage
+          t={t}
+          {...aboutPageProps}
+          feedbackConfigured={Boolean(FEEDBACK_ENDPOINT_URL)}
+          onSubmitFeedback={handleSubmitFeedback}
+        />
+      );
     }
 
     return null;

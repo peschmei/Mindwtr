@@ -77,6 +77,7 @@ const ensureLogTargets = async (): Promise<void> => {
 const MAX_LOG_FILE_BYTES = 500_000;
 const ROTATED_LOG_RETAIN_CHARS = 250_000;
 const LOG_ROTATION_CHECK_INTERVAL = 50;
+const RECENT_LOG_MAX_CHARS = 20_000;
 const UTF8_ENCODING = 'utf8';
 
 type LogEntry = {
@@ -288,6 +289,19 @@ export async function clearLog(): Promise<void> {
       }
     }
   } catch (error) {
+  }
+}
+
+export async function readRecentLogText(maxChars = RECENT_LOG_MAX_CHARS): Promise<string | null> {
+  await ensureLogTargets();
+  if (!LOG_FILE || !fileExists(LOG_FILE)) return null;
+  try {
+    const raw = await LOG_FILE.text();
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    return trimmed.slice(-Math.max(1, maxChars));
+  } catch {
+    return null;
   }
 }
 

@@ -84,6 +84,23 @@ export type {
 } from './bulk-organize';
 
 export {
+    buildFeedbackSubmissionPayload,
+    FEEDBACK_CATEGORIES,
+    isFeedbackCategory,
+    isValidFeedbackEmail,
+    normalizeFeedbackEmail,
+    submitFeedbackSubmission,
+} from './feedback';
+export type {
+    FeedbackCategory,
+    FeedbackDiagnostics,
+    FeedbackMetadata,
+    FeedbackSubmissionInput,
+    FeedbackSubmissionPayload,
+    FeedbackValidationError,
+} from './feedback';
+
+export {
     applyTaskUpdates,
     flushPendingSave,
     getStorageAdapter,
