@@ -85,7 +85,7 @@ export function SettingsAboutPage({
                 <div className="border-t border-border/50"></div>
                 <div className="flex justify-between items-center gap-4">
                     <div>
-                        <span className="font-medium">{t.feedback}</span>
+                        <span className="text-muted-foreground">{t.feedback}</span>
                         <p className="mt-0.5 text-xs text-muted-foreground">{t.feedbackDesc}</p>
                     </div>
                     <button
