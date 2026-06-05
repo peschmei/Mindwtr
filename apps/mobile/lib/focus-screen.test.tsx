@@ -9,6 +9,10 @@ import { SwipeableTaskItem } from '@/components/swipeable-task-item';
 
 const showToastMock = vi.hoisted(() => vi.fn());
 const openProjectScreenMock = vi.hoisted(() => vi.fn());
+const asyncStorageMock = vi.hoisted(() => ({
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+}));
 
 const makeTask = (id: string, overrides: Partial<Task> = {}): Task => ({
   id,
@@ -70,6 +74,10 @@ beforeEach(() => {
   storeState.highlightTaskId = null;
   showToastMock.mockClear();
   openProjectScreenMock.mockClear();
+  asyncStorageMock.getItem.mockReset();
+  asyncStorageMock.getItem.mockResolvedValue(null);
+  asyncStorageMock.setItem.mockReset();
+  asyncStorageMock.setItem.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -101,6 +109,10 @@ vi.mock('@mindwtr/core', async (importOriginal) => {
 
 vi.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
+}));
+
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  default: asyncStorageMock,
 }));
 
 vi.mock('../contexts/theme-context', () => ({
@@ -544,6 +556,63 @@ describe('FocusScreen', () => {
     expect(nextSectionButton.props.accessibilityState).toEqual({ expanded: false });
     expect(tree.root.findAllByType(SwipeableTaskItem)).toHaveLength(1);
     expect(() => tree.root.findByProps({ children: 'All clear' })).toThrow();
+  });
+
+  it('restores the persisted Next Actions collapsed state', async () => {
+    asyncStorageMock.getItem.mockResolvedValue(JSON.stringify({
+      expandedSections: { nextActions: false },
+    }));
+    storeState.tasks = [
+      makeTask('focused-next', { title: 'Focused next', isFocusedToday: true }),
+      makeTask('plain-next', { title: 'Plain next' }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const nextSectionButton = tree.root.find((node) =>
+      node.props.accessibilityLabel === 'Next Actions' && typeof node.props.onPress === 'function'
+    );
+
+    expect(asyncStorageMock.getItem).toHaveBeenCalledWith('mindwtr:view:focus:v1');
+    expect(nextSectionButton.props.accessibilityState).toEqual({ expanded: false });
+    expect(
+      tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
+    ).toEqual(['focused-next']);
+  });
+
+  it('persists the Next Actions expanded state when toggled', () => {
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const nextSectionButton = tree.root.find((node) =>
+      node.props.accessibilityLabel === 'Next Actions' && typeof node.props.onPress === 'function'
+    );
+
+    act(() => {
+      nextSectionButton.props.onPress();
+    });
+
+    expect(asyncStorageMock.setItem).toHaveBeenCalledWith(
+      'mindwtr:view:focus:v1',
+      JSON.stringify({
+        expandedSections: {
+          schedule: true,
+          nextActions: false,
+          reviewDue: true,
+        },
+      })
+    );
   });
 
   it('renders mobile Next Actions flat by default', () => {

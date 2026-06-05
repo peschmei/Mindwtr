@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -77,10 +78,18 @@ const FOCUS_GROUP_BY_OPTIONS: FocusGroupBy[] = ['none', 'context', 'project', 'a
 const FOCUS_SORT_OPTIONS: SortField[] = ['default', 'due', 'start', 'priority', 'created', 'created-desc'];
 const NO_PROJECT_FILTER_ID = SAVED_FILTER_NO_PROJECT_ID;
 const DEFAULT_FOCUS_SORT_BY: SortField = 'default';
+const FOCUS_VIEW_STATE_STORAGE_KEY = 'mindwtr:view:focus:v1';
 const FOCUS_LIST_INITIAL_RENDER_COUNT = 12;
 const FOCUS_LIST_BATCH_RENDER_COUNT = 12;
 const FOCUS_LIST_WINDOW_SIZE = 5;
 const FOCUS_LIST_BOTTOM_CLEARANCE = 150;
+const DEFAULT_EXPANDED_SECTIONS = {
+  focus: true,
+  schedule: true,
+  next: true,
+  reviewDue: true,
+  reviewProjects: true,
+};
 
 type TaskActionResult = { success?: boolean; error?: unknown } | void;
 
@@ -218,6 +227,30 @@ function buildFocusTaskGroups(
   });
 }
 
+const readPersistedNextActionsExpanded = (raw: string | null): boolean | null => {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as {
+      expandedSections?: {
+        nextActions?: unknown;
+      };
+    };
+    return typeof parsed.expandedSections?.nextActions === 'boolean'
+      ? parsed.expandedSections.nextActions
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const serializeFocusViewState = (expandedSections: typeof DEFAULT_EXPANDED_SECTIONS): string => JSON.stringify({
+  expandedSections: {
+    schedule: expandedSections.schedule,
+    nextActions: expandedSections.next,
+    reviewDue: expandedSections.reviewDue,
+  },
+});
+
 export default function FocusScreen() {
   const { taskId, openToken } = useLocalSearchParams<{ taskId?: string; openToken?: string }>();
   const insets = useSafeAreaInsets();
@@ -252,13 +285,8 @@ export default function FocusScreen() {
   const [saveFilterDialogVisible, setSaveFilterDialogVisible] = useState(false);
   const [saveFilterName, setSaveFilterName] = useState('');
   const showFutureStarts = settings?.appearance?.showFutureStarts === true;
-  const [expandedSections, setExpandedSections] = useState({
-    focus: true,
-    schedule: true,
-    next: true,
-    reviewDue: true,
-    reviewProjects: true,
-  });
+  const [expandedSections, setExpandedSections] = useState(DEFAULT_EXPANDED_SECTIONS);
+  const didToggleNextSectionRef = useRef(false);
   const lastOpenedFromNotificationRef = useRef<string | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pomodoroEnabled = settings?.features?.pomodoro === true;
@@ -652,6 +680,24 @@ export default function FocusScreen() {
       { cancelable: true },
     );
   }, [removeAdvancedSavedFilterCriterion, resolveText]);
+
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(FOCUS_VIEW_STATE_STORAGE_KEY)
+      .then((raw) => {
+        if (!active || didToggleNextSectionRef.current) return;
+        const persistedNextExpanded = readPersistedNextActionsExpanded(raw);
+        if (typeof persistedNextExpanded !== 'boolean') return;
+        setExpandedSections((current) => ({
+          ...current,
+          next: persistedNextExpanded,
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!taskId || typeof taskId !== 'string') return;
@@ -1074,10 +1120,19 @@ export default function FocusScreen() {
   }, [updateTask]);
 
   const toggleSection = useCallback((sectionType: FocusSectionType) => {
-    setExpandedSections((current) => ({
-      ...current,
-      [sectionType]: !current[sectionType],
-    }));
+    if (sectionType === 'next') {
+      didToggleNextSectionRef.current = true;
+    }
+    setExpandedSections((current) => {
+      const next = {
+        ...current,
+        [sectionType]: !current[sectionType],
+      };
+      if (sectionType === 'next') {
+        AsyncStorage.setItem(FOCUS_VIEW_STATE_STORAGE_KEY, serializeFocusViewState(next)).catch(() => {});
+      }
+      return next;
+    });
   }, []);
   const renderFilterChip = useCallback((label: string, selected: boolean, onPress?: () => void, key = label, variant?: FocusFilterChip['variant']) => {
     const isAdvanced = variant === 'advanced';
