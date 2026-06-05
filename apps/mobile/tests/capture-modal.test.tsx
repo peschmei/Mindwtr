@@ -45,7 +45,10 @@ vi.mock('@mindwtr/core', () => ({
     !project.deletedAt && project.status !== 'archived' && project.status !== 'completed'
   )),
   parseQuickAdd,
-  useTaskStore: () => storeState,
+  shallow: (left: unknown, right: unknown) => Object.is(left, right),
+  useTaskStore: (selector?: (state: typeof storeState) => unknown) => (
+    typeof selector === 'function' ? selector(storeState) : storeState
+  ),
 }));
 
 vi.mock('@/contexts/language-context', () => ({
