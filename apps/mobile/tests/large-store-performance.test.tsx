@@ -202,8 +202,13 @@ vi.mock('react-native', async (importOriginal) => {
     return react.createElement('SectionList', props, renderedChildren);
   };
 
+  const RefreshControl = (props: any) => (
+    react.createElement('RefreshControl', props, props.children)
+  );
+
   return {
     ...actual,
+    RefreshControl,
     SectionList,
   };
 });
