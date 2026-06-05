@@ -107,6 +107,17 @@ export function SettingsAboutPage({
                     <div className="text-sm text-muted-foreground">{updateNotice}</div>
                 )}
                 <div className="border-t border-border/50"></div>
+                <div className="flex justify-between items-center gap-4">
+                    <span className="text-muted-foreground">{t.feedback}</span>
+                    <button
+                        onClick={() => setFeedbackOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        {t.feedback}
+                    </button>
+                </div>
+                <div className="border-t border-border/50"></div>
                 <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">{t.documentation}</span>
                     <button
@@ -126,17 +137,6 @@ export function SettingsAboutPage({
                     >
                         github.com/dongdongbh/Mindwtr
                         <ExternalLink className="w-3 h-3" />
-                    </button>
-                </div>
-                <div className="border-t border-border/50"></div>
-                <div className="flex justify-between items-center gap-4">
-                    <span className="text-muted-foreground">{t.feedback}</span>
-                    <button
-                        onClick={() => setFeedbackOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                        <MessageSquare className="w-4 h-4" />
-                        {t.feedback}
                     </button>
                 </div>
                 <div className="border-t border-border/50"></div>

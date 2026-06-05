@@ -431,6 +431,13 @@ export function AboutSettingsScreen({
                     )}
                     <TouchableOpacity
                         style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
+                        onPress={() => setFeedbackOpen(true)}
+                    >
+                        <Text style={[styles.settingLabel, { color: tc.text }]}>{tr('settings.feedback')}</Text>
+                        <Text style={styles.linkText}>{tr('settings.feedbackSubmit')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
                         onPress={() => openLink('https://github.com/dongdongbh/Mindwtr/wiki')}
                     >
                         <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.documentation')}</Text>
@@ -442,13 +449,6 @@ export function AboutSettingsScreen({
                     >
                         <Text style={[styles.settingLabel, { color: tc.text }]}>GitHub</Text>
                         <Text style={styles.linkText}>Mindwtr</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
-                        onPress={() => setFeedbackOpen(true)}
-                    >
-                        <Text style={[styles.settingLabel, { color: tc.text }]}>{tr('settings.feedback')}</Text>
-                        <Text style={styles.linkText}>{tr('settings.feedbackSubmit')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
