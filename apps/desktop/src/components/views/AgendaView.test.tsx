@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
-import { useTaskStore, type Task } from '@mindwtr/core';
+import { useTaskStore, type Project, type Task } from '@mindwtr/core';
 import { LanguageProvider } from '../../contexts/language-context';
 import { AgendaView } from './AgendaView';
 import { useUiStore } from '../../store/ui-store';
+import { MINDWTR_NAVIGATE_EVENT } from '../../lib/navigation-events';
 
 const nowIso = '2026-02-28T12:00:00.000Z';
 const focusViewStateStorageKey = 'mindwtr:view:focus:v1';
@@ -49,6 +50,7 @@ describe('AgendaView', () => {
                 focusTop3Only: false,
             },
             expandedTaskIds: {},
+            projectView: { selectedProjectId: null },
         });
     });
 
@@ -543,6 +545,45 @@ describe('AgendaView', () => {
         expect(queryByRole('heading', { name: /today/i })).not.toBeInTheDocument();
         expect(getByRole('heading', { name: /review due/i })).toBeInTheDocument();
         expect(getAllByText('Waiting review task')).toHaveLength(1);
+    });
+
+    it('opens a project due for review from Focus', () => {
+        const now = new Date();
+        const reviewProject: Project = {
+            id: 'review-project',
+            title: 'Project to revisit',
+            status: 'active',
+            color: '#3b82f6',
+            order: 0,
+            tagIds: [],
+            reviewAt: new Date(now.getTime() - 60_000).toISOString(),
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        };
+        const onNavigate = vi.fn((event: Event) => (event as CustomEvent).detail);
+        window.addEventListener(MINDWTR_NAVIGATE_EVENT, onNavigate as EventListener);
+
+        useTaskStore.setState({
+            tasks: [],
+            _allTasks: [],
+            projects: [reviewProject],
+            _allProjects: [reviewProject],
+            areas: [],
+            _allAreas: [],
+            settings: {},
+            highlightTaskId: null,
+        });
+
+        try {
+            const { getByRole } = renderAgenda();
+
+            fireEvent.click(getByRole('button', { name: /open project to revisit/i }));
+
+            expect(useUiStore.getState().projectView.selectedProjectId).toBe('review-project');
+            expect(onNavigate).toHaveReturnedWith({ view: 'projects' });
+        } finally {
+            window.removeEventListener(MINDWTR_NAVIGATE_EVENT, onNavigate as EventListener);
+        }
     });
 
     it('opens editor when double-clicking a non-focused task row in Focus', () => {

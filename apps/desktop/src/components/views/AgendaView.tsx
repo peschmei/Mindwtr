@@ -19,6 +19,7 @@ import { StoreTaskItem } from './list/StoreTaskItem';
 import { groupTasksByArea, groupTasksByContext, groupTasksByEnergy, groupTasksByPriority, groupTasksByProject, type NextGroupBy, type TaskGroup } from './list/next-grouping';
 import { PromptModal } from '../PromptModal';
 import { ConfirmModal } from '../ConfirmModal';
+import { dispatchNavigateEvent } from '../../lib/navigation-events';
 
 const AGENDA_VIRTUALIZATION_THRESHOLD = 25;
 const NO_PROJECT_FILTER_ID = SAVED_FILTER_NO_PROJECT_ID;
@@ -240,12 +241,13 @@ export function AgendaView() {
     const getDerivedState = useTaskStore((state) => state.getDerivedState);
     const { activeTasksByStatus, projectMap, sequentialProjectIds, sequentialWithinSectionProjectIds, tasksById } = getDerivedState();
     const { t } = useLanguage();
-    const { showListDetails, nextGroupBy, top3Only, setListOptions, collapseAllTaskDetails } = useUiStore((state) => ({
+    const { showListDetails, nextGroupBy, top3Only, setListOptions, collapseAllTaskDetails, setProjectView } = useUiStore((state) => ({
         showListDetails: state.listOptions.showDetails,
         nextGroupBy: state.listOptions.nextGroupBy,
         top3Only: state.listOptions.focusTop3Only,
         setListOptions: state.setListOptions,
         collapseAllTaskDetails: state.collapseAllTaskDetails,
+        setProjectView: state.setProjectView,
     }));
     const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
     const [selectedPriorities, setSelectedPriorities] = useState<TaskPriority[]>([]);
@@ -517,6 +519,10 @@ export function AgendaView() {
                 return a.title.localeCompare(b.title);
             });
     }, [projects, matchesSearchQuery, resolvedAreaFilter, areaById]);
+    const handleOpenReviewProject = useCallback((projectId: string) => {
+        setProjectView({ selectedProjectId: projectId });
+        dispatchNavigateEvent('projects');
+    }, [setProjectView]);
     const hasTaskFilters = hasFilters || Boolean(normalizedSearchQuery);
     const showFiltersPanel = filtersOpen;
     const shouldRenderFiltersPanel = filtersOpen
@@ -1220,6 +1226,7 @@ export function AgendaView() {
                         <AgendaProjectSection
                             title={t('agenda.reviewDueProjects') || 'Projects to review'}
                             icon={Folder}
+                            onProjectPress={handleOpenReviewProject}
                             projects={reviewDueProjects}
                             color="text-indigo-600"
                             t={t}

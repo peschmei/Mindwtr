@@ -2,12 +2,13 @@ import React from 'react';
 import { Alert, SectionList, TextInput, View } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Task } from '@mindwtr/core';
+import type { Project, Task } from '@mindwtr/core';
 
 import FocusScreen from '../app/(drawer)/(tabs)/focus';
 import { SwipeableTaskItem } from '@/components/swipeable-task-item';
 
 const showToastMock = vi.hoisted(() => vi.fn());
+const openProjectScreenMock = vi.hoisted(() => vi.fn());
 
 const makeTask = (id: string, overrides: Partial<Task> = {}): Task => ({
   id,
@@ -20,7 +21,7 @@ const makeTask = (id: string, overrides: Partial<Task> = {}): Task => ({
   ...overrides,
 });
 
-const makeProject = (id: string, overrides: Record<string, unknown> = {}) => ({
+const makeProject = (id: string, overrides: Partial<Project> = {}): Project => ({
   id,
   title: `Project ${id}`,
   status: 'active',
@@ -34,7 +35,7 @@ const makeProject = (id: string, overrides: Record<string, unknown> = {}) => ({
 
 const storeState: {
   tasks: Task[];
-  projects: unknown[];
+  projects: Project[];
   settings: { appearance: Record<string, unknown>; features: Record<string, unknown> };
   updateTask: ReturnType<typeof vi.fn>;
   deleteTask: ReturnType<typeof vi.fn>;
@@ -68,6 +69,7 @@ beforeEach(() => {
   storeState.updateSettings.mockClear();
   storeState.highlightTaskId = null;
   showToastMock.mockClear();
+  openProjectScreenMock.mockClear();
 });
 
 afterEach(() => {
@@ -114,8 +116,10 @@ vi.mock('../contexts/language-context', () => ({
         'focus.schedule': 'Today',
         'focus.nextActions': 'Next Actions',
         'agenda.reviewDue': 'Review Due',
+        'agenda.reviewDueProjects': 'Projects to review',
         'agenda.allClear': 'All clear',
         'agenda.noTasks': 'No tasks',
+        'status.active': 'Active',
         'energyLevel.high': 'High energy',
         'filters.label': 'Filters',
         'savedFilters.save': 'Save',
@@ -184,7 +188,7 @@ vi.mock('@/lib/area-filter', () => ({
 
 vi.mock('@/lib/task-meta-navigation', () => ({
   openContextsScreen: vi.fn(),
-  openProjectScreen: vi.fn(),
+  openProjectScreen: openProjectScreenMock,
 }));
 
 function textContent(node: any): string {
@@ -240,6 +244,31 @@ describe('FocusScreen', () => {
         node.props.accessibilityLabel === "Today's Focus" && typeof node.props.onPress === 'function'
       )
     ).not.toThrow();
+  });
+
+  it('renders projects due for review and opens the project screen', () => {
+    storeState.tasks = [];
+    storeState.projects = [
+      makeProject('review-project', {
+        title: 'Quarterly planning',
+        reviewAt: '2026-03-30T09:00:00.000Z',
+      }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    expect(textContent(tree.root)).toContain('Projects to review');
+
+    const projectButton = findButtonByText(tree, 'Quarterly planning');
+    act(() => {
+      projectButton.props.onPress();
+    });
+
+    expect(openProjectScreenMock).toHaveBeenCalledWith('review-project');
   });
 
   it('defers a focused task from the row action and offers undo', async () => {

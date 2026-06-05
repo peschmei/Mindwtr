@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams } from 'expo-router';
-import { BookmarkPlus, SlidersHorizontal, X } from 'lucide-react-native';
+import { BookmarkPlus, Folder, SlidersHorizontal, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -38,6 +38,7 @@ import {
   safeParseDate,
   safeParseDueDate,
   shallow,
+  type Project,
   type Task,
   type TaskStatus,
   type TaskPriority,
@@ -87,7 +88,7 @@ type FocusFilterChip = {
   variant?: 'advanced';
 };
 
-type FocusSectionType = 'focus' | 'schedule' | 'next' | 'reviewDue';
+type FocusSectionType = 'focus' | 'schedule' | 'next' | 'reviewDue' | 'reviewProjects';
 
 type FocusTaskGroup = {
   id: string;
@@ -99,6 +100,7 @@ type FocusTaskGroup = {
 
 type FocusListItem =
   | { type: 'task'; task: Task; grouped?: boolean }
+  | { type: 'project'; project: Project }
   | { type: 'groupHeader'; id: string; title: string; count: number; muted?: boolean };
 
 type FocusSection = {
@@ -251,6 +253,7 @@ export default function FocusScreen() {
     schedule: true,
     next: true,
     reviewDue: true,
+    reviewProjects: true,
   });
   const lastOpenedFromNotificationRef = useRef<string | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -781,10 +784,24 @@ export default function FocusScreen() {
     sequentialWithinSectionProjectIds,
     sortBySavedPerspective,
   ]);
+  const reviewDueProjects = useMemo(() => {
+    const now = new Date();
+    return visibleProjects
+      .filter((project) => project.status !== 'archived' && isDueForReview(project.reviewAt, now))
+      .sort((a, b) => {
+        const aReview = safeParseDate(a.reviewAt)?.getTime() ?? Number.POSITIVE_INFINITY;
+        const bReview = safeParseDate(b.reviewAt)?.getTime() ?? Number.POSITIVE_INFINITY;
+        if (aReview !== bReview) return aReview - bReview;
+        return a.title.localeCompare(b.title);
+      });
+  }, [visibleProjects]);
 
   const sections = useMemo<FocusSection[]>(() => {
     const buildTaskItems = (items: Task[], grouped = false): FocusListItem[] => (
       items.map((task) => ({ type: 'task' as const, task, grouped }))
+    );
+    const buildProjectItems = (items: Project[]): FocusListItem[] => (
+      items.map((project) => ({ type: 'project' as const, project }))
     );
     const getEnergySortOrder = (energyLevel: TaskEnergyLevel | undefined): number => {
       if (energyLevel === 'high') return 0;
@@ -904,6 +921,13 @@ export default function FocusScreen() {
         totalCount: reviewDue.length,
         expanded: expandedSections.reviewDue,
         type: 'reviewDue',
+      },
+      {
+        title: t('agenda.reviewDueProjects') ?? 'Projects to review',
+        data: expandedSections.reviewProjects ? buildProjectItems(reviewDueProjects) : [],
+        totalCount: reviewDueProjects.length,
+        expanded: expandedSections.reviewProjects,
+        type: 'reviewProjects',
       }
     );
 
@@ -914,16 +938,18 @@ export default function FocusScreen() {
     expandedSections.focus,
     expandedSections.next,
     expandedSections.reviewDue,
+    expandedSections.reviewProjects,
     expandedSections.schedule,
     focusedTasks,
     nextActions,
     projectById,
     resolveText,
     reviewDue,
+    reviewDueProjects,
     schedule,
     t,
   ]);
-  const hasTasks = focusedTasks.length > 0 || schedule.length > 0 || nextActions.length > 0 || reviewDue.length > 0;
+  const hasTasks = focusedTasks.length > 0 || schedule.length > 0 || nextActions.length > 0 || reviewDue.length > 0 || reviewDueProjects.length > 0;
   const activeFilterCount = countFilterCriteria(effectiveFilterCriteria);
   const advancedFilterChips = useMemo<FocusFilterChip[]>(() => {
     if (!activeSavedFilter) return [];
@@ -1039,7 +1065,7 @@ export default function FocusScreen() {
     updateTask(taskId, updates);
   }, [updateTask]);
 
-  const toggleSection = useCallback((sectionType: 'focus' | 'schedule' | 'next' | 'reviewDue') => {
+  const toggleSection = useCallback((sectionType: FocusSectionType) => {
     setExpandedSections((current) => ({
       ...current,
       [sectionType]: !current[sectionType],
@@ -1130,6 +1156,40 @@ export default function FocusScreen() {
       );
     }
 
+    if (item.type === 'project') {
+      const project = item.project;
+      return (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`${resolveText('common.open', 'Open')} ${project.title}`}
+          onPress={() => openProjectScreen(project.id)}
+          style={[
+            styles.projectReviewCard,
+            { backgroundColor: tc.cardBg, borderColor: tc.border },
+          ]}
+        >
+          <View style={styles.projectReviewMain}>
+            <View style={[styles.projectReviewIcon, { backgroundColor: project.color || tc.tint }]}>
+              <Folder size={18} color="#fff" />
+            </View>
+            <View style={styles.projectReviewTextBlock}>
+              <Text numberOfLines={1} style={[styles.projectReviewTitle, { color: tc.text }]}>
+                {project.title}
+              </Text>
+              <Text style={[styles.projectReviewStatus, { color: tc.secondaryText }]}>
+                {t(`status.${project.status}`)}
+              </Text>
+            </View>
+          </View>
+          {project.reviewAt ? (
+            <Text style={[styles.projectReviewDate, { color: tc.secondaryText }]}>
+              {safeFormatDate(project.reviewAt, 'P')}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
+      );
+    }
+
     const canDeferTask = !item.task.dueDate && (item.task.isFocusedToday === true || item.task.status === 'next');
 
     return (
@@ -1164,7 +1224,7 @@ export default function FocusScreen() {
     <View style={[styles.container, { backgroundColor: tc.bg }]}>
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.type === 'task' ? item.task.id : item.id}
+        keyExtractor={(item) => item.type === 'task' ? item.task.id : item.type === 'project' ? `project:${item.project.id}` : item.id}
         stickySectionHeadersEnabled={false}
         initialNumToRender={FOCUS_LIST_INITIAL_RENDER_COUNT}
         maxToRenderPerBatch={FOCUS_LIST_BATCH_RENDER_COUNT}
@@ -1876,6 +1936,50 @@ const styles = StyleSheet.create({
   },
   itemWrapper: {
     marginBottom: 8,
+  },
+  projectReviewCard: {
+    minHeight: 72,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  projectReviewMain: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  projectReviewIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  projectReviewTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  projectReviewTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  projectReviewStatus: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  projectReviewDate: {
+    flexShrink: 0,
+    fontSize: 12,
+    fontWeight: '700',
   },
   emptyState: {
     paddingVertical: 40,
