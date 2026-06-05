@@ -95,6 +95,22 @@ export type {
 } from './announcements';
 
 export {
+    PROMPT_COORDINATOR_COOLDOWN_MS,
+    STORE_REVIEW_ATTEMPT_COOLDOWN_MS,
+    STORE_REVIEW_MIN_ACTIVE_DAYS,
+    STORE_REVIEW_MIN_DAYS_SINCE_FIRST_SEEN,
+    getPromptLocalDayKey,
+    recordPromptActivity,
+    recordStoreReviewPromptAttempt,
+    shouldAttemptStoreReviewPrompt,
+} from './user-prompts';
+export type {
+    StoreReviewPromptInput,
+    UserPromptPlatform,
+    UserPromptState,
+} from './user-prompts';
+
+export {
     buildFeedbackSubmissionPayload,
     FEEDBACK_CATEGORIES,
     isFeedbackCategory,

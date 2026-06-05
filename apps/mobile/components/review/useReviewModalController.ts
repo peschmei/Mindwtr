@@ -35,6 +35,7 @@ import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigatio
 import { buildAIConfig, isAIKeyRequired, loadAIKey } from '../../lib/ai-config';
 import { logError } from '../../lib/app-log';
 import { fetchExternalCalendarEvents } from '../../lib/external-calendar';
+import { maybeRequestStoreReviewAfterPositiveMoment } from '../../lib/store-review-prompt';
 import { getReviewLabels } from '../review-modal.labels';
 
 export type ReviewStep =
@@ -272,6 +273,9 @@ export function useReviewModalController({
             void logError(error, { scope: 'review', extra: { message: 'Failed to save review time' } });
         }
         handleClose();
+        setTimeout(() => {
+            void maybeRequestStoreReviewAfterPositiveMoment();
+        }, 650);
     }, [handleClose]);
 
     const staleItems = useMemo(() => getStaleItems(tasks, projects), [tasks, projects]);

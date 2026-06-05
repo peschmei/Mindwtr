@@ -48,6 +48,7 @@ import { MobileOnboardingFlow } from '@/components/MobileOnboardingFlow';
 import { MobileAppLockGate } from '@/components/mobile-app-lock-gate';
 import { applyAndroidSystemBars } from '@/lib/android-system-bars';
 import { isCloudKitAvailable } from '@/lib/cloudkit-sync';
+import { recordLocalPromptActivity } from '@/lib/user-prompt-state';
 import {
   readMobileOnboardingDismissed,
   shouldOpenMobileFirstRunOnboarding,
@@ -536,6 +537,16 @@ function RootLayoutContentInner() {
       return;
     }
     markStartupPhase('js.splash_hidden.noop');
+  }, [isFirstPaintReady]);
+
+  useEffect(() => {
+    if (!isFirstPaintReady) return;
+    recordLocalPromptActivity().catch((error) => {
+      void logWarn('Failed to record local prompt activity', {
+        scope: 'prompt-state',
+        extra: { error: error instanceof Error ? error.message : String(error) },
+      });
+    });
   }, [isFirstPaintReady]);
 
   if (storageInitError) {
