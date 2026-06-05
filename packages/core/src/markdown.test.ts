@@ -4,6 +4,7 @@ import {
     getActiveMarkdownReferenceQuery,
     insertMarkdownReferenceAtQuery,
     normalizeMarkdownInternalLinks,
+    parseInlineMarkdown,
     parseMarkdownReferenceHref,
     searchMarkdownReferences,
     stripMarkdown,
@@ -37,6 +38,24 @@ describe('stripMarkdown', () => {
     it('keeps internal markdown link labels', () => {
         const input = 'See [[task:task-1|Quarterly review]] next.';
         expect(stripMarkdown(input)).toBe('See Quarterly review next.');
+    });
+});
+
+describe('parseInlineMarkdown', () => {
+    it('autolinks raw safe URLs outside explicit markdown links', () => {
+        expect(parseInlineMarkdown('See https://example.com/docs.')).toEqual([
+            { type: 'text', text: 'See ' },
+            { type: 'link', text: 'https://example.com/docs', href: 'https://example.com/docs' },
+            { type: 'text', text: '.' },
+        ]);
+    });
+
+    it('keeps explicit markdown link labels and hrefs', () => {
+        expect(parseInlineMarkdown('See [docs](https://example.com/docs).')).toEqual([
+            { type: 'text', text: 'See ' },
+            { type: 'link', text: 'docs', href: 'https://example.com/docs' },
+            { type: 'text', text: '.' },
+        ]);
     });
 });
 

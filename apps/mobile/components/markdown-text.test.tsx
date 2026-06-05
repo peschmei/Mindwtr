@@ -1,6 +1,7 @@
 import React from 'react';
 import renderer from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
+import * as Linking from 'expo-linking';
 
 import { MarkdownInlineText, MarkdownText } from './markdown-text';
 
@@ -208,5 +209,21 @@ describe('MarkdownText', () => {
     expect(rendered).toContain('✓ Draft spec');
     expect(rendered).not.toContain('**');
     expect(rendered).not.toContain('](');
+  });
+
+  it('opens raw URL links from task descriptions', () => {
+    const tree = renderMarkdown('Read https://example.com/docs.');
+    const link = tree.root.findAll((node) => (
+      typeof node.props.onPress === 'function'
+      && flattenText(node.children as renderer.ReactTestRendererNode[]) === 'https://example.com/docs'
+    ))[0];
+
+    expect(link).toBeTruthy();
+
+    renderer.act(() => {
+      link.props.onPress();
+    });
+
+    expect(Linking.openURL).toHaveBeenCalledWith('https://example.com/docs');
   });
 });

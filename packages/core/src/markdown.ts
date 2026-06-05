@@ -10,7 +10,7 @@ import type { Project, Task } from './types';
 const CODE_BLOCK_RE = /```[\s\S]*?```/g;
 const INLINE_CODE_RE = /`([^`]+)`/g;
 const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g;
-const INLINE_TOKEN_RE = /(\*\*([^*]+)\*\*|__([^_]+)__|~~([^~\n]+)~~|\*([^*\n]+)\*|_([^_\n]+)_|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))/g;
+const INLINE_TOKEN_RE = /(\*\*([^*]+)\*\*|__([^_]+)__|~~([^~\n]+)~~|\*([^*\n]+)\*|_([^_\n]+)_|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)|((?:https?:\/\/|mailto:|tel:)[^\s<>\]]+))/gi;
 const INTERNAL_LINK_RE = /\[\[(task|project):([^\]|]+)\|([^\]]+)\]\]/g;
 const INTERNAL_LINK_TOKEN_RE = /^\[\[(task|project):([^\]|]+)\|([^\]]+)\]\]$/;
 const TASK_LIST_RE = /^\s{0,3}(?:[-*+]\s+)?\[( |x|X)\]\s+(.+)$/;
@@ -109,6 +109,7 @@ export const MARKDOWN_TOOLBAR_ACTIONS: MarkdownToolbarAction[] = [
 ];
 
 const clampIndex = (value: string, index: number) => Math.max(0, Math.min(index, value.length));
+const RAW_LINK_TRAILING_PUNCTUATION_RE = /[),.;:!?]+$/;
 
 const sanitizeLinkHref = (href: string): string | null => {
     const trimmed = href.trim();
@@ -129,6 +130,14 @@ const sanitizeLinkHref = (href: string): string | null => {
         return null;
     }
     return null;
+};
+
+const splitRawLinkToken = (rawHref: string): { href: string; trailing: string } => {
+    const trailingMatch = RAW_LINK_TRAILING_PUNCTUATION_RE.exec(rawHref);
+    if (!trailingMatch) return { href: rawHref, trailing: '' };
+    const trailing = trailingMatch[0];
+    const href = rawHref.slice(0, -trailing.length);
+    return href ? { href, trailing } : { href: rawHref, trailing: '' };
 };
 
 const replaceOutsideInlineCode = (
@@ -357,6 +366,7 @@ export function parseInlineMarkdown(text: string): InlineToken[] {
         const code = match[7];
         const linkText = match[8];
         const linkHref = match[9];
+        const rawHref = match[10];
 
         if (code) {
             tokens.push({ type: 'code', text: code });
@@ -372,6 +382,15 @@ export function parseInlineMarkdown(text: string): InlineToken[] {
                 tokens.push({ type: 'link', text: linkText, href: safeHref });
             } else {
                 tokens.push({ type: 'text', text: linkText });
+            }
+        } else if (rawHref) {
+            const { href, trailing } = splitRawLinkToken(rawHref);
+            const safeHref = sanitizeLinkHref(href);
+            if (safeHref) {
+                tokens.push({ type: 'link', text: href, href: safeHref });
+                if (trailing) tokens.push({ type: 'text', text: trailing });
+            } else {
+                tokens.push({ type: 'text', text: rawHref });
             }
         }
 
