@@ -21,10 +21,16 @@ import {
     getAnnouncementDismissalStorageKey,
     isSupportedLanguage,
     recordDonationPromptShown,
+    recordUpdateReminderChecked,
+    recordUpdateReminderDismissed,
+    recordUpdateReminderShown,
     shouldShowAppAnnouncement,
     shouldShowDonationPrompt,
+    shouldCheckUpdateReminder,
+    shouldShowUpdateReminder,
     translateWithFallback,
     useTaskStore,
+    type AppAnnouncement,
     type AppAnnouncementAction,
 } from '@mindwtr/core';
 import { GlobalSearch } from './components/GlobalSearch';
@@ -77,6 +83,7 @@ import {
     recordLocalPromptActivity,
     updateLocalUserPromptState,
 } from './lib/user-prompt-state';
+import { checkForUpdates, normalizeInstallSource, type InstallSource } from './lib/update-service';
 import { useUiStore } from './store/ui-store';
 import { useObsidianStore } from './store/obsidian-store';
 import type { SettingsOnboardingHintPage, SettingsPage } from './components/views/SettingsView';
@@ -95,15 +102,28 @@ const DONATION_PROMPT_ENABLED = (
     import.meta.env.VITE_DONATION_PROMPT_ENABLED === '1'
     || import.meta.env.VITE_DONATION_PROMPT_ENABLED === 'true'
 );
+const UPDATE_REMINDER_DESKTOP_INSTALL_SOURCES = new Set<InstallSource>([
+    'direct',
+    'portable',
+    'github-release',
+    'appimage',
+    'apt',
+    'rpm',
+]);
 
-const normalizeInstallSourceForDonation = (value: string | null | undefined): string => {
-    const normalized = String(value ?? '').trim().toLowerCase();
-    if (normalized.startsWith('flatpak:')) return 'flatpak';
-    return normalized;
+type DesktopUpdateReminderInfo = {
+    currentVersion: string;
+    latestVersion: string;
+    latestReleasedAt: string | null;
+    releaseUrl: string;
 };
 
 const isDesktopDonationPromptAllowed = (installSource: string | null | undefined): boolean => (
-    DONATION_PROMPT_ENABLED && normalizeInstallSourceForDonation(installSource) !== 'unknown'
+    DONATION_PROMPT_ENABLED && normalizeInstallSource(installSource) !== 'unknown'
+);
+
+const isDesktopUpdateReminderAllowed = (installSource: InstallSource | null | undefined): boolean => (
+    Boolean(installSource && UPDATE_REMINDER_DESKTOP_INSTALL_SOURCES.has(installSource))
 );
 
 const readDesktopOnboardingDismissed = () => {
@@ -124,6 +144,17 @@ const writeDesktopOnboardingDismissed = () => {
     }
 };
 
+const buildUpdateReminderAnnouncement = (info: DesktopUpdateReminderInfo): AppAnnouncement => ({
+    id: `update-reminder-${info.latestVersion}`,
+    title: 'Update available',
+    body: `Mindwtr ${info.latestVersion} is available. You are using ${info.currentVersion}. Update when you have a minute to keep fixes and improvements current.`,
+    action: {
+        type: 'url',
+        label: 'View release',
+        url: info.releaseUrl,
+    },
+});
+
 function App() {
     const [currentView, setCurrentView] = useState(DEFAULT_DESKTOP_VIEW);
     const [activeView, setActiveView] = useState(DEFAULT_DESKTOP_VIEW);
@@ -141,6 +172,10 @@ function App() {
     const [donationPromptOpen, setDonationPromptOpen] = useState(false);
     const [donationDismissedInSession, setDonationDismissedInSession] = useState(false);
     const [donationPromptAllowed, setDonationPromptAllowed] = useState<boolean | null>(null);
+    const [desktopInstallSource, setDesktopInstallSource] = useState<InstallSource | null>(null);
+    const [updateReminderOpen, setUpdateReminderOpen] = useState(false);
+    const [updateReminderDismissedInSession, setUpdateReminderDismissedInSession] = useState(false);
+    const [updateReminderInfo, setUpdateReminderInfo] = useState<DesktopUpdateReminderInfo | null>(null);
     const [, startTransition] = useTransition();
     const fetchData = useTaskStore((state) => state.fetchData);
     const seedGettingStarted = useTaskStore((state) => state.seedGettingStarted);
@@ -910,6 +945,30 @@ function App() {
         void openAnnouncementUrl(action.url);
     }, [dismissDonationPrompt, handleViewChange, openAnnouncementUrl]);
 
+    const dismissUpdateReminder = useCallback(() => {
+        const latestVersion = updateReminderInfo?.latestVersion;
+        if (latestVersion) {
+            try {
+                updateLocalUserPromptState((state) => recordUpdateReminderDismissed(state, latestVersion));
+            } catch (error) {
+                void logError(error, { scope: 'prompt-state', step: 'dismissUpdateReminder' });
+            }
+        }
+        setUpdateReminderDismissedInSession(true);
+        setUpdateReminderOpen(false);
+    }, [updateReminderInfo?.latestVersion]);
+
+    const handleUpdateReminderAction = useCallback((action: AppAnnouncementAction) => {
+        dismissUpdateReminder();
+        if (action.type === 'feedback') {
+            setSettingsInitialPage('about');
+            setSettingsOnboardingHintPage(undefined);
+            handleViewChange('settings');
+            return;
+        }
+        void openAnnouncementUrl(action.url);
+    }, [dismissUpdateReminder, handleViewChange, openAnnouncementUrl]);
+
     useEffect(() => {
         if (import.meta.env.MODE === 'test' || import.meta.env.VITEST || process.env.NODE_ENV === 'test') return;
         if (
@@ -963,10 +1022,16 @@ function App() {
         let cancelled = false;
         getInstallSourceOrFallback('unknown')
             .then((installSource) => {
-                if (!cancelled) setDonationPromptAllowed(isDesktopDonationPromptAllowed(installSource));
+                if (cancelled) return;
+                const normalized = normalizeInstallSource(installSource);
+                setDesktopInstallSource(normalized);
+                setDonationPromptAllowed(isDesktopDonationPromptAllowed(normalized));
             })
             .catch((error) => {
-                if (!cancelled) setDonationPromptAllowed(false);
+                if (!cancelled) {
+                    setDesktopInstallSource('unknown');
+                    setDonationPromptAllowed(false);
+                }
                 void logError(error, { scope: 'prompt-state', step: 'resolveDonationInstallSource' });
             });
         return () => {
@@ -979,6 +1044,7 @@ function App() {
         if (
             donationDismissedInSession
             || donationPromptOpen
+            || updateReminderOpen
             || donationPromptAllowed !== true
             || ACTIVE_APP_ANNOUNCEMENT
             || announcementOpen
@@ -1025,6 +1091,96 @@ function App() {
         externalSyncChange,
         hasHydratedSettings,
         isLoading,
+        updateReminderOpen,
+    ]);
+
+    useEffect(() => {
+        if (import.meta.env.MODE === 'test' || import.meta.env.VITEST || process.env.NODE_ENV === 'test') return;
+        if (
+            updateReminderDismissedInSession
+            || updateReminderOpen
+            || !desktopInstallSource
+            || !isDesktopUpdateReminderAllowed(desktopInstallSource)
+            || ACTIVE_APP_ANNOUNCEMENT
+            || announcementOpen
+            || donationPromptOpen
+            || !hasHydratedSettings
+            || isLoading
+            || !desktopOnboardingGateSettled
+            || desktopOnboardingOpen
+            || closePromptOpen
+            || externalSyncChange
+        ) {
+            return;
+        }
+
+        const nowMs = Date.now();
+        let promptState: ReturnType<typeof readLocalUserPromptState>;
+        try {
+            promptState = readLocalUserPromptState();
+        } catch (error) {
+            setUpdateReminderDismissedInSession(true);
+            void logError(error, { scope: 'prompt-state', step: 'readUpdateReminderState' });
+            return;
+        }
+        if (!shouldCheckUpdateReminder({ nowMs, promptState, updateReminderAllowed: true })) return;
+        try {
+            updateLocalUserPromptState((state) => recordUpdateReminderChecked(state, nowMs));
+        } catch (error) {
+            setUpdateReminderDismissedInSession(true);
+            void logError(error, { scope: 'prompt-state', step: 'recordUpdateReminderChecked' });
+            return;
+        }
+
+        let cancelled = false;
+        const timer = window.setTimeout(() => {
+            const check = async () => {
+                const { getVersion } = await import('@tauri-apps/api/app');
+                const currentVersion = await getVersion();
+                const info = await checkForUpdates(currentVersion, { installSource: desktopInstallSource });
+                if (cancelled || !info.hasUpdate) return;
+                const latestPromptState = readLocalUserPromptState();
+                if (!shouldShowUpdateReminder({
+                    nowMs: Date.now(),
+                    promptState: latestPromptState,
+                    updateReminderAllowed: true,
+                    currentVersion: info.currentVersion,
+                    latestVersion: info.latestVersion,
+                    latestReleasedAt: info.latestReleasedAt,
+                })) {
+                    return;
+                }
+                updateLocalUserPromptState((state) => recordUpdateReminderShown(state, Date.now()));
+                if (cancelled) return;
+                setUpdateReminderInfo({
+                    currentVersion: info.currentVersion,
+                    latestVersion: info.latestVersion,
+                    latestReleasedAt: info.latestReleasedAt,
+                    releaseUrl: info.releaseUrl,
+                });
+                setUpdateReminderOpen(true);
+            };
+            check().catch((error) => {
+                if (!cancelled) setUpdateReminderDismissedInSession(true);
+                void logError(error, { scope: 'prompt-state', step: 'checkUpdateReminder' });
+            });
+        }, 1750);
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [
+        announcementOpen,
+        closePromptOpen,
+        desktopInstallSource,
+        desktopOnboardingGateSettled,
+        desktopOnboardingOpen,
+        donationPromptOpen,
+        externalSyncChange,
+        hasHydratedSettings,
+        isLoading,
+        updateReminderDismissedInSession,
+        updateReminderOpen,
     ]);
 
     const LoadingFallback = ({ view }: { view: string }) => {
@@ -1145,6 +1301,19 @@ function App() {
                         }
                         onAction={handleDonationPromptAction}
                         onDismiss={dismissDonationPrompt}
+                    />
+                    <AppAnnouncementModal
+                        announcement={updateReminderInfo ? buildUpdateReminderAnnouncement(updateReminderInfo) : null}
+                        isOpen={
+                            updateReminderOpen
+                            && !announcementOpen
+                            && !donationPromptOpen
+                            && !desktopOnboardingOpen
+                            && !closePromptOpen
+                            && !externalSyncChange
+                        }
+                        onAction={handleUpdateReminderAction}
+                        onDismiss={dismissUpdateReminder}
                     />
                     {externalSyncChange && (
                         <div

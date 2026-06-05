@@ -6,6 +6,10 @@ export const STORE_REVIEW_MIN_ACTIVE_DAYS = 7;
 export const STORE_REVIEW_ATTEMPT_COOLDOWN_MS = 90 * DAY_MS;
 export const DONATION_PROMPT_MIN_DAYS_SINCE_FIRST_SEEN = 30;
 export const DONATION_PROMPT_MIN_ACTIVE_DAYS = 21;
+export const UPDATE_REMINDER_CHECK_INTERVAL_MS = DAY_MS;
+export const UPDATE_REMINDER_MIN_DAYS_SINCE_FIRST_SEEN = 7;
+export const UPDATE_REMINDER_MIN_ACTIVE_DAYS = 2;
+export const UPDATE_REMINDER_PATCH_GRACE_MS = 21 * DAY_MS;
 
 export type UserPromptPlatform = 'ios' | 'android' | 'desktop' | 'web' | 'unknown';
 
@@ -41,6 +45,21 @@ export type DonationPromptInput = {
     donationAllowed: boolean;
 };
 
+export type UpdateReminderCheckInput = {
+    nowMs: number;
+    promptState: UserPromptState | null | undefined;
+    updateReminderAllowed: boolean;
+};
+
+export type UpdateReminderPromptInput = {
+    nowMs: number;
+    promptState: UserPromptState | null | undefined;
+    updateReminderAllowed: boolean;
+    currentVersion: string;
+    latestVersion: string;
+    latestReleasedAt?: string | null;
+};
+
 export function getPromptLocalDayKey(nowMs: number): string {
     const date = new Date(nowMs);
     const year = date.getFullYear();
@@ -65,6 +84,50 @@ function isCooldownElapsed(value: string | null | undefined, nowMs: number, cool
     const thenMs = parseTimeMs(value);
     if (thenMs === null) return true;
     return nowMs - thenMs >= cooldownMs;
+}
+
+type ParsedVersion = {
+    major: number;
+    minor: number;
+    patch: number;
+};
+
+function parseComparableVersion(value: string): ParsedVersion | null {
+    const match = value.trim().replace(/^v/i, '').match(/\d+(?:\.\d+){0,3}/);
+    if (!match) return null;
+    const [major = 0, minor = 0, patch = 0] = match[0]
+        .split('.')
+        .map((part) => Number.parseInt(part, 10));
+    if (![major, minor, patch].every(Number.isFinite)) return null;
+    return { major, minor, patch };
+}
+
+export function comparePromptVersions(currentVersion: string, latestVersion: string): number {
+    const current = parseComparableVersion(currentVersion);
+    const latest = parseComparableVersion(latestVersion);
+    if (!current || !latest) return currentVersion.trim().localeCompare(latestVersion.trim());
+    const currentParts = [current.major, current.minor, current.patch];
+    const latestParts = [latest.major, latest.minor, latest.patch];
+    for (let index = 0; index < latestParts.length; index += 1) {
+        const diff = currentParts[index] - latestParts[index];
+        if (diff !== 0) return diff > 0 ? 1 : -1;
+    }
+    return 0;
+}
+
+function isMeaningfullyBehindUpdate(
+    currentVersion: string,
+    latestVersion: string,
+    latestReleasedAt: string | null | undefined,
+    nowMs: number,
+): boolean {
+    if (comparePromptVersions(currentVersion, latestVersion) >= 0) return false;
+    const current = parseComparableVersion(currentVersion);
+    const latest = parseComparableVersion(latestVersion);
+    if (!current || !latest) return true;
+    if (latest.major > current.major || latest.minor > current.minor) return true;
+    const latestReleasedMs = parseTimeMs(latestReleasedAt);
+    return latestReleasedMs !== null && nowMs - latestReleasedMs >= UPDATE_REMINDER_PATCH_GRACE_MS;
 }
 
 export function recordPromptActivity(
@@ -169,6 +232,89 @@ export function recordDonationPromptShown(
             ...(promptState?.donation ?? {}),
             askedEver: true,
             lastShownAt: nowIso,
+        },
+    };
+}
+
+export function shouldCheckUpdateReminder({
+    nowMs,
+    promptState,
+    updateReminderAllowed,
+}: UpdateReminderCheckInput): boolean {
+    if (!updateReminderAllowed) return false;
+    return isCooldownElapsed(
+        promptState?.update?.lastCheckedAt,
+        nowMs,
+        UPDATE_REMINDER_CHECK_INTERVAL_MS,
+    );
+}
+
+export function recordUpdateReminderChecked(
+    promptState: UserPromptState | null | undefined,
+    nowMs: number,
+): UserPromptState {
+    return {
+        ...(promptState ?? {}),
+        update: {
+            ...(promptState?.update ?? {}),
+            lastCheckedAt: new Date(nowMs).toISOString(),
+        },
+    };
+}
+
+export function shouldShowUpdateReminder({
+    nowMs,
+    promptState,
+    updateReminderAllowed,
+    currentVersion,
+    latestVersion,
+    latestReleasedAt,
+}: UpdateReminderPromptInput): boolean {
+    if (!updateReminderAllowed) return false;
+    if (!isMeaningfullyBehindUpdate(currentVersion, latestVersion, latestReleasedAt, nowMs)) return false;
+
+    const dismissedVersion = promptState?.update?.dismissedVersion;
+    if (dismissedVersion && comparePromptVersions(dismissedVersion, latestVersion) >= 0) return false;
+
+    const daysSinceFirstSeen = daysSince(promptState?.firstSeenAt, nowMs);
+    if (daysSinceFirstSeen === null || daysSinceFirstSeen < UPDATE_REMINDER_MIN_DAYS_SINCE_FIRST_SEEN) {
+        return false;
+    }
+
+    const activeDayCount = new Set(promptState?.activeDayKeys ?? []).size;
+    if (activeDayCount < UPDATE_REMINDER_MIN_ACTIVE_DAYS) return false;
+
+    return isCooldownElapsed(
+        promptState?.lastInterruptivePromptAt,
+        nowMs,
+        PROMPT_COORDINATOR_COOLDOWN_MS,
+    );
+}
+
+export function recordUpdateReminderShown(
+    promptState: UserPromptState | null | undefined,
+    nowMs: number,
+): UserPromptState {
+    const nowIso = new Date(nowMs).toISOString();
+    return {
+        ...(promptState ?? {}),
+        lastInterruptivePromptAt: nowIso,
+        update: {
+            ...(promptState?.update ?? {}),
+            lastShownAt: nowIso,
+        },
+    };
+}
+
+export function recordUpdateReminderDismissed(
+    promptState: UserPromptState | null | undefined,
+    latestVersion: string,
+): UserPromptState {
+    return {
+        ...(promptState ?? {}),
+        update: {
+            ...(promptState?.update ?? {}),
+            dismissedVersion: latestVersion.trim(),
         },
     };
 }

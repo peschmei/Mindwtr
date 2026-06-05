@@ -96,22 +96,34 @@ export type {
 } from './announcements';
 
 export {
+    comparePromptVersions,
     DONATION_PROMPT_MIN_ACTIVE_DAYS,
     DONATION_PROMPT_MIN_DAYS_SINCE_FIRST_SEEN,
     PROMPT_COORDINATOR_COOLDOWN_MS,
     STORE_REVIEW_ATTEMPT_COOLDOWN_MS,
     STORE_REVIEW_MIN_ACTIVE_DAYS,
     STORE_REVIEW_MIN_DAYS_SINCE_FIRST_SEEN,
+    UPDATE_REMINDER_CHECK_INTERVAL_MS,
+    UPDATE_REMINDER_MIN_ACTIVE_DAYS,
+    UPDATE_REMINDER_MIN_DAYS_SINCE_FIRST_SEEN,
+    UPDATE_REMINDER_PATCH_GRACE_MS,
     getPromptLocalDayKey,
     recordDonationPromptShown,
     recordPromptActivity,
     recordStoreReviewPromptAttempt,
+    recordUpdateReminderChecked,
+    recordUpdateReminderDismissed,
+    recordUpdateReminderShown,
+    shouldCheckUpdateReminder,
     shouldShowDonationPrompt,
+    shouldShowUpdateReminder,
     shouldAttemptStoreReviewPrompt,
 } from './user-prompts';
 export type {
     DonationPromptInput,
     StoreReviewPromptInput,
+    UpdateReminderCheckInput,
+    UpdateReminderPromptInput,
     UserPromptPlatform,
     UserPromptState,
 } from './user-prompts';

@@ -60,6 +60,7 @@ export interface UpdateInfo {
   currentVersion: string;
   latestVersion: string;
   releaseUrl: string;
+  latestReleasedAt: string | null;
   releaseNotes: string;
   downloadUrl: string | null;
   platform: string;
@@ -148,6 +149,7 @@ interface GitHubAsset {
 interface GitHubRelease {
   tag_name: string;
   html_url: string;
+  published_at?: string;
   body: string;
   assets: GitHubAsset[];
 }
@@ -578,6 +580,7 @@ export async function checkForUpdates(
       currentVersion: cleanCurrentVersion,
       latestVersion,
       releaseUrl,
+      latestReleasedAt: githubRelease?.published_at || null,
       releaseNotes: githubRelease?.body || "",
       downloadUrl,
       platform,

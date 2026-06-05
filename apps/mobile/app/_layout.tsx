@@ -1,6 +1,7 @@
 import '../polyfills';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { Stack, usePathname, useRouter } from 'expo-router';
@@ -25,12 +26,18 @@ import {
   getAnnouncementDismissalStorageKey,
   isSupportedLanguage,
   recordDonationPromptShown,
+  recordUpdateReminderChecked,
+  recordUpdateReminderDismissed,
+  recordUpdateReminderShown,
   setStorageAdapter,
   setLogger,
+  shouldCheckUpdateReminder,
   shouldShowAppAnnouncement,
   shouldShowDonationPrompt,
+  shouldShowUpdateReminder,
   translateWithFallback,
   useTaskStore,
+  type AppAnnouncement,
   type AppAnnouncementAction,
 } from '@mindwtr/core';
 import { mobileStorage } from '../lib/storage-adapter';
@@ -132,6 +139,67 @@ const resolveMobileDonationPromptAllowed = async (options: {
   return Platform.OS === 'android' || Platform.OS === 'ios';
 };
 
+const UPDATE_REMINDER_RELEASES_API = 'https://api.github.com/repos/dongdongbh/Mindwtr/releases/latest';
+const UPDATE_REMINDER_RELEASES_URL = 'https://github.com/dongdongbh/Mindwtr/releases/latest';
+
+type MobileUpdateReminderInfo = {
+  currentVersion: string;
+  latestVersion: string;
+  latestReleasedAt: string | null;
+  releaseUrl: string;
+};
+
+type GitHubLatestRelease = {
+  tag_name?: unknown;
+  html_url?: unknown;
+  published_at?: unknown;
+};
+
+const resolveMobileUpdateReminderAllowed = async (options: {
+  isExpoGo: boolean;
+  isFossBuild: boolean;
+}): Promise<boolean> => {
+  if (options.isExpoGo) return false;
+  if (Platform.OS !== 'android') return false;
+  if (options.isFossBuild) return true;
+  const referrer = await Application.getInstallReferrerAsync();
+  return !String(referrer || '').trim();
+};
+
+const fetchMobileUpdateReminderInfo = async (currentVersion: string): Promise<MobileUpdateReminderInfo> => {
+  const response = await fetch(UPDATE_REMINDER_RELEASES_API, {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'Mindwtr-App',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub API error: ${response.status}`);
+  }
+  const release = await response.json() as GitHubLatestRelease;
+  const latestVersion = String(release.tag_name || '').trim().replace(/^v/i, '');
+  if (!latestVersion) throw new Error('GitHub release returned no version');
+  return {
+    currentVersion,
+    latestVersion,
+    latestReleasedAt: typeof release.published_at === 'string' ? release.published_at : null,
+    releaseUrl: typeof release.html_url === 'string' && release.html_url.trim()
+      ? release.html_url.trim()
+      : UPDATE_REMINDER_RELEASES_URL,
+  };
+};
+
+const buildUpdateReminderAnnouncement = (info: MobileUpdateReminderInfo): AppAnnouncement => ({
+  id: `update-reminder-${info.latestVersion}`,
+  title: 'Update available',
+  body: `Mindwtr ${info.latestVersion} is available. You are using ${info.currentVersion}. Update when you have a minute to keep fixes and improvements current.`,
+  action: {
+    type: 'url',
+    label: 'View release',
+    url: info.releaseUrl,
+  },
+});
+
 const getDeviceLocale = (): string => {
   try {
     return String(Intl.DateTimeFormat().resolvedOptions().locale || '').trim();
@@ -219,6 +287,10 @@ function RootLayoutContentInner() {
   const [donationPromptOpen, setDonationPromptOpen] = useState(false);
   const [donationDismissedInSession, setDonationDismissedInSession] = useState(false);
   const [donationPromptAllowed, setDonationPromptAllowed] = useState<boolean | null>(null);
+  const [updateReminderOpen, setUpdateReminderOpen] = useState(false);
+  const [updateReminderDismissedInSession, setUpdateReminderDismissedInSession] = useState(false);
+  const [updateReminderAllowed, setUpdateReminderAllowed] = useState<boolean | null>(null);
+  const [updateReminderInfo, setUpdateReminderInfo] = useState<MobileUpdateReminderInfo | null>(null);
   const [promptActivitySettled, setPromptActivitySettled] = useState(false);
 
   const resolveText = useCallback((key: string, fallback: string) => (
@@ -517,6 +589,30 @@ function RootLayoutContentInner() {
     openAnnouncementUrl(action.url);
   }, [dismissDonationPrompt, openAnnouncementUrl, router]);
 
+  const dismissUpdateReminder = useCallback(() => {
+    const latestVersion = updateReminderInfo?.latestVersion;
+    if (latestVersion) {
+      updateLocalUserPromptState((state) => recordUpdateReminderDismissed(state, latestVersion))
+        .catch((error) => {
+          void logWarn('Failed to persist update reminder dismissal', {
+            scope: 'prompt-state',
+            extra: { error: error instanceof Error ? error.message : String(error) },
+          });
+        });
+    }
+    setUpdateReminderDismissedInSession(true);
+    setUpdateReminderOpen(false);
+  }, [updateReminderInfo?.latestVersion]);
+
+  const handleUpdateReminderAction = useCallback((action: AppAnnouncementAction) => {
+    dismissUpdateReminder();
+    if (action.type === 'feedback') {
+      router.push({ pathname: '/settings', params: { settingsScreen: 'about' } } as never);
+      return;
+    }
+    openAnnouncementUrl(action.url);
+  }, [dismissUpdateReminder, openAnnouncementUrl, router]);
+
   useEffect(() => {
     if (
       announcementDismissedInSession
@@ -606,9 +702,28 @@ function RootLayoutContentInner() {
   }, [donationPromptEnabled, isExpoGo]);
 
   useEffect(() => {
+    let cancelled = false;
+    resolveMobileUpdateReminderAllowed({ isExpoGo, isFossBuild })
+      .then((allowed) => {
+        if (!cancelled) setUpdateReminderAllowed(allowed);
+      })
+      .catch((error) => {
+        if (!cancelled) setUpdateReminderAllowed(false);
+        void logWarn('Failed to resolve update reminder channel', {
+          scope: 'prompt-state',
+          extra: { error: error instanceof Error ? error.message : String(error) },
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isExpoGo, isFossBuild]);
+
+  useEffect(() => {
     if (
       donationDismissedInSession
       || donationPromptOpen
+      || updateReminderOpen
       || donationPromptAllowed !== true
       || ACTIVE_APP_ANNOUNCEMENT
       || announcementOpen
@@ -663,6 +778,101 @@ function RootLayoutContentInner() {
     mobileOnboardingGateSettled,
     mobileOnboardingOpen,
     promptActivitySettled,
+    updateReminderOpen,
+  ]);
+
+  useEffect(() => {
+    if (
+      updateReminderDismissedInSession
+      || updateReminderOpen
+      || updateReminderAllowed !== true
+      || ACTIVE_APP_ANNOUNCEMENT
+      || announcementOpen
+      || donationPromptOpen
+      || !isFirstPaintReady
+      || !promptActivitySettled
+      || !mobileOnboardingGateSettled
+      || mobileOnboardingOpen
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const nowMs = Date.now();
+
+    readLocalUserPromptState()
+      .then((promptState) => {
+        if (cancelled) return;
+        if (!shouldCheckUpdateReminder({ nowMs, promptState, updateReminderAllowed: true })) return;
+        updateLocalUserPromptState((state) => recordUpdateReminderChecked(state, nowMs))
+          .then(() => {
+            if (cancelled) return;
+            timer = setTimeout(() => {
+              fetchMobileUpdateReminderInfo(appVersion)
+                .then((info) => {
+                  if (cancelled) return;
+                  return readLocalUserPromptState()
+                    .then((latestPromptState) => {
+                      if (cancelled) return;
+                      if (!shouldShowUpdateReminder({
+                        nowMs: Date.now(),
+                        promptState: latestPromptState,
+                        updateReminderAllowed: true,
+                        currentVersion: info.currentVersion,
+                        latestVersion: info.latestVersion,
+                        latestReleasedAt: info.latestReleasedAt,
+                      })) {
+                        return;
+                      }
+                      return updateLocalUserPromptState((state) => recordUpdateReminderShown(state, Date.now()))
+                        .then(() => {
+                          if (cancelled) return;
+                          setUpdateReminderInfo(info);
+                          setUpdateReminderOpen(true);
+                        });
+                    });
+                })
+                .catch((error) => {
+                  if (!cancelled) setUpdateReminderDismissedInSession(true);
+                  void logWarn('Failed to check update reminder', {
+                    scope: 'prompt-state',
+                    extra: { error: error instanceof Error ? error.message : String(error) },
+                  });
+                });
+            }, 1750);
+          })
+          .catch((error) => {
+            if (!cancelled) setUpdateReminderDismissedInSession(true);
+            void logWarn('Failed to record update reminder check', {
+              scope: 'prompt-state',
+              extra: { error: error instanceof Error ? error.message : String(error) },
+            });
+          });
+      })
+      .catch((error) => {
+        if (!cancelled) setUpdateReminderDismissedInSession(true);
+        void logWarn('Failed to read update reminder state', {
+          scope: 'prompt-state',
+          extra: { error: error instanceof Error ? error.message : String(error) },
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    announcementOpen,
+    appVersion,
+    donationPromptOpen,
+    isFirstPaintReady,
+    mobileOnboardingGateSettled,
+    mobileOnboardingOpen,
+    promptActivitySettled,
+    updateReminderAllowed,
+    updateReminderDismissedInSession,
+    updateReminderOpen,
   ]);
 
   if (storageInitError) {
@@ -765,6 +975,17 @@ function RootLayoutContentInner() {
             visible={donationPromptOpen && !announcementOpen && !mobileOnboardingOpen}
             onAction={handleDonationPromptAction}
             onDismiss={dismissDonationPrompt}
+          />
+          <AppAnnouncementModal
+            announcement={updateReminderInfo ? buildUpdateReminderAnnouncement(updateReminderInfo) : null}
+            visible={
+              updateReminderOpen
+              && !announcementOpen
+              && !donationPromptOpen
+              && !mobileOnboardingOpen
+            }
+            onAction={handleUpdateReminderAction}
+            onDismiss={dismissUpdateReminder}
           />
         </MobileAppLockGate>
         <StatusBar
