@@ -117,6 +117,7 @@ type MobileExtraConfig = {
   isFossBuild?: boolean | string;
   analyticsHeartbeatUrl?: string;
   analyticsHeartbeatChannel?: string;
+  donationPromptEnabled?: boolean | string;
 };
 
 const parseBool = (value: unknown): boolean =>
@@ -124,7 +125,9 @@ const parseBool = (value: unknown): boolean =>
 
 const resolveMobileDonationPromptAllowed = async (options: {
   isExpoGo: boolean;
+  donationPromptEnabled: boolean;
 }): Promise<boolean> => {
+  if (!options.donationPromptEnabled) return false;
   if (options.isExpoGo) return false;
   return Platform.OS === 'android' || Platform.OS === 'ios';
 };
@@ -192,6 +195,7 @@ function RootLayoutContentInner() {
   const isFossBuild = parseBool(extraConfig?.isFossBuild);
   const analyticsHeartbeatUrl = String(extraConfig?.analyticsHeartbeatUrl || '').trim();
   const analyticsHeartbeatChannel = String(extraConfig?.analyticsHeartbeatChannel || '').trim();
+  const donationPromptEnabled = parseBool(extraConfig?.donationPromptEnabled);
   const isExpoGo = Constants.appOwnership === 'expo';
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
   const settingsLanguage = useTaskStore((state) => state.settings?.language);
@@ -585,7 +589,7 @@ function RootLayoutContentInner() {
 
   useEffect(() => {
     let cancelled = false;
-    resolveMobileDonationPromptAllowed({ isExpoGo })
+    resolveMobileDonationPromptAllowed({ donationPromptEnabled, isExpoGo })
       .then((allowed) => {
         if (!cancelled) setDonationPromptAllowed(allowed);
       })
@@ -599,7 +603,7 @@ function RootLayoutContentInner() {
     return () => {
       cancelled = true;
     };
-  }, [isExpoGo]);
+  }, [donationPromptEnabled, isExpoGo]);
 
   useEffect(() => {
     if (

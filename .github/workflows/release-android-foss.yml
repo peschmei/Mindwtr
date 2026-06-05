@@ -34,6 +34,7 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=6144
       DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY || secrets.DROPBOX_APP_KEY }}
       FEEDBACK_ENDPOINT_URL: ${{ vars.FEEDBACK_ENDPOINT_URL || vars.VITE_FEEDBACK_ENDPOINT_URL || 'https://mindwtr-feedback.mindwtr.workers.dev' }}
+      DONATION_PROMPT_ENABLED: "true"
 
     steps:
       - name: Checkout code

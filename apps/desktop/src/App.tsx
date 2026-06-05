@@ -91,13 +91,10 @@ const SettingsView = lazy(wrapSettingsOpenImport(
 
 const DEFAULT_DESKTOP_VIEW = 'agenda';
 const DESKTOP_ONBOARDING_STORAGE_KEY = 'mindwtr:desktop:first-run-onboarding:v1';
-const DONATION_PROMPT_DESKTOP_INSTALL_SOURCES = new Set([
-    'direct',
-    'portable',
-    'github-release',
-    'mac-app-store',
-    'microsoft-store',
-]);
+const DONATION_PROMPT_ENABLED = (
+    import.meta.env.VITE_DONATION_PROMPT_ENABLED === '1'
+    || import.meta.env.VITE_DONATION_PROMPT_ENABLED === 'true'
+);
 
 const normalizeInstallSourceForDonation = (value: string | null | undefined): string => {
     const normalized = String(value ?? '').trim().toLowerCase();
@@ -106,7 +103,7 @@ const normalizeInstallSourceForDonation = (value: string | null | undefined): st
 };
 
 const isDesktopDonationPromptAllowed = (installSource: string | null | undefined): boolean => (
-    DONATION_PROMPT_DESKTOP_INSTALL_SOURCES.has(normalizeInstallSourceForDonation(installSource))
+    DONATION_PROMPT_ENABLED && normalizeInstallSourceForDonation(installSource) !== 'unknown'
 );
 
 const readDesktopOnboardingDismissed = () => {

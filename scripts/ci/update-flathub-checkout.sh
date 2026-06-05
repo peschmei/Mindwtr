@@ -188,6 +188,7 @@ def remove_env_value(name: str) -> None:
             return
 
 set_env_value('VITE_ANALYTICS_HEARTBEAT_URL', heartbeat_url)
+set_env_value('VITE_DONATION_PROMPT_ENABLED', 'true')
 if dropbox_app_key:
     set_env_value('VITE_DROPBOX_APP_KEY', dropbox_app_key)
 else:
