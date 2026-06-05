@@ -47,7 +47,7 @@ describe('task-meta-navigation', () => {
 
         expect(routerMocks.push).toHaveBeenCalledWith({
             pathname: '/projects-screen',
-            params: { projectId: 'project-1', taskId: 'task-1', openToken: '12345' },
+            params: { projectId: 'project-1', taskId: 'task-1', openToken: '12345', taskTab: 'view' },
         });
     });
 
@@ -58,7 +58,7 @@ describe('task-meta-navigation', () => {
 
         expect(routerMocks.push).toHaveBeenCalledWith({
             pathname: '/focus',
-            params: { taskId: 'task-9', openToken: '98765' },
+            params: { taskId: 'task-9', openToken: '98765', taskTab: 'view' },
         });
     });
 

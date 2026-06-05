@@ -57,6 +57,7 @@ import { useTheme } from '../../../contexts/theme-context';
 import { useLanguage } from '../../../contexts/language-context';
 import { useToast } from '../../../contexts/toast-context';
 import { TaskEditModal } from '@/components/task-edit-modal';
+import type { TaskEditTab } from '@/components/task-edit/use-task-edit-state';
 import { PomodoroPanel } from '@/components/pomodoro-panel';
 import {
   formatFocusTimeEstimateLabel,
@@ -78,6 +79,11 @@ const FOCUS_GROUP_BY_OPTIONS: FocusGroupBy[] = ['none', 'context', 'project', 'a
 const FOCUS_SORT_OPTIONS: SortField[] = ['default', 'due', 'start', 'priority', 'created', 'created-desc'];
 const NO_PROJECT_FILTER_ID = SAVED_FILTER_NO_PROJECT_ID;
 const DEFAULT_FOCUS_SORT_BY: SortField = 'default';
+
+function resolveTaskRouteTab(value?: string | string[]): TaskEditTab {
+  const routeValue = Array.isArray(value) ? value[0] : value;
+  return routeValue === 'task' ? 'task' : 'view';
+}
 const FOCUS_VIEW_STATE_STORAGE_KEY = 'mindwtr:view:focus:v1';
 const FOCUS_LIST_INITIAL_RENDER_COUNT = 12;
 const FOCUS_LIST_BATCH_RENDER_COUNT = 12;
@@ -252,7 +258,7 @@ const serializeFocusViewState = (expandedSections: typeof DEFAULT_EXPANDED_SECTI
 });
 
 export default function FocusScreen() {
-  const { taskId, openToken } = useLocalSearchParams<{ taskId?: string; openToken?: string }>();
+  const { taskId, openToken, taskTab } = useLocalSearchParams<{ taskId?: string; openToken?: string; taskTab?: string }>();
   const insets = useSafeAreaInsets();
   const { tasks, projects, settings, updateTask, deleteTask, updateSettings, highlightTaskId, setHighlightTask } = useTaskStore((state) => ({
     tasks: state.tasks,
@@ -271,6 +277,8 @@ export default function FocusScreen() {
   const pullSync = useManualPullSync();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [taskModalDefaultTab, setTaskModalDefaultTab] = useState<TaskEditTab>('view');
+  const [taskModalOpenKey, setTaskModalOpenKey] = useState('manual');
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [deferPickerTask, setDeferPickerTask] = useState<Task | null>(null);
   const [deferPickerDate, setDeferPickerDate] = useState<Date>(() => getStartDateOffset(1));
@@ -701,15 +709,18 @@ export default function FocusScreen() {
 
   useEffect(() => {
     if (!taskId || typeof taskId !== 'string') return;
-    const openKey = `${taskId}:${typeof openToken === 'string' ? openToken : ''}`;
+    const nextTaskTab = resolveTaskRouteTab(taskTab);
+    const openKey = `${taskId}:${typeof openToken === 'string' ? openToken : ''}:${nextTaskTab}`;
     if (lastOpenedFromNotificationRef.current === openKey) return;
     const task = tasks.find((item) => item.id === taskId && !item.deletedAt);
     if (!task) return;
     lastOpenedFromNotificationRef.current = openKey;
     setHighlightTask(task.id);
+    setTaskModalDefaultTab(nextTaskTab);
+    setTaskModalOpenKey(`route:${openKey}`);
     setEditingTask(task);
     setIsModalVisible(true);
-  }, [openToken, setHighlightTask, taskId, tasks]);
+  }, [openToken, setHighlightTask, taskId, taskTab, tasks]);
 
   useEffect(() => {
     if (!highlightTaskId) return;
@@ -1111,6 +1122,8 @@ export default function FocusScreen() {
   }, [focusedTasks, schedule, nextActions, reviewDue]);
 
   const onEdit = useCallback((task: Task) => {
+    setTaskModalDefaultTab('view');
+    setTaskModalOpenKey(`manual:${task.id}`);
     setEditingTask(task);
     setIsModalVisible(true);
   }, []);
@@ -1772,11 +1785,12 @@ export default function FocusScreen() {
         />
       ) : null}
       <TaskEditModal
+        key={taskModalOpenKey}
         visible={isModalVisible}
         task={editingTask}
         onClose={() => setIsModalVisible(false)}
         onSave={onSaveTask}
-        defaultTab="view"
+        defaultTab={taskModalDefaultTab}
         onProjectNavigate={openProjectScreen}
         onContextNavigate={openContextsScreen}
         onTagNavigate={openContextsScreen}

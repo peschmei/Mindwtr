@@ -217,6 +217,7 @@ describe('useRootLayoutNotificationOpenHandler', () => {
       pathname: '/focus',
       params: expect.objectContaining({
         taskId: 'task-1',
+        taskTab: 'view',
       }),
     });
   });
@@ -240,11 +241,11 @@ describe('useRootLayoutNotificationOpenHandler', () => {
       expect(setHighlightTask).toHaveBeenCalledWith('task-1');
       expect(router.push).toHaveBeenNthCalledWith(1, {
         pathname: '/focus',
-        params: { taskId: 'task-1', openToken: 'notif-1:12345:1' },
+        params: { taskId: 'task-1', openToken: 'notif-1:12345:1', taskTab: 'view' },
       });
       expect(router.push).toHaveBeenNthCalledWith(2, {
         pathname: '/focus',
-        params: { taskId: 'task-1', openToken: 'notif-1:12345:2' },
+        params: { taskId: 'task-1', openToken: 'notif-1:12345:2', taskTab: 'view' },
       });
     } finally {
       nowSpy.mockRestore();

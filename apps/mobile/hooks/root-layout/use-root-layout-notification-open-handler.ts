@@ -90,7 +90,7 @@ export function useRootLayoutNotificationOpenHandler({
             taskOpenSequenceRef.current += 1;
             const taskOpenToken = `${notificationId || 'notification'}:${Date.now()}:${taskOpenSequenceRef.current}`;
             useTaskStore.getState().setHighlightTask(taskId);
-            router.push({ pathname: '/focus', params: { taskId, openToken: taskOpenToken } });
+            router.push({ pathname: '/focus', params: { taskId, openToken: taskOpenToken, taskTab: 'view' } });
             return;
         }
         if (projectId) {

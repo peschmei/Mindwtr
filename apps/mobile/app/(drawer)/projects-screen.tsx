@@ -25,6 +25,7 @@ import {
 import { useProjectAttachments } from '@/components/projects-screen/use-project-attachments';
 import { useProjectNotesEditor } from '@/components/projects-screen/use-project-notes-editor';
 import { TaskEditModal } from '@/components/task-edit-modal';
+import type { TaskEditTab } from '@/components/task-edit/use-task-edit-state';
 import { useProjectFiltering } from '@/hooks/use-project-filtering';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useLanguage } from '../../contexts/language-context';
@@ -36,6 +37,11 @@ import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '@/lib/area-filter';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 
 type ProjectTaskSortBy = Extract<TaskSortBy, 'default' | 'due'>;
+
+function resolveTaskRouteTab(value?: string | string[]): TaskEditTab {
+  const routeValue = Array.isArray(value) ? value[0] : value;
+  return routeValue === 'task' ? 'task' : 'view';
+}
 
 export default function ProjectsScreen() {
   const {
@@ -92,12 +98,14 @@ export default function ProjectsScreen() {
   const [showReviewPicker, setShowReviewPicker] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskModalDefaultTab, setTaskModalDefaultTab] = useState<TaskEditTab>('view');
+  const [taskModalOpenKey, setTaskModalOpenKey] = useState('manual');
   const [showAreaPicker, setShowAreaPicker] = useState(false);
   const [showAreaManager, setShowAreaManager] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaColor, setNewAreaColor] = useState('#3b82f6');
   const [expandedAreaColorId, setExpandedAreaColorId] = useState<string | null>(null);
-  const { projectId, taskId, openToken } = useLocalSearchParams<{ projectId?: string; taskId?: string; openToken?: string }>();
+  const { projectId, taskId, openToken, taskTab } = useLocalSearchParams<{ projectId?: string; taskId?: string; openToken?: string; taskTab?: string }>();
   const lastOpenedTaskKeyRef = useRef<string | null>(null);
   const ALL_TAGS = '__all__';
   const NO_TAGS = '__none__';
@@ -253,14 +261,17 @@ export default function ProjectsScreen() {
   useEffect(() => {
     if (!taskId || typeof taskId !== 'string') return;
     if (!selectedProject || selectedProject.id !== projectId) return;
-    const openKey = `${taskId}:${typeof openToken === 'string' ? openToken : ''}`;
+    const nextTaskTab = resolveTaskRouteTab(taskTab);
+    const openKey = `${taskId}:${typeof openToken === 'string' ? openToken : ''}:${nextTaskTab}`;
     if (lastOpenedTaskKeyRef.current === openKey) return;
     const task = tasks.find((item) => item.id === taskId && !item.deletedAt);
     if (!task || task.projectId !== selectedProject.id) return;
     lastOpenedTaskKeyRef.current = openKey;
     setHighlightTask(task.id);
+    setTaskModalDefaultTab(nextTaskTab);
+    setTaskModalOpenKey(`route:${openKey}`);
     setEditingTask(task);
-  }, [openToken, taskId, projectId, selectedProject, tasks, setHighlightTask]);
+  }, [openToken, taskId, projectId, selectedProject, taskTab, tasks, setHighlightTask]);
 
   const sortAreasByName = () => {
     const reordered = [...sortedAreas]
@@ -769,11 +780,12 @@ export default function ProjectsScreen() {
       />
 
       <TaskEditModal
+        key={taskModalOpenKey}
         visible={editingTask !== null}
         task={editingTask}
         onClose={() => setEditingTask(null)}
         onSave={(taskId, updates) => updateTask(taskId, updates)}
-        defaultTab="view"
+        defaultTab={taskModalDefaultTab}
         onProjectNavigate={(projectId) => {
           if (!selectedProject || selectedProject.id !== projectId) {
             openProjectScreen(projectId);

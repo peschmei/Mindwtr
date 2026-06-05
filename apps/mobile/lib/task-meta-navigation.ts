@@ -25,12 +25,12 @@ export function openTaskScreen(taskId: string, projectId?: string) {
     if (projectId) {
         router.push({
             pathname: '/projects-screen',
-            params: { projectId, taskId, openToken },
+            params: { projectId, taskId, openToken, taskTab: 'view' },
         });
         return;
     }
     router.push({
         pathname: '/focus',
-        params: { taskId, openToken },
+        params: { taskId, openToken, taskTab: 'view' },
     });
 }
