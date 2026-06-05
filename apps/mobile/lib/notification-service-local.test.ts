@@ -261,6 +261,7 @@ describe('notification-service-local', () => {
         loop_sound: false,
         message: 'Pay rent',
         play_sound: true,
+        snooze_interval: 10,
         title: 'Pay rent',
         use_big_text: true,
         vibrate: false,

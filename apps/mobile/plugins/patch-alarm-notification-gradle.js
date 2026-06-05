@@ -90,6 +90,56 @@ const applyAlarmDuplicateToastPatchToSource = (original) => original.replace(
 
 const applyAlarmDuplicateToastPatch = (filePath) => patchFile(filePath, applyAlarmDuplicateToastPatchToSource);
 
+const applyAlarmTimingPatchToSource = (original) => {
+  let next = original;
+  const alarmManagerHelperMarker = `    private AlarmManager getAlarmManager() {
+        return (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+    }
+`;
+
+  if (!next.includes('setExactOrAllowWhileIdle(') && next.includes(alarmManagerHelperMarker)) {
+    next = next.replace(
+      alarmManagerHelperMarker,
+      `${alarmManagerHelperMarker}
+    private void setExactOrAllowWhileIdle(AlarmManager alarmManager, long triggerAtMillis, PendingIntent alarmIntent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, alarmIntent);
+            } else {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, alarmIntent);
+            }
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, alarmIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, alarmIntent);
+        } else {
+            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, alarmIntent);
+        }
+    }
+`
+    );
+  }
+
+  next = next.replace(
+    /^([ \t]*)if \(Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.M\) \{\n\1[ \t]{4}alarmManager\.setAndAllowWhileIdle\(AlarmManager\.RTC_WAKEUP, calendar\.getTimeInMillis\(\), alarmIntent\);\n\1\} else if \(Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.KITKAT\) \{\n\1[ \t]{4}alarmManager\.setExact\(AlarmManager\.RTC_WAKEUP, calendar\.getTimeInMillis\(\), alarmIntent\);\n\1\} else \{\n\1[ \t]{4}alarmManager\.set\(AlarmManager\.RTC_WAKEUP, calendar\.getTimeInMillis\(\), alarmIntent\);\n\1\}\n/gm,
+    '$1setExactOrAllowWhileIdle(alarmManager, calendar.getTimeInMillis(), alarmIntent);\n'
+  );
+  next = next.replace(
+    `    void snoozeAlarm(AlarmModel alarm) {
+        Calendar calendar = getCalendarFromAlarm(alarm);
+`,
+    `    void snoozeAlarm(AlarmModel alarm) {
+        Calendar calendar = Calendar.getInstance();
+`
+  );
+
+  return next;
+};
+
+const applyAlarmTimingPatch = (filePath) => patchFile(filePath, applyAlarmTimingPatchToSource);
+
 const applyAlarmReminderBehaviorPatchToSource = (original) => {
   let next = original;
 
@@ -568,6 +618,7 @@ function withAlarmNotificationGradlePatch(config) {
     }
 
     ensurePermission(manifest, 'android.permission.RECEIVE_BOOT_COMPLETED');
+    ensurePermission(manifest, 'android.permission.SCHEDULE_EXACT_ALARM');
 
     ensureReceiver(
       application,
@@ -635,6 +686,9 @@ function withAlarmNotificationGradlePatch(config) {
         if (applyAlarmDuplicateToastPatch(candidate)) {
           logPatchedCandidate('alarm-duplicate-toast-patch', candidate);
         }
+        if (applyAlarmTimingPatch(candidate)) {
+          logPatchedCandidate('alarm-timing-patch', candidate);
+        }
         if (applyAlarmReminderBehaviorPatch(candidate)) {
           logPatchedCandidate('alarm-reminder-behavior-patch', candidate);
         }
@@ -695,6 +749,7 @@ module.exports.__testables = {
   applyGradleCompatPatchToSource,
   applyAlarmPendingIntentPatchToSource,
   applyAlarmDuplicateToastPatchToSource,
+  applyAlarmTimingPatchToSource,
   applyAlarmReminderBehaviorPatchToSource,
   applyAlarmAudioInterfacePatchToSource,
   applyAlarmDismissReceiverPatchToSource,

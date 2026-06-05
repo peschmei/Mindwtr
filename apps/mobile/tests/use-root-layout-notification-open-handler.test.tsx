@@ -193,11 +193,12 @@ describe('useRootLayoutNotificationOpenHandler', () => {
     });
   });
 
-  it('waits for startup navigation to leave the root path before replaying a pending open', async () => {
+  it('waits for app readiness before replaying a pending open from the root path', async () => {
     const router = { push: vi.fn() };
     consumePendingNotificationOpenPayload.mockResolvedValue({
-      kind: 'weekly-review',
-      notificationId: 'pending-weekly',
+      kind: 'task-reminder',
+      notificationId: 'pending-task',
+      taskId: 'task-1',
     });
 
     let tree!: ReturnType<typeof create>;
@@ -208,12 +209,15 @@ describe('useRootLayoutNotificationOpenHandler', () => {
     expect(router.push).not.toHaveBeenCalled();
 
     await act(async () => {
-      tree.update(<TestHarnessWithState appReady pathname="/inbox" router={router} />);
+      tree.update(<TestHarnessWithState appReady pathname="/" router={router} />);
     });
 
+    expect(setHighlightTask).toHaveBeenCalledWith('task-1');
     expect(router.push).toHaveBeenCalledWith({
-      pathname: '/weekly-review',
-      params: { openToken: 'pending-weekly' },
+      pathname: '/focus',
+      params: expect.objectContaining({
+        taskId: 'task-1',
+      }),
     });
   });
 

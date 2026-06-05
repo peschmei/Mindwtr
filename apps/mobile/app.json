@@ -41,6 +41,7 @@
       "permissions": [
         "RECORD_AUDIO",
         "POST_NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM",
         "READ_CALENDAR",
         "WRITE_CALENDAR"
       ],

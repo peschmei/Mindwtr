@@ -6,6 +6,7 @@ const {
   applyGradleCompatPatchToSource,
   applyAlarmPendingIntentPatchToSource,
   applyAlarmDuplicateToastPatchToSource,
+  applyAlarmTimingPatchToSource,
   applyAlarmReminderBehaviorPatchToSource,
   applyAlarmAudioInterfacePatchToSource,
   applyAlarmDismissReceiverPatchToSource,
@@ -52,6 +53,43 @@ describe('patch-alarm-notification-gradle', () => {
     expect(output).not.toContain('Toast.makeText');
     expect(output).toContain('Duplicate alarms are reported to JS via promise rejection');
     expect(output).toContain('return contain;');
+  });
+
+  it('patches Android task reminder timing for exact delivery and sane snooze', () => {
+    const input = `class AlarmUtil {
+    private AlarmManager getAlarmManager() {
+        return (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+    }
+
+    void setAlarm(Alarm alarm, AlarmManager alarmManager, Calendar calendar, PendingIntent alarmIntent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
+        } else {
+            alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
+        }
+    }
+
+    void snoozeAlarm(AlarmModel alarm) {
+        Calendar calendar = getCalendarFromAlarm(alarm);
+
+        this.stopAlarmSound();
+
+        calendar.add(Calendar.MINUTE, alarm.getSnoozeInterval());
+    }
+}`;
+
+    const output = applyAlarmTimingPatchToSource(input);
+
+    expect(output).toContain('private void setExactOrAllowWhileIdle');
+    expect(output).toContain('alarmManager.canScheduleExactAlarms()');
+    expect(output).toContain('alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, alarmIntent);');
+    expect(output).toContain('alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, alarmIntent);');
+    expect(output).toContain('setExactOrAllowWhileIdle(alarmManager, calendar.getTimeInMillis(), alarmIntent);');
+    expect(output).not.toContain('alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);');
+    expect(output).toContain('Calendar calendar = Calendar.getInstance();');
+    expect(output).not.toContain('Calendar calendar = getCalendarFromAlarm(alarm);');
   });
 
   it('patches AlarmUtil reminder behavior away from alarm semantics', () => {

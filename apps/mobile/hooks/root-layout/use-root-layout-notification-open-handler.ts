@@ -43,7 +43,7 @@ export function useRootLayoutNotificationOpenHandler({
     const handledCompleteActionsRef = useRef(new Set<string>());
     const taskOpenSequenceRef = useRef(0);
     const normalizedPathname = useMemo(() => String(pathname || '').trim(), [pathname]);
-    const canNavigate = appReady && normalizedPathname.length > 0 && normalizedPathname !== '/';
+    const canNavigate = appReady && normalizedPathname.length > 0;
 
     const routeNotificationOpen = useCallback((payload: {
         notificationId?: string;

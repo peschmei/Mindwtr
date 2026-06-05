@@ -100,6 +100,7 @@ const ALARM_SCHEDULE_BATCH_SIZE = 10;
 const ONE_SHOT_TOP_UP_DELAY_MS = 5_000;
 const MAX_SETTIMEOUT_DELAY_MS = 24 * 60 * 60 * 1000;
 const NOTIFICATION_EVENT_RESCHEDULE_DEBOUNCE_MS = 250;
+const TASK_REMINDER_SNOOZE_MINUTES = 10;
 
 let started = false;
 let alarmApi: AlarmNotificationsApi | null = null;
@@ -530,6 +531,7 @@ async function scheduleAlarmForKey(api: AlarmNotificationsApi, key: string, conf
       alarmKey: key,
       ...(config.hasCompleteAction === true ? { notificationActionComplete: 'true' } : {}),
     },
+    ...(config.hasSnoozeAction === true ? { snooze_interval: TASK_REMINDER_SNOOZE_MINUTES } : {}),
   };
 
   let scheduledId: number | null = null;
