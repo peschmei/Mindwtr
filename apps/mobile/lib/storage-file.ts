@@ -186,6 +186,21 @@ function sanitizeJsonText(raw: string): string {
     return text;
 }
 
+const getUtf8ByteLength = (value: string): number => {
+    if (typeof TextEncoder === 'function') {
+        return new TextEncoder().encode(value).byteLength;
+    }
+    return unescape(encodeURIComponent(value)).length;
+};
+
+const padForNonTruncatingOverwrite = (content: string, previousContent: string | null): string => {
+    if (!previousContent) return content;
+    const previousBytes = getUtf8ByteLength(previousContent);
+    const nextBytes = getUtf8ByteLength(content);
+    if (nextBytes >= previousBytes) return content;
+    return `${content}${' '.repeat(previousBytes - nextBytes)}`;
+};
+
 function parseAppData(text: string): AppData {
     const sanitized = sanitizeJsonText(text);
     if (!sanitized) throw new Error('Sync file is empty');
@@ -580,7 +595,16 @@ export const writeSyncFile = async (fileUri: string, data: AppData): Promise<voi
 
         // SAF URIs (content://) require special handling on Android
         if (resolvedUri.startsWith('content://') && StorageAccessFramework) {
-            await StorageAccessFramework.writeAsStringAsync(resolvedUri, content);
+            const previousContent = await readFileText(resolvedUri).catch(() => null);
+            await StorageAccessFramework.writeAsStringAsync(
+                resolvedUri,
+                padForNonTruncatingOverwrite(content, previousContent)
+            );
+            const writtenContent = await readFileText(resolvedUri);
+            if (!writtenContent) {
+                throw new Error('Sync file write verification failed: file is empty after write.');
+            }
+            parseAppData(writtenContent);
             void logInfo('Written sync file via SAF', { scope: 'sync', extra: { fileUri: resolvedUri } });
         } else {
             // Best-effort backup before overwriting, for recovery.
