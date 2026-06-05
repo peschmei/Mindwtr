@@ -16,14 +16,19 @@ import { ToastProvider, useToast } from '../contexts/toast-context';
 import { ThemeProvider, useTheme } from '../contexts/theme-context';
 import { LanguageProvider, useLanguage } from '../contexts/language-context';
 import {
+  ACTIVE_APP_ANNOUNCEMENT,
+  APP_ANNOUNCEMENT_DISMISSED_VALUE,
   addBreadcrumb,
   consoleLogger,
   configureDateFormatting,
+  getAnnouncementDismissalStorageKey,
   isSupportedLanguage,
   setStorageAdapter,
   setLogger,
+  shouldShowAppAnnouncement,
   translateWithFallback,
   useTaskStore,
+  type AppAnnouncementAction,
 } from '@mindwtr/core';
 import { mobileStorage } from '../lib/storage-adapter';
 import { markStartupPhase } from '../lib/startup-profiler';
@@ -38,6 +43,7 @@ import { useRootLayoutStartup } from '@/hooks/root-layout/use-root-layout-startu
 import { useRootLayoutSyncEffects } from '@/hooks/root-layout/use-root-layout-sync-effects';
 import { ProjectNextActionPromptProvider } from '@/components/project-next-action-prompt';
 import { ThemedAlertProvider } from '@/components/themed-alert';
+import { AppAnnouncementModal } from '@/components/app-announcement-modal';
 import { MobileOnboardingFlow } from '@/components/MobileOnboardingFlow';
 import { MobileAppLockGate } from '@/components/mobile-app-lock-gate';
 import { applyAndroidSystemBars } from '@/lib/android-system-bars';
@@ -188,6 +194,9 @@ function RootLayoutContentInner() {
   const [mobileOnboardingOpen, setMobileOnboardingOpen] = useState(false);
   const [mobileOnboardingBusy, setMobileOnboardingBusy] = useState(false);
   const [mobileOnboardingError, setMobileOnboardingError] = useState<string | null>(null);
+  const [mobileOnboardingGateSettled, setMobileOnboardingGateSettled] = useState(false);
+  const [announcementOpen, setAnnouncementOpen] = useState(false);
+  const [announcementDismissedInSession, setAnnouncementDismissedInSession] = useState(false);
 
   const resolveText = useCallback((key: string, fallback: string) => (
     translateWithFallback(t, key, fallback)
@@ -324,13 +333,16 @@ function RootLayoutContentInner() {
     if (
       !mobileOnboardingDismissalLoaded
       || !dataReady
-      || mobileOnboardingDismissed
-      || visibleDataCount > 0
     ) {
+      return undefined;
+    }
+    if (mobileOnboardingDismissed || visibleDataCount > 0) {
+      setMobileOnboardingGateSettled(true);
       return undefined;
     }
 
     let cancelled = false;
+    setMobileOnboardingGateSettled(false);
     AsyncStorage.getItem(SYNC_BACKEND_KEY)
       .then((rawBackend) => {
         if (cancelled) return;
@@ -343,6 +355,7 @@ function RootLayoutContentInner() {
         })) {
           setMobileOnboardingOpen(true);
         }
+        setMobileOnboardingGateSettled(true);
       })
       .catch((error) => {
         void logError(error, { scope: 'onboarding', extra: { step: 'readMobileSyncBackend' } });
@@ -355,6 +368,7 @@ function RootLayoutContentInner() {
         })) {
           setMobileOnboardingOpen(true);
         }
+        setMobileOnboardingGateSettled(true);
       });
 
     return () => {
@@ -428,6 +442,79 @@ function RootLayoutContentInner() {
     router,
     seedGettingStarted,
     showToast,
+  ]);
+
+  const dismissAppAnnouncement = useCallback(() => {
+    const announcement = ACTIVE_APP_ANNOUNCEMENT;
+    setAnnouncementDismissedInSession(true);
+    setAnnouncementOpen(false);
+    if (!announcement) return;
+    AsyncStorage.setItem(
+      getAnnouncementDismissalStorageKey(announcement.id),
+      APP_ANNOUNCEMENT_DISMISSED_VALUE,
+    ).catch((error) => {
+      void logWarn('Failed to persist announcement dismissal', {
+        scope: 'announcement',
+        extra: { error: error instanceof Error ? error.message : String(error) },
+      });
+    });
+  }, []);
+
+  const openAnnouncementUrl = useCallback((url: string) => {
+    const nextUrl = url.trim();
+    if (!nextUrl) return;
+    Linking.openURL(nextUrl).catch((error) => {
+      void logWarn('Failed to open announcement link', {
+        scope: 'announcement',
+        extra: { error: error instanceof Error ? error.message : String(error) },
+      });
+    });
+  }, []);
+
+  const handleAppAnnouncementAction = useCallback((action: AppAnnouncementAction) => {
+    dismissAppAnnouncement();
+    if (action.type === 'feedback') {
+      router.push({ pathname: '/settings', params: { settingsScreen: 'about' } } as never);
+      return;
+    }
+    openAnnouncementUrl(action.url);
+  }, [dismissAppAnnouncement, openAnnouncementUrl, router]);
+
+  useEffect(() => {
+    if (
+      announcementDismissedInSession
+      || !isFirstPaintReady
+      || !mobileOnboardingGateSettled
+      || mobileOnboardingOpen
+    ) {
+      return undefined;
+    }
+
+    const announcement = ACTIVE_APP_ANNOUNCEMENT;
+    if (!shouldShowAppAnnouncement(announcement, null)) return undefined;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const openWhenUndismissed = (dismissedValue: string | null) => {
+      if (cancelled || !shouldShowAppAnnouncement(announcement, dismissedValue)) return;
+      timer = setTimeout(() => {
+        if (!cancelled) setAnnouncementOpen(true);
+      }, 250);
+    };
+
+    AsyncStorage.getItem(getAnnouncementDismissalStorageKey(announcement.id))
+      .then(openWhenUndismissed)
+      .catch(() => openWhenUndismissed(null));
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    announcementDismissedInSession,
+    isFirstPaintReady,
+    mobileOnboardingGateSettled,
+    mobileOnboardingOpen,
   ]);
 
   useEffect(() => {
@@ -539,6 +626,12 @@ function RootLayoutContentInner() {
             onOpenSync={openOnboardingSync}
             onSkip={dismissMobileOnboarding}
             onStartFresh={startFreshOnboarding}
+          />
+          <AppAnnouncementModal
+            announcement={ACTIVE_APP_ANNOUNCEMENT}
+            visible={announcementOpen && !mobileOnboardingOpen}
+            onAction={handleAppAnnouncementAction}
+            onDismiss={dismissAppAnnouncement}
           />
         </MobileAppLockGate>
         <StatusBar

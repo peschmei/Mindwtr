@@ -11,9 +11,22 @@ import { ArchiveView } from './components/views/ArchiveView';
 import { TrashView } from './components/views/TrashView';
 import { AgendaView } from './components/views/AgendaView';
 import { SearchView } from './components/views/SearchView';
-import { addBreadcrumb, useTaskStore, configureDateFormatting, flushPendingSave, isSupportedLanguage, translateWithFallback } from '@mindwtr/core';
+import {
+    ACTIVE_APP_ANNOUNCEMENT,
+    APP_ANNOUNCEMENT_DISMISSED_VALUE,
+    addBreadcrumb,
+    configureDateFormatting,
+    flushPendingSave,
+    getAnnouncementDismissalStorageKey,
+    isSupportedLanguage,
+    shouldShowAppAnnouncement,
+    translateWithFallback,
+    useTaskStore,
+    type AppAnnouncementAction,
+} from '@mindwtr/core';
 import { GlobalSearch } from './components/GlobalSearch';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppAnnouncementModal } from './components/AppAnnouncementModal';
 import { DesktopOnboardingFlow } from './components/DesktopOnboardingFlow';
 import { useLanguage } from './contexts/language-context';
 import { KeybindingProvider } from './contexts/keybinding-context';
@@ -100,6 +113,9 @@ function App() {
     const [desktopOnboardingOpen, setDesktopOnboardingOpen] = useState(false);
     const [desktopOnboardingBusy, setDesktopOnboardingBusy] = useState(false);
     const [desktopOnboardingError, setDesktopOnboardingError] = useState<string | null>(null);
+    const [desktopOnboardingGateSettled, setDesktopOnboardingGateSettled] = useState(false);
+    const [announcementOpen, setAnnouncementOpen] = useState(false);
+    const [announcementDismissedInSession, setAnnouncementDismissedInSession] = useState(false);
     const [, startTransition] = useTransition();
     const fetchData = useTaskStore((state) => state.fetchData);
     const seedGettingStarted = useTaskStore((state) => state.seedGettingStarted);
@@ -716,8 +732,14 @@ function App() {
     }, [currentView, handleViewChange, isObsidianEnabled]);
 
     useEffect(() => {
-        if (!hasHydratedSettings || isLoading || desktopOnboardingDismissed || visibleDataCount > 0) return;
+        if (!hasHydratedSettings || isLoading) return;
+        if (desktopOnboardingDismissed || visibleDataCount > 0) {
+            setDesktopOnboardingGateSettled(true);
+            return;
+        }
+
         let cancelled = false;
+        setDesktopOnboardingGateSettled(false);
         SyncService.getSyncBackend()
             .then((backend) => {
                 if (cancelled) return;
@@ -730,6 +752,7 @@ function App() {
                 })) {
                     setDesktopOnboardingOpen(true);
                 }
+                setDesktopOnboardingGateSettled(true);
             })
             .catch((error) => {
                 void logError(error, { scope: 'onboarding', step: 'readSyncBackend' });
@@ -741,6 +764,9 @@ function App() {
                     syncBackend: 'off',
                 })) {
                     setDesktopOnboardingOpen(true);
+                }
+                if (!cancelled) {
+                    setDesktopOnboardingGateSettled(true);
                 }
             });
         return () => {
@@ -791,6 +817,93 @@ function App() {
             })
             .finally(() => setDesktopOnboardingBusy(false));
     }, [desktopOnboardingBusy, dismissDesktopOnboarding, handleViewChange, seedGettingStarted, showToast]);
+
+    const dismissAppAnnouncement = useCallback(() => {
+        const announcement = ACTIVE_APP_ANNOUNCEMENT;
+        if (announcement && typeof window !== 'undefined') {
+            try {
+                window.localStorage.setItem(
+                    getAnnouncementDismissalStorageKey(announcement.id),
+                    APP_ANNOUNCEMENT_DISMISSED_VALUE,
+                );
+            } catch {
+                // Keep the in-memory dismissal for this session when localStorage is unavailable.
+            }
+        }
+        setAnnouncementDismissedInSession(true);
+        setAnnouncementOpen(false);
+    }, []);
+
+    const openAnnouncementUrl = useCallback(async (url: string) => {
+        const nextUrl = url.trim();
+        if (!nextUrl) return;
+        let openError: unknown = null;
+        if (isTauriRuntime()) {
+            try {
+                const { open } = await import('@tauri-apps/plugin-shell');
+                await open(nextUrl);
+                return;
+            } catch (error) {
+                openError = error;
+            }
+        }
+
+        const opened = window.open(nextUrl, '_blank', 'noopener,noreferrer');
+        if (!opened) {
+            void logError(openError ?? new Error('Failed to open announcement link'), {
+                scope: 'announcement',
+                step: 'openUrl',
+            });
+        }
+    }, []);
+
+    const handleAppAnnouncementAction = useCallback((action: AppAnnouncementAction) => {
+        dismissAppAnnouncement();
+        if (action.type === 'feedback') {
+            setSettingsInitialPage('about');
+            setSettingsOnboardingHintPage(undefined);
+            handleViewChange('settings');
+            return;
+        }
+        void openAnnouncementUrl(action.url);
+    }, [dismissAppAnnouncement, handleViewChange, openAnnouncementUrl]);
+
+    useEffect(() => {
+        if (import.meta.env.MODE === 'test' || import.meta.env.VITEST || process.env.NODE_ENV === 'test') return;
+        if (
+            announcementDismissedInSession
+            || !hasHydratedSettings
+            || isLoading
+            || !desktopOnboardingGateSettled
+            || desktopOnboardingOpen
+            || closePromptOpen
+            || externalSyncChange
+        ) {
+            return;
+        }
+
+        const announcement = ACTIVE_APP_ANNOUNCEMENT;
+        if (!shouldShowAppAnnouncement(announcement, null)) return;
+
+        let dismissedValue: string | null = null;
+        try {
+            dismissedValue = window.localStorage.getItem(getAnnouncementDismissalStorageKey(announcement.id));
+        } catch {
+            dismissedValue = null;
+        }
+        if (!shouldShowAppAnnouncement(announcement, dismissedValue)) return;
+
+        const timer = window.setTimeout(() => setAnnouncementOpen(true), 250);
+        return () => window.clearTimeout(timer);
+    }, [
+        announcementDismissedInSession,
+        closePromptOpen,
+        desktopOnboardingGateSettled,
+        desktopOnboardingOpen,
+        externalSyncChange,
+        hasHydratedSettings,
+        isLoading,
+    ]);
 
     const LoadingFallback = ({ view }: { view: string }) => {
         useEffect(() => {
@@ -887,6 +1000,17 @@ function App() {
                         onOpenImport={() => openSettingsPage('data')}
                         onStartFresh={handleStartFreshOnboarding}
                         onSkip={dismissDesktopOnboarding}
+                    />
+                    <AppAnnouncementModal
+                        announcement={ACTIVE_APP_ANNOUNCEMENT}
+                        isOpen={
+                            announcementOpen
+                            && !desktopOnboardingOpen
+                            && !closePromptOpen
+                            && !externalSyncChange
+                        }
+                        onAction={handleAppAnnouncementAction}
+                        onDismiss={dismissAppAnnouncement}
                     />
                     {externalSyncChange && (
                         <div

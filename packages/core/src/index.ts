@@ -84,6 +84,17 @@ export type {
 } from './bulk-organize';
 
 export {
+    ACTIVE_APP_ANNOUNCEMENT,
+    APP_ANNOUNCEMENT_DISMISSED_VALUE,
+    getAnnouncementDismissalStorageKey,
+    shouldShowAppAnnouncement,
+} from './announcements';
+export type {
+    AppAnnouncement,
+    AppAnnouncementAction,
+} from './announcements';
+
+export {
     buildFeedbackSubmissionPayload,
     FEEDBACK_CATEGORIES,
     isFeedbackCategory,
