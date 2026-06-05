@@ -1,7 +1,6 @@
 import '../polyfills';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { Stack, usePathname, useRouter } from 'expo-router';
@@ -125,17 +124,9 @@ const parseBool = (value: unknown): boolean =>
 
 const resolveMobileDonationPromptAllowed = async (options: {
   isExpoGo: boolean;
-  isFossBuild: boolean;
 }): Promise<boolean> => {
   if (options.isExpoGo) return false;
-  if (Platform.OS !== 'android') return false;
-  if (options.isFossBuild) return true;
-  try {
-    const referrer = await Application.getInstallReferrerAsync();
-    return !(referrer || '').trim();
-  } catch {
-    return false;
-  }
+  return Platform.OS === 'android' || Platform.OS === 'ios';
 };
 
 const getDeviceLocale = (): string => {
@@ -594,7 +585,7 @@ function RootLayoutContentInner() {
 
   useEffect(() => {
     let cancelled = false;
-    resolveMobileDonationPromptAllowed({ isExpoGo, isFossBuild })
+    resolveMobileDonationPromptAllowed({ isExpoGo })
       .then((allowed) => {
         if (!cancelled) setDonationPromptAllowed(allowed);
       })
@@ -608,7 +599,7 @@ function RootLayoutContentInner() {
     return () => {
       cancelled = true;
     };
-  }, [isExpoGo, isFossBuild]);
+  }, [isExpoGo]);
 
   useEffect(() => {
     if (

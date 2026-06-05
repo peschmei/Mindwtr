@@ -91,7 +91,13 @@ const SettingsView = lazy(wrapSettingsOpenImport(
 
 const DEFAULT_DESKTOP_VIEW = 'agenda';
 const DESKTOP_ONBOARDING_STORAGE_KEY = 'mindwtr:desktop:first-run-onboarding:v1';
-const DONATION_PROMPT_DESKTOP_INSTALL_SOURCES = new Set(['direct', 'portable', 'github-release']);
+const DONATION_PROMPT_DESKTOP_INSTALL_SOURCES = new Set([
+    'direct',
+    'portable',
+    'github-release',
+    'mac-app-store',
+    'microsoft-store',
+]);
 
 const normalizeInstallSourceForDonation = (value: string | null | undefined): string => {
     const normalized = String(value ?? '').trim().toLowerCase();
