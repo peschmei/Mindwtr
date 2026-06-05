@@ -49,6 +49,7 @@ export function AppAnnouncementModal({
     if (!isOpen || !announcement) return null;
 
     const action = announcement.action;
+    const dismissLabel = announcement.dismissLabel ?? 'Not now';
 
     return (
         <ModalPortal>
@@ -110,7 +111,7 @@ export function AppAnnouncementModal({
 
                 <div className="flex flex-wrap justify-end gap-2 px-4 py-3">
                     <Button ref={dismissButtonRef} variant="secondary" onClick={onDismiss}>
-                        Not now
+                        {dismissLabel}
                     </Button>
                     {action ? (
                         <Button

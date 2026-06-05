@@ -197,10 +197,10 @@ const getDesktopReviewTarget = (installSource: InstallSource | null): { label: s
     const platform = getDesktopPlatform();
     if (platform === 'linux') return null;
     if (installSource === 'microsoft-store' || platform === 'windows') {
-        return { label: 'Open Microsoft Store', url: MS_STORE_REVIEW_URL };
+        return { label: 'Rate Mindwtr', url: MS_STORE_REVIEW_URL };
     }
     if (installSource === 'mac-app-store' || platform === 'macos') {
-        return { label: 'Open App Store', url: MAC_APP_STORE_REVIEW_URL };
+        return { label: 'Rate Mindwtr', url: MAC_APP_STORE_REVIEW_URL };
     }
     return {
         label: 'Open GitHub',
@@ -244,8 +244,8 @@ const buildPromptTestReviewAnnouncement = (installSource: InstallSource | null):
     if (!target) return null;
     return {
         id: 'prompt-test-review',
-        title: 'Review prompt test',
-        body: 'Desktop builds do not have a native in-app review sheet. This test opens the best review destination for this platform.',
+        title: 'Enjoying Mindwtr?',
+        body: 'A quick rating helps others discover it. It only takes a moment.',
         action: {
             type: 'url',
             label: target.label,

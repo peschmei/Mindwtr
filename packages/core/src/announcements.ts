@@ -13,6 +13,7 @@ export type AppAnnouncement = {
     id: string;
     title: string;
     body: string;
+    dismissLabel?: string;
     action?: AppAnnouncementAction;
 };
 
@@ -20,8 +21,9 @@ export const APP_ANNOUNCEMENT_DISMISSED_VALUE = 'dismissed';
 
 export const DONATION_PROMPT_ANNOUNCEMENT: AppAnnouncement = {
     id: 'support-mindwtr-one-time-v1',
-    title: 'Support Mindwtr',
-    body: 'Mindwtr is free and local-first. If it has become useful to you, a voluntary one-time contribution helps keep development sustainable.',
+    title: 'Mindwtr is free, forever',
+    body: 'No ads, no paywalls. Mindwtr is built and maintained by one person. If it helps you, you can support its development. Either way, thank you.',
+    dismissLabel: 'No thanks',
     action: {
         type: 'url',
         label: 'Support Mindwtr',

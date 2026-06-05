@@ -32,6 +32,7 @@ export function AppAnnouncementModal({
   if (!announcement) return null;
 
   const action = announcement.action;
+  const dismissLabel = announcement.dismissLabel ?? 'Not now';
   const actionIcon = action?.type === 'feedback'
     ? <MessageSquare color={tc.onTint} size={16} strokeWidth={2.2} />
     : <ExternalLink color={tc.onTint} size={16} strokeWidth={2.2} />;
@@ -87,7 +88,7 @@ export function AppAnnouncementModal({
                 style={[styles.secondaryButton, { borderColor: tc.border }]}
               >
                 <Text numberOfLines={1} style={[styles.secondaryButtonText, { color: tc.secondaryText }]}>
-                  Not now
+                  {dismissLabel}
                 </Text>
               </TouchableOpacity>
               {action ? (
