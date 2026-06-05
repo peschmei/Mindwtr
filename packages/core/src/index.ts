@@ -282,6 +282,7 @@ export {
     extractWaitingPerson,
     FOCUS_NEXT_DUE_SOON_WINDOW_DAYS,
     getChecklistProgress,
+    getProjectDeadlineBoosts,
     getFocusSequentialFirstTaskIds,
     getSequentialFirstTaskIds,
     getStatusColor,
@@ -304,6 +305,7 @@ export {
     STATUS_COLORS,
 } from './task-utils';
 export type {
+    ProjectDeadlineBoost,
     SpeechResultLike,
     SpeechUpdatePlan,
 } from './task-utils';

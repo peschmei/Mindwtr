@@ -27,6 +27,7 @@ import {
   shouldShowTaskForStart,
   getFocusSequentialFirstTaskIds,
   generateUUID,
+  getProjectDeadlineBoosts,
   hasActiveFilterCriteria,
   markSavedFilterDeleted,
   normalizeFocusTaskLimit,
@@ -50,6 +51,7 @@ import {
   type FilterCriteria,
   type SavedFilter,
   type SortField,
+  type ProjectDeadlineBoost,
 } from '@mindwtr/core';
 import { SwipeableTaskItem } from '@/components/swipeable-task-item';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -83,6 +85,16 @@ const DEFAULT_FOCUS_SORT_BY: SortField = 'default';
 function resolveTaskRouteTab(value?: string | string[]): TaskEditTab {
   const routeValue = Array.isArray(value) ? value[0] : value;
   return routeValue === 'task' ? 'task' : 'view';
+}
+
+function getProjectDeadlineBoostLabel(
+  boost: ProjectDeadlineBoost | undefined,
+  resolveText: (key: string, fallback: string) => string,
+): string | undefined {
+  if (!boost) return undefined;
+  return boost.isOverdue
+    ? resolveText('focus.projectOverdue', 'Project overdue')
+    : resolveText('focus.projectDueToday', 'Project due today');
 }
 const FOCUS_VIEW_STATE_STORAGE_KEY = 'mindwtr:view:focus:v1';
 const FOCUS_LIST_INITIAL_RENDER_COUNT = 12;
@@ -779,7 +791,7 @@ export default function FocusScreen() {
     });
   }, [activeSavedFilter?.sortOrder, effectiveFocusSortBy, prioritiesEnabled, projects]);
 
-  const { focusedTasks, schedule, nextActions, reviewDue } = useMemo(() => {
+  const { focusedTasks, schedule, nextActions, reviewDue, projectDeadlineBoosts } = useMemo(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -815,6 +827,9 @@ export default function FocusScreen() {
       if (isSequentialBlocked(task)) return false;
       return !scheduleIds.has(task.id);
     });
+    const nextProjectDeadlineBoosts = effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY
+      ? getProjectDeadlineBoosts(nextItems, projects, { now })
+      : new Map<string, ProjectDeadlineBoost>();
 
     const reviewDueItems = nonFocusedTasks
       .filter((task) => isDueForReview(task.reviewAt, now))
@@ -832,15 +847,18 @@ export default function FocusScreen() {
         ? sortFocusNextActions(nextItems, {
           now,
           prioritizeByPriority: prioritiesEnabled,
+          projectDeadlineBoosts: nextProjectDeadlineBoosts,
         })
         : sortBySavedPerspective(nextItems),
       reviewDue: effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY ? reviewDueItems : sortBySavedPerspective(reviewDueItems),
+      projectDeadlineBoosts: nextProjectDeadlineBoosts,
     };
   }, [
     baseActiveTasks,
     effectiveFocusSortBy,
     filteredActiveTasks,
     prioritiesEnabled,
+    projects,
     sequentialProjectIds,
     sequentialWithinSectionProjectIds,
     sortBySavedPerspective,
@@ -1267,6 +1285,10 @@ export default function FocusScreen() {
     }
 
     const canDeferTask = !item.task.dueDate && (item.task.isFocusedToday === true || item.task.status === 'next');
+    const projectDeadlineLabel = getProjectDeadlineBoostLabel(
+      projectDeadlineBoosts.get(item.task.id),
+      resolveText,
+    );
 
     return (
       <View
@@ -1285,6 +1307,7 @@ export default function FocusScreen() {
           isHighlighted={item.task.id === highlightTaskId}
           showFocusToggle
           hideStatusBadge
+          projectDeadlineLabel={projectDeadlineLabel}
           onLongPressAction={canDeferTask ? () => openDeferMenu(item.task) : undefined}
           onLongPressActionLabel={canDeferTask ? resolveText('review.startTime', 'Defer until') : undefined}
           onProjectPress={openProjectScreen}

@@ -513,6 +513,80 @@ describe('AgendaView', () => {
         expect(undatedRow!.compareDocumentPosition(futureRow!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
+    it('surfaces one next action from a project due today before unrelated undated tasks', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-02-28T12:00:00.000Z'));
+
+        const project: Project = {
+            id: 'due-project',
+            title: 'Due project',
+            status: 'active',
+            dueDate: '2026-02-28T17:00:00.000Z',
+            color: '#123456',
+            order: 0,
+            tagIds: [],
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        };
+        const unrelatedTask: Task = {
+            id: 'unrelated-next',
+            title: 'Unrelated next',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            createdAt: '2026-02-20T00:00:00.000Z',
+            updatedAt: '2026-02-20T00:00:00.000Z',
+        };
+        const projectSecond: Task = {
+            id: 'project-second',
+            title: 'Project second',
+            status: 'next',
+            projectId: project.id,
+            order: 1,
+            orderNum: 1,
+            tags: [],
+            contexts: [],
+            createdAt: '2026-02-21T00:00:00.000Z',
+            updatedAt: '2026-02-21T00:00:00.000Z',
+        };
+        const projectFirst: Task = {
+            id: 'project-first',
+            title: 'Project first',
+            status: 'next',
+            projectId: project.id,
+            order: 0,
+            orderNum: 0,
+            tags: [],
+            contexts: [],
+            createdAt: '2026-02-22T00:00:00.000Z',
+            updatedAt: '2026-02-22T00:00:00.000Z',
+        };
+
+        useTaskStore.setState({
+            tasks: [unrelatedTask, projectSecond, projectFirst],
+            _allTasks: [unrelatedTask, projectSecond, projectFirst],
+            projects: [project],
+            _allProjects: [project],
+            areas: [],
+            _allAreas: [],
+            settings: {},
+            highlightTaskId: null,
+        });
+
+        const { container, getByText } = renderAgenda();
+        const firstRow = container.querySelector('[data-task-id="project-first"]');
+        const unrelatedRow = container.querySelector('[data-task-id="unrelated-next"]');
+        const secondRow = container.querySelector('[data-task-id="project-second"]');
+
+        expect(firstRow).toBeTruthy();
+        expect(unrelatedRow).toBeTruthy();
+        expect(secondRow).toBeTruthy();
+        expect(firstRow!.compareDocumentPosition(unrelatedRow!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(unrelatedRow!.compareDocumentPosition(secondRow!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(getByText('Project due today')).toBeInTheDocument();
+        expect(projectFirst.dueDate).toBeUndefined();
+    });
+
     it('keeps waiting tasks with review dates out of Today', () => {
         const now = new Date();
         const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0).toISOString();

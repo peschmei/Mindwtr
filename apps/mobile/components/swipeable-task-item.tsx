@@ -53,6 +53,7 @@ export interface SwipeableTaskItemProps {
     onProjectPress?: (projectId: string) => void;
     onContextPress?: (context: string) => void;
     onTagPress?: (tag: string) => void;
+    projectDeadlineLabel?: string;
 }
 
 type ProjectNextActionPromptState = {
@@ -109,6 +110,7 @@ export function SwipeableTaskItem({
     onProjectPress,
     onContextPress,
     onTagPress,
+    projectDeadlineLabel,
 }: SwipeableTaskItemProps) {
     const swipeableRef = useRef<Swipeable>(null);
     const ignorePressUntil = useRef<number>(0);
@@ -360,6 +362,7 @@ export function SwipeableTaskItem({
             const hasTime = hasTimeComponent(task.dueDate);
             return `Due: ${safeFormatDate(due, hasTime ? 'Pp' : 'P')}`;
         })(),
+        projectDeadlineLabel,
     ].filter(Boolean).join('. ');
 
     const handlePress = () => {
@@ -479,6 +482,7 @@ export function SwipeableTaskItem({
             onPress={handlePress}
             onProjectPress={onProjectPress}
             onTagPress={onTagPress}
+            projectDeadlineLabel={projectDeadlineLabel}
             onToggleChecklist={toggleChecklist}
             onToggleChecklistItem={toggleChecklistItem}
             onToggleFocus={toggleFocus}

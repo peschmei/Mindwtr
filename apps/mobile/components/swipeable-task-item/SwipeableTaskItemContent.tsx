@@ -44,6 +44,7 @@ interface SwipeableTaskItemContentProps {
     onToggleChecklistItem: (index: number) => void;
     onToggleFocus: () => void;
     projects: Project[];
+    projectDeadlineLabel?: string;
     areas: Area[];
     selectionMode: boolean;
     showChecklist: boolean;
@@ -81,6 +82,7 @@ export function SwipeableTaskItemContent({
     onToggleChecklistItem,
     onToggleFocus,
     projects,
+    projectDeadlineLabel,
     selectionMode,
     showChecklist,
     showTaskAge,
@@ -213,6 +215,15 @@ export function SwipeableTaskItemContent({
                 ),
             }),
             'project'
+        );
+    }
+
+    if (projectDeadlineLabel) {
+        addMetaPart(
+            <Text key="project-deadline" style={[styles.metaText, styles.projectDeadlineText]} numberOfLines={1}>
+                {projectDeadlineLabel}
+            </Text>,
+            'project-deadline'
         );
     }
 

@@ -11,6 +11,7 @@ export type StoreTaskItemProps = Omit<TaskItemProps, 'task' | 'project' | 'focus
     onSelectIndex?: (index: number) => void;
     onToggleSelectId?: (id: string, options?: RangeSelectionOptions) => void;
     buildFocusToggle?: (task: Task) => FocusToggle;
+    projectDeadlineLabel?: string;
 };
 
 export const StoreTaskItem = memo(function StoreTaskItem({

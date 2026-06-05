@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { shallow, useTaskStore, TaskPriority, TimeEstimate, applyFilter, buildAdvancedFilterCriteriaChips, removeAdvancedFilterCriteriaChip, formatFocusTaskLimitText, generateUUID, getUsedTaskTokens, getFocusSequentialFirstTaskIds, hasActiveFilterCriteria, markSavedFilterDeleted, normalizeFocusTaskLimit, safeParseDate, safeParseDueDate, isDueForReview, isTaskInActiveProject, SAVED_FILTER_NO_PROJECT_ID, shouldShowTaskForStart, sortFocusNextActions, sortTasksBySavedPreference, translateWithFallback } from '@mindwtr/core';
-import type { FilterCriteria, FocusGroupBy, SavedFilter, SortField, Task, TaskEnergyLevel } from '@mindwtr/core';
+import { shallow, useTaskStore, TaskPriority, TimeEstimate, applyFilter, buildAdvancedFilterCriteriaChips, removeAdvancedFilterCriteriaChip, formatFocusTaskLimitText, generateUUID, getUsedTaskTokens, getFocusSequentialFirstTaskIds, getProjectDeadlineBoosts, hasActiveFilterCriteria, markSavedFilterDeleted, normalizeFocusTaskLimit, safeParseDate, safeParseDueDate, isDueForReview, isTaskInActiveProject, SAVED_FILTER_NO_PROJECT_ID, shouldShowTaskForStart, sortFocusNextActions, sortTasksBySavedPreference, translateWithFallback } from '@mindwtr/core';
+import type { FilterCriteria, FocusGroupBy, ProjectDeadlineBoost, SavedFilter, SortField, Task, TaskEnergyLevel } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
 import { cn } from '../../lib/utils';
 import { useUiStore } from '../../store/ui-store';
@@ -77,6 +77,16 @@ function getAgendaScrollMargin(containerElement: HTMLDivElement, scrollElement: 
     return containerRect.top - scrollRect.top + scrollElement.scrollTop;
 }
 
+function getProjectDeadlineBoostLabel(
+    boost: ProjectDeadlineBoost | undefined,
+    resolveText: (key: string, fallback: string) => string,
+): string | undefined {
+    if (!boost) return undefined;
+    return boost.isOverdue
+        ? resolveText('focus.projectOverdue', 'Project overdue')
+        : resolveText('focus.projectDueToday', 'Project due today');
+}
+
 function buildFocusFilterCriteria({
     locations,
     priorities,
@@ -113,6 +123,7 @@ function getSavedFilterDefaultName(chips: AgendaActiveFilterChip[], fallback: st
 function AgendaTaskList({
     tasks,
     buildFocusToggle,
+    getProjectDeadlineLabel,
     showListDetails,
     highlightTaskId,
 }: {
@@ -125,6 +136,7 @@ function AgendaTaskList({
         ariaLabel: string;
         alwaysVisible?: boolean;
     };
+    getProjectDeadlineLabel?: (taskId: string) => string | undefined;
     showListDetails: boolean;
     highlightTaskId: string | null;
 }) {
@@ -177,6 +189,7 @@ function AgendaTaskList({
                         showProjectBadgeInActions={false}
                         compactMetaEnabled={showListDetails}
                         enableDoubleClickEdit
+                        projectDeadlineLabel={getProjectDeadlineLabel?.(task.id)}
                     />
                 ))}
             </div>
@@ -214,6 +227,7 @@ function AgendaTaskList({
                             showProjectBadgeInActions={false}
                             compactMetaEnabled={showListDetails}
                             enableDoubleClickEdit
+                            projectDeadlineLabel={getProjectDeadlineLabel?.(task.id)}
                         />
                     </div>
                 );
@@ -728,6 +742,9 @@ export function AgendaView() {
             if (isSequentialBlocked(task)) return false;
             return !scheduleIds.has(task.id);
         });
+        const projectDeadlineBoosts = effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY
+            ? getProjectDeadlineBoosts(nextActions, projects, { now })
+            : new Map<string, ProjectDeadlineBoost>();
         const reviewDue = reviewDueCandidates.filter(t => !t.isFocusedToday);
         const scheduleSortTime = (task: Task) => {
             const due = safeParseDueDate(task.dueDate)?.getTime();
@@ -748,6 +765,7 @@ export function AgendaView() {
                 ? sortFocusNextActions(items, {
                     now,
                     prioritizeByPriority: prioritiesEnabled,
+                    projectDeadlineBoosts,
                 })
                 : sortBySavedPerspective(items)
         );
@@ -761,12 +779,14 @@ export function AgendaView() {
             schedule: sortSchedule(schedule),
             nextActions: sortNextActions(nextActions),
             reviewDue: sortReviewDue(reviewDue),
+            projectDeadlineBoosts,
         };
     }, [
         baseActiveTasks,
         effectiveFocusSortBy,
         filteredActiveTasks,
         prioritiesEnabled,
+        projects,
         reviewDueCandidates,
         sequentialProjectIds,
         sequentialWithinSectionProjectIds,
@@ -808,43 +828,24 @@ export function AgendaView() {
             noContextLabel: resolveText('contexts.none', 'No context'),
         });
     }, [areas, effectiveNextGroupBy, projectMap, resolveText, sections.nextActions, t]);
+    const getProjectDeadlineLabel = useCallback((taskId: string) => (
+        getProjectDeadlineBoostLabel(sections.projectDeadlineBoosts.get(taskId), resolveText)
+    ), [resolveText, sections.projectDeadlineBoosts]);
     const focusedCount = focusedTasks.length;
     const { top3Tasks, remainingCount } = useMemo(() => {
         const byId = new Map<string, Task>();
         [...sections.schedule, ...sections.nextActions, ...sections.reviewDue].forEach((task) => {
-            byId.set(task.id, task);
+            if (!byId.has(task.id)) {
+                byId.set(task.id, task);
+            }
         });
         const candidates = Array.from(byId.values());
-        const priorityRank: Record<TaskPriority, number> = {
-            low: 1,
-            medium: 2,
-            high: 3,
-            urgent: 4,
-        };
-        const parseDue = (value?: string) => {
-            if (!value) return Number.POSITIVE_INFINITY;
-            const parsed = safeParseDueDate(value);
-            return parsed ? parsed.getTime() : Number.POSITIVE_INFINITY;
-        };
-        const sorted = effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY
-            ? [...candidates].sort((a, b) => {
-                if (prioritiesEnabled) {
-                    const priorityDiff = (priorityRank[b.priority as TaskPriority] || 0) - (priorityRank[a.priority as TaskPriority] || 0);
-                    if (priorityDiff !== 0) return priorityDiff;
-                }
-                const dueDiff = parseDue(a.dueDate) - parseDue(b.dueDate);
-                if (dueDiff !== 0) return dueDiff;
-                const aCreated = safeParseDate(a.createdAt)?.getTime() ?? 0;
-                const bCreated = safeParseDate(b.createdAt)?.getTime() ?? 0;
-                return aCreated - bCreated;
-            })
-            : sortBySavedPerspective(candidates);
-        const top3 = sorted.slice(0, 3);
+        const top3 = candidates.slice(0, 3);
         return {
             top3Tasks: top3,
             remainingCount: Math.max(candidates.length - top3.length, 0),
         };
-    }, [effectiveFocusSortBy, sections, prioritiesEnabled, sortBySavedPerspective]);
+    }, [sections]);
 
     const handleToggleFocus = useCallback((taskId: string) => {
         const task = tasksById.get(taskId);
@@ -1100,6 +1101,7 @@ export function AgendaView() {
                                         showProjectBadgeInActions={false}
                                         compactMetaEnabled={showListDetails}
                                         enableDoubleClickEdit
+                                        projectDeadlineLabel={getProjectDeadlineLabel(task.id)}
                                     />
                                 ))}
                             </div>
@@ -1156,6 +1158,7 @@ export function AgendaView() {
                                     <AgendaTaskList
                                         tasks={sections.nextActions}
                                         buildFocusToggle={buildFocusToggle}
+                                        getProjectDeadlineLabel={getProjectDeadlineLabel}
                                         showListDetails={showListDetails}
                                         highlightTaskId={highlightTaskId}
                                     />
@@ -1193,6 +1196,7 @@ export function AgendaView() {
                                                     <AgendaTaskList
                                                         tasks={group.tasks}
                                                         buildFocusToggle={buildFocusToggle}
+                                                        getProjectDeadlineLabel={getProjectDeadlineLabel}
                                                         showListDetails={showListDetails}
                                                         highlightTaskId={highlightTaskId}
                                                     />

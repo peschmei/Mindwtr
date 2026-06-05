@@ -3,6 +3,7 @@ import {
     sortTasks,
     sortFocusNextActions,
     sortTasksBySavedPreference,
+    getProjectDeadlineBoosts,
     getStatusColor,
     getTaskAgeLabel,
     rescheduleTask,
@@ -15,7 +16,7 @@ import {
     shouldShowTaskForStart,
     splitCompletedTasks,
 } from './task-utils';
-import { Task } from './types';
+import { Project, Task } from './types';
 
 describe('task-utils', () => {
     describe('sortTasks', () => {
@@ -118,6 +119,179 @@ describe('task-utils', () => {
             });
 
             expect(sorted.map((task) => task.id)).toEqual(['overdue', 'near', 'later']);
+        });
+
+        it('surfaces one date-less next action from each overdue or due-today project', () => {
+            const now = new Date('2026-01-10T12:00:00.000Z');
+            const projects = [
+                {
+                    id: 'today-project',
+                    title: 'Today project',
+                    status: 'active',
+                    dueDate: '2026-01-10T17:00:00.000Z',
+                    color: '#123456',
+                    order: 1,
+                    tagIds: [],
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    id: 'overdue-project',
+                    title: 'Overdue project',
+                    status: 'active',
+                    dueDate: '2026-01-08T17:00:00.000Z',
+                    color: '#654321',
+                    order: 2,
+                    tagIds: [],
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            ] as Project[];
+            const tasks = [
+                {
+                    id: 'normal-undated',
+                    title: 'Normal undated',
+                    status: 'next',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    id: 'today-project-second',
+                    title: 'Second project action',
+                    status: 'next',
+                    projectId: 'today-project',
+                    order: 1,
+                    orderNum: 1,
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-07T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    id: 'today-project-first',
+                    title: 'First project action',
+                    status: 'next',
+                    projectId: 'today-project',
+                    order: 0,
+                    orderNum: 0,
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-05T00:00:00.000Z',
+                    updatedAt: '2026-01-05T00:00:00.000Z',
+                },
+                {
+                    id: 'overdue-project-first',
+                    title: 'Overdue project action',
+                    status: 'next',
+                    projectId: 'overdue-project',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-06T00:00:00.000Z',
+                    updatedAt: '2026-01-06T00:00:00.000Z',
+                },
+            ] as Task[];
+
+            const boosts = getProjectDeadlineBoosts(tasks, projects, { now });
+            const sorted = sortFocusNextActions(tasks, {
+                now,
+                projectDeadlineBoosts: boosts,
+            });
+
+            expect([...boosts.keys()]).toEqual(['today-project-first', 'overdue-project-first']);
+            expect(sorted.map((task) => task.id)).toEqual([
+                'overdue-project-first',
+                'today-project-first',
+                'normal-undated',
+                'today-project-second',
+            ]);
+            expect(tasks.find((task) => task.id === 'today-project-first')?.dueDate).toBeUndefined();
+        });
+
+        it('does not boost dated tasks, future-start tasks, inactive projects, or projects due after today', () => {
+            const now = new Date('2026-01-10T12:00:00.000Z');
+            const projects = [
+                {
+                    id: 'due-project',
+                    title: 'Due project',
+                    status: 'active',
+                    dueDate: '2026-01-10T17:00:00.000Z',
+                    color: '#123456',
+                    order: 0,
+                    tagIds: [],
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    id: 'future-project',
+                    title: 'Future project',
+                    status: 'active',
+                    dueDate: '2026-01-11T17:00:00.000Z',
+                    color: '#654321',
+                    order: 1,
+                    tagIds: [],
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    id: 'someday-project',
+                    title: 'Someday project',
+                    status: 'someday',
+                    dueDate: '2026-01-10T17:00:00.000Z',
+                    color: '#abcdef',
+                    order: 2,
+                    tagIds: [],
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            ] as Project[];
+            const tasks = [
+                {
+                    id: 'dated-task',
+                    title: 'Dated task',
+                    status: 'next',
+                    projectId: 'due-project',
+                    dueDate: '2026-01-20T09:00:00.000Z',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    id: 'future-start-task',
+                    title: 'Future start task',
+                    status: 'next',
+                    projectId: 'due-project',
+                    startTime: '2026-01-12T09:00:00.000Z',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-02T00:00:00.000Z',
+                    updatedAt: '2026-01-02T00:00:00.000Z',
+                },
+                {
+                    id: 'future-project-task',
+                    title: 'Future project task',
+                    status: 'next',
+                    projectId: 'future-project',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-03T00:00:00.000Z',
+                    updatedAt: '2026-01-03T00:00:00.000Z',
+                },
+                {
+                    id: 'someday-project-task',
+                    title: 'Someday project task',
+                    status: 'next',
+                    projectId: 'someday-project',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-01-04T00:00:00.000Z',
+                    updatedAt: '2026-01-04T00:00:00.000Z',
+                },
+            ] as Task[];
+
+            expect([...getProjectDeadlineBoosts(tasks, projects, { now }).keys()]).toEqual([]);
         });
     });
 

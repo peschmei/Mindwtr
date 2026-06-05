@@ -71,6 +71,7 @@ interface TaskItemProps {
     enableDoubleClickEdit?: boolean;
     showHoverHint?: boolean;
     editorPresentation?: TaskEditorPresentation;
+    projectDeadlineLabel?: string;
 }
 
 type ProjectNextActionPromptState = {
@@ -99,6 +100,7 @@ export const TaskItem = memo(function TaskItem({
     enableDoubleClickEdit = false,
     showHoverHint = true,
     editorPresentation,
+    projectDeadlineLabel,
 }: TaskItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [autoFocusTitle, setAutoFocusTitle] = useState(false);
@@ -1149,6 +1151,7 @@ export const TaskItem = memo(function TaskItem({
                                 dragHandle={dragHandle}
                                 showTaskAge={showTaskAge}
                                 showHoverHint={showHoverHint}
+                                projectDeadlineLabel={projectDeadlineLabel}
                                 t={t}
                             />
                         )}

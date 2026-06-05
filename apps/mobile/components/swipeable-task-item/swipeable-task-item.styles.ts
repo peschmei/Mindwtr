@@ -92,6 +92,10 @@ export const styles = StyleSheet.create({
         color: '#EF4444',
         fontWeight: '600',
     },
+    projectDeadlineText: {
+        color: '#F59E0B',
+        fontWeight: '600',
+    },
     dateIssueText: {
         color: '#F59E0B',
         fontWeight: '600',

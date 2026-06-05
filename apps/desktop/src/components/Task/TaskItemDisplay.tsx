@@ -61,6 +61,7 @@ interface TaskItemDisplayProps {
     dragHandle?: ReactNode;
     showTaskAge?: boolean;
     showHoverHint?: boolean;
+    projectDeadlineLabel?: string;
     t: (key: string) => string;
 }
 
@@ -108,6 +109,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     dragHandle,
     showTaskAge = false,
     showHoverHint = true,
+    projectDeadlineLabel,
     t,
 }: TaskItemDisplayProps) {
     const {
@@ -159,6 +161,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     const hasMetadata = Boolean(
         project
         || area
+        || projectDeadlineLabel
         || completionLabel
         || task.startTime
         || task.dueDate
@@ -340,9 +343,21 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
             />
         );
     };
+    const renderProjectDeadlineMetadataBadge = () => {
+        if (!projectDeadlineLabel) return null;
+        return (
+            <MetadataBadge
+                variant="info"
+                icon={CalendarIcon}
+                label={projectDeadlineLabel}
+                className="text-amber-600 dark:text-amber-300"
+            />
+        );
+    };
     const renderMetadataRow = (className?: string) => (
         <div className={cn("flex flex-wrap items-center text-xs", className)}>
             {renderProjectBadge()}
+            {renderProjectDeadlineMetadataBadge()}
             {!project && area && (
                 <MetadataBadge
                     variant="project"
@@ -566,13 +581,14 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                         dense ? "mt-0.5" : "mt-1",
                         (overlayDragHandle || overlayQuickDone) && "pl-12"
                     ))}
-                    {!showCompactMeta && completionLabel && (
+                    {!showCompactMeta && !isViewOpen && (completionLabel || projectDeadlineLabel) && (
                         <div className={cn(
                             "flex flex-wrap items-center gap-2 text-xs text-muted-foreground",
                             dense ? "mt-0.5" : "mt-1",
                             (overlayDragHandle || overlayQuickDone) && "pl-12"
                         )}>
                             {renderCompletionMetadataBadge()}
+                            {renderProjectDeadlineMetadataBadge()}
                         </div>
                     )}
 

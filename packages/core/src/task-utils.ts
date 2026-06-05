@@ -96,6 +96,8 @@ type SortFocusNextActionsOptions = {
     now?: Date;
     dueSoonWindowDays?: number;
     prioritizeByPriority?: boolean;
+    projectDeadlineBoosts?: ReadonlyMap<string, ProjectDeadlineBoost>;
+    projects?: readonly Project[];
 };
 
 type SortTasksBySavedPreferenceOptions = {
@@ -113,6 +115,121 @@ function getFocusNextActionBucket(
     if (!Number.isFinite(dueMs)) return 1;
     if (dueMs <= nowMs + dueSoonWindowMs) return 0;
     return 2;
+}
+
+export type ProjectDeadlineBoost = {
+    projectDueDate: string;
+    projectDueTime: number;
+    projectId: string;
+    projectOrder: number;
+    projectTitle: string;
+    isOverdue: boolean;
+};
+
+type ProjectDeadlineBoostProjectInfo = ProjectDeadlineBoost;
+
+const getProjectOrder = (project: Pick<Project, 'order'>): number => (
+    Number.isFinite(project.order) ? project.order : Number.POSITIVE_INFINITY
+);
+
+const getTaskOrder = (task: Pick<Task, 'order' | 'orderNum'>): number => (
+    Number.isFinite(task.order)
+        ? task.order as number
+        : Number.isFinite(task.orderNum)
+            ? task.orderNum as number
+            : Number.POSITIVE_INFINITY
+);
+
+const compareProjectDeadlineBoostTasks = (
+    a: Pick<Task, 'createdAt' | 'id' | 'order' | 'orderNum' | 'title'>,
+    b: Pick<Task, 'createdAt' | 'id' | 'order' | 'orderNum' | 'title'>,
+): number => {
+    const orderA = getTaskOrder(a);
+    const orderB = getTaskOrder(b);
+    if (orderA !== orderB) return orderA - orderB;
+
+    const createdDiff = safeTime(a.createdAt, Number.POSITIVE_INFINITY) - safeTime(b.createdAt, Number.POSITIVE_INFINITY);
+    if (createdDiff !== 0) return createdDiff;
+
+    const titleDiff = a.title.localeCompare(b.title);
+    if (titleDiff !== 0) return titleDiff;
+
+    return a.id.localeCompare(b.id);
+};
+
+const compareProjectDeadlineBoosts = (
+    boostA: ProjectDeadlineBoost | undefined,
+    boostB: ProjectDeadlineBoost | undefined,
+    taskA: Pick<Task, 'createdAt' | 'id' | 'order' | 'orderNum' | 'title'>,
+    taskB: Pick<Task, 'createdAt' | 'id' | 'order' | 'orderNum' | 'title'>,
+): number => {
+    if (boostA && !boostB) return -1;
+    if (!boostA && boostB) return 1;
+    if (!boostA || !boostB) return 0;
+
+    if (boostA.projectDueTime !== boostB.projectDueTime) {
+        return boostA.projectDueTime - boostB.projectDueTime;
+    }
+    if (boostA.projectOrder !== boostB.projectOrder) {
+        return boostA.projectOrder - boostB.projectOrder;
+    }
+
+    const projectTitleDiff = boostA.projectTitle.localeCompare(boostB.projectTitle);
+    if (projectTitleDiff !== 0) return projectTitleDiff;
+
+    return compareProjectDeadlineBoostTasks(taskA, taskB);
+};
+
+export function getProjectDeadlineBoosts(
+    tasks: readonly Task[],
+    projects: readonly Project[],
+    options: { now?: Date } = {},
+): Map<string, ProjectDeadlineBoost> {
+    const now = options.now ?? new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const projectInfoById = new Map<string, ProjectDeadlineBoostProjectInfo>();
+
+    projects.forEach((project) => {
+        if (project.deletedAt) return;
+        if (project.status !== 'active' && project.isFocused !== true) return;
+        const projectDue = safeParseDueDate(project.dueDate);
+        if (!projectDue) return;
+        const projectDueTime = projectDue.getTime();
+        if (projectDueTime > endOfToday.getTime()) return;
+        projectInfoById.set(project.id, {
+            projectDueDate: project.dueDate as string,
+            projectDueTime,
+            projectId: project.id,
+            projectOrder: getProjectOrder(project),
+            projectTitle: project.title,
+            isOverdue: projectDueTime < startOfToday.getTime(),
+        });
+    });
+
+    if (projectInfoById.size === 0) return new Map();
+
+    const selectedTaskByProjectId = new Map<string, Task>();
+    tasks.forEach((task) => {
+        if (task.status !== 'next') return;
+        if (task.deletedAt) return;
+        if (!task.projectId) return;
+        if (task.dueDate || task.startTime) return;
+        if (!projectInfoById.has(task.projectId)) return;
+
+        const selectedTask = selectedTaskByProjectId.get(task.projectId);
+        if (!selectedTask || compareProjectDeadlineBoostTasks(task, selectedTask) < 0) {
+            selectedTaskByProjectId.set(task.projectId, task);
+        }
+    });
+
+    const boosts = new Map<string, ProjectDeadlineBoost>();
+    selectedTaskByProjectId.forEach((task, projectId) => {
+        const info = projectInfoById.get(projectId);
+        if (!info) return;
+        boosts.set(task.id, info);
+    });
+    return boosts;
 }
 
 function getSequentialTaskOrderKey<T extends SequentialTaskOrderFields>(task: T, hasOrder: boolean): number {
@@ -525,6 +642,8 @@ export function sortFocusNextActions(tasks: Task[], options: SortFocusNextAction
         : FOCUS_NEXT_DUE_SOON_WINDOW_DAYS;
     const dueSoonWindowMs = dueSoonWindowDays * 24 * 60 * 60 * 1000;
     const prioritizeByPriority = options.prioritizeByPriority === true;
+    const projectDeadlineBoosts = options.projectDeadlineBoosts
+        ?? (options.projects ? getProjectDeadlineBoosts(tasks, options.projects, { now: options.now }) : new Map());
 
     return [...tasks].sort((a, b) => {
         const bucketA = getFocusNextActionBucket(a, nowMs, dueSoonWindowMs);
@@ -535,6 +654,16 @@ export function sortFocusNextActions(tasks: Task[], options: SortFocusNextAction
             const dueA = safeDueTime(a.dueDate, Number.POSITIVE_INFINITY);
             const dueB = safeDueTime(b.dueDate, Number.POSITIVE_INFINITY);
             if (dueA !== dueB) return dueA - dueB;
+        }
+
+        if (bucketA === 1) {
+            const projectBoostDiff = compareProjectDeadlineBoosts(
+                projectDeadlineBoosts.get(a.id),
+                projectDeadlineBoosts.get(b.id),
+                a,
+                b,
+            );
+            if (projectBoostDiff !== 0) return projectBoostDiff;
         }
 
         if (prioritizeByPriority) {

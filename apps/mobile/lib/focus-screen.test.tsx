@@ -638,6 +638,54 @@ describe('FocusScreen', () => {
     ).toEqual(['home-next', 'no-context-next', 'work-next']);
   });
 
+  it('surfaces one next action from a project due today before unrelated undated tasks', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-10T12:00:00.000Z'));
+    storeState.projects = [
+      makeProject('due-project', {
+        title: 'Due project',
+        dueDate: '2026-04-10T17:00:00.000Z',
+      }),
+    ];
+    storeState.tasks = [
+      makeTask('unrelated-next', {
+        title: 'Unrelated next',
+        createdAt: '2026-04-01T00:00:00.000Z',
+      }),
+      makeTask('project-second', {
+        title: 'Project second',
+        projectId: 'due-project',
+        order: 1,
+        orderNum: 1,
+        createdAt: '2026-04-02T00:00:00.000Z',
+      }),
+      makeTask('project-first', {
+        title: 'Project first',
+        projectId: 'due-project',
+        order: 0,
+        orderNum: 0,
+        createdAt: '2026-04-03T00:00:00.000Z',
+      }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const rows = tree.root.findAllByType(SwipeableTaskItem);
+    expect(rows.map((node) => node.props.task.id)).toEqual([
+      'project-first',
+      'unrelated-next',
+      'project-second',
+    ]);
+    expect(rows[0]?.props.projectDeadlineLabel).toBe('Project due today');
+    expect(rows[1]?.props.projectDeadlineLabel).toBeUndefined();
+    expect(rows[2]?.props.projectDeadlineLabel).toBeUndefined();
+    expect(rows[0]?.props.task.dueDate).toBeUndefined();
+  });
+
   it('groups mobile Next Actions under context headers when selected', () => {
     storeState.settings = {
       appearance: {},
