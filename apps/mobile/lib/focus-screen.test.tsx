@@ -221,6 +221,16 @@ function findButtonByLabel(tree: ReturnType<typeof create>, label: string, optio
   return options.last ? matches[matches.length - 1] : matches[0];
 }
 
+function flattenStyle(style: unknown): Record<string, unknown> {
+  if (Array.isArray(style)) {
+    return style.reduce<Record<string, unknown>>((result, item) => ({
+      ...result,
+      ...flattenStyle(item),
+    }), {});
+  }
+  return style && typeof style === 'object' ? style as Record<string, unknown> : {};
+}
+
 describe('FocusScreen', () => {
   it('renders starred tasks in a dedicated Today\'s Focus section', () => {
     storeState.tasks = [
@@ -416,6 +426,39 @@ describe('FocusScreen', () => {
       expect.arrayContaining([expect.objectContaining({ paddingBottom: 174 })])
     );
     expect(list.props.scrollIndicatorInsets).toEqual(expect.objectContaining({ bottom: 174 }));
+  });
+
+  it('uses a compact lead-in before the first visible Focus section', () => {
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const todayHeader = findButtonByLabel(tree, "Today's Focus");
+    const nextHeader = findButtonByLabel(tree, 'Next Actions');
+
+    expect(flattenStyle(todayHeader.props.style).marginTop).toBe(8);
+    expect(flattenStyle(nextHeader.props.style).marginTop).toBe(18);
+  });
+
+  it('keeps the Focus filter affordance compact without visible circle chrome', () => {
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const filterButton = findButtonByLabel(tree, 'Filters');
+    const rawStyle = typeof filterButton.props.style === 'function'
+      ? filterButton.props.style({ pressed: false })
+      : filterButton.props.style;
+    const style = flattenStyle(rawStyle);
+
+    expect(style.width).toBe(44);
+    expect(style.height).toBe(44);
+    expect(style.borderWidth).toBeUndefined();
+    expect(style.backgroundColor).toBeUndefined();
   });
 
   it('keeps Today\'s Focus visible when collapsing Next Actions', () => {

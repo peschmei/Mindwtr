@@ -949,6 +949,10 @@ export default function FocusScreen() {
     schedule,
     t,
   ]);
+  const firstVisibleSectionType = useMemo(
+    () => sections.find((section) => section.totalCount > 0)?.type ?? null,
+    [sections]
+  );
   const hasTasks = focusedTasks.length > 0 || schedule.length > 0 || nextActions.length > 0 || reviewDue.length > 0 || reviewDueProjects.length > 0;
   const activeFilterCount = countFilterCriteria(effectiveFilterCriteria);
   const advancedFilterChips = useMemo<FocusFilterChip[]>(() => {
@@ -1256,13 +1260,11 @@ export default function FocusScreen() {
                   style={({ pressed }) => [
                     styles.filterButton,
                     {
-                      borderColor: hasFilters ? tc.tint : tc.border,
-                      backgroundColor: hasFilters ? tc.filterBg : 'transparent',
                       opacity: pressed ? 0.78 : 1,
                     },
                   ]}
                 >
-                  <SlidersHorizontal size={16} color={hasFilters ? tc.tint : tc.secondaryText} />
+                  <SlidersHorizontal size={20} color={hasFilters ? tc.tint : tc.secondaryText} />
                   {hasFilters ? (
                     <View style={[styles.filterBadge, { backgroundColor: tc.tint }]}>
                       <Text style={[styles.filterBadgeText, { color: tc.onTint }]}>
@@ -1380,7 +1382,10 @@ export default function FocusScreen() {
               accessibilityLabel={section.title}
               accessibilityState={{ expanded: section.expanded }}
               onPress={() => toggleSection(section.type)}
-              style={styles.sectionHeader}
+              style={[
+                styles.sectionHeader,
+                section.type === firstVisibleSectionType ? styles.firstSectionHeader : null,
+              ]}
             >
               <Text style={[styles.sectionChevron, { color: tc.secondaryText }]}>
                 {section.expanded ? '▾' : '▸'}
@@ -1720,8 +1725,8 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   header: {
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: 6,
+    marginBottom: 0,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1793,17 +1798,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   filterButton: {
-    minWidth: 44,
-    minHeight: 44,
-    borderWidth: 1,
+    width: 44,
+    height: 44,
     borderRadius: 22,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    position: 'relative',
   },
   filterBadge: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
     minWidth: 16,
     height: 16,
     borderRadius: 999,
@@ -1886,6 +1891,9 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 18,
     marginBottom: 10,
+  },
+  firstSectionHeader: {
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 12,
