@@ -20,9 +20,9 @@ import {
 import { reportError } from '../../../lib/report-error';
 import {
     THEME_STORAGE_KEY,
+    applyNativeTheme,
     applyThemeMode,
-    coerceDesktopThemeMode,
-    mapSyncedThemeToDesktop,
+    resolveDesktopThemeMode,
     resolveNativeTheme,
     type DesktopThemeMode,
 } from '../../../lib/theme';
@@ -66,7 +66,9 @@ export function useSettingsMainPage({
     const appearanceSettings: AppearanceSettings | undefined = settings?.appearance;
     const notificationSettings: NotificationSettings = settings ?? {};
     const windowSettings: WindowSettings | undefined = settings?.window;
-    const [themeMode, setThemeMode] = useState<DesktopThemeMode>('system');
+    const [themeMode, setThemeMode] = useState<DesktopThemeMode>(() => (
+        resolveDesktopThemeMode(settings?.theme, localStorage.getItem(THEME_STORAGE_KEY))
+    ));
     const [launchAtStartupEnabled, setLaunchAtStartupEnabledState] = useState(
         windowSettings?.launchAtStartup === true,
     );
@@ -86,19 +88,10 @@ export function useSettingsMainPage({
     const trayVisible = windowSettings?.showTray !== false;
 
     useEffect(() => {
-        const savedTheme = coerceDesktopThemeMode(
-            localStorage.getItem(THEME_STORAGE_KEY),
-        );
-        if (savedTheme) {
-            setThemeMode(savedTheme);
-        }
-    }, []);
-
-    useEffect(() => {
-        const syncedTheme = mapSyncedThemeToDesktop(settings?.theme);
-        if (!syncedTheme || syncedTheme === themeMode) return;
-        localStorage.setItem(THEME_STORAGE_KEY, syncedTheme);
-        setThemeMode(syncedTheme);
+        const resolvedTheme = resolveDesktopThemeMode(settings?.theme, localStorage.getItem(THEME_STORAGE_KEY));
+        if (resolvedTheme === themeMode) return;
+        localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
+        setThemeMode(resolvedTheme);
     }, [settings?.theme, themeMode]);
 
     useEffect(() => {
@@ -106,9 +99,12 @@ export function useSettingsMainPage({
 
         if (!isTauri) return;
         const tauriTheme = resolveNativeTheme(themeMode);
-        import('@tauri-apps/api/app')
-            .then(({ setTheme }) => setTheme(tauriTheme))
-            .catch((error) => reportError('Failed to set theme', error));
+        void applyNativeTheme(
+            tauriTheme,
+            () => import('@tauri-apps/api/app'),
+            () => import('@tauri-apps/api/window'),
+            (_step, error) => reportError('Failed to set theme', error),
+        );
     }, [isTauri, themeMode]);
 
     useEffect(() => {

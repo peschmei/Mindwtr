@@ -367,21 +367,41 @@ function App() {
         resolveDesktopThemeMode(settingsTheme, localStorage.getItem(THEME_STORAGE_KEY))
     ), [settingsTheme]);
 
+    const applyActiveNativeTheme = useCallback((stepPrefix = 'apply') => {
+        if (!isTauriRuntime()) return;
+        const nativeTheme = resolveNativeTheme(getActiveThemeMode());
+        void applyNativeTheme(
+            nativeTheme,
+            () => import('@tauri-apps/api/app'),
+            () => import('@tauri-apps/api/window'),
+            (step, error) => void logError(error, { scope: 'theme', step: `${stepPrefix}:${step}` }),
+        );
+    }, [getActiveThemeMode]);
+
     useEffect(() => {
         if (!hasHydratedSettings) return;
         const normalizedTheme = getActiveThemeMode();
         localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
         applyThemeMode(normalizedTheme);
+        applyActiveNativeTheme();
+    }, [applyActiveNativeTheme, getActiveThemeMode, hasHydratedSettings]);
 
-        if (!isTauriRuntime()) return;
-        const nativeTheme = resolveNativeTheme(normalizedTheme);
-        void applyNativeTheme(
-            nativeTheme,
-            () => import('@tauri-apps/api/app'),
-            () => import('@tauri-apps/api/window'),
-            (step, error) => void logError(error, { scope: 'theme', step: `apply:${step}` }),
-        );
-    }, [getActiveThemeMode, hasHydratedSettings]);
+    useEffect(() => {
+        if (!hasHydratedSettings || !isTauriRuntime()) return;
+        const reapplyTheme = () => applyActiveNativeTheme('reapply');
+        const reapplyThemeWhenVisible = () => {
+            if (document.visibilityState === 'visible') {
+                reapplyTheme();
+            }
+        };
+
+        window.addEventListener('focus', reapplyTheme);
+        document.addEventListener('visibilitychange', reapplyThemeWhenVisible);
+        return () => {
+            window.removeEventListener('focus', reapplyTheme);
+            document.removeEventListener('visibilitychange', reapplyThemeWhenVisible);
+        };
+    }, [applyActiveNativeTheme, hasHydratedSettings]);
 
     useEffect(() => {
         if (!hasHydratedSettings) return;
