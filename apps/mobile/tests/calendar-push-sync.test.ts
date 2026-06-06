@@ -133,6 +133,24 @@ vi.mock('@mindwtr/core', () => ({
     getProjectedRecurringTaskId: (taskId: string): string => `${taskId}:projected-recurrence`,
     hasTimeComponent: (dateStr: string | null | undefined): boolean =>
         Boolean(dateStr && /[T\s]\d{2}:\d{2}/.test(dateStr)),
+    timeEstimateToMinutes: (estimate?: string): number => {
+        if (typeof estimate === 'string' && estimate.startsWith('custom:')) {
+            const minutes = Number(estimate.slice('custom:'.length));
+            return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : 30;
+        }
+        switch (estimate) {
+            case '5min': return 5;
+            case '10min': return 10;
+            case '15min': return 15;
+            case '30min': return 30;
+            case '1hr': return 60;
+            case '2hr': return 120;
+            case '3hr': return 180;
+            case '4hr':
+            case '4hr+': return 240;
+            default: return 30;
+        }
+    },
     isProjectedRecurringTask: (task: unknown): boolean =>
         Boolean(task && typeof task === 'object' && (task as { isProjectedRecurringTask?: unknown }).isProjectedRecurringTask === true),
     isProjectedRecurringTaskId: (taskId: string | null | undefined): boolean =>

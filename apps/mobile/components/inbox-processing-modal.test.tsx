@@ -111,6 +111,10 @@ vi.mock('@mindwtr/core', () => {
       clarifyTask,
     })),
     hasTimeComponent: vi.fn((value?: string | null) => Boolean(value && /[T\s]\d{2}:\d{2}/.test(value))),
+    formatTimeEstimateLabel: vi.fn((value: string) => {
+        if (value.startsWith('custom:')) return `${value.slice('custom:'.length)}m`;
+        return value.replace('min', 'm').replace('hr+', 'h+').replace('hr', 'h');
+    }),
     filterProjectsBySelectedArea: vi.fn((projects: any[], selectedAreaId?: string) => projects.filter((project: any) => (
       !project.deletedAt
       && project.status !== 'archived'

@@ -311,7 +311,7 @@ describe('CalendarView', () => {
         expect(storeMocks.taskStoreState.addTask).toHaveBeenCalledWith('Launch window', {
             status: 'next',
             startTime: '2026-04-03T10:00:00.000Z',
-            timeEstimate: '1hr',
+            timeEstimate: 'custom:45',
             location: 'Room 1',
             description: 'Discuss launch.\n\nCalendar: Work',
         });
