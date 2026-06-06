@@ -75,6 +75,7 @@
     "desktop:build": "bun run --filter mindwtr build",
     "desktop:web:build": "bun run --filter mindwtr build:vite",
     "test": "bun run --filter @mindwtr/core test && bun run --filter mindwtr test && bun run --filter mobile test && bun run --filter mindwtr-cloud test",
+    "test:perf": "bun run --filter @mindwtr/core test:perf && bun --cwd apps/mobile test tests/large-store-performance.test.tsx",
     "typecheck": "bun run typecheck:desktop && bun run typecheck:mobile",
     "typecheck:desktop": "bunx tsc --noEmit -p apps/desktop/tsconfig.json",
     "typecheck:mobile": "bunx tsc --noEmit -p apps/mobile/tsconfig.json",

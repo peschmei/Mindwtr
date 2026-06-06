@@ -69,7 +69,8 @@
   "scripts": {
     "build": "tsc",
     "bench": "vitest bench",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:perf": "vitest run src/performance-large-store.test.ts"
   },
   "devDependencies": {
     "@types/uuid": "^9.0.8",

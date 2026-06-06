@@ -43,6 +43,9 @@ jobs:
       - name: TypeScript check
         run: cd packages/core && bun run tsc --noEmit
 
+      - name: Large-store performance budgets
+        run: bun run test:perf
+
       - name: Locale parity check
         run: bun run i18n:check
 
