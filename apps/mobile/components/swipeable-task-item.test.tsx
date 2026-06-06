@@ -13,7 +13,7 @@ const { addTask, updateTask, restoreTask, showToast, getChecklistProgress, getTa
   getChecklistProgress: vi.fn((_value: any): any => null),
   getTaskAgeLabel: vi.fn(() => '3 weeks old'),
   getTaskStaleness: vi.fn(() => 'stale'),
-  safeFormatDate: vi.fn((_value: unknown, formatStr: string) => (
+  safeFormatDate: vi.fn((_value: unknown, formatStr: string): string => (
     formatStr === 'Pp' ? 'May 12, 2026, 8:30 AM' : ''
   )),
   safeParseDate: vi.fn((value?: string | null) => (value ? new Date(value) : null)),
@@ -113,6 +113,7 @@ vi.mock('@mindwtr/core', () => {
         : []
     ),
     getTaskStaleness,
+    getTaskUrgency: (task: any) => task?.urgency ?? 'normal',
     getStatusColor: () => ({ bg: '#111111', border: '#222222', text: '#333333' }),
     hasTimeComponent: (value?: string | null) => Boolean(value && /[T\s]\d{2}:\d{2}/.test(value)),
     normalizeFocusTaskLimit: (value?: number) => value ?? 3,
@@ -146,7 +147,7 @@ vi.mock('@mindwtr/core', () => {
     parseMarkdownReferenceHref: () => null,
     safeFormatDate,
     safeParseDate,
-    safeParseDueDate: () => null,
+    safeParseDueDate: (value?: string | null) => (value ? new Date(value) : null),
     tFallback: (t: (key: string) => string, key: string, fallback: string) => {
       const value = t(key);
       return value && value !== key ? value : fallback;
@@ -228,6 +229,18 @@ describe('SwipeableTaskItem', () => {
 
   const hasText = (tree: renderer.ReactTestRenderer, text: string) =>
     tree.root.findAll((node) => flattenText(node.props?.children).includes(text)).length > 0;
+
+  const getTextColor = (tree: renderer.ReactTestRenderer, text: string) => {
+    const flattenStyle = (style: unknown): Record<string, unknown> => {
+      if (Array.isArray(style)) return Object.assign({}, ...style.map(flattenStyle));
+      return style && typeof style === 'object' ? style as Record<string, unknown> : {};
+    };
+    const matches = tree.root.findAll((node) => (
+      flattenText(node.props?.children) === text && node.props?.style
+    ));
+    const node = matches[matches.length - 1];
+    return flattenStyle(node?.props.style).color;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -478,6 +491,47 @@ describe('SwipeableTaskItem', () => {
     ));
     expect(row).toBeTruthy();
     expect(safeFormatDate).toHaveBeenCalledWith(expect.any(Date), 'Pp');
+  });
+
+  it('colors due date metadata by urgency', () => {
+    safeFormatDate.mockReturnValue('Due date');
+    const renderDueTask = (urgency: string) => {
+      let tree!: renderer.ReactTestRenderer;
+      renderer.act(() => {
+        tree = renderer.create(
+          <SwipeableTaskItem
+            task={{
+              id: `task-${urgency}`,
+              title: 'Plan release',
+              status: 'next',
+              dueDate: '2026-05-12',
+              urgency,
+              createdAt: '2026-01-01T00:00:00.000Z',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            } as any}
+            isDark={false}
+            tc={{
+              taskItemBg: '#111111',
+              border: '#222222',
+              text: '#ffffff',
+              secondaryText: '#999999',
+              tint: '#3b82f6',
+              warning: '#f59e0b',
+              danger: '#b91c1c',
+            } as any}
+            onPress={vi.fn()}
+            onStatusChange={vi.fn()}
+            onDelete={vi.fn()}
+          />
+        );
+      });
+      return tree;
+    };
+
+    expect(getTextColor(renderDueTask('normal'), 'Due date')).toBe('#999999');
+    expect(getTextColor(renderDueTask('upcoming'), 'Due date')).toBe('#f59e0b');
+    expect(getTextColor(renderDueTask('urgent'), 'Due date')).toBe('#f59e0b');
+    expect(getTextColor(renderDueTask('overdue'), 'Due date')).toBe('#b91c1c');
   });
 
   it('navigates from project, context, and tag meta labels', () => {

@@ -89,7 +89,6 @@ export const styles = StyleSheet.create({
         color: '#7C3AED',
     },
     dueText: {
-        color: '#EF4444',
         fontWeight: '600',
     },
     projectDeadlineText: {

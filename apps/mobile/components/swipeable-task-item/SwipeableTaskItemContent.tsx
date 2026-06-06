@@ -4,6 +4,7 @@ import {
     getInlineMarkdownPreview,
     getTaskAgeLabel,
     getTaskDateCoherenceIssues,
+    getTaskUrgency,
     getStatusColor,
     hasTimeComponent,
     resolveTaskTextDirection,
@@ -121,6 +122,12 @@ export function SwipeableTaskItemContent({
         if (!due) return null;
         const hasTime = hasTimeComponent(task.dueDate);
         return safeFormatDate(due, hasTime ? 'Pp' : 'P');
+    })();
+    const dueColor = (() => {
+        const urgency = getTaskUrgency(task);
+        if (urgency === 'overdue') return tc.danger;
+        if (urgency === 'urgent' || urgency === 'upcoming') return tc.warning;
+        return tc.secondaryText;
     })();
     const startLabel = (() => {
         const start = safeParseDate(task.startTime);
@@ -284,7 +291,7 @@ export function SwipeableTaskItemContent({
 
     if (dueLabel) {
         addMetaPart(
-            <Text key="due" style={[styles.metaText, styles.dueText]}>
+            <Text key="due" style={[styles.metaText, styles.dueText, { color: dueColor }]}>
                 {dueLabel}
             </Text>,
             'due'
