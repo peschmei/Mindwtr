@@ -468,9 +468,14 @@ describe('TaskItem', () => {
             </LanguageProvider>
         );
 
-        fireEvent.change(getByLabelText(/task status/i), { target: { value: 'waiting' } });
+        const statusSelect = getByLabelText(/task status/i) as HTMLSelectElement;
+        statusSelect.focus();
+        expect(statusSelect).toHaveFocus();
+
+        fireEvent.change(statusSelect, { target: { value: 'waiting' } });
 
         expect(getByText('Who/what are you waiting for?')).toBeInTheDocument();
+        expect(statusSelect).not.toHaveFocus();
         fireEvent.change(getByPlaceholderText('Who is this waiting for?'), { target: { value: 'Alex' } });
         fireEvent.click(getByRole('button', { name: 'Save' }));
 
