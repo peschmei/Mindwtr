@@ -317,14 +317,18 @@ Any MCP-compatible client can work as long as it can launch a **stdio** server w
   - Input: `{}`
 - `mindwtr_get_project`
   - Input: `{ id, includeDeleted? }`
+- `mindwtr_list_sections`
+  - Input: `{ projectId?, includeDeleted? }`
+- `mindwtr_get_section`
+  - Input: `{ id, includeDeleted? }`
 - `mindwtr_list_areas`
   - Input: `{}`
 - `mindwtr_get_task`
   - Input: `{ id, includeDeleted? }`
 - `mindwtr_add_task` **(requires `--write`)**
-  - Input: `{ title? | quickAdd?, status?, projectId?, dueDate?, startTime?, contexts?, tags?, description?, priority?, timeEstimate? }`
+  - Input: `{ title? | quickAdd?, status?, projectId?, sectionId?, dueDate?, startTime?, contexts?, tags?, description?, priority?, timeEstimate? }`
 - `mindwtr_update_task` **(requires `--write`)**
-  - Input: `{ id, title?, status?, projectId?, dueDate?, startTime?, contexts?, tags?, description?, priority?, timeEstimate?, reviewAt?, isFocusedToday? }`
+  - Input: `{ id, title?, status?, projectId?, sectionId?, dueDate?, startTime?, contexts?, tags?, description?, priority?, timeEstimate?, reviewAt?, isFocusedToday? }`
 - `mindwtr_complete_task` **(requires `--write`)**
   - Input: `{ id }`
 - `mindwtr_delete_task` **(requires `--write`)**
@@ -337,6 +341,12 @@ Any MCP-compatible client can work as long as it can launch a **stdio** server w
   - Input: `{ id, title?, color?, status?, areaId?, isSequential?, isFocused?, dueDate?, reviewAt?, supportNotes? }`
 - `mindwtr_delete_project` **(requires `--write`)**
   - Input: `{ id }`
+- `mindwtr_add_section` **(requires `--write`)**
+  - Input: `{ projectId, title, description?, order?, isCollapsed? }`
+- `mindwtr_update_section` **(requires `--write`)**
+  - Input: `{ id, title?, description?, order?, isCollapsed? }`
+- `mindwtr_delete_section` **(requires `--write`)**
+  - Input: `{ id }`
 - `mindwtr_add_area` **(requires `--write`)**
   - Input: `{ name, color?, icon? }`
 - `mindwtr_update_area` **(requires `--write`)**
@@ -344,7 +354,7 @@ Any MCP-compatible client can work as long as it can launch a **stdio** server w
 - `mindwtr_delete_area` **(requires `--write`)**
   - Input: `{ id }`
 
-All tools return JSON text payloads with the resulting task, project, area, or collection payload.
+All tools return JSON text payloads with the resulting task, project, section, area, or collection payload.
 
 ---
 
@@ -422,5 +432,5 @@ claude mcp add mindwtr -- \
 
 ## Notes
 
-- This MCP server writes directly to the SQLite database used by the desktop app.
+- This MCP server targets the SQLite database used by the desktop app, with mutations routed through `@mindwtr/core`.
 - Keep an eye on schema changes across app versions (update queries if needed).

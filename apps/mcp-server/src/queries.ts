@@ -5,6 +5,7 @@ import {
   parseQuickAdd as parseQuickAddCore,
   type Area as CoreArea,
   type Project as CoreProject,
+  type Section as CoreSection,
   type Task as CoreTask,
   type TaskEnergyLevel as CoreTaskEnergyLevel,
   type TaskPriority as CoreTaskPriority,
@@ -19,6 +20,7 @@ export type TaskStatus = CoreTaskStatus;
 export type Task = CoreTask;
 export type Project = CoreProject & { orderNum?: number };
 export type Area = CoreArea;
+export type Section = CoreSection;
 export type ProjectRef = Pick<CoreProject, 'id' | 'title'>;
 
 const parseTaskStatusInput = (value: unknown): TaskStatus | undefined => {
@@ -66,6 +68,7 @@ export type AddTaskInput = {
   quickAdd?: string;
   status?: TaskStatus;
   projectId?: string;
+  sectionId?: string;
   dueDate?: string;
   startTime?: string;
   contexts?: string[];
@@ -338,6 +341,93 @@ export function getProject(db: DbClient, input: GetProjectInput): Project {
   return mapProjectRow(row);
 }
 
+const BASE_SECTION_COLUMNS = [
+  'id',
+  'projectId',
+  'title',
+  'description',
+  'orderNum',
+  'isCollapsed',
+  'rev',
+  'revBy',
+  'createdAt',
+  'updatedAt',
+  'deletedAt',
+];
+
+const sectionColumnsCache = new WeakMap<DbClient, { hasOrderNum: boolean; selectColumns: string[] }>();
+
+const getSectionColumns = (db: DbClient) => {
+  const cached = sectionColumnsCache.get(db);
+  if (cached) return cached;
+  try {
+    const columns = db.prepare('PRAGMA table_info(sections)').all();
+    const names = new Set<string>(columns.map((col: any) => String(col.name)));
+    const hasOrderNum = names.has('orderNum');
+    const selectColumns = BASE_SECTION_COLUMNS.filter((name) => hasOrderNum || name !== 'orderNum');
+    const resolved = { hasOrderNum, selectColumns };
+    sectionColumnsCache.set(db, resolved);
+    return resolved;
+  } catch {
+    const fallback = { hasOrderNum: true, selectColumns: BASE_SECTION_COLUMNS };
+    sectionColumnsCache.set(db, fallback);
+    return fallback;
+  }
+};
+
+const mapSectionRow = (row: any): Section => ({
+  id: row.id,
+  projectId: row.projectId,
+  title: row.title,
+  description: row.description ?? undefined,
+  order: row.orderNum ?? 0,
+  isCollapsed: row.isCollapsed === null || row.isCollapsed === undefined ? undefined : row.isCollapsed === 1,
+  rev: row.rev ?? undefined,
+  revBy: row.revBy ?? undefined,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+  deletedAt: row.deletedAt ?? undefined,
+});
+
+export type ListSectionsInput = {
+  projectId?: string;
+  includeDeleted?: boolean;
+};
+
+export function listSections(db: DbClient, input: ListSectionsInput = {}): Section[] {
+  const { hasOrderNum, selectColumns } = getSectionColumns(db);
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (input.projectId) {
+    where.push('projectId = ?');
+    params.push(input.projectId);
+  }
+  if (!input.includeDeleted) {
+    where.push('deletedAt IS NULL');
+  }
+  const whereSql = where.length > 0 ? ` WHERE ${where.join(' AND ')}` : '';
+  const orderSql = hasOrderNum ? 'projectId ASC, orderNum ASC, title ASC' : 'projectId ASC, title ASC';
+  const rows = db
+    .prepare(`SELECT ${selectColumns.join(', ')} FROM sections${whereSql} ORDER BY ${orderSql}`)
+    .all(...params);
+  return rows.map(mapSectionRow);
+}
+
+export type GetSectionInput = { id: string; includeDeleted?: boolean };
+
+export function getSection(db: DbClient, input: GetSectionInput): Section {
+  const { selectColumns } = getSectionColumns(db);
+  const where = ['id = ?'];
+  if (!input.includeDeleted) {
+    where.push('deletedAt IS NULL');
+  }
+  const row = db.prepare(`SELECT ${selectColumns.join(', ')} FROM sections WHERE ${where.join(' AND ')}`).get(input.id);
+  if (!row) {
+    throw new NotFoundError(`Section not found: ${input.id}`);
+  }
+  return mapSectionRow(row);
+}
+
 const BASE_AREA_COLUMNS = [
   'id',
   'name',
@@ -550,6 +640,7 @@ export type UpdateTaskInput = {
   title?: string;
   status?: TaskStatus;
   projectId?: string | null;
+  sectionId?: string | null;
   dueDate?: string | null;
   startTime?: string | null;
   contexts?: string[] | null;

@@ -5,6 +5,7 @@ import {
   TASK_STATUS_SET,
   type Area as CoreArea,
   type Project as CoreProject,
+  type Section as CoreSection,
 } from '@mindwtr/core';
 
 import { closeDb, openMindwtrDb, type DbOptions } from './db.js';
@@ -19,15 +20,20 @@ import {
 import {
   getTask,
   getProject,
+  getSection,
   listAreas,
   listProjects,
+  listSections,
   listTasks,
   type AddTaskInput,
   type Area,
+  type GetSectionInput,
   type GetTaskInput,
   type GetProjectInput,
+  type ListSectionsInput,
   type ListTasksInput,
   type Project,
+  type Section,
   type Task,
   type TaskRow,
   type UpdateTaskInput,
@@ -49,9 +55,11 @@ type ServiceDeps = {
   closeDb: typeof closeDb;
   listTasks: typeof listTasks;
   listProjects: typeof listProjects;
+  listSections: typeof listSections;
   listAreas: typeof listAreas;
   getTask: typeof getTask;
   getProject: typeof getProject;
+  getSection: typeof getSection;
   parseQuickAdd: typeof parseQuickAdd;
   runCoreService: typeof runCoreService;
 };
@@ -61,9 +69,11 @@ const defaultServiceDeps: ServiceDeps = {
   closeDb,
   listTasks,
   listProjects,
+  listSections,
   listAreas,
   getTask,
   getProject,
+  getSection,
   parseQuickAdd,
   runCoreService,
 };
@@ -139,6 +149,7 @@ const buildTaskUpdates = (input: UpdateTaskInput): Partial<Task> => {
   if (input.title !== undefined) updates.title = input.title;
   if (input.status !== undefined) updates.status = parseInputStatus(input.status);
   if (input.projectId !== undefined) updates.projectId = input.projectId ?? undefined;
+  if (input.sectionId !== undefined) updates.sectionId = input.sectionId ?? undefined;
   if (input.dueDate !== undefined) updates.dueDate = input.dueDate ?? undefined;
   if (input.startTime !== undefined) updates.startTime = input.startTime ?? undefined;
   if (input.contexts !== undefined) updates.contexts = normalizeNullableTaskTokens('contexts', input.contexts) ?? [];
@@ -189,6 +200,22 @@ export type UpdateAreaInput = {
   icon?: string | null;
 };
 
+export type AddSectionInput = {
+  projectId: string;
+  title: string;
+  description?: string | null;
+  order?: number;
+  isCollapsed?: boolean;
+};
+
+export type UpdateSectionInput = {
+  id: string;
+  title?: string;
+  description?: string | null;
+  order?: number;
+  isCollapsed?: boolean;
+};
+
 const validateProjectTitle = (title: string): string => {
   const trimmed = title.trim();
   if (!trimmed) {
@@ -211,12 +238,25 @@ const validateAreaName = (name: string): string => {
   return trimmed;
 };
 
+const validateSectionTitle = (title: string): string => {
+  const trimmed = title.trim();
+  if (!trimmed) {
+    throw new ValidationError('Section title is required');
+  }
+  if (trimmed.length > MAX_TASK_TITLE_LENGTH) {
+    throw new ValidationError(`Section title too long (max ${MAX_TASK_TITLE_LENGTH} characters)`);
+  }
+  return trimmed;
+};
+
 export type MindwtrService = {
   listTasks: (input: ListTasksInput) => Promise<TaskRow[]>;
   listProjects: () => Promise<Project[]>;
+  listSections: (input?: ListSectionsInput) => Promise<Section[]>;
   listAreas: () => Promise<Area[]>;
   getTask: (input: GetTaskInput) => Promise<TaskRow>;
   getProject: (input: GetProjectInput) => Promise<Project>;
+  getSection: (input: GetSectionInput) => Promise<Section>;
   addTask: (input: AddTaskInput) => Promise<Task>;
   updateTask: (input: UpdateTaskInput) => Promise<Task>;
   completeTask: (id: string) => Promise<Task>;
@@ -225,6 +265,9 @@ export type MindwtrService = {
   addProject: (input: AddProjectInput) => Promise<Project>;
   updateProject: (input: UpdateProjectInput) => Promise<Project>;
   deleteProject: (id: string) => Promise<Project>;
+  addSection: (input: AddSectionInput) => Promise<Section>;
+  updateSection: (input: UpdateSectionInput) => Promise<Section>;
+  deleteSection: (id: string) => Promise<Section>;
   addArea: (input: AddAreaInput) => Promise<Area>;
   updateArea: (input: UpdateAreaInput) => Promise<Area>;
   deleteArea: (id: string) => Promise<Area>;
@@ -236,9 +279,11 @@ export const createService = (options: DbOptions, deps: ServiceDeps = defaultSer
   return {
     listTasks: async (input) => withDb((db) => deps.listTasks(db, input)),
     listProjects: async () => withDb((db) => deps.listProjects(db)),
+    listSections: async (input = {}) => withDb((db) => deps.listSections(db, input)),
     listAreas: async () => withDb((db) => deps.listAreas(db)),
     getTask: async (input) => withDb((db) => deps.getTask(db, input)),
     getProject: async (input) => withDb((db) => deps.getProject(db, input)),
+    getSection: async (input) => withDb((db) => deps.getSection(db, input)),
     addTask: async (input) => {
       const normalizedInput = validateAddTaskInput(input);
       return await deps.runCoreService(options, async (core) => {
@@ -249,9 +294,10 @@ export const createService = (options: DbOptions, deps: ServiceDeps = defaultSer
           const status = parseInputStatus(normalizedInput.status);
           const props = filterUndefined({
             ...quick.props,
-            status: status ?? quick.props.status,
-            projectId: normalizedInput.projectId ?? quick.props.projectId,
-            dueDate: normalizedInput.dueDate ?? quick.props.dueDate,
+          status: status ?? quick.props.status,
+          projectId: normalizedInput.projectId ?? quick.props.projectId,
+          sectionId: normalizedInput.sectionId ?? quick.props.sectionId,
+          dueDate: normalizedInput.dueDate ?? quick.props.dueDate,
             startTime: normalizedInput.startTime ?? quick.props.startTime,
             contexts: normalizedInput.contexts ?? quick.props.contexts,
             tags: normalizedInput.tags ?? quick.props.tags,
@@ -321,6 +367,27 @@ export const createService = (options: DbOptions, deps: ServiceDeps = defaultSer
         return core.updateProject({ id: input.id, updates });
       }),
     deleteProject: async (id) => deps.runCoreService(options, (core) => core.deleteProject(id)),
+    addSection: async (input) =>
+      deps.runCoreService(options, async (core) => {
+        const projectId = input.projectId.trim();
+        if (!projectId) throw new ValidationError('Section projectId is required');
+        const title = validateSectionTitle(input.title);
+        const props: Partial<CoreSection> = {};
+        if (input.description !== undefined) props.description = input.description ?? undefined;
+        if (input.order !== undefined) props.order = input.order;
+        if (input.isCollapsed !== undefined) props.isCollapsed = input.isCollapsed;
+        return core.addSection({ projectId, title, props });
+      }),
+    updateSection: async (input) =>
+      deps.runCoreService(options, async (core) => {
+        const updates: Partial<CoreSection> = {};
+        if (input.title !== undefined) updates.title = validateSectionTitle(input.title);
+        if (input.description !== undefined) updates.description = input.description ?? undefined;
+        if (input.order !== undefined) updates.order = input.order;
+        if (input.isCollapsed !== undefined) updates.isCollapsed = input.isCollapsed;
+        return core.updateSection({ id: input.id, updates });
+      }),
+    deleteSection: async (id) => deps.runCoreService(options, (core) => core.deleteSection(id)),
     addArea: async (input) =>
       deps.runCoreService(options, async (core) => {
         const name = validateAreaName(input.name);

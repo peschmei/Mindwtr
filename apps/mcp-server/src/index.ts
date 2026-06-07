@@ -151,6 +151,7 @@ const addTaskSchema = z.object({
   quickAdd: z.string().optional().describe('Quick-add string with natural language parsing (e.g. "Buy milk @errands #shopping /due:tomorrow +ProjectName")'),
   status: taskStatusSchema.optional().describe('Task status: inbox, next, waiting, someday, reference, done, archived'),
   projectId: z.string().optional().describe('Project ID to assign the task to'),
+  sectionId: z.string().optional().describe('Project section ID to assign the task to'),
   dueDate: isoDateLikeSchema.optional().describe('Due date in ISO format'),
   startTime: isoDateLikeSchema.optional().describe('Start time in ISO format'),
   contexts: z.array(taskTokenSchema).optional().describe('Context tags (e.g. ["@home", "@work"])'),
@@ -191,6 +192,7 @@ const updateTaskSchema = z.object({
   title: z.string().max(MAX_TASK_TITLE_LENGTH).optional(),
   status: taskStatusSchema.optional(),
   projectId: z.string().nullable().optional(),
+  sectionId: z.string().nullable().optional(),
   dueDate: isoDateLikeSchema.nullable().optional(),
   startTime: isoDateLikeSchema.nullable().optional(),
   contexts: z.array(taskTokenSchema).nullable().optional(),
@@ -229,6 +231,17 @@ const getProjectSchema = z.object({
   id: z.string(),
   includeDeleted: z.boolean().optional(),
 });
+
+const listSectionsSchema = z.object({
+  projectId: z.string().optional(),
+  includeDeleted: z.boolean().optional(),
+});
+
+const getSectionSchema = z.object({
+  id: z.string(),
+  includeDeleted: z.boolean().optional(),
+});
+
 const addProjectSchema = z.object({
   title: z.string().min(1).max(MAX_TASK_TITLE_LENGTH),
   color: z.string().optional(),
@@ -253,6 +266,26 @@ const updateProjectSchema = z.object({
   supportNotes: z.string().nullable().optional(),
 });
 const deleteProjectSchema = z.object({
+  id: z.string(),
+});
+
+const addSectionSchema = z.object({
+  projectId: z.string().min(1),
+  title: z.string().min(1).max(MAX_TASK_TITLE_LENGTH),
+  description: z.string().nullable().optional(),
+  order: z.number().int().optional(),
+  isCollapsed: z.boolean().optional(),
+});
+
+const updateSectionSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1).max(MAX_TASK_TITLE_LENGTH).optional(),
+  description: z.string().nullable().optional(),
+  order: z.number().int().optional(),
+  isCollapsed: z.boolean().optional(),
+});
+
+const deleteSectionSchema = z.object({
   id: z.string(),
 });
 const addAreaSchema = z.object({
@@ -314,6 +347,30 @@ export const registerMindwtrTools = (server: McpServer, service: MindwtrService,
     withMcpErrorHandling('mindwtr_get_project', async (input) => {
       const project = await service.getProject({ id: input.id, includeDeleted: input.includeDeleted });
       return createMcpTextResponse({ project });
+    }),
+  );
+
+  server.registerTool(
+    'mindwtr_list_sections',
+    {
+      description: 'List project sections from the local Mindwtr SQLite database. Optionally filter by projectId.',
+      inputSchema: listSectionsSchema,
+    },
+    withMcpErrorHandling('mindwtr_list_sections', async (input) => {
+      const sections = await service.listSections(input);
+      return createMcpTextResponse({ sections });
+    }),
+  );
+
+  server.registerTool(
+    'mindwtr_get_section',
+    {
+      description: 'Get a single project section by ID from the local Mindwtr SQLite database.',
+      inputSchema: getSectionSchema,
+    },
+    withMcpErrorHandling('mindwtr_get_section', async (input) => {
+      const section = await service.getSection({ id: input.id, includeDeleted: input.includeDeleted });
+      return createMcpTextResponse({ section });
     }),
   );
 
@@ -439,6 +496,42 @@ export const registerMindwtrTools = (server: McpServer, service: MindwtrService,
     withReadonlyMcpErrorHandling('mindwtr_delete_project', async (input) => {
       const project = await service.deleteProject(input.id);
       return createMcpTextResponse({ project });
+    }),
+  );
+
+  server.registerTool(
+    'mindwtr_add_section',
+    {
+      description: 'Add a project-scoped section to the local Mindwtr SQLite database.',
+      inputSchema: addSectionSchema,
+    },
+    withReadonlyMcpErrorHandling('mindwtr_add_section', async (input) => {
+      const section = await service.addSection(input);
+      return createMcpTextResponse({ section });
+    }),
+  );
+
+  server.registerTool(
+    'mindwtr_update_section',
+    {
+      description: 'Update a project section in the local Mindwtr SQLite database.',
+      inputSchema: updateSectionSchema,
+    },
+    withReadonlyMcpErrorHandling('mindwtr_update_section', async (input) => {
+      const section = await service.updateSection(input);
+      return createMcpTextResponse({ section });
+    }),
+  );
+
+  server.registerTool(
+    'mindwtr_delete_section',
+    {
+      description: 'Soft-delete a project section in the local Mindwtr SQLite database. Tasks in the section are kept and moved to no section by core.',
+      inputSchema: deleteSectionSchema,
+    },
+    withReadonlyMcpErrorHandling('mindwtr_delete_section', async (input) => {
+      const section = await service.deleteSection(input.id);
+      return createMcpTextResponse({ section });
     }),
   );
 

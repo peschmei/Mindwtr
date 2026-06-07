@@ -1,10 +1,11 @@
-import type { Area, Project, Task } from './queries.js';
+import type { Area, Project, Section, Task } from './queries.js';
 import { ensureMindwtrDbPath, type DbOptions } from './db.js';
 
 type CoreStore = {
   getState: () => {
     _allTasks: Task[];
     _allProjects: Project[];
+    _allSections: Section[];
     _allAreas: Area[];
     fetchData: () => Promise<void>;
     addTask: (title: string, initialProps?: Partial<Task>) => Promise<CoreActionResult>;
@@ -14,6 +15,9 @@ type CoreStore = {
     addProject: (title: string, color: string, initialProps?: Partial<Project>) => Promise<Project | null>;
     updateProject: (id: string, updates: Partial<Project>) => Promise<CoreActionResult>;
     deleteProject: (id: string) => Promise<CoreActionResult>;
+    addSection: (projectId: string, title: string, initialProps?: Partial<Section>) => Promise<Section | null>;
+    updateSection: (id: string, updates: Partial<Section>) => Promise<CoreActionResult>;
+    deleteSection: (id: string) => Promise<CoreActionResult>;
     addArea: (name: string, initialProps?: Partial<Area>) => Promise<Area | null>;
     updateArea: (id: string, updates: Partial<Area>) => Promise<CoreActionResult>;
     deleteArea: (id: string) => Promise<CoreActionResult>;
@@ -46,6 +50,9 @@ type CoreService = {
   addProject: (input: { title: string; color: string; props?: Partial<Project> }) => Promise<Project>;
   updateProject: (input: { id: string; updates: Partial<Project> }) => Promise<Project>;
   deleteProject: (id: string) => Promise<Project>;
+  addSection: (input: { projectId: string; title: string; props?: Partial<Section> }) => Promise<Section>;
+  updateSection: (input: { id: string; updates: Partial<Section> }) => Promise<Section>;
+  deleteSection: (id: string) => Promise<Section>;
   addArea: (input: { name: string; props?: Partial<Area> }) => Promise<Area>;
   updateArea: (input: { id: string; updates: Partial<Area> }) => Promise<Area>;
   deleteArea: (id: string) => Promise<Area>;
@@ -218,16 +225,44 @@ const ensureCoreReady = async (options: DbOptions) => {
         if (!updated) throw new Error(`Project not found after update: ${id}`);
         return updated as Project;
       },
-      deleteProject: async (id) => {
-        const state = core.useTaskStore.getState();
-        await state.fetchData();
-        ensureActionSucceeded('delete project', await state.deleteProject(id));
-        await core.flushPendingSave();
-        const updated = core.useTaskStore.getState()._allProjects.find((project) => project.id === id);
-        if (!updated) throw new Error(`Project not found after delete: ${id}`);
-        return updated as Project;
-      },
-      addArea: async ({ name, props }) => {
+    deleteProject: async (id) => {
+      const state = core.useTaskStore.getState();
+      await state.fetchData();
+      ensureActionSucceeded('delete project', await state.deleteProject(id));
+      await core.flushPendingSave();
+      const updated = core.useTaskStore.getState()._allProjects.find((project) => project.id === id);
+      if (!updated) throw new Error(`Project not found after delete: ${id}`);
+      return updated as Project;
+    },
+    addSection: async ({ projectId, title, props }) => {
+      const state = core.useTaskStore.getState();
+      await state.fetchData();
+      const created = await state.addSection(projectId, title, props);
+      if (!created) throw new Error('Failed to create section.');
+      await core.flushPendingSave();
+      const saved = core.useTaskStore.getState()._allSections.find((section) => section.id === created.id);
+      if (!saved) throw new Error(`Section not found after create: ${created.id}`);
+      return saved as Section;
+    },
+    updateSection: async ({ id, updates }) => {
+      const state = core.useTaskStore.getState();
+      await state.fetchData();
+      ensureActionSucceeded('update section', await state.updateSection(id, updates));
+      await core.flushPendingSave();
+      const updated = core.useTaskStore.getState()._allSections.find((section) => section.id === id);
+      if (!updated) throw new Error(`Section not found after update: ${id}`);
+      return updated as Section;
+    },
+    deleteSection: async (id) => {
+      const state = core.useTaskStore.getState();
+      await state.fetchData();
+      ensureActionSucceeded('delete section', await state.deleteSection(id));
+      await core.flushPendingSave();
+      const updated = core.useTaskStore.getState()._allSections.find((section) => section.id === id);
+      if (!updated) throw new Error(`Section not found after delete: ${id}`);
+      return updated as Section;
+    },
+    addArea: async ({ name, props }) => {
         const state = core.useTaskStore.getState();
         await state.fetchData();
         const created = await state.addArea(name, props);
