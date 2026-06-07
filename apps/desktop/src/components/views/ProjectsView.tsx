@@ -9,7 +9,7 @@ import {
     type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { buildTasksByProjectId, tFallback, useTaskStore, Task, type Project } from '@mindwtr/core';
+import { tFallback, useTaskStore, type Task, type Project } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
 import { PromptModal } from '../PromptModal';
 import { ProjectsSidebar } from './projects/ProjectsSidebar';
@@ -150,7 +150,7 @@ export function ProjectsView() {
         getDerivedState,
         focusedProjectCount,
     } = useProjectsViewStore();
-    const { allContexts, allTags } = getDerivedState();
+    const { allContexts, allTags, tasksByProjectId } = getDerivedState();
     const allTokens = useMemo(
         () => Array.from(new Set([...allContexts, ...allTags])).sort(),
         [allContexts, allTags],
@@ -544,10 +544,9 @@ export function ProjectsView() {
     };
 
     const selectedProject = projects.find(p => p.id === selectedProjectId);
-    const selectedProjectTasksById = useMemo(() => buildTasksByProjectId(allTasks), [allTasks]);
     const selectedProjectTasks = useMemo(
-        () => (selectedProjectId ? selectedProjectTasksById.get(selectedProjectId) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
-        [selectedProjectId, selectedProjectTasksById]
+        () => (selectedProjectId ? tasksByProjectId.get(selectedProjectId) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
+        [selectedProjectId, tasksByProjectId]
     );
 
     useEffect(() => {

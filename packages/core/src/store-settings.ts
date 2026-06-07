@@ -1233,6 +1233,11 @@ export const createSettingsActions = ({
                 ? {
                     tasksById: previous.tasksById,
                     activeTasksByStatus: previous.activeTasksByStatus,
+                    tasksByProjectId: previous.tasksByProjectId,
+                    tasksByContext: previous.tasksByContext,
+                    tasksByTag: previous.tasksByTag,
+                    focusedTasks: previous.focusedTasks,
+                    projectTaskSummaryById: previous.projectTaskSummaryById,
                     allContexts: previous.allContexts,
                     allTags: previous.allTags,
                     contextTokenUsage: previous.contextTokenUsage,

@@ -446,9 +446,14 @@ export const computeProjectDerivedState = (
 export const computeTaskDerivedState = (
     tasks: Task[],
     tasksById?: Map<string, Task>
-): Pick<DerivedState, 'tasksById' | 'activeTasksByStatus' | 'allContexts' | 'allTags' | 'contextTokenUsage' | 'tagTokenUsage' | 'dateCoherenceIssuesByTaskId' | 'focusedCount'> => {
+): Pick<DerivedState, 'tasksById' | 'activeTasksByStatus' | 'tasksByProjectId' | 'tasksByContext' | 'tasksByTag' | 'focusedTasks' | 'projectTaskSummaryById' | 'allContexts' | 'allTags' | 'contextTokenUsage' | 'tagTokenUsage' | 'dateCoherenceIssuesByTaskId' | 'focusedCount'> => {
     const resolvedTasksById = tasksById ?? new Map<string, Task>();
     const activeTasksByStatus = new Map<TaskStatus, Task[]>();
+    const tasksByProjectId = new Map<string, Task[]>();
+    const tasksByContext = new Map<string, Task[]>();
+    const tasksByTag = new Map<string, Task[]>();
+    const focusedTasks: Task[] = [];
+    const projectTaskSummaryById = new Map<string, { activeTaskCount: number; nextAction?: Task }>();
     const dateCoherenceIssuesByTaskId = new Map<string, ReturnType<typeof getTaskDateCoherenceIssues>>();
     const contextTokenUsage = collectTaskTokenUsage(tasks, (task) => task.contexts, { prefix: '@' });
     const tagTokenUsage = collectTaskTokenUsage(tasks, (task) => task.tags, { prefix: '#' });
@@ -462,6 +467,28 @@ export const computeTaskDerivedState = (
         const list = activeTasksByStatus.get(task.status) ?? [];
         list.push(task);
         activeTasksByStatus.set(task.status, list);
+        if (task.projectId) {
+            const projectTasks = tasksByProjectId.get(task.projectId) ?? [];
+            projectTasks.push(task);
+            tasksByProjectId.set(task.projectId, projectTasks);
+
+            if (task.status !== 'done' && task.status !== 'reference' && task.status !== 'archived') {
+                const summary = projectTaskSummaryById.get(task.projectId) ?? { activeTaskCount: 0 };
+                summary.activeTaskCount += 1;
+                if (!summary.nextAction && task.status === 'next') summary.nextAction = task;
+                projectTaskSummaryById.set(task.projectId, summary);
+            }
+        }
+        (task.contexts ?? []).forEach((context) => {
+            const contextTasks = tasksByContext.get(context) ?? [];
+            contextTasks.push(task);
+            tasksByContext.set(context, contextTasks);
+        });
+        (task.tags ?? []).forEach((tag) => {
+            const tagTasks = tasksByTag.get(tag) ?? [];
+            tagTasks.push(task);
+            tasksByTag.set(tag, tagTasks);
+        });
         const dateCoherenceIssues = getTaskDateCoherenceIssues(task);
         if (dateCoherenceIssues.length > 0) {
             dateCoherenceIssuesByTaskId.set(task.id, dateCoherenceIssues);
@@ -469,12 +496,18 @@ export const computeTaskDerivedState = (
         // Done/reference tasks keep their historical focus flag but should not consume today's focus limit.
         if (task.isFocusedToday && task.status !== 'done' && task.status !== 'reference') {
             focusedCount += 1;
+            focusedTasks.push(task);
         }
     });
 
     return {
         tasksById: resolvedTasksById,
         activeTasksByStatus,
+        tasksByProjectId,
+        tasksByContext,
+        tasksByTag,
+        focusedTasks,
+        projectTaskSummaryById,
         allContexts: getUsedTaskTokensFromUsage(contextTokenUsage),
         allTags: getUsedTaskTokensFromUsage(tagTokenUsage),
         contextTokenUsage,

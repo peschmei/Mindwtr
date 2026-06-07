@@ -93,6 +93,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         batchDeleteTasks,
         batchUpdateTasks,
         queryTasks,
+        getDerivedState,
         setHighlightTask,
     } = useTaskStore((state) => ({
         updateSettings: state.updateSettings,
@@ -107,6 +108,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         batchDeleteTasks: state.batchDeleteTasks,
         batchUpdateTasks: state.batchUpdateTasks,
         queryTasks: state.queryTasks,
+        getDerivedState: state.getDerivedState,
         setHighlightTask: state.setHighlightTask,
     }), shallow);
     const { t } = useLanguage();
@@ -231,8 +233,12 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         const cacheKey = `${statusFilter}-${lastDataChangeAt}`;
         const cached = queryCacheRef.current.get(cacheKey);
         if (statusFilter !== 'archived') {
-            setBaseTasks(tasks);
-            queryCacheRef.current.set(cacheKey, tasks);
+            const { activeTasksByStatus } = getDerivedState();
+            const indexedTasks = statusFilter === 'all'
+                ? tasks
+                : activeTasksByStatus.get(statusFilter) ?? [];
+            setBaseTasks(indexedTasks);
+            queryCacheRef.current.set(cacheKey, indexedTasks);
             if (queryCacheRef.current.size > 10) {
                 const firstKey = queryCacheRef.current.keys().next().value;
                 if (firstKey) queryCacheRef.current.delete(firstKey);
@@ -264,7 +270,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         return () => {
             cancelled = true;
         };
-    }, [statusFilter, queryTasks, lastDataChangeAt, showToast, tasks]);
+    }, [statusFilter, queryTasks, getDerivedState, lastDataChangeAt, showToast, tasks]);
 
     useEffect(() => {
         setSearchQuery('');

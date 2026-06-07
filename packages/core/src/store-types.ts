@@ -147,6 +147,11 @@ export type DerivedState = {
     projectMap: Map<string, Project>;
     tasksById: Map<string, Task>;
     activeTasksByStatus: Map<TaskStatus, Task[]>;
+    tasksByProjectId: Map<string, Task[]>;
+    tasksByContext: Map<string, Task[]>;
+    tasksByTag: Map<string, Task[]>;
+    focusedTasks: Task[];
+    projectTaskSummaryById: Map<string, { activeTaskCount: number; nextAction?: Task }>;
     allContexts: string[];
     allTags: string[];
     contextTokenUsage: TaskTokenUsage[];

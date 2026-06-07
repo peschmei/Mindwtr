@@ -987,12 +987,27 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave }: TaskA
             return storage.queryTasks(options);
         }
         const tasks = get()._allTasks;
-        const statusFilter = options.status;
-        const excludeStatuses = options.excludeStatuses ?? [];
-        const includeArchived = options.includeArchived === true;
-        const includeDeleted = options.includeDeleted === true;
-        return tasks.filter((task) => {
-            if (!isTaskVisible(task, { includeArchived, includeDeleted })) return false;
+            const statusFilter = options.status;
+            const excludeStatuses = options.excludeStatuses ?? [];
+            const includeArchived = options.includeArchived === true;
+            const includeDeleted = options.includeDeleted === true;
+            if (!includeArchived && !includeDeleted) {
+                const state = get();
+                const derived = state.getDerivedState();
+                const indexedTasks = options.projectId
+                    ? derived.tasksByProjectId.get(options.projectId) ?? []
+                    : statusFilter && statusFilter !== 'all'
+                        ? derived.activeTasksByStatus.get(statusFilter) ?? []
+                        : state.tasks;
+                return indexedTasks.filter((task) => {
+                    if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) return false;
+                    if (excludeStatuses.length > 0 && excludeStatuses.includes(task.status)) return false;
+                    if (options.projectId && task.projectId !== options.projectId) return false;
+                    return true;
+                });
+            }
+            return tasks.filter((task) => {
+                if (!isTaskVisible(task, { includeArchived, includeDeleted })) return false;
             if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) return false;
             if (excludeStatuses.length > 0 && excludeStatuses.includes(task.status)) return false;
             if (options.projectId && task.projectId !== options.projectId) return false;

@@ -426,6 +426,40 @@ describe('derived store state helpers', () => {
         expect(incoherent.dueDate).toBe('2026-04-24');
     });
 
+    it('derives query-scoped task indexes in one pass', () => {
+        const nextTask = createTask('next', 'project-1', 0, {
+            status: 'next',
+            contexts: ['@office'],
+            tags: ['#deep'],
+            isFocusedToday: true,
+        });
+        const doneTask = createTask('done', 'project-1', 1, {
+            status: 'done',
+            contexts: ['@office'],
+            tags: ['#done'],
+            isFocusedToday: true,
+        });
+        const waitingTask = createTask('waiting', 'project-2', 2, {
+            status: 'waiting',
+            contexts: ['@home'],
+            tags: ['#deep'],
+        });
+
+        const derived = computeTaskDerivedState([nextTask, doneTask, waitingTask]);
+
+        expect(derived.tasksByProjectId.get('project-1')?.map((task) => task.id)).toEqual(['next', 'done']);
+        expect(derived.tasksByContext.get('@office')?.map((task) => task.id)).toEqual(['next', 'done']);
+        expect(derived.tasksByTag.get('#deep')?.map((task) => task.id)).toEqual(['next', 'waiting']);
+        expect(derived.focusedTasks.map((task) => task.id)).toEqual(['next']);
+        expect(derived.projectTaskSummaryById.get('project-1')).toEqual({
+            activeTaskCount: 1,
+            nextAction: nextTask,
+        });
+        expect(derived.projectTaskSummaryById.get('project-2')).toEqual({
+            activeTaskCount: 1,
+        });
+    });
+
     it('derives focused project count while ignoring tombstones', () => {
         const derived = computeProjectDerivedState([
             createProject('focused-a', { isFocused: true }),

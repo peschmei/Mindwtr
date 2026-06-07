@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { View, Text, TextInput, TouchableOpacity, Alert, FlatList, Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AREA_PRESET_COLORS, Attachment, buildTasksByProjectId, DEFAULT_PROJECT_COLOR, Project, shallow, Task, type TaskSortBy, useTaskStore } from '@mindwtr/core';
+import { AREA_PRESET_COLORS, Attachment, DEFAULT_PROJECT_COLOR, Project, shallow, Task, type TaskSortBy, useTaskStore } from '@mindwtr/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react-native';
 
@@ -19,7 +19,6 @@ import { ProjectImagePreviewModal, ProjectLinkModal, ProjectTagPickerModal } fro
 import { ProjectRow } from '@/components/projects-screen/ProjectRow';
 import {
   buildProjectListRows,
-  buildProjectTaskSummaryById,
   type ProjectListRow,
 } from '@/components/projects-screen/project-list-model';
 import { useProjectAttachments } from '@/components/projects-screen/use-project-attachments';
@@ -83,6 +82,11 @@ export default function ProjectsScreen() {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
   const tc = useThemeColors();
+  const {
+    focusedProjectCount,
+    projectTaskSummaryById,
+    tasksByProjectId,
+  } = getDerivedState();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const statusPalette: Record<Project['status'], { text: string; bg: string; border: string }> = {
@@ -167,7 +171,7 @@ export default function ProjectsScreen() {
     selectedAreaFilter,
     allTagsValue: ALL_TAGS,
     noTagsValue: NO_TAGS,
-    focusedProjectCount: getDerivedState().focusedProjectCount,
+    focusedProjectCount,
     t,
   });
   const {
@@ -238,11 +242,9 @@ export default function ProjectsScreen() {
     showDeferredProjects,
     t,
   ]);
-  const projectTaskSummaryById = useMemo(() => buildProjectTaskSummaryById(tasks), [tasks]);
-  const projectTasksById = useMemo(() => buildTasksByProjectId(tasks), [tasks]);
   const selectedProjectTasks = useMemo(
-    () => (selectedProject ? projectTasksById.get(selectedProject.id) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
-    [projectTasksById, selectedProject?.id]
+    () => (selectedProject ? tasksByProjectId.get(selectedProject.id) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
+    [tasksByProjectId, selectedProject?.id]
   );
 
   const openProject = useCallback((project: Project) => {
