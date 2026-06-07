@@ -1,8 +1,20 @@
 import { useState } from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import type { Project } from '@mindwtr/core';
 
 import { TaskInput } from './TaskInput';
+
+const buildProject = (title: string, status: Project['status'] = 'active'): Project => ({
+    id: title.toLowerCase().replace(/\s+/g, '-'),
+    title,
+    status,
+    color: '#3b82f6',
+    order: 0,
+    tagIds: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+});
 
 function TaskInputHarness({
     initialValue = '',
@@ -39,6 +51,24 @@ describe('TaskInput autocomplete', () => {
         fireEvent.click(input);
 
         expect(getByRole('option', { name: '@personal' })).toBeInTheDocument();
+    });
+
+    it('hides archived projects from project suggestions', () => {
+        const onChange = vi.fn();
+        const { getByRole, queryByRole } = render(
+            <TaskInput
+                value="+Arc"
+                onChange={onChange}
+                projects={[buildProject('Active Roadmap'), buildProject('Arc', 'archived')]}
+                contexts={[]}
+            />
+        );
+        const input = getByRole('combobox') as HTMLInputElement;
+        input.setSelectionRange(input.value.length, input.value.length);
+        fireEvent.click(input);
+
+        expect(queryByRole('option', { name: 'Arc' })).not.toBeInTheDocument();
+        expect(getByRole('option', { name: /Create Project "Arc"/ })).toBeInTheDocument();
     });
 
     it('suggests tags for # trigger and inserts selected tag', () => {

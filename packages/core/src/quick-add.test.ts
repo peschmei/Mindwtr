@@ -268,6 +268,25 @@ describe('quick-add', () => {
         expect(result.projectTitle).toBeUndefined();
     });
 
+    it('does not match archived projects by title', () => {
+        const now = new Date('2025-01-01T10:00:00Z');
+        const projects = [{
+            id: 'p1',
+            title: 'OldProject',
+            status: 'archived',
+            color: '#000000',
+            order: 0,
+            tagIds: [],
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+        }];
+
+        const result = parseQuickAdd('Write spec +OldProject', projects as any, now);
+        expect(result.title).toBe('Write spec');
+        expect(result.props.projectId).toBeUndefined();
+        expect(result.projectTitle).toBe('OldProject');
+    });
+
     it('captures project title when project is missing', () => {
         const now = new Date('2025-01-01T10:00:00Z');
         const projects = [

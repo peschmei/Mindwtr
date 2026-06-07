@@ -97,10 +97,11 @@ export function TaskInput({
         if (!trigger) return [];
         const query = trigger.query.trim().toLowerCase();
         if (trigger.type === 'project') {
-            const matches = projects.filter((project) =>
+            const activeProjects = projects.filter((project) => project.status !== 'archived');
+            const matches = activeProjects.filter((project) =>
                 project.title.toLowerCase().includes(query)
             );
-            const hasExact = query.length > 0 && projects.some((project) => project.title.toLowerCase() === query);
+            const hasExact = query.length > 0 && activeProjects.some((project) => project.title.toLowerCase() === query);
             const result: Option[] = [];
             if (!hasExact && query.length > 0) {
                 result.push({

@@ -422,7 +422,9 @@ export function parseQuickAdd(input: string, projects?: Project[], now: Date = n
                 return { title, props: {} };
             }
             if (projects && projects.length > 0) {
-                const found = projects.find((p) => p.title.toLowerCase() === rawProject.toLowerCase());
+                const found = projects.find(
+                    (p) => p.status !== 'archived' && p.title.toLowerCase() === rawProject.toLowerCase()
+                );
                 if (found) projectId = found.id;
             } else if (/^[0-9a-f-]{8,}$/i.test(rawProject)) {
                 projectId = rawProject;
