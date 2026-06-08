@@ -4,6 +4,7 @@ import {
   buildStaticListVirtualWindow,
   buildProjectTaskReorderGroups,
   getBulkActionFailureMessage,
+  resolveStaticListViewportHeight,
   sortProjectTasksByOrder,
 } from './task-list-utils';
 
@@ -91,6 +92,25 @@ describe('sortProjectTasksByOrder', () => {
 });
 
 describe('buildStaticListVirtualWindow', () => {
+  it('can use a fallback viewport before the scroll view reports its first measurement', () => {
+    const items = Array.from({ length: 138 }, (_, index) => index);
+    const viewportHeight = resolveStaticListViewportHeight(0, 844);
+
+    const window = buildStaticListVirtualWindow(items, {
+      listOffsetY: 0,
+      overscan: 8,
+      rowEstimate: 88,
+      scrollOffsetY: 0,
+      viewportHeight,
+    });
+
+    expect(viewportHeight).toBe(844);
+    expect(window.startIndex).toBe(0);
+    expect(window.items.length).toBeLessThan(40);
+    expect(window.items).toEqual(items.slice(0, window.items.length));
+    expect(window.bottomSpacerHeight).toBeGreaterThan(0);
+  });
+
   it('returns a bounded visible slice with spacers for large static lists', () => {
     const items = Array.from({ length: 200 }, (_, index) => ({ id: `item-${index}` }));
 

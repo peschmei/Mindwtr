@@ -81,6 +81,16 @@ export type StaticListVirtualWindow<T> = {
   topSpacerHeight: number;
 };
 
+export function resolveStaticListViewportHeight(viewportHeight: number, fallbackHeight: number): number {
+  if (Number.isFinite(viewportHeight) && viewportHeight > 0) {
+    return viewportHeight;
+  }
+  if (Number.isFinite(fallbackHeight) && fallbackHeight > 0) {
+    return fallbackHeight;
+  }
+  return 0;
+}
+
 export function buildStaticListVirtualWindow<T>(
   items: T[],
   options: {

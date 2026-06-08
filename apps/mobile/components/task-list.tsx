@@ -69,6 +69,7 @@ import { styles } from './task-list/task-list.styles';
 import {
   buildProjectTaskReorderGroups,
   buildStaticListVirtualWindow,
+  resolveStaticListViewportHeight,
   type ProjectTaskReorderGroup,
   sortProjectTasksByOrder,
 } from './task-list-utils';
@@ -168,7 +169,7 @@ function TaskListComponent({
   const { isDark } = useTheme();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
-  const { width: windowWidth } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const {
     tasks,
     projects,
@@ -739,11 +740,15 @@ function TaskListComponent({
   const projectSectionIds = useMemo(() => projectSections.map((section) => section.id), [projectSections]);
   const hasProjectReorderItems = projectReorderGroups.some((group) => group.tasks.length > 0) || projectSections.length > 1;
   const staticListVirtualWindow = useMemo(() => {
+    const effectiveViewportHeight = resolveStaticListViewportHeight(
+      staticListVirtualization?.viewportHeight ?? 0,
+      windowHeight,
+    );
     if (
       !staticList
       || projectReorderMode
       || !staticListVirtualization
-      || staticListVirtualization.viewportHeight <= 0
+      || effectiveViewportHeight <= 0
       || listItems.length <= STATIC_LIST_VIRTUALIZATION_THRESHOLD
     ) {
       return null;
@@ -754,7 +759,7 @@ function TaskListComponent({
       overscan: STATIC_LIST_OVERSCAN,
       rowEstimate: STATIC_LIST_ROW_ESTIMATE,
       scrollOffsetY: staticListVirtualization.scrollOffsetY,
-      viewportHeight: staticListVirtualization.viewportHeight,
+      viewportHeight: effectiveViewportHeight,
     });
   }, [
     listItems,
@@ -763,6 +768,7 @@ function TaskListComponent({
     staticListOffsetY,
     staticListVirtualization,
     taskListRootOffsetY,
+    windowHeight,
   ]);
   // Keep the draggable pan handler on the handle strip so vertical scrolling still works.
   // DraggableFlatList gesture props: https://github.com/computerjazz/react-native-draggable-flatlist#props
