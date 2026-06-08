@@ -146,8 +146,6 @@ export function TaskListFiltersSheet({
             showsVerticalScrollIndicator={false}
             style={styles.taskFilterSheetScroll}
           >
-            {extraContent}
-
             <Text style={[styles.taskFilterSectionLabel, { color: themeColors.secondaryText }]}>
               {resolveText(t, 'common.search', 'Search')}
             </Text>
@@ -162,6 +160,8 @@ export function TaskListFiltersSheet({
               style={[styles.taskFilterInput, { backgroundColor: themeColors.bg, borderColor: themeColors.border, color: themeColors.text }]}
               value={searchQuery}
             />
+
+            {extraContent}
 
             {tokenOptions.length > 0 ? (
               <>
