@@ -8,6 +8,7 @@ import {
 } from '../cloudkit-sync';
 import {
     collectAttachments,
+    ensureAttachmentStoredLocally,
     extractExtension,
     fileExists,
     getAttachmentByteSize,
@@ -147,6 +148,9 @@ export const syncCloudKitAttachments = async (appData: AppData, signal?: AbortSi
         if (attachment.kind !== 'file') continue;
         if (attachment.deletedAt) continue;
         assertAttachmentSyncNotAborted(signal);
+        if (await ensureAttachmentStoredLocally(attachment)) {
+            didMutate = true;
+        }
 
         const uri = attachment.uri || '';
         const isHttp = isHttpAttachmentUri(uri);

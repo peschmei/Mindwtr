@@ -608,6 +608,25 @@ export const persistAttachmentLocally = async (attachment: Attachment): Promise<
   }
 };
 
+export const ensureAttachmentStoredLocally = async (attachment: Attachment): Promise<boolean> => {
+  if (attachment.kind !== 'file') return false;
+  if (attachment.deletedAt) return false;
+
+  const cached = await persistAttachmentLocally(attachment);
+  if (
+    cached.uri === attachment.uri
+    && cached.size === attachment.size
+    && cached.localStatus === attachment.localStatus
+  ) {
+    return false;
+  }
+
+  attachment.uri = cached.uri;
+  attachment.size = cached.size;
+  attachment.localStatus = cached.localStatus;
+  return true;
+};
+
 export const collectAttachments = (appData: AppData): Map<string, Attachment> => {
   const attachmentsById = new Map<string, Attachment>();
   for (const task of appData.tasks) {

@@ -11,6 +11,7 @@ import {
   DEFAULT_CONTENT_TYPE,
   DROPBOX_ATTACHMENT_MAX_DOWNLOADS_PER_SYNC,
   DROPBOX_ATTACHMENT_MAX_UPLOADS_PER_SYNC,
+  ensureAttachmentStoredLocally,
   extractExtension,
   fileExists,
   getAttachmentByteSize,
@@ -74,6 +75,9 @@ export const syncDropboxAttachments = async (
   for (const attachment of attachmentsById.values()) {
     if (attachment.kind !== 'file') continue;
     if (attachment.deletedAt) continue;
+    if (await ensureAttachmentStoredLocally(attachment)) {
+      didMutate = true;
+    }
 
     const uri = attachment.uri || '';
     const isHttp = isHttpAttachmentUri(uri);

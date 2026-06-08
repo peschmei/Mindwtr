@@ -7,6 +7,7 @@ import {
   collectAttachments,
   copyFileSafely,
   DEFAULT_CONTENT_TYPE,
+  ensureAttachmentStoredLocally,
   extractExtension,
   FILE_BACKEND_VALIDATION_CONFIG,
   fileExists,
@@ -51,6 +52,9 @@ export const syncFileAttachments = async (
     if (attachment.kind !== 'file') continue;
     if (attachment.deletedAt) continue;
     assertAttachmentSyncNotAborted(signal);
+    if (await ensureAttachmentStoredLocally(attachment)) {
+      didMutate = true;
+    }
 
     const uri = attachment.uri || '';
     const isHttp = isHttpAttachmentUri(uri);

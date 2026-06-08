@@ -130,6 +130,33 @@ describe('attachment sync', () => {
     expect(result.size).toBe(3);
   });
 
+  it('normalizes legacy content-uri attachments when ensuring availability', async () => {
+    const contentUri = 'content://com.android.providers.downloads.documents/document/msf%3A1000006031';
+    fileSystemMock.getInfoAsync
+      .mockResolvedValueOnce({ exists: false })
+      .mockResolvedValueOnce({ exists: true, size: 3 });
+    fileSystemMock.readAsStringAsync.mockResolvedValue('AQID');
+
+    const { ensureAttachmentAvailable } = await import('./attachment-sync');
+
+    const result = await ensureAttachmentAvailable({
+      id: 'att-available',
+      kind: 'file',
+      title: 'Legacy.png',
+      uri: contentUri,
+      createdAt: '2026-03-06T05:14:32.399Z',
+      updatedAt: '2026-03-06T05:14:32.399Z',
+    });
+
+    expect(result?.uri).toBe('file://document/attachments/att-available.png');
+    expect(result?.localStatus).toBe('available');
+    expect(result?.size).toBe(3);
+    expect(fileSystemMock.readAsStringAsync).toHaveBeenCalledWith(
+      contentUri,
+      { encoding: 'base64' }
+    );
+  });
+
   it('reuses an existing SAF attachments directory even when Android returns it with a trailing slash', async () => {
     const syncFileUri = 'content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FMindwtr%20Backup/document/primary%3ADocuments%2FMindwtr%20Backup%2Fdata.json';
     const attachmentsDirUri = 'content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FMindwtr%20Backup/document/primary%3ADocuments%2FMindwtr%20Backup%2Fattachments/';
@@ -273,6 +300,77 @@ describe('attachment sync', () => {
     expect(attachmentDirReads).toHaveLength(1);
     expect(fileSystemMock.StorageAccessFramework.createFileAsync).not.toHaveBeenCalled();
     expect(fileSystemMock.StorageAccessFramework.writeAsStringAsync).not.toHaveBeenCalled();
+  });
+
+  it('migrates legacy content-uri attachments into app-managed storage during sync', async () => {
+    const syncFileUri = 'content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FMindwtr%20Backup/document/primary%3ADocuments%2FMindwtr%20Backup%2Fdata.json';
+    const attachmentsDirUri = 'content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FMindwtr%20Backup/document/primary%3ADocuments%2FMindwtr%20Backup%2Fattachments/';
+    const remoteFileUri = `${attachmentsDirUri}legacy.txt`;
+    const legacyContentUri = 'content://com.android.providers.downloads.documents/document/msf%3A42';
+    const managedUri = 'file://document/attachments/legacy.txt';
+
+    fileSystemMock.getInfoAsync
+      .mockResolvedValueOnce({ exists: false, size: 0 })
+      .mockResolvedValue({ exists: true, size: 3 });
+    fileSystemMock.readAsStringAsync.mockResolvedValue('AQID');
+    fileSystemMock.StorageAccessFramework.readDirectoryAsync.mockImplementation(async (uri: string) => {
+      if (uri === attachmentsDirUri) {
+        return [remoteFileUri];
+      }
+      if (uri.includes('primary%3ADocuments%2FMindwtr%20Backup')) {
+        return [attachmentsDirUri];
+      }
+      return [];
+    });
+
+    const { syncFileAttachments } = await import('./attachment-sync');
+    const appData: AppData = {
+      tasks: [
+        {
+          id: 'task-1',
+          title: 'Task',
+          status: 'inbox',
+          tags: [],
+          contexts: [],
+          attachments: [
+            {
+              id: 'legacy',
+              kind: 'file',
+              title: 'legacy.txt',
+              uri: legacyContentUri,
+              cloudKey: 'attachments/legacy.txt',
+              localStatus: 'available',
+              size: 3,
+              createdAt: '2026-04-18T10:00:00.000Z',
+              updatedAt: '2026-04-18T10:00:00.000Z',
+            },
+          ],
+          createdAt: '2026-04-18T10:00:00.000Z',
+          updatedAt: '2026-04-18T10:00:00.000Z',
+        },
+      ],
+      projects: [],
+      sections: [],
+      areas: [],
+      settings: {},
+    };
+
+    const didMutate = await syncFileAttachments(appData, syncFileUri);
+    const attachment = appData.tasks[0].attachments?.[0];
+
+    expect(didMutate).toBe(true);
+    expect(attachment?.uri).toBe(managedUri);
+    expect(attachment?.localStatus).toBe('available');
+    expect(fileSystemMock.readAsStringAsync).toHaveBeenCalledWith(
+      legacyContentUri,
+      { encoding: 'base64' }
+    );
+    expect(fileSystemMock.writeAsStringAsync).toHaveBeenCalledWith(
+      expect.stringMatching(/^file:\/\/document\/attachments\/legacy\.txt\.tmp-/),
+      'AQID',
+      { encoding: 'base64' }
+    );
+    expect(fileSystemMock.StorageAccessFramework.createFileAsync).not.toHaveBeenCalled();
   });
 
   it('uploads a pending SAF file attachment into the existing attachments directory', async () => {

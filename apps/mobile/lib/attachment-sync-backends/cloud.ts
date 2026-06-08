@@ -5,6 +5,7 @@ import {
   buildCloudKey,
   collectAttachments,
   DEFAULT_CONTENT_TYPE,
+  ensureAttachmentStoredLocally,
   fileExists,
   getAttachmentByteSize,
   getAttachmentLocalStatus,
@@ -77,6 +78,9 @@ export const syncCloudAttachments = async (
   for (const attachment of attachmentsById.values()) {
     if (attachment.kind !== 'file') continue;
     if (attachment.deletedAt) continue;
+    if (await ensureAttachmentStoredLocally(attachment)) {
+      didMutate = true;
+    }
 
     const uri = attachment.uri || '';
     const isHttp = isHttpAttachmentUri(uri);

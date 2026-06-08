@@ -16,6 +16,7 @@ import {
   clearWebdavDownloadBackoff,
   collectAttachments,
   DEFAULT_CONTENT_TYPE,
+  ensureAttachmentStoredLocally,
   extractExtension,
   fileExists,
   getAttachmentByteSize,
@@ -110,6 +111,9 @@ export const syncWebdavAttachments = async (
     if (attachment.deletedAt) continue;
     if (abortedByRateLimit) break;
     assertAttachmentSyncNotAborted(signal);
+    if (await ensureAttachmentStoredLocally(attachment)) {
+      didMutate = true;
+    }
 
     const uri = attachment.uri || '';
     const isHttp = isHttpAttachmentUri(uri);
