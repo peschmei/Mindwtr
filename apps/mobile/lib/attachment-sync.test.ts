@@ -339,7 +339,6 @@ describe('attachment sync', () => {
               title: 'legacy.txt',
               uri: legacyContentUri,
               cloudKey: 'attachments/legacy.txt',
-              localStatus: 'available',
               size: 3,
               createdAt: '2026-04-18T10:00:00.000Z',
               updatedAt: '2026-04-18T10:00:00.000Z',
