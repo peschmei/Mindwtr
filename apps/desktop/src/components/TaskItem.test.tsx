@@ -264,6 +264,108 @@ describe('TaskItem', () => {
         expect(getByRole('menuitem', { name: /duplicate/i })).toBeInTheDocument();
     });
 
+    it('adds an eligible next action to today focus from the task quick actions menu', async () => {
+        const nextTask: Task = {
+            ...mockTask,
+            id: 'quick-focus-next-task',
+            status: 'next',
+        };
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                tasks: [nextTask],
+                _allTasks: [nextTask],
+                projects: [],
+                _allProjects: [],
+            }));
+        });
+
+        const { container, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={nextTask} />
+            </LanguageProvider>
+        );
+
+        const row = container.querySelector('[data-task-id="quick-focus-next-task"]');
+        expect(row).toBeTruthy();
+        fireEvent.contextMenu(row!);
+        fireEvent.click(getByRole('menuitem', { name: /add to today's focus/i }));
+
+        await waitFor(() => {
+            const updatedTask = useTaskStore.getState()._allTasks.find((task) => task.id === 'quick-focus-next-task');
+            expect(updatedTask?.isFocusedToday).toBe(true);
+            expect(updatedTask?.status).toBe('next');
+        });
+    });
+
+    it('does not add unclarified inbox tasks to today focus from the quick actions menu', () => {
+        const inboxTask: Task = {
+            ...mockTask,
+            id: 'quick-focus-inbox-task',
+            status: 'inbox',
+        };
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                tasks: [inboxTask],
+                _allTasks: [inboxTask],
+                projects: [],
+                _allProjects: [],
+            }));
+        });
+
+        const { container, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={inboxTask} />
+            </LanguageProvider>
+        );
+
+        const row = container.querySelector('[data-task-id="quick-focus-inbox-task"]');
+        expect(row).toBeTruthy();
+        fireEvent.contextMenu(row!);
+        const focusAction = getByRole('menuitem', { name: /add to today's focus/i });
+
+        expect(focusAction).toBeDisabled();
+        expect(focusAction).toHaveAttribute('title', 'Clarify this task before adding it to Focus.');
+        expect(useTaskStore.getState()._allTasks.find((task) => task.id === 'quick-focus-inbox-task')?.isFocusedToday)
+            .not.toBe(true);
+    });
+
+    it('focuses review-due tasks from the quick actions menu without changing their status', async () => {
+        const reviewDueTask: Task = {
+            ...mockTask,
+            id: 'quick-focus-review-task',
+            status: 'waiting',
+            reviewAt: '2026-01-01T00:00:00.000Z',
+        };
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                tasks: [reviewDueTask],
+                _allTasks: [reviewDueTask],
+                projects: [],
+                _allProjects: [],
+            }));
+        });
+
+        const { container, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={reviewDueTask} />
+            </LanguageProvider>
+        );
+
+        const row = container.querySelector('[data-task-id="quick-focus-review-task"]');
+        expect(row).toBeTruthy();
+        fireEvent.contextMenu(row!);
+        fireEvent.click(getByRole('menuitem', { name: /add to today's focus/i }));
+
+        await waitFor(() => {
+            const updatedTask = useTaskStore.getState()._allTasks.find((task) => task.id === 'quick-focus-review-task');
+            expect(updatedTask?.isFocusedToday).toBe(true);
+            expect(updatedTask?.status).toBe('waiting');
+        });
+    });
+
     it('updates due date from the task quick actions menu', async () => {
         const quickDueTask: Task = {
             ...mockTask,

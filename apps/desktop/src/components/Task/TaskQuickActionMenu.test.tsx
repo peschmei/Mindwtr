@@ -203,4 +203,45 @@ describe('TaskQuickActionMenu', () => {
         expect(onStatusChange).toHaveBeenCalledWith('reference');
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('runs the focus action from the quick menu and closes it', () => {
+        const onToggle = vi.fn();
+        const props = renderMenu({
+            focusAction: {
+                isFocused: false,
+                canToggle: true,
+                label: "Add to today's focus",
+                title: "Add to today's focus",
+                onToggle,
+            },
+        });
+
+        fireEvent.click(screen.getByRole('menuitem', { name: /add to today's focus/i }));
+
+        expect(onToggle).toHaveBeenCalledTimes(1);
+        expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows disabled focus actions with a reason', () => {
+        const onToggle = vi.fn();
+        const reason = 'Clarify this task before adding it to Focus.';
+        const props = renderMenu({
+            focusAction: {
+                isFocused: false,
+                canToggle: false,
+                label: "Add to today's focus",
+                title: reason,
+                onToggle,
+            },
+        });
+
+        const focusAction = screen.getByRole('menuitem', { name: /add to today's focus/i });
+        expect(focusAction).toBeDisabled();
+        expect(focusAction).toHaveAttribute('title', reason);
+
+        fireEvent.click(focusAction);
+
+        expect(onToggle).not.toHaveBeenCalled();
+        expect(props.onClose).not.toHaveBeenCalled();
+    });
 });

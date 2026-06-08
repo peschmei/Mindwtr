@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, MapPin, Tag, Trash2 } from 'lucide-react';
+import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, MapPin, Star, Tag, Trash2 } from 'lucide-react';
 import {
     hasTimeComponent,
     safeFormatDate,
@@ -36,6 +36,13 @@ interface TaskQuickActionMenuProps {
     contextOptions: string[];
     areas: Area[];
     readOnly: boolean;
+    focusAction?: {
+        isFocused: boolean;
+        canToggle: boolean;
+        label: string;
+        title: string;
+        onToggle: () => void;
+    };
     onClose: () => void;
     onDuplicate: () => void;
     onDelete: () => void;
@@ -76,6 +83,7 @@ export function TaskQuickActionMenu({
     contextOptions,
     areas,
     readOnly,
+    focusAction,
     onClose,
     onDuplicate,
     onDelete,
@@ -382,6 +390,8 @@ export function TaskQuickActionMenu({
         active = false,
         onClick,
         showChevron = false,
+        disabled = false,
+        title,
     }: {
         ref?: RefObject<HTMLButtonElement | null>;
         icon: ReactNode;
@@ -389,6 +399,8 @@ export function TaskQuickActionMenu({
         active?: boolean;
         onClick: () => void;
         showChevron?: boolean;
+        disabled?: boolean;
+        title?: string;
     }) => (
         <button
             ref={ref}
@@ -396,13 +408,19 @@ export function TaskQuickActionMenu({
             role="menuitem"
             aria-haspopup={showChevron ? 'dialog' : undefined}
             aria-expanded={showChevron ? active : undefined}
+            disabled={disabled}
+            title={title}
             onClick={onClick}
             className={cn(
                 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                active ? 'bg-muted text-foreground' : 'text-foreground hover:bg-muted',
+                disabled
+                    ? 'cursor-not-allowed text-muted-foreground/50'
+                    : active
+                        ? 'bg-muted text-foreground'
+                        : 'text-foreground hover:bg-muted',
             )}
         >
-            <span className="text-muted-foreground">{icon}</span>
+            <span className={disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}>{icon}</span>
             <span className="flex-1 truncate">{label}</span>
             {showChevron ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : null}
         </button>
@@ -418,6 +436,25 @@ export function TaskQuickActionMenu({
                     style={{ top: menuPosition.top, left: menuPosition.left }}
                     onContextMenu={(event) => event.preventDefault()}
                 >
+                {!readOnly && focusAction && renderMenuAction({
+                    icon: (
+                        <Star
+                            className={cn(
+                                'h-4 w-4',
+                                focusAction.isFocused && 'fill-current text-yellow-500',
+                            )}
+                        />
+                    ),
+                    label: focusAction.label,
+                    title: focusAction.title,
+                    disabled: !focusAction.canToggle,
+                    onClick: () => {
+                        if (!focusAction.canToggle) return;
+                        focusAction.onToggle();
+                        onClose();
+                    },
+                })}
+                {!readOnly && focusAction ? <div className="my-1 h-px bg-border/70" role="separator" /> : null}
                 {!readOnly && renderMenuAction({
                     ref: startButtonRef,
                     icon: <Calendar className="h-4 w-4" />,

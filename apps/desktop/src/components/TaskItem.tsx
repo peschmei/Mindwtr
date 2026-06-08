@@ -12,8 +12,14 @@ import {
     type RangeSelectionOptions,
     generateUUID,
     normalizeClockTimeInput,
+    normalizeFocusTaskLimit,
     syncMarkdownChecklistWithCanonical,
     tFallback,
+    formatFocusTaskLimitText,
+    getFocusSequentialFirstTaskIds,
+    isDueForReview,
+    isTaskInActiveProject,
+    shouldShowTaskForStart,
     useTaskStore,
 } from '@mindwtr/core';
 import { cn } from '../lib/utils';
@@ -81,6 +87,8 @@ type ProjectNextActionPromptState = {
     sectionId?: string;
 };
 
+const QUICK_ACTION_FOCUS_ACTIVE_STATUSES: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday'];
+
 export const TaskItem = memo(function TaskItem({
     task,
     project: propProject,
@@ -121,6 +129,7 @@ export const TaskItem = memo(function TaskItem({
         projectArea,
         taskArea: storeTaskArea,
         settings,
+        focusedCount,
         duplicateTask,
         resetTaskChecklist,
         restoreTask,
@@ -131,6 +140,10 @@ export const TaskItem = memo(function TaskItem({
         addSection,
         lockEditing,
         unlockEditing,
+        projectMap,
+        activeTasksByStatus,
+        sequentialProjectIds,
+        sequentialWithinSectionProjectIds,
     } = useTaskItemStoreState({
         task,
         propProject,
@@ -256,6 +269,8 @@ export const TaskItem = memo(function TaskItem({
     const timeEstimatesEnabled = settings?.features?.timeEstimates !== false;
     const undoNotificationsEnabled = settings?.undoNotificationsEnabled !== false;
     const showTaskAge = settings?.appearance?.showTaskAge === true;
+    const showFutureStarts = settings?.appearance?.showFutureStarts === true;
+    const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
     const isCompact = settings?.appearance?.density === 'compact';
     const isHighlighted = highlightTaskId === task.id;
     const recurrenceRule = getRecurrenceRuleValue(task.recurrence);
@@ -264,6 +279,107 @@ export const TaskItem = memo(function TaskItem({
     const effectiveReadOnly = readOnly || task.status === 'done';
     const effectiveFocusToggle = effectiveReadOnly ? undefined : focusToggle;
     const canCalendarDrag = !actionsOverlay && !dragHandle && !selectionMode && !isEditing && !effectiveReadOnly;
+    const quickActionFocus = useMemo(() => {
+        if (!quickActionMenu || effectiveReadOnly) return undefined;
+
+        const now = new Date();
+        const isFocused = Boolean(task.isFocusedToday);
+        const addLabel = tFallback(t, 'agenda.addToFocus', "Add to today's focus");
+        const removeLabel = tFallback(t, 'agenda.removeFromFocus', "Remove from today's focus");
+        const limitMessage = formatFocusTaskLimitText(
+            tFallback(t, 'agenda.maxFocusItems', 'Max {{count}} focus items.'),
+            focusTaskLimit,
+        );
+        const clarifyReason = tFallback(
+            t,
+            'agenda.focusUnavailableClarifyFirst',
+            'Clarify this task before adding it to Focus.',
+        );
+        const deferredReason = tFallback(
+            t,
+            'agenda.focusUnavailableDeferred',
+            'This task is deferred; change its start date before focusing it.',
+        );
+        const sequentialReason = tFallback(
+            t,
+            'agenda.focusUnavailableSequential',
+            'Complete the earlier sequential action before focusing this task.',
+        );
+        const activeFocusBaseTasks = QUICK_ACTION_FOCUS_ACTIVE_STATUSES
+            .flatMap((status) => activeTasksByStatus.get(status) ?? [])
+            .filter((candidate) => isTaskInActiveProject(candidate, projectMap));
+        const sequentialFirstTaskIds = getFocusSequentialFirstTaskIds(
+            activeFocusBaseTasks,
+            sequentialProjectIds,
+            { now, sectionScopedProjectIds: sequentialWithinSectionProjectIds },
+        );
+        const isSequentialBlocked = Boolean(
+            task.projectId
+            && sequentialProjectIds.has(task.projectId)
+            && !sequentialFirstTaskIds.has(task.id),
+        );
+        const isVisibleForStart = shouldShowTaskForStart(task, { showFutureStarts, now });
+        const isVisibleActiveTask = isTaskInActiveProject(task, projectMap) && isVisibleForStart;
+        const isReviewDueEligible = task.status !== 'inbox' && isDueForReview(task.reviewAt, now);
+        const isEligible = isVisibleActiveTask
+            && !isSequentialBlocked
+            && (task.status === 'next' || isReviewDueEligible);
+        const ineligibleReason = !isVisibleForStart
+            ? deferredReason
+            : isSequentialBlocked
+                ? sequentialReason
+                : clarifyReason;
+        const canToggle = isFocused || (isEligible && focusedCount < focusTaskLimit);
+        const title = isFocused
+            ? removeLabel
+            : !isEligible
+                ? ineligibleReason
+                : focusedCount >= focusTaskLimit
+                    ? limitMessage
+                    : addLabel;
+
+        return {
+            isFocused,
+            canToggle,
+            label: isFocused ? removeLabel : addLabel,
+            title,
+            onToggle: () => {
+                if (isFocused) {
+                    void updateTask(task.id, { isFocusedToday: false })
+                        .then((result) => {
+                            if (!result.success) showToast(result.error || 'Failed to update task', 'error');
+                        });
+                    return;
+                }
+                if (!isEligible) {
+                    showToast(ineligibleReason, 'info');
+                    return;
+                }
+                if (focusedCount >= focusTaskLimit) {
+                    showToast(limitMessage, 'info');
+                    return;
+                }
+                void updateTask(task.id, { isFocusedToday: true })
+                    .then((result) => {
+                        if (!result.success) showToast(result.error || 'Failed to update task', 'error');
+                    });
+            },
+        };
+    }, [
+        activeTasksByStatus,
+        effectiveReadOnly,
+        focusTaskLimit,
+        focusedCount,
+        projectMap,
+        quickActionMenu,
+        sequentialProjectIds,
+        sequentialWithinSectionProjectIds,
+        showFutureStarts,
+        showToast,
+        t,
+        task,
+        updateTask,
+    ]);
     const handleToggleChecklistItem = useCallback((index: number) => {
         if (effectiveReadOnly) return;
         const checklist = task.checklist || [];
@@ -1170,6 +1286,7 @@ export const TaskItem = memo(function TaskItem({
                     contextOptions={popularContextOptions}
                     areas={areas}
                     readOnly={effectiveReadOnly}
+                    focusAction={quickActionFocus}
                     onClose={handleCloseQuickActionMenu}
                     onDuplicate={() => {
                         duplicateTask(task.id, false);
