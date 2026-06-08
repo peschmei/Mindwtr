@@ -921,8 +921,8 @@ const styles = StyleSheet.create({
   moreTileLabel: {
     fontSize: 12,
     fontWeight: '700',
+    includeFontPadding: false,
     lineHeight: 15,
-    minHeight: 30,
     textAlign: 'center',
   },
   moreDivider: {

@@ -102,45 +102,61 @@ export const projectsScreenStyles = StyleSheet.create({
     projectDetailRoot: {
         flex: 1,
     },
-    completedToggleButton: {
-        minHeight: 34,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 7,
-        borderRadius: 999,
-        borderWidth: 1,
+    projectTaskFilterSection: {
+        gap: 12,
+        paddingBottom: 2,
     },
-    completedToggleText: {
+    projectTaskFilterGroup: {
+        gap: 8,
+    },
+    projectFilterSectionLabel: {
         fontSize: 12,
         fontWeight: '700',
+        letterSpacing: 0.4,
+        textTransform: 'uppercase',
     },
-    projectTaskControls: {
+    projectFilterChipRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
         flexWrap: 'wrap',
         gap: 8,
     },
-    projectSortSegment: {
+    projectFilterChip: {
         minHeight: 34,
-        flexDirection: 'row',
-        alignItems: 'center',
         borderRadius: 999,
         borderWidth: 1,
-        padding: 2,
-    },
-    projectSortSegmentButton: {
-        minHeight: 28,
-        justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 999,
-        paddingHorizontal: 10,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 7,
     },
-    projectSortSegmentText: {
+    projectFilterChipText: {
         fontSize: 12,
         fontWeight: '700',
+    },
+    projectFilterSwitch: {
+        minHeight: 42,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 9,
+    },
+    projectFilterSwitchText: {
+        flex: 1,
+        minWidth: 0,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    projectFilterSwitchIndicator: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     projectContent: {
         flex: 1,

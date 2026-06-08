@@ -75,7 +75,7 @@ const taskListPropsSpy = vi.hoisted(() => vi.fn());
 vi.mock('../../components/task-list', () => ({
     TaskList: (props: any) => {
         taskListPropsSpy(props);
-        return props.headerAccessory ?? null;
+        return props.filterSheetAccessory ?? props.headerAccessory ?? null;
     },
 }));
 
@@ -296,12 +296,37 @@ describe('ProjectDetailModal task sorting', () => {
         expect(taskListPropsSpy).toHaveBeenCalled();
         expect(taskListPropsSpy.mock.calls.at(-1)?.[0].projectSortBy).toBe('default');
         expect(taskListPropsSpy.mock.calls.at(-1)?.[0].taskSource).toBe(selectedProjectTasks);
+        expect(taskListPropsSpy.mock.calls.at(-1)?.[0].extraFilterActiveCount).toBe(0);
 
         act(() => {
             tree.root.findByProps({ testID: 'project-task-sort-due' }).props.onPress();
         });
 
         expect(onProjectTaskSortByChange).toHaveBeenCalledWith('due');
+    });
+
+    it('clears project-local filter sheet controls with the task filters', () => {
+        const onProjectTaskSortByChange = vi.fn();
+        const onToggleShowCompletedTasks = vi.fn();
+
+        act(() => {
+            create(<ProjectDetailModal {...createProjectDetailModalProps({
+                onProjectTaskSortByChange,
+                onToggleShowCompletedTasks,
+                projectTaskSortBy: 'due',
+                showCompletedTasks: true,
+            })} />);
+        });
+
+        const taskListProps = taskListPropsSpy.mock.calls.at(-1)?.[0];
+        expect(taskListProps.extraFilterActiveCount).toBe(2);
+
+        act(() => {
+            taskListProps.onClearExtraFilters();
+        });
+
+        expect(onProjectTaskSortByChange).toHaveBeenCalledWith('default');
+        expect(onToggleShowCompletedTasks).toHaveBeenCalledTimes(1);
     });
 });
 

@@ -19,6 +19,7 @@ type ThemeColors = {
 
 type TaskListFiltersSheetProps = {
   energyLevelOptions: TaskEnergyLevel[];
+  extraContent?: React.ReactNode;
   hasFilters: boolean;
   locationQuery: string;
   onChangeLocationQuery: (value: string) => void;
@@ -52,6 +53,7 @@ const resolveText = (t: (key: string) => string, key: string, fallback: string):
 
 export function TaskListFiltersSheet({
   energyLevelOptions,
+  extraContent,
   hasFilters,
   locationQuery,
   onChangeLocationQuery,
@@ -144,6 +146,8 @@ export function TaskListFiltersSheet({
             showsVerticalScrollIndicator={false}
             style={styles.taskFilterSheetScroll}
           >
+            {extraContent}
+
             <Text style={[styles.taskFilterSectionLabel, { color: themeColors.secondaryText }]}>
               {resolveText(t, 'common.search', 'Search')}
             </Text>

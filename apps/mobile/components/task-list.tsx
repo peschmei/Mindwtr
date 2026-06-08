@@ -110,6 +110,9 @@ export interface TaskListProps {
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
   headerAccessory?: React.ReactNode;
+  filterSheetAccessory?: React.ReactNode;
+  extraFilterActiveCount?: number;
+  onClearExtraFilters?: () => void;
   enableCopilot?: boolean;
   defaultEditTab?: 'task' | 'view';
   contentPaddingBottom?: number;
@@ -145,6 +148,9 @@ function TaskListComponent({
   emptyActionLabel,
   onEmptyAction,
   headerAccessory,
+  filterSheetAccessory,
+  extraFilterActiveCount = 0,
+  onClearExtraFilters,
   enableCopilot = true,
   defaultEditTab,
   contentPaddingBottom,
@@ -421,6 +427,10 @@ function TaskListComponent({
     setSelectedEnergyLevels([]);
     setSelectedTimeEstimates([]);
   }, []);
+  const clearAllFilters = useCallback(() => {
+    clearTaskFilters();
+    onClearExtraFilters?.();
+  }, [clearTaskFilters, onClearExtraFilters]);
 
   const filterableTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -462,6 +472,8 @@ function TaskListComponent({
   ]);
   const activeTaskFilterCount = countActiveMobileTaskFilters(taskListFilters);
   const hasActiveTaskFilters = activeTaskFilterCount > 0;
+  const totalFilterActiveCount = activeTaskFilterCount + extraFilterActiveCount;
+  const hasAnyActiveFilters = hasActiveTaskFilters || extraFilterActiveCount > 0;
   const activeFilterChips = useMemo<TaskListActiveFilterChip[]>(() => {
     const chips: TaskListActiveFilterChip[] = [];
     const normalizedSearch = taskSearchQuery.trim();
@@ -1332,10 +1344,10 @@ function TaskListComponent({
       <TaskListHeader
         activeFilterChips={activeFilterChips}
         count={orderedTasks.length}
-        filterActiveCount={activeTaskFilterCount}
-        hasActiveFilters={hasActiveTaskFilters}
+        filterActiveCount={totalFilterActiveCount}
+        hasActiveFilters={hasAnyActiveFilters}
         headerAccessory={headerAccessory}
-        onClearFilters={clearTaskFilters}
+        onClearFilters={clearAllFilters}
         onOpenFilters={() => setFiltersVisible(true)}
         onOpenSort={() => setSortModalVisible(true)}
         showHeader={showHeader}
@@ -1348,11 +1360,12 @@ function TaskListComponent({
 
       <TaskListFiltersSheet
         energyLevelOptions={ENERGY_LEVEL_OPTIONS}
-        hasFilters={hasActiveTaskFilters}
+        extraContent={filterSheetAccessory}
+        hasFilters={hasAnyActiveFilters}
         locationQuery={locationFilter}
         onChangeLocationQuery={setLocationFilter}
         onChangeSearchQuery={setTaskSearchQuery}
-        onClearFilters={clearTaskFilters}
+        onClearFilters={clearAllFilters}
         onClose={() => setFiltersVisible(false)}
         prioritiesEnabled={prioritiesEnabled}
         priorityOptions={PRIORITY_OPTIONS}

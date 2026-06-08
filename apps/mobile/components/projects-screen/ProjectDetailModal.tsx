@@ -36,7 +36,6 @@ import {
     tFallback,
 } from '@mindwtr/core';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CheckCircle2 } from 'lucide-react-native';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
 import { KeyboardAccessoryHost } from '../../components/keyboard-accessory-host';
 import { ExpandedMarkdownEditor } from '../../components/expanded-markdown-editor';
@@ -301,88 +300,123 @@ export function ProjectDetailModal({
         Alert.alert(sequentialScopeHelpLabel, sequentialScopeHelpText);
     }, [sequentialScopeHelpLabel, sequentialScopeHelpText]);
     const sortLabel = tFallback(t, 'sort.label', 'Sort');
+    const taskControlsLabel = tFallback(t, 'common.tasks', 'Tasks');
+    const projectTaskFilterActiveCount = (
+        (projectTaskSortBy !== 'default' ? 1 : 0)
+        + (selectedProject?.status !== 'archived' && showCompletedTasks ? 1 : 0)
+    );
+    const clearProjectTaskFilters = React.useCallback(() => {
+        if (projectTaskSortBy !== 'default') {
+            onProjectTaskSortByChange('default');
+        }
+        if (selectedProject?.status !== 'archived' && showCompletedTasks) {
+            onToggleShowCompletedTasks();
+        }
+    }, [
+        onProjectTaskSortByChange,
+        onToggleShowCompletedTasks,
+        projectTaskSortBy,
+        selectedProject?.status,
+        showCompletedTasks,
+    ]);
     const setSelectedProjectSequentialScope = (sequentialScope: Project['sequentialScope']) => {
         if (!selectedProject) return;
         updateProject(selectedProject.id, { sequentialScope });
         onSetSelectedProject({ ...selectedProject, sequentialScope });
     };
-    const sortControl = selectedProject ? (
-        <View
-            accessibilityLabel={sortLabel}
-            accessibilityRole="radiogroup"
-            style={[
-                styles.projectSortSegment,
-                { backgroundColor: tc.filterBg, borderColor: tc.border },
-            ]}
-        >
-            {(['default', 'due'] as const).map((option) => {
-                const selected = projectTaskSortBy === option;
-                const label = option === 'default'
-                    ? tFallback(t, 'sort.default', 'Default')
-                    : tFallback(t, 'sort.due', 'Due date');
-                return (
+    const projectTaskFilterAccessory = selectedProject ? (
+        <View style={styles.projectTaskFilterSection}>
+            <View style={styles.projectTaskFilterGroup}>
+                <Text style={[styles.projectFilterSectionLabel, { color: tc.secondaryText }]}>
+                    {sortLabel}
+                </Text>
+                <View
+                    accessibilityLabel={sortLabel}
+                    accessibilityRole="radiogroup"
+                    style={styles.projectFilterChipRow}
+                >
+                    {(['default', 'due'] as const).map((option) => {
+                        const selected = projectTaskSortBy === option;
+                        const label = option === 'default'
+                            ? tFallback(t, 'sort.default', 'Default')
+                            : tFallback(t, 'sort.due', 'Due date');
+                        return (
+                            <TouchableOpacity
+                                key={option}
+                                accessibilityLabel={`${sortLabel}: ${label}`}
+                                accessibilityRole="radio"
+                                accessibilityState={{ checked: selected }}
+                                onPress={() => onProjectTaskSortByChange(option)}
+                                style={[
+                                    styles.projectFilterChip,
+                                    {
+                                        backgroundColor: selected ? tc.tint : tc.filterBg,
+                                        borderColor: selected ? tc.tint : tc.border,
+                                    },
+                                ]}
+                                testID={`project-task-sort-${option}`}
+                            >
+                                <Text
+                                    style={[
+                                        styles.projectFilterChipText,
+                                        { color: selected ? tc.onTint : tc.text },
+                                    ]}
+                                    numberOfLines={1}
+                                >
+                                    {label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            </View>
+
+            {selectedProject.status !== 'archived' ? (
+                <View style={styles.projectTaskFilterGroup}>
+                    <Text style={[styles.projectFilterSectionLabel, { color: tc.secondaryText }]}>
+                        {taskControlsLabel}
+                    </Text>
                     <TouchableOpacity
-                        key={option}
-                        accessibilityLabel={`${sortLabel}: ${label}`}
-                        accessibilityRole="radio"
-                        accessibilityState={{ checked: selected }}
-                        onPress={() => onProjectTaskSortByChange(option)}
+                        accessibilityLabel={showCompletedLabel}
+                        accessibilityRole="switch"
+                        accessibilityState={{ checked: showCompletedTasks }}
+                        onPress={onToggleShowCompletedTasks}
                         style={[
-                            styles.projectSortSegmentButton,
-                            selected && { backgroundColor: tc.tint },
+                            styles.projectFilterSwitch,
+                            {
+                                backgroundColor: showCompletedTasks ? `${tc.tint}20` : tc.filterBg,
+                                borderColor: showCompletedTasks ? tc.tint : tc.border,
+                            },
                         ]}
-                        testID={`project-task-sort-${option}`}
+                        testID="project-show-completed-toggle"
                     >
                         <Text
                             style={[
-                                styles.projectSortSegmentText,
-                                { color: selected ? tc.onTint : tc.secondaryText },
+                                styles.projectFilterSwitchText,
+                                { color: showCompletedTasks ? tc.tint : tc.text },
                             ]}
                             numberOfLines={1}
                         >
-                            {label}
+                            {showCompletedLabel}
                         </Text>
+                        <View
+                            style={[
+                                styles.projectFilterSwitchIndicator,
+                                {
+                                    backgroundColor: showCompletedTasks ? tc.tint : 'transparent',
+                                    borderColor: showCompletedTasks ? tc.tint : tc.border,
+                                },
+                            ]}
+                        >
+                            {showCompletedTasks ? (
+                                <Ionicons name="checkmark" size={15} color={tc.onTint} />
+                            ) : null}
+                        </View>
                     </TouchableOpacity>
-                );
-            })}
+                </View>
+            ) : null}
         </View>
     ) : null;
-    const completedToggle = selectedProject && selectedProject.status !== 'archived' ? (
-        <TouchableOpacity
-            accessibilityLabel={showCompletedLabel}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: showCompletedTasks }}
-            onPress={onToggleShowCompletedTasks}
-            style={[
-                styles.completedToggleButton,
-                {
-                    backgroundColor: showCompletedTasks ? `${tc.tint}20` : tc.filterBg,
-                    borderColor: showCompletedTasks ? tc.tint : tc.border,
-                },
-            ]}
-            testID="project-show-completed-toggle"
-        >
-            <CheckCircle2
-                size={16}
-                color={showCompletedTasks ? tc.tint : tc.secondaryText}
-                strokeWidth={2.2}
-            />
-            <Text
-                style={[
-                    styles.completedToggleText,
-                    { color: showCompletedTasks ? tc.tint : tc.secondaryText },
-                ]}
-            >
-                {showCompletedLabel}
-            </Text>
-        </TouchableOpacity>
-    ) : null;
-    const taskHeaderAccessory = (
-        <View style={styles.projectTaskControls}>
-            {sortControl}
-            {completedToggle}
-        </View>
-    );
 
     React.useEffect(() => {
         setProjectTaskReorderMode(false);
@@ -981,7 +1015,9 @@ export function ProjectDetailModal({
                                 <TaskList
                                     statusFilter="all"
                                     title={selectedProject.title}
-                                    headerAccessory={taskHeaderAccessory}
+                                    filterSheetAccessory={projectTaskFilterAccessory}
+                                    extraFilterActiveCount={projectTaskFilterActiveCount}
+                                    onClearExtraFilters={clearProjectTaskFilters}
                                     showHeader={false}
                                     showTimeEstimateFilters={false}
                                     projectId={selectedProject.id}

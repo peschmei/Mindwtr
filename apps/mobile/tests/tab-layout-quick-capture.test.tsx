@@ -167,6 +167,9 @@ const getAddTaskButton = (tree: ReturnType<typeof create>) => {
 };
 
 const flattenStyle = (style: unknown): Record<string, unknown> => {
+  if (typeof style === 'function') {
+    return flattenStyle(style({ pressed: false }));
+  }
   if (Array.isArray(style)) {
     return style.reduce<Record<string, unknown>>((acc, item) => ({
       ...acc,
@@ -174,6 +177,17 @@ const flattenStyle = (style: unknown): Record<string, unknown> => {
     }), {});
   }
   return style && typeof style === 'object' ? style as Record<string, unknown> : {};
+};
+
+const getMoreSheetButtonLabelStyle = (tree: ReturnType<typeof create>, label: string) => {
+  const button = getMoreSheetButtons(tree, label)[0];
+  if (!button) throw new Error(`${label} button not found`);
+  const text = button.findAll((node) => (
+    String(node.type) === 'Text'
+    && node.children.includes(label)
+  ))[0];
+  if (!text) throw new Error(`${label} label not found`);
+  return flattenStyle(text.props.style);
 };
 
 const getCaptureButtonInnerStyle = (tree: ReturnType<typeof create>) => {
@@ -441,6 +455,10 @@ describe('mobile tab quick capture', () => {
 
     const reviewButtons = getMoreSheetButtons(tree, 'Review');
     expect(reviewButtons.length).toBeGreaterThan(0);
+    expect(getMoreSheetButtonLabelStyle(tree, 'Review')).toEqual(expect.objectContaining({
+      includeFontPadding: false,
+    }));
+    expect(getMoreSheetButtonLabelStyle(tree, 'Review')).not.toHaveProperty('minHeight');
 
     act(() => {
       reviewButtons[0]?.props.onPress();
