@@ -2096,6 +2096,39 @@ describe('TaskStore', () => {
         expect(nextInstance.dueDate).toBe('2023-01-02T09:00');
     });
 
+    it('does not append a duplicate recurring follow-up when one already exists', async () => {
+        const current: Task = {
+            id: 'weekly-current',
+            title: 'Timeblock',
+            status: 'next',
+            recurrence: { rule: 'weekly', strategy: 'strict' },
+            startTime: '2026-06-08T08:00:00.000Z',
+            dueDate: '2026-06-08T17:00:00.000Z',
+            createdAt: '2026-06-01T00:00:00.000Z',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+        };
+        const existingFollowUp: Task = {
+            ...current,
+            id: 'weekly-follow-up',
+            startTime: '2026-06-15T08:00:00.000Z',
+            dueDate: '2026-06-15T17:00:00.000Z',
+        };
+
+        useTaskStore.setState({
+            tasks: [current, existingFollowUp],
+            _allTasks: [current, existingFollowUp],
+        });
+
+        await useTaskStore.getState().updateTask(current.id, { status: 'done' });
+
+        const state = useTaskStore.getState();
+        expect(state._allTasks).toHaveLength(2);
+        expect(state._allTasks.find((task) => task.id === current.id)?.status).toBe('done');
+        const openTimeblocks = state._allTasks.filter((task) => task.title === 'Timeblock' && task.status === 'next');
+        expect(openTimeblocks).toHaveLength(1);
+        expect(openTimeblocks[0]?.id).toBe(existingFollowUp.id);
+    });
+
     it('should roll a fluid recurring task from completion date', () => {
         const { addTask, updateTask, moveTask } = useTaskStore.getState();
         addTask('Fluid Task', {

@@ -34,6 +34,32 @@ const stripAttachmentRemoteMetadata = (attachments: Task['attachments']): Task['
             : attachment
     ));
 
+const normalizeOptionalTaskField = (value: string | undefined): string => value ?? '';
+
+const recurrenceKeyForDuplicateCheck = (task: Task): string => (
+    JSON.stringify(normalizeRecurrenceForLoad(task.recurrence) ?? null)
+);
+
+const isExistingRecurringFollowUp = (existing: Task, candidate: Task): boolean => {
+    if (existing.id === candidate.id) return false;
+    if (existing.deletedAt) return false;
+    if (existing.status === 'done' || existing.status === 'archived') return false;
+    if (existing.status !== candidate.status) return false;
+    if (existing.title.trim() !== candidate.title.trim()) return false;
+    if (normalizeOptionalTaskField(existing.projectId) !== normalizeOptionalTaskField(candidate.projectId)) return false;
+    if (normalizeOptionalTaskField(existing.sectionId) !== normalizeOptionalTaskField(candidate.sectionId)) return false;
+    if (normalizeOptionalTaskField(existing.areaId) !== normalizeOptionalTaskField(candidate.areaId)) return false;
+    if (normalizeOptionalTaskField(existing.startTime) !== normalizeOptionalTaskField(candidate.startTime)) return false;
+    if (normalizeOptionalTaskField(existing.dueDate) !== normalizeOptionalTaskField(candidate.dueDate)) return false;
+    if (normalizeOptionalTaskField(existing.reviewAt) !== normalizeOptionalTaskField(candidate.reviewAt)) return false;
+    return recurrenceKeyForDuplicateCheck(existing) === recurrenceKeyForDuplicateCheck(candidate);
+};
+
+const findExistingRecurringFollowUp = (tasks: readonly Task[], candidate: Task | null): Task | null => {
+    if (!candidate) return null;
+    return tasks.find((task) => isExistingRecurringFollowUp(task, candidate)) ?? null;
+};
+
 type TaskActions = Pick<
     TaskStore,
     | 'addTask'
@@ -449,18 +475,21 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave }: TaskA
                 { ...preparedUpdates.updates, ...revisionPatch },
                 now
             );
+            const recurringFollowUpTask = findExistingRecurringFollowUp(state._allTasks, nextRecurringTask)
+                ? null
+                : nextRecurringTask;
             incrementalPersistence.task = updatedTask;
-            incrementalPersistence.hasRecurringFollowUp = nextRecurringTask !== null;
+            incrementalPersistence.hasRecurringFollowUp = recurringFollowUpTask !== null;
 
             const updatedAllTasksBase = replaceEntityInArray(state._allTasks, id, updatedTask);
-            const updatedAllTasks = nextRecurringTask
-                ? [...updatedAllTasksBase, nextRecurringTask]
+            const updatedAllTasks = recurringFollowUpTask
+                ? [...updatedAllTasksBase, recurringFollowUpTask]
                 : updatedAllTasksBase;
             const updatedTasksById = replaceEntityInMap(state._tasksById, updatedTask);
 
             let updatedVisibleTasks = updateVisibleTasks(state.tasks, oldTask, updatedTask);
-            if (nextRecurringTask) {
-                updatedVisibleTasks = updateVisibleTasks(updatedVisibleTasks, null, nextRecurringTask);
+            if (recurringFollowUpTask) {
+                updatedVisibleTasks = updateVisibleTasks(updatedVisibleTasks, null, recurringFollowUpTask);
             }
             snapshot = buildSaveSnapshot(state, {
                 tasks: updatedAllTasks,
@@ -469,8 +498,8 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave }: TaskA
             return {
                 tasks: updatedVisibleTasks,
                 _allTasks: updatedAllTasks,
-                _tasksById: nextRecurringTask
-                    ? replaceEntityInMap(updatedTasksById, nextRecurringTask)
+                _tasksById: recurringFollowUpTask
+                    ? replaceEntityInMap(updatedTasksById, recurringFollowUpTask)
                     : updatedTasksById,
                 lastDataChangeAt: getNextDataChangeAt(state.lastDataChangeAt, changeAt),
                 ...(deviceState.updated ? { settings: deviceState.settings } : {}),
@@ -889,7 +918,13 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave }: TaskA
                     },
                     now
                 );
-                if (nextRecurringTask) nextRecurringTasks = [...nextRecurringTasks, nextRecurringTask];
+                const duplicateFollowUp = findExistingRecurringFollowUp(
+                    [...newAllTasksBase, ...nextRecurringTasks],
+                    nextRecurringTask
+                );
+                if (nextRecurringTask && !duplicateFollowUp) {
+                    nextRecurringTasks = [...nextRecurringTasks, nextRecurringTask];
+                }
                 newVisibleTasks = updateVisibleTasks(newVisibleTasks, task, updatedTask);
                 newAllTasksBase[index] = updatedTask;
                 changedTasks.push(updatedTask);
