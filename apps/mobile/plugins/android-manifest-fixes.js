@@ -18,6 +18,8 @@ const PERMISSIONS_TO_REMOVE = [
   'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE',
 ];
 const isFossBuild = process.env.FOSS_BUILD === '1' || process.env.FOSS_BUILD === 'true';
+const androidProfileableEnabled =
+    process.env.ANDROID_PROFILEABLE === '1' || process.env.ANDROID_PROFILEABLE === 'true';
 
 const ensureArray = (target, key) => {
   if (!Array.isArray(target[key])) {
@@ -90,15 +92,29 @@ const ensureContextAutomationReceiver = (application) => {
 };
 
 const ensureContextAutomationHeadlessService = (application) => {
-  const services = ensureArray(application, 'service');
-  let service = services.find((entry) => entry?.$?.['android:name'] === CONTEXT_AUTOMATION_HEADLESS_SERVICE);
+    const services = ensureArray(application, 'service');
+    let service = services.find((entry) => entry?.$?.['android:name'] === CONTEXT_AUTOMATION_HEADLESS_SERVICE);
   if (!service) {
     service = { $: {} };
     services.push(service);
   }
 
-  service.$['android:name'] = CONTEXT_AUTOMATION_HEADLESS_SERVICE;
-  service.$['android:exported'] = 'false';
+    service.$['android:name'] = CONTEXT_AUTOMATION_HEADLESS_SERVICE;
+    service.$['android:exported'] = 'false';
+};
+
+const setProfileable = (application, enabled = androidProfileableEnabled) => {
+    if (enabled) {
+        application.profileable = [
+            {
+                $: {
+                    'android:shell': 'true',
+                },
+            },
+        ];
+    } else {
+        delete application.profileable;
+    }
 };
 
 module.exports = function withAndroidManifestFixes(config) {
@@ -117,8 +133,9 @@ module.exports = function withAndroidManifestFixes(config) {
       return config;
     }
     if (!application.$) {
-      application.$ = {};
+        application.$ = {};
     }
+    setProfileable(application);
     application.$['android:resizeableActivity'] = 'true';
     // WebDAV sync allows HTTP only for localhost, private IPs, and local hostnames in app code.
     // Android still needs cleartext enabled at the manifest level for those private endpoints.
@@ -239,8 +256,9 @@ module.exports = function withAndroidManifestFixes(config) {
 };
 
 module.exports.__testables = {
-  buildContextIntentFilter,
-  ensureContextAutomationHeadlessService,
-  ensureContextAutomationReceiver,
-  removeContextIntentFilters,
+    buildContextIntentFilter,
+    ensureContextAutomationHeadlessService,
+    ensureContextAutomationReceiver,
+    removeContextIntentFilters,
+    setProfileable,
 };

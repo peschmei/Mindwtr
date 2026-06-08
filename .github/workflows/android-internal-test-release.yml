@@ -34,6 +34,7 @@ jobs:
       DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY || secrets.DROPBOX_APP_KEY }}
       DONATION_PROMPT_ENABLED: "true"
       ANALYTICS_HEARTBEAT_CHANNEL: "android-internal-test"
+      ANDROID_PROFILEABLE: "true"
 
     steps:
       - name: Checkout code
@@ -249,6 +250,7 @@ jobs:
             echo "Commit: ${GITHUB_SHA}"
             echo "VersionCode: ${{ steps.publish.outputs.version_code }}"
             echo "Track: internal"
+            echo "Profileable: true"
           } > android-internal-test-artifacts/README.txt
           ls -la android-internal-test-artifacts
 

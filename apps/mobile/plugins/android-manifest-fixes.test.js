@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 const plugin = require('./android-manifest-fixes');
 
 const {
-  buildContextIntentFilter,
-  ensureContextAutomationHeadlessService,
-  ensureContextAutomationReceiver,
-  removeContextIntentFilters,
+    buildContextIntentFilter,
+    ensureContextAutomationHeadlessService,
+    ensureContextAutomationReceiver,
+    removeContextIntentFilters,
+    setProfileable,
 } = plugin.__testables;
 
 describe('android-manifest-fixes', () => {
@@ -45,5 +46,35 @@ describe('android-manifest-fixes', () => {
       'android:name': '.ContextAutomationHeadlessService',
       'android:exported': 'false',
     });
+  });
+
+  it('adds profileable shell access for diagnostic Android releases', () => {
+    const application = {};
+
+    setProfileable(application, true);
+
+    expect(application.profileable).toEqual([
+      {
+        $: {
+          'android:shell': 'true',
+        },
+      },
+    ]);
+  });
+
+  it('removes profileable shell access by default', () => {
+    const application = {
+      profileable: [
+        {
+          $: {
+            'android:shell': 'true',
+          },
+        },
+      ],
+    };
+
+    setProfileable(application, false);
+
+    expect(application.profileable).toBeUndefined();
   });
 });
