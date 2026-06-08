@@ -30,7 +30,7 @@
           "完全离线可用，无需互联网连接",
           "完全开源，安全透明"
         ],
-        "ReleaseNotes": "• 项目可按到期日排序，并把已完成任务放在活动任务之后。\n• 任务选择、附件打开、关闭行为和清单搜索更可靠。\n• 备份恢复、区域删除同步、快速添加和重复任务处理更安全。",
+        "ReleaseNotes": "• 已配置版本可从设置发送反馈。\n• 自定义时间估算、项目顺序提示和期限下一步让规划更清晰。\n• 大型列表、增量存储、数据库刷新、Markdown 编辑和项目合并更稳定。",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",
@@ -82,7 +82,7 @@
           "No internet connection required to function",
           "Open source and transparent"
         ],
-        "ReleaseNotes": "• Projects can sort by due date and group completed tasks below active work.\n• Selection, attachment opening, close behavior, and checklist search are more reliable.\n• Backup restore, area delete sync, quick add, and recurrence handling are safer.",
+        "ReleaseNotes": "• Send feedback from Settings in configured builds.\n• Custom time estimates, project sequencing hints, and a Focus action improve desktop planning.\n• Large lists, incremental storage, database refreshes, Markdown editing, and project area merges are steadier.",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",
@@ -131,7 +131,7 @@
           "Offline nutzbar ohne staendige Internetverbindung",
           "Open Source und transparent"
         ],
-        "ReleaseNotes": "• Projekte koennen nach Faelligkeit sortieren und erledigte Aufgaben unter aktiver Arbeit gruppieren.\n• Auswahl, Anhaenge, Schliessverhalten und Checklisten-Suche sind zuverlaessiger.\n• Backup-Wiederherstellung, Bereichsloeschungen, Schnellhinzufuegen und Wiederholungen sind sicherer.",
+        "ReleaseNotes": "• Feedback kann in konfigurierten Builds aus den Einstellungen gesendet werden.\n• Eigene Zeitschaetzungen, Projekt-Sequenzhinweise und eine Focus-Aktion verbessern die Desktop-Planung.\n• Grosse Listen, inkrementelles Speichern, Datenbankaktualisierung, Markdown und Projektbereichs-Merges sind stabiler.",
         "Images": [],
         "RecommendedHardware": [],
         "MinimumHardware": [],
@@ -161,7 +161,7 @@
           "Projets, contextes, revue et tableau Kanban",
           "Open source et transparent"
         ],
-        "ReleaseNotes": "• Les projets peuvent être triés par date limite et grouper les tâches terminées sous le travail actif.\n• La sélection, les pièces jointes, la fermeture et la recherche de listes sont plus fiables.\n• La restauration, la suppression des areas, l'ajout rapide et les répétitions sont plus sûres.",
+        "ReleaseNotes": "• Les builds configures peuvent envoyer des retours depuis les reglages.\n• Estimations de temps, indices de sequence et action Focus ameliorent la planification desktop.\n• Grandes listes, stockage incremental, rafraichissement des donnees, Markdown et fusions de projets sont plus stables.",
         "Images": [],
         "RecommendedHardware": [],
         "MinimumHardware": [],
@@ -190,7 +190,7 @@
           "No requiere conexión a internet para funcionar",
           "Código abierto y transparente"
         ],
-        "ReleaseNotes": "• Los proyectos pueden ordenarse por fecha limite y agrupar tareas completadas debajo de las activas.\n• Seleccion, adjuntos, cierre y busqueda de listas son mas fiables.\n• Restauracion, borrado de areas, agregado rapido y recurrencias son mas seguros.",
+        "ReleaseNotes": "• En versiones configuradas puedes enviar comentarios desde Ajustes.\n• Estimaciones de tiempo, pistas de secuencia y una accion de Focus mejoran la planificacion de escritorio.\n• Listas grandes, guardado incremental, refresco de datos, Markdown y fusiones de proyectos son mas estables.",
         "Images": [
           {
             "FileName": "2026-01-27_22-59-40.png",

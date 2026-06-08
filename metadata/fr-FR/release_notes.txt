@@ -1,3 +1,3 @@
-- Verrouillage optionnel de l'application avec authentification de l'appareil.
-- Le texte partagé est capturé comme notes de tâche, et la capture rapide est plus fluide.
-- Les lignes de projets, les heures planifiées, la synchronisation des listes, l'édition et la recherche sont plus fiables.
+- Les builds configures peuvent envoyer des retours depuis les reglages.
+- Estimations de temps, indices de sequence, couleurs d'urgence et prochaines actions par echeance ameliorent la planification.
+- Synchro des pieces jointes iCloud, grandes listes, Markdown, repetitions et anciens fichiers joints sont plus fiables.

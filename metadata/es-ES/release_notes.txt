@@ -1,3 +1,3 @@
-- Se agrega bloqueo opcional de la app con autenticacion del dispositivo.
-- El texto compartido se captura como nota de tarea y la captura rapida es mas estable.
-- Filas de proyectos, horas programadas, sync de listas, edicion y busqueda son mas fiables.
+- En versiones configuradas puedes enviar comentarios desde Ajustes.
+- Estimaciones de tiempo, pistas de secuencia, colores de urgencia y proximas acciones por fecha limite mejoran la planificacion.
+- Sync de adjuntos iCloud, listas grandes, Markdown, recurrencias y adjuntos antiguos son mas fiables.

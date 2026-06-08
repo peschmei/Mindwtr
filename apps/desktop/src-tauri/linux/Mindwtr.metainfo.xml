@@ -88,6 +88,25 @@
   <url type="bugtracker">https://github.com/dongdongbh/Mindwtr/issues</url>
   <url type="vcs-browser">https://github.com/dongdongbh/Mindwtr</url>
   <releases>
+    <release version="0.9.9" date="2026-06-08">
+      <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.9</url>
+      <description>
+        <p>Mindwtr 0.9.9 improves desktop feedback, planning metadata, large-library performance, Markdown editing, and Linux startup and theme reliability.</p>
+        <p xml:lang="de">Mindwtr 0.9.9 verbessert Desktop-Feedback, Planungsmetadaten, Leistung bei grossen Sammlungen, Markdown-Bearbeitung sowie Linux-Start- und Designzuverlaessigkeit.</p>
+        <ul>
+          <li>Added a Settings feedback flow for configured desktop builds.</li>
+          <li xml:lang="de">Feedback in den Einstellungen fuer konfigurierte Desktop-Builds hinzugefuegt.</li>
+          <li>Added custom time estimates, project sequencing cues, and a task-menu Focus action.</li>
+          <li xml:lang="de">Eigene Zeitschaetzungen, Projekt-Sequenzhinweise und eine Focus-Aktion im Aufgabenmenue hinzugefuegt.</li>
+          <li>Made large project lists faster with virtualization, derived indexes, and incremental task persistence.</li>
+          <li xml:lang="de">Grosse Projektlisten durch Virtualisierung, abgeleitete Indizes und inkrementelles Speichern von Aufgaben beschleunigt.</li>
+          <li>Refreshed after external SQLite writes while ignoring local watcher echoes.</li>
+          <li xml:lang="de">Nach externen SQLite-Schreibvorgaengen aktualisiert und lokale Watcher-Echos ignoriert.</li>
+          <li>Improved GNOME system theme detection on startup plus Markdown shortcuts and email links.</li>
+          <li xml:lang="de">GNOME-Systemdesign beim Start sowie Markdown-Kuerzel und E-Mail-Links verbessert.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.8" date="2026-06-04">
       <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.8</url>
       <description>

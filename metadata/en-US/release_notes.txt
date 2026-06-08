@@ -1,3 +1,3 @@
-- Added optional app lock with device authentication.
-- Shared text is captured as task notes, and quick capture is smoother.
-- Project rows, scheduled times, checklist sync, editing, and search are more reliable.
+- Send feedback from Settings in configured builds.
+- Custom time estimates, project sequencing hints, urgency colors, and project deadline next actions improve planning.
+- iCloud attachment sync, large lists, Markdown editing, recurring follow-ups, and legacy attachment upgrades are more reliable.
