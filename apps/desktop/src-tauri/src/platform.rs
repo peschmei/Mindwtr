@@ -457,6 +457,72 @@ pub(crate) async fn cloudkit_save_records(
 }
 
 #[tauri::command]
+pub(crate) async fn cloudkit_save_attachment_asset(
+    record_name: String,
+    file_path: String,
+    metadata_json: String,
+) -> Result<Value, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let value = tauri::async_runtime::spawn_blocking(move || {
+            let c_record_name = CString::new(record_name.as_str())
+                .map_err(|e| format!("Invalid attachment record name: {e}"))?;
+            let c_file_path = CString::new(file_path.as_str())
+                .map_err(|e| format!("Invalid attachment file path: {e}"))?;
+            let c_metadata = CString::new(metadata_json.as_str())
+                .map_err(|e| format!("Invalid attachment metadata JSON: {e}"))?;
+            parse_cloudkit_json(unsafe {
+                mindwtr_cloudkit_save_attachment_asset(
+                    c_record_name.as_ptr(),
+                    c_file_path.as_ptr(),
+                    c_metadata.as_ptr(),
+                )
+            })
+        })
+        .await
+        .map_err(|error| format!("CloudKit save attachment task failed: {error}"))??;
+        return Ok(value);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (record_name, file_path, metadata_json);
+        Err("CloudKit is not available on this platform".to_string())
+    }
+}
+
+#[tauri::command]
+pub(crate) async fn cloudkit_fetch_attachment_asset(
+    record_name: String,
+    target_path: String,
+) -> Result<Value, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let value = tauri::async_runtime::spawn_blocking(move || {
+            let c_record_name = CString::new(record_name.as_str())
+                .map_err(|e| format!("Invalid attachment record name: {e}"))?;
+            let c_target_path = CString::new(target_path.as_str())
+                .map_err(|e| format!("Invalid attachment target path: {e}"))?;
+            parse_cloudkit_json(unsafe {
+                mindwtr_cloudkit_fetch_attachment_asset(
+                    c_record_name.as_ptr(),
+                    c_target_path.as_ptr(),
+                )
+            })
+        })
+        .await
+        .map_err(|error| format!("CloudKit fetch attachment task failed: {error}"))??;
+        return Ok(value);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (record_name, target_path);
+        Err("CloudKit is not available on this platform".to_string())
+    }
+}
+
+#[tauri::command]
 pub(crate) async fn cloudkit_delete_records(
     record_type: String,
     record_ids: Vec<String>,

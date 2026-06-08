@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { AppData, Attachment, MergeStats, createSyncOrchestrator, runPreSyncAttachmentPhase, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, findOrphanedAttachments, removeOrphanedAttachmentsFromData, removeAttachmentsByIdFromData, webdavDeleteFile, cloudDeleteFile, CLOCK_SKEW_THRESHOLD_MS, appendSyncHistory, withRetry, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, sanitizeAppDataForRemote, computeStableValueFingerprint, computeSyncPayloadFingerprint, areSyncPayloadsEqual, assertNoPendingAttachmentUploads, findPendingAttachmentUploads, hasPendingSyncSideEffects, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, mergeAppData, cloneAppData, LocalSyncAbort, getInMemoryAppDataSnapshot, shouldRunAttachmentCleanup, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, getErrorStatus, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type CloudProvider, type PendingRemoteAttachmentDelete } from '@mindwtr/core';
+import { AppData, Attachment, MergeStats, createSyncOrchestrator, runPreSyncAttachmentPhase, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, findOrphanedAttachments, removeOrphanedAttachmentsFromData, removeAttachmentsByIdFromData, webdavDeleteFile, cloudDeleteFile, CLOCK_SKEW_THRESHOLD_MS, appendSyncHistory, withRetry, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, sanitizeAppDataForRemote, computeStableValueFingerprint, computeSyncPayloadFingerprint, areSyncPayloadsEqual, assertNoPendingAttachmentUploads, findPendingAttachmentUploads, hasPendingSyncSideEffects, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, mergeAppData, cloneAppData, LocalSyncAbort, getInMemoryAppDataSnapshot, shouldRunAttachmentCleanup, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, getErrorStatus, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type CloudProvider, type PendingAttachmentUpload, type PendingRemoteAttachmentDelete } from '@mindwtr/core';
 import { mobileStorage } from './storage-adapter';
 import { logInfo, logSyncError, logWarn, sanitizeLogMessage } from './app-log';
 import { readSyncFile, resolveSyncFileUri, writeSyncFile } from './storage-file';
 import { resolveSyncPathBookmark } from './sync-path-bookmarks';
-import { getBaseSyncUrl, getCloudBaseUrl, syncCloudAttachments, syncDropboxAttachments, syncFileAttachments, syncWebdavAttachments, cleanupAttachmentTempFiles } from './attachment-sync';
+import { getBaseSyncUrl, getCloudBaseUrl, syncCloudAttachments, syncCloudKitAttachments, syncDropboxAttachments, syncFileAttachments, syncWebdavAttachments, cleanupAttachmentTempFiles } from './attachment-sync';
 import { getExternalCalendars, saveExternalCalendars } from './external-calendar';
 import { forceRefreshDropboxAccessToken, getValidDropboxAccessToken, isDropboxConnected } from './dropbox-auth';
 import {
@@ -84,6 +84,27 @@ const logSyncWarning = (message: string, error?: unknown) => {
 
 const logSyncInfo = (message: string, extra?: Record<string, string>) => {
   void logInfo(message, { scope: 'sync', extra });
+};
+
+const buildPendingAttachmentUploadLogExtra = (backend: string, phase: string, pending: PendingAttachmentUpload[]): Record<string, string> => {
+  const sample = pending.slice(0, 3);
+  return {
+    backend,
+    phase,
+    pending: String(pending.length),
+    sample: sample.map((item) => `${item.ownerType}:${item.ownerId}:${item.attachmentId}`).join(', '),
+    uriSchemes: sample.map((item) => item.uriScheme || 'unknown').join(', '),
+    localStatuses: sample.map((item) => item.localStatus || 'unset').join(', '),
+    titles: sample.map((item) => sanitizeLogMessage(item.title || '')).join(' | '),
+  };
+};
+
+const logPendingAttachmentUploads = (message: string, backend: string, phase: string, pending: PendingAttachmentUpload[]): void => {
+  if (pending.length === 0) return;
+  void logWarn(message, {
+    scope: 'sync',
+    extra: buildPendingAttachmentUploadLogExtra(backend, phase, pending),
+  });
 };
 
 const buildConflictDiagnosticsLogExtra = (stats: MergeStats): Record<string, string> => {
@@ -691,6 +712,9 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
               return syncWebdavAttachments(data, webdavConfig, baseSyncUrl, requestAbortController.signal);
             }
             : undefined,
+          cloudkit: backend === 'cloudkit'
+            ? async (data) => syncCloudKitAttachments(data, requestAbortController.signal)
+            : undefined,
           selfHostedCloud: cloudProvider === CLOUD_PROVIDER_SELF_HOSTED && cloudConfig?.url
             ? async (data) => {
               const baseSyncUrl = getCloudBaseUrl(cloudConfig.url);
@@ -825,6 +849,9 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
           await ensureNetworkStillAvailable();
           const baseSyncUrl = getBaseSyncUrl(webdavConfig.url);
           await syncWebdavAttachments(data, webdavConfig, baseSyncUrl, requestAbortController.signal);
+        } else if (backend === 'cloudkit') {
+          await ensureNetworkStillAvailable();
+          await syncCloudKitAttachments(data, requestAbortController.signal);
         } else if (backend === 'cloud' && cloudProvider === CLOUD_PROVIDER_SELF_HOSTED && cloudConfig?.url) {
           await ensureNetworkStillAvailable();
           const baseSyncUrl = getCloudBaseUrl(cloudConfig.url);
@@ -846,12 +873,24 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
           backend,
           pending: String(remainingUploads.length),
         });
+        logPendingAttachmentUploads(
+          'Attachment uploads still pending after final sync',
+          backend,
+          'attachments-finalize',
+          remainingUploads
+        );
 
         return data;
       };
 
       const writeRemoteDataByBackend = async (data: AppData): Promise<void> => {
         await ensureNetworkStillAvailable();
+        logPendingAttachmentUploads(
+          'Remote write blocked by pending attachment uploads',
+          backend,
+          'remote-write',
+          findPendingAttachmentUploads(data)
+        );
         assertNoPendingAttachmentUploads(data);
         const sanitized = sanitizeAppDataForRemote(data);
         const remoteSanitized = remoteDataForCompare

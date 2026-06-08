@@ -82,7 +82,8 @@ use obsidian_writer::{
 use platform::{
     cloudkit_account_status, cloudkit_consume_pending_remote_change, cloudkit_delete_records,
     cloudkit_ensure_subscription, cloudkit_ensure_zone, cloudkit_fetch_all_records,
-    cloudkit_fetch_changes, cloudkit_register_for_notifications, cloudkit_save_records,
+    cloudkit_fetch_attachment_asset, cloudkit_fetch_changes, cloudkit_register_for_notifications,
+    cloudkit_save_attachment_asset, cloudkit_save_records,
     create_macos_calendar_event, delete_macos_calendar_event, ensure_macos_mindwtr_calendar,
     get_macos_calendar_events, get_macos_calendar_permission_status, get_macos_writable_calendars,
     open_path, request_macos_calendar_permission, set_macos_activation_policy,
@@ -569,6 +570,15 @@ unsafe extern "C" {
     fn mindwtr_cloudkit_save_records(
         record_type: *const c_char,
         records_json: *const c_char,
+    ) -> *mut c_char;
+    fn mindwtr_cloudkit_save_attachment_asset(
+        record_name: *const c_char,
+        file_path: *const c_char,
+        metadata_json: *const c_char,
+    ) -> *mut c_char;
+    fn mindwtr_cloudkit_fetch_attachment_asset(
+        record_name: *const c_char,
+        target_path: *const c_char,
     ) -> *mut c_char;
     fn mindwtr_cloudkit_delete_records(
         record_type: *const c_char,
@@ -1272,6 +1282,8 @@ pub fn run() {
             cloudkit_ensure_subscription,
             cloudkit_fetch_all_records,
             cloudkit_fetch_changes,
+            cloudkit_fetch_attachment_asset,
+            cloudkit_save_attachment_asset,
             cloudkit_save_records,
             cloudkit_delete_records,
             cloudkit_consume_pending_remote_change,

@@ -25,6 +25,7 @@ export interface RunPreSyncAttachmentPhaseOptions<Data> {
     backend: PreSyncAttachmentBackend;
     cloudProvider?: PreSyncAttachmentCloudProvider;
     data: Data;
+    cloudkit?: PreSyncAttachmentOperation<Data>;
     dropbox?: PreSyncAttachmentOperation<Data>;
     file?: PreSyncAttachmentOperation<Data>;
     selfHostedCloud?: PreSyncAttachmentOperation<Data>;
@@ -40,7 +41,7 @@ export interface PreSyncAttachmentPhaseResult<Data> {
 
 const normalizePreSyncAttachmentResult = <Data>(
     originalData: Data,
-    result: boolean | Data | null | undefined
+    result: boolean | Data | null | undefined,
 ): PreSyncAttachmentPhaseResult<Data> => {
     if (result === true) {
         return { data: originalData, mutated: true, ran: true };
@@ -53,7 +54,7 @@ const normalizePreSyncAttachmentResult = <Data>(
 
 const ensureNetworkIfNeeded = async <Data>(
     operation: PreSyncAttachmentOperation<Data> | undefined,
-    ensureNetworkStillAvailable: RunPreSyncAttachmentPhaseOptions<Data>['ensureNetworkStillAvailable']
+    ensureNetworkStillAvailable: RunPreSyncAttachmentPhaseOptions<Data>['ensureNetworkStillAvailable'],
 ): Promise<PreSyncAttachmentOperation<Data> | undefined> => {
     if (!operation) return undefined;
     await ensureNetworkStillAvailable?.();
@@ -61,13 +62,15 @@ const ensureNetworkIfNeeded = async <Data>(
 };
 
 export const runPreSyncAttachmentPhase = async <Data>(
-    options: RunPreSyncAttachmentPhaseOptions<Data>
+    options: RunPreSyncAttachmentPhaseOptions<Data>,
 ): Promise<PreSyncAttachmentPhaseResult<Data>> => {
     const { backend, cloudProvider = 'selfhosted', data } = options;
     let operation: PreSyncAttachmentOperation<Data> | undefined;
 
     if (backend === 'webdav') {
         operation = await ensureNetworkIfNeeded(options.webdav, options.ensureNetworkStillAvailable);
+    } else if (backend === 'cloudkit') {
+        operation = await ensureNetworkIfNeeded(options.cloudkit, options.ensureNetworkStillAvailable);
     } else if (backend === 'file') {
         operation = options.file;
     } else if (backend === 'cloud' && cloudProvider === 'selfhosted') {
@@ -84,7 +87,7 @@ export const runPreSyncAttachmentPhase = async <Data>(
 };
 
 export const createSyncOrchestrator = <Arg, Result>(
-    options: CreateSyncOrchestratorOptions<Arg, Result>
+    options: CreateSyncOrchestratorOptions<Arg, Result>,
 ): SyncOrchestrator<Arg, Result> => {
     const { runCycle, onQueueStateChange, onDrained, onQueuedRunComplete, onQueuedRunError } = options;
     let inFlight: Promise<Result> | null = null;

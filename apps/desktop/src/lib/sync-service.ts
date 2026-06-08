@@ -40,6 +40,7 @@ import {
     getTranslationsSync,
     isSupportedLanguage,
     type CloudProvider,
+    type PendingAttachmentUpload,
 } from '@mindwtr/core';
 import { isTauriRuntime } from './runtime';
 import { reportError } from './report-error';
@@ -58,6 +59,7 @@ import {
     type AttachmentBackendDeps,
     type CloudConfig,
     syncCloudAttachments,
+    syncCloudKitAttachments,
     syncDropboxAttachments,
     syncFileAttachments,
     syncWebdavAttachments as syncAttachments,
@@ -232,6 +234,36 @@ const logSyncWarning = (message: string, error?: unknown) => {
 
 const logSyncInfo = (message: string, extra?: Record<string, string>) => {
     void syncServiceDependencies.logInfo(message, { scope: 'sync', extra });
+};
+
+const buildPendingAttachmentUploadLogExtra = (
+    backend: string,
+    phase: string,
+    pending: PendingAttachmentUpload[]
+): Record<string, string> => {
+    const sample = pending.slice(0, 3);
+    return {
+        backend,
+        phase,
+        pending: String(pending.length),
+        sample: sample.map((item) => `${item.ownerType}:${item.ownerId}:${item.attachmentId}`).join(', '),
+        uriSchemes: sample.map((item) => item.uriScheme || 'unknown').join(', '),
+        localStatuses: sample.map((item) => item.localStatus || 'unset').join(', '),
+        titles: sample.map((item) => syncServiceDependencies.sanitizeLogMessage(item.title || '')).join(' | '),
+    };
+};
+
+const logPendingAttachmentUploads = (
+    message: string,
+    backend: string,
+    phase: string,
+    pending: PendingAttachmentUpload[]
+): void => {
+    if (pending.length === 0) return;
+    void syncServiceDependencies.logWarn(message, {
+        scope: 'sync',
+        extra: buildPendingAttachmentUploadLogExtra(backend, phase, pending),
+    });
 };
 
 const buildConflictDiagnosticsLogExtra = (stats: MergeStats): Record<string, string> => {
@@ -1090,7 +1122,7 @@ export class SyncService {
             'setStep' | 'ensureNetworkStillAvailable' | 'ensureLocalSnapshotFresh' | 'resolveDropboxAccessToken'
         >
     ): Promise<void> {
-        if (!isTauriRuntimeEnv() || (context.backend !== 'webdav' && context.backend !== 'file' && context.backend !== 'cloud')) {
+        if (!isTauriRuntimeEnv() || (context.backend !== 'webdav' && context.backend !== 'file' && context.backend !== 'cloud' && context.backend !== 'cloudkit')) {
             return;
         }
 
@@ -1103,15 +1135,18 @@ export class SyncService {
                 cloudProvider: context.cloudProvider,
                 data: localData,
                 ensureNetworkStillAvailable: helpers.ensureNetworkStillAvailable,
-                webdav: context.webdavConfig?.url
-                    ? async (data) => {
-                        const baseUrl = getBaseSyncUrl(context.webdavConfig!.url);
-                        return syncAttachments(data, context.webdavConfig!, baseUrl, attachmentBackendDeps);
-                    }
-                    : undefined,
-                file: context.fileBaseDir
-                    ? async (data) => syncFileAttachments(data, context.fileBaseDir, attachmentBackendDeps)
-                    : undefined,
+            webdav: context.webdavConfig?.url
+                ? async (data) => {
+                    const baseUrl = getBaseSyncUrl(context.webdavConfig!.url);
+                    return syncAttachments(data, context.webdavConfig!, baseUrl, attachmentBackendDeps);
+                }
+                : undefined,
+            cloudkit: context.backend === 'cloudkit'
+                ? async (data) => syncCloudKitAttachments(data, attachmentBackendDeps)
+                : undefined,
+            file: context.fileBaseDir
+                ? async (data) => syncFileAttachments(data, context.fileBaseDir, attachmentBackendDeps)
+                : undefined,
                 selfHostedCloud: context.cloudProvider === 'selfhosted' && context.cloudConfig?.url
                     ? async (data) => {
                         const baseUrl = getCloudBaseUrl(context.cloudConfig!.url);
@@ -1285,6 +1320,12 @@ export class SyncService {
             return data;
         }
 
+        if (context.backend === 'cloudkit') {
+            helpers.ensureNetworkStillAvailable();
+            await syncCloudKitAttachments(data, attachmentBackendDeps);
+            return data;
+        }
+
         if (context.backend === 'cloud' && context.cloudProvider === 'selfhosted' && context.cloudConfig?.url) {
             helpers.ensureNetworkStillAvailable();
             const baseUrl = getCloudBaseUrl(context.cloudConfig.url);
@@ -1307,6 +1348,12 @@ export class SyncService {
     ): Promise<void> {
         helpers.ensureNetworkStillAvailable();
         if (context.backend === 'cloudkit') {
+            logPendingAttachmentUploads(
+                'CloudKit sync has local-only file attachments',
+                context.backend,
+                'cloudkit-write',
+                findPendingAttachmentUploads(data)
+            );
             const sanitized = sanitizeAppDataForRemote(data);
             const remoteSanitized = context.remoteDataForCompare
                 ? sanitizeAppDataForRemote(context.remoteDataForCompare)
@@ -1319,6 +1366,12 @@ export class SyncService {
             return;
         }
 
+        logPendingAttachmentUploads(
+            'Remote write blocked by pending attachment uploads',
+            context.backend,
+            'remote-write',
+            findPendingAttachmentUploads(data)
+        );
         assertNoPendingAttachmentUploads(data);
         const sanitized = sanitizeAppDataForRemote(data);
         const remoteSanitized = context.remoteDataForCompare
@@ -1443,7 +1496,7 @@ export class SyncService {
             'setStep' | 'ensureNetworkStillAvailable' | 'ensureLocalSnapshotFresh' | 'persistLocalDataWithTracking' | 'resolveDropboxAccessToken'
         >
     ): Promise<AppData> {
-        if (!isTauriRuntimeEnv() || (context.backend !== 'webdav' && context.backend !== 'file' && context.backend !== 'cloud')) {
+        if (!isTauriRuntimeEnv() || (context.backend !== 'webdav' && context.backend !== 'file' && context.backend !== 'cloud' && context.backend !== 'cloudkit')) {
             return mergedData;
         }
 
@@ -1478,15 +1531,20 @@ export class SyncService {
                         syncAttachments(candidateData, config, baseUrl, attachmentBackendDeps)
                     );
                 }
-            } else if (context.backend === 'file') {
-                if (context.fileBaseDir) {
-                    await applyAttachmentSyncMutation((candidateData) =>
-                        syncFileAttachments(candidateData, context.fileBaseDir, attachmentBackendDeps)
-                    );
-                }
-            } else if (context.backend === 'cloud') {
-                helpers.ensureNetworkStillAvailable();
-                if (context.cloudProvider === 'selfhosted') {
+        } else if (context.backend === 'file') {
+            if (context.fileBaseDir) {
+                await applyAttachmentSyncMutation((candidateData) =>
+                    syncFileAttachments(candidateData, context.fileBaseDir, attachmentBackendDeps)
+                );
+            }
+        } else if (context.backend === 'cloudkit') {
+            helpers.ensureNetworkStillAvailable();
+            await applyAttachmentSyncMutation((candidateData) =>
+                syncCloudKitAttachments(candidateData, attachmentBackendDeps)
+            );
+        } else if (context.backend === 'cloud') {
+            helpers.ensureNetworkStillAvailable();
+            if (context.cloudProvider === 'selfhosted') {
                     const config = context.cloudConfig ?? await SyncService.getCloudConfig();
                     const baseUrl = config.url ? getCloudBaseUrl(config.url) : '';
                     if (baseUrl) {

@@ -69,6 +69,8 @@ describe('sync-helpers pending attachment uploads', () => {
                 ownerId: 'task-1',
                 attachmentId: 'att-1',
                 title: 'photo.jpg',
+                uriScheme: 'file',
+                localStatus: undefined,
             },
         ]);
     });

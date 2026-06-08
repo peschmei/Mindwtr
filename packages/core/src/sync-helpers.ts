@@ -16,6 +16,8 @@ export type PendingAttachmentUpload = {
     ownerId: string;
     attachmentId: string;
     title: string;
+    uriScheme: string;
+    localStatus?: Attachment['localStatus'];
 };
 
 export const normalizeWebdavUrl = (rawUrl: string): string => {
@@ -46,6 +48,12 @@ const isLocalAttachmentUri = (uri: string): boolean => {
     return !/^https?:\/\//i.test(trimmed);
 };
 
+const getAttachmentUriScheme = (uri: string): string => {
+    const trimmed = uri.trim();
+    const match = /^([a-z][a-z0-9+.-]*):/i.exec(trimmed);
+    return match?.[1]?.toLowerCase() ?? (trimmed ? 'file' : 'empty');
+};
+
 const isLocalCalendarSourceUrl = (url: string): boolean => {
     const normalized = url.trim().toLowerCase();
     return normalized.startsWith('file://') || normalized.startsWith('content://');
@@ -72,6 +80,8 @@ const collectPendingUploads = (
             ownerId,
             attachmentId: attachment.id,
             title: attachment.title,
+            uriScheme: getAttachmentUriScheme(attachment.uri),
+            localStatus: attachment.localStatus,
         }));
 };
 

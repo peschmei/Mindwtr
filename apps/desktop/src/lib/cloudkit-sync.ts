@@ -5,7 +5,7 @@
  * Expo native modules. Provides readRemote/writeRemote functions that plug
  * into the existing SyncService sync cycle.
  */
-import type { AppData } from '@mindwtr/core';
+import { CLOUDKIT_ATTACHMENT_RECORD_TYPE, type AppData } from '@mindwtr/core';
 import { isTauriRuntime } from './runtime';
 import { logInfo, logWarn, logError } from './app-log';
 
@@ -21,6 +21,20 @@ type ChangeResult = {
 };
 
 type AccountStatus = 'available' | 'noAccount' | 'restricted' | 'temporarilyUnavailable' | 'unknown' | 'unsupported';
+
+export type CloudKitAttachmentMetadata = {
+    recordName?: string;
+    attachmentId: string;
+    ownerType: 'task' | 'project';
+    ownerId: string;
+    title: string;
+    mimeType?: string;
+    size?: number;
+    fileHash?: string;
+    updatedAt: string;
+    deletedAt?: string;
+    filePath?: string;
+};
 
 // Record type names (must match the ObjC bridge / CloudKitRecordMapper)
 const RECORD_TYPES = {
@@ -66,7 +80,7 @@ export const isCloudKitAvailable = (): boolean => {
 export const getCloudKitAccountStatus = async (): Promise<AccountStatus> => {
     if (!isCloudKitAvailable()) return 'unsupported';
     try {
-        return await tauriInvoke<string>('cloudkit_account_status') as AccountStatus;
+        return (await tauriInvoke<string>('cloudkit_account_status')) as AccountStatus;
     } catch {
         return 'unknown';
     }
@@ -117,7 +131,9 @@ export const readRemoteCloudKit = async (): Promise<AppData | null> => {
             });
 
             if (result.tokenExpired) {
-                void logInfo('CloudKit change token expired; doing full fetch', { scope: 'cloudkit' });
+                void logInfo('CloudKit change token expired; doing full fetch', {
+                    scope: 'cloudkit',
+                });
                 localStorage.removeItem(CLOUDKIT_CHANGE_TOKEN_KEY);
                 return await fullFetch();
             }
@@ -128,8 +144,9 @@ export const readRemoteCloudKit = async (): Promise<AppData | null> => {
             }
 
             // If no changes, return null to skip merge
-            const hasChanges = Object.values(result.records).some(arr => arr.length > 0)
-                || Object.values(result.deletedIDs).some(arr => arr.length > 0);
+            const hasChanges =
+                Object.values(result.records).some((arr) => arr.length > 0) ||
+                Object.values(result.deletedIDs).some((arr) => arr.length > 0);
 
             if (!hasChanges) return null;
 
@@ -198,11 +215,13 @@ export const writeRemoteCloudKit = async (data: AppData): Promise<void> => {
 
         // Save settings as a single record
         if (data.settings && Object.keys(data.settings).length > 0) {
-            const settingsRecord = [{
-                id: 'settings',
-                payload: data.settings,
-                updatedAt: new Date().toISOString(),
-            }];
+            const settingsRecord = [
+                {
+                    id: 'settings',
+                    payload: data.settings,
+                    updatedAt: new Date().toISOString(),
+                },
+            ];
             savePromises.push(
                 tauriInvoke('cloudkit_save_records', {
                     recordType: RECORD_TYPES.settings,
@@ -212,7 +231,7 @@ export const writeRemoteCloudKit = async (data: AppData): Promise<void> => {
         }
 
         const results = await Promise.all(savePromises);
-        const allConflicts = results.flatMap(r => r.conflictIDs ?? []);
+        const allConflicts = results.flatMap((r) => r.conflictIDs ?? []);
 
         if (allConflicts.length > 0) {
             void logWarn(`CloudKit save had ${allConflicts.length} conflicts (will resolve on next sync)`, {
@@ -250,6 +269,39 @@ export const writeRemoteCloudKit = async (data: AppData): Promise<void> => {
 // ---------------------------------------------------------------------------
 // Seed (first-time upload from local data)
 // ---------------------------------------------------------------------------
+
+export const saveCloudKitAttachmentAsset = async (
+    recordName: string,
+    filePath: string,
+    metadata: CloudKitAttachmentMetadata,
+): Promise<CloudKitAttachmentMetadata> => {
+    if (!isCloudKitAvailable()) throw new Error('CloudKit is not available on this platform');
+    return await tauriInvoke<CloudKitAttachmentMetadata>('cloudkit_save_attachment_asset', {
+        recordName,
+        filePath,
+        metadataJson: JSON.stringify(metadata),
+    });
+};
+
+export const fetchCloudKitAttachmentAsset = async (
+    recordName: string,
+    targetPath: string,
+): Promise<CloudKitAttachmentMetadata> => {
+    if (!isCloudKitAvailable()) throw new Error('CloudKit is not available on this platform');
+    return await tauriInvoke<CloudKitAttachmentMetadata>('cloudkit_fetch_attachment_asset', {
+        recordName,
+        targetPath,
+    });
+};
+
+export const deleteCloudKitAttachmentAssets = async (recordNames: string[]): Promise<void> => {
+    if (!isCloudKitAvailable()) return;
+    if (recordNames.length === 0) return;
+    await tauriInvoke<boolean>('cloudkit_delete_records', {
+        recordType: CLOUDKIT_ATTACHMENT_RECORD_TYPE,
+        recordIds: recordNames,
+    });
+};
 
 let seedingInFlight: Promise<void> | null = null;
 
@@ -299,7 +351,9 @@ async function fullFetch(): Promise<AppData> {
         tauriInvoke<Array<Record<string, unknown>>>('cloudkit_fetch_all_records', { recordType: RECORD_TYPES.project }),
         tauriInvoke<Array<Record<string, unknown>>>('cloudkit_fetch_all_records', { recordType: RECORD_TYPES.section }),
         tauriInvoke<Array<Record<string, unknown>>>('cloudkit_fetch_all_records', { recordType: RECORD_TYPES.area }),
-        tauriInvoke<Array<Record<string, unknown>>>('cloudkit_fetch_all_records', { recordType: RECORD_TYPES.settings }),
+        tauriInvoke<Array<Record<string, unknown>>>('cloudkit_fetch_all_records', {
+            recordType: RECORD_TYPES.settings,
+        }),
     ]);
 
     // Extract settings from the single settings record
@@ -336,12 +390,8 @@ async function fullFetch(): Promise<AppData> {
 }
 
 async function deletePurgedRecords(data: AppData): Promise<void> {
-    const purgedTaskIDs = (data.tasks ?? [])
-        .filter(t => t.purgedAt)
-        .map(t => t.id);
-    const purgedProjectIDs = (data.projects ?? [])
-        .filter(p => (p as any).purgedAt)
-        .map(p => p.id);
+    const purgedTaskIDs = (data.tasks ?? []).filter((t) => t.purgedAt).map((t) => t.id);
+    const purgedProjectIDs = (data.projects ?? []).filter((p) => (p as any).purgedAt).map((p) => p.id);
 
     const deletePromises: Promise<boolean>[] = [];
     if (purgedTaskIDs.length > 0) {

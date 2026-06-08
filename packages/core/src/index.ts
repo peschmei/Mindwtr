@@ -727,6 +727,14 @@ export type {
 } from './attachment-link-utils';
 
 export {
+    CLOUDKIT_ATTACHMENT_ASSET_FIELD,
+    CLOUDKIT_ATTACHMENT_KEY_PREFIX,
+    CLOUDKIT_ATTACHMENT_RECORD_TYPE,
+    buildCloudKitAttachmentKey,
+    parseCloudKitAttachmentKey,
+} from './cloudkit-attachments';
+
+export {
     validateAttachmentForUpload,
 } from './attachment-validation';
 export type {
