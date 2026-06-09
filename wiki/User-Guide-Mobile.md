@@ -130,7 +130,7 @@ Android builds expose a capture action to supported assistants, including Gemini
 
 ### Android Context Automation Intents
 
-Automation apps such as Tasker, MacroDroid, or Phone Profiles can activate a Mindwtr context. Use the Android broadcast form for background-only triggers. When activated, Mindwtr checks matching `/next` actions and sends a notification only when there is work to show. Tapping that notification opens the matching Contexts view.
+Automation apps such as Tasker, MacroDroid, or Phone Profiles can activate a Mindwtr context. Use the Android broadcast form for background-only triggers. When activated, Mindwtr checks matching `/next` actions that are available now and sends a notification only when there is work to show. Tapping that notification opens the matching Contexts view.
 
 Android broadcast form:
 
@@ -167,8 +167,8 @@ Notes:
 - URL launches may open Mindwtr. Use the broadcast receiver form when the automation should stay in the background.
 - Context names are normalized to `@context`, so `parents` and `@parents` both match `@parents`.
 - Hierarchical contexts match below the selected context, so `@parents` also matches `@parents/errands`.
-- If no `/next` actions match the context, Mindwtr stays silent.
-- Deactivation acknowledges the automation exit trigger; it does not delete, hide, or change tasks.
+- If no currently available `/next` actions match the context, Mindwtr stays silent.
+- Deactivation is a silent no-op for now. It acknowledges the automation exit trigger and is reserved for future active-context state; it does not delete, hide, or change tasks.
 - On Android, context automation URLs and intents return Mindwtr to the background after handling. Use the notification tap when you want to open the matching Contexts view.
 - Mindwtr does not detect locations or device states itself; the automation app owns the trigger.
 

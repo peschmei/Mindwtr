@@ -1,6 +1,7 @@
 import {
   isTaskInActiveProject,
   matchesHierarchicalToken,
+  safeParseDate,
   sortFocusNextActions,
   type Project,
   type Task,
@@ -119,7 +120,13 @@ export function parseContextAutomationUrl(rawUrl: string): ContextAutomationPayl
   return { action, context };
 }
 
-export function selectContextNextActions(tasks: Task[], projects: Project[], context: string): Task[] {
+const startsInFuture = (task: Pick<Task, 'startTime'>, now: Date): boolean => {
+  if (!task.startTime) return false;
+  const start = safeParseDate(task.startTime);
+  return Boolean(start && start.getTime() > now.getTime());
+};
+
+export function selectContextNextActions(tasks: Task[], projects: Project[], context: string, now: Date = new Date()): Task[] {
   const normalizedContext = normalizeContextToken(context);
   if (!normalizedContext) return [];
 
@@ -127,6 +134,7 @@ export function selectContextNextActions(tasks: Task[], projects: Project[], con
   const matchingTasks = tasks.filter((task) => {
     if (task.deletedAt || task.status !== 'next') return false;
     if (!isTaskInActiveProject(task, projectById)) return false;
+    if (startsInFuture(task, now)) return false;
     return (task.contexts ?? []).some((taskContext) => {
       const normalizedTaskContext = normalizeContextToken(taskContext);
       return normalizedTaskContext ? matchesHierarchicalToken(normalizedContext, normalizedTaskContext) : false;

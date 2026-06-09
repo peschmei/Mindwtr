@@ -66,6 +66,10 @@ describe('context-automation', () => {
       task({ id: 'later-due', title: 'Later due', contexts: ['@parents'], dueDate: '2026-01-03' }),
       task({ id: 'soon-due', title: 'Soon due', contexts: ['@parents'], dueDate: '2026-01-02' }),
       task({ id: 'nested', title: 'Nested', contexts: ['@parents/errands'] }),
+      task({ id: 'started-today', title: 'Started today', contexts: ['@parents'], startTime: '2026-01-02' }),
+      task({ id: 'started-earlier', title: 'Started earlier', contexts: ['@parents'], startTime: '2026-01-02T08:00:00.000Z' }),
+      task({ id: 'future-date', title: 'Future date', contexts: ['@parents'], startTime: '2026-01-03' }),
+      task({ id: 'future-time', title: 'Future time', contexts: ['@parents'], startTime: '2026-01-02T13:00:00.000Z' }),
       task({ id: 'waiting', title: 'Waiting', status: 'waiting', contexts: ['@parents'] }),
       task({ id: 'deleted', title: 'Deleted', contexts: ['@parents'], deletedAt: '2026-01-01T01:00:00.000Z' }),
       task({ id: 'archived-project', title: 'Archived project', contexts: ['@parents'], projectId: 'archived' }),
@@ -75,9 +79,11 @@ describe('context-automation', () => {
       project({ id: 'archived', status: 'archived' }),
     ];
 
-    expect(selectContextNextActions(tasks, projects, 'parents').map((item) => item.id)).toEqual([
+    expect(selectContextNextActions(tasks, projects, 'parents', new Date('2026-01-02T12:00:00.000Z')).map((item) => item.id)).toEqual([
       'soon-due',
       'later-due',
+      'started-today',
+      'started-earlier',
       'nested',
     ]);
   });
