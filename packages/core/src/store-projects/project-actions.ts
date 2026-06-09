@@ -50,6 +50,11 @@ export const createProjectCoreActions = ({
                 .reduce((max, project) => Math.max(max, Number.isFinite(project.order) ? project.order : -1), -1);
             const baseOrder = Number.isFinite(initialProps?.order) ? (initialProps?.order as number) : maxOrder + 1;
             const now = new Date().toISOString();
+            const hasExplicitFlowMode = Boolean(
+                initialProps && Object.prototype.hasOwnProperty.call(initialProps, 'isSequential')
+            );
+            const useSequentialDefault = !hasExplicitFlowMode
+                && state.settings.gtd?.defaultProjectFlowMode === 'sequential';
             const newProject: Project = {
                 id: uuidv4(),
                 title: trimmedTitle,
@@ -60,6 +65,7 @@ export const createProjectCoreActions = ({
                 revBy: deviceState.deviceId,
                 createdAt: now,
                 updatedAt: now,
+                ...(useSequentialDefault ? { isSequential: true } : {}),
                 ...initialProps,
                 tagIds: initialProps?.tagIds ?? [],
             };

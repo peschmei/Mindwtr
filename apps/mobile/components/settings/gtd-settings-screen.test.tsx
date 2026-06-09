@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer from 'react-test-renderer';
-import { Modal, Switch, TextInput } from 'react-native';
+import { Modal, Switch, Text, TextInput, TouchableOpacity } from 'react-native';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { AppData } from '@mindwtr/core';
 
@@ -254,6 +254,28 @@ describe('GtdSettingsScreen task editor layout', () => {
     expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
       gtd: expect.objectContaining({
         defaultScheduleTime: '09:30',
+      }),
+    }));
+  });
+
+  it('saves the default project flow mode from GTD settings', () => {
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<GtdSettingsScreen onNavigate={vi.fn()} screen="gtd" />);
+    });
+
+    const sequentialButton = tree.root.findAllByType(TouchableOpacity).find((button) => (
+      button.findAllByType(Text).some((text) => text.props.children === 'Sequential')
+    ));
+    expect(sequentialButton).toBeTruthy();
+
+    renderer.act(() => {
+      sequentialButton?.props.onPress();
+    });
+
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      gtd: expect.objectContaining({
+        defaultProjectFlowMode: 'sequential',
       }),
     }));
   });

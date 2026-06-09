@@ -1,4 +1,4 @@
-import type { AppSettings, FeatureSettings, GtdSettings, TaskEditorFieldId, TaskEditorPresentation, TaskEditorSectionId } from '@mindwtr/core';
+import type { AppSettings, DefaultProjectFlowMode, FeatureSettings, GtdSettings, TaskEditorFieldId, TaskEditorPresentation, TaskEditorSectionId } from '@mindwtr/core';
 import {
     FOCUS_TASK_LIMIT_OPTIONS,
     normalizeClockTimeInput,
@@ -39,6 +39,10 @@ type Labels = {
     defaultScheduleTimeDesc: string;
     focusTaskLimit: string;
     focusTaskLimitDesc: string;
+    defaultProjectFlowMode: string;
+    defaultProjectFlowModeDesc: string;
+    projectFlowParallel: string;
+    projectFlowSequential: string;
     inboxProcessing: string;
     inboxProcessingDesc: string;
     inboxDefaultMode: string;
@@ -228,6 +232,9 @@ export function SettingsGtdPage({
     const includeContextStep = safeSettings.gtd?.weeklyReview?.includeContextStep !== false;
     const defaultScheduleTime = normalizeClockTimeInput(safeSettings.gtd?.defaultScheduleTime) || '';
     const focusTaskLimit = normalizeFocusTaskLimit(safeSettings.gtd?.focusTaskLimit);
+    const defaultProjectFlowMode: DefaultProjectFlowMode = safeSettings.gtd?.defaultProjectFlowMode === 'sequential'
+        ? 'sequential'
+        : 'parallel';
     const pomodoroEnabled = safeSettings.features?.pomodoro === true;
     const pomodoroCustomDurations = sanitizePomodoroDurations(safeSettings.gtd?.pomodoro?.customDurations);
     const pomodoroLinkTask = safeSettings.gtd?.pomodoro?.linkTask === true;
@@ -572,6 +579,38 @@ export function SettingsGtdPage({
                                     )}
                                 >
                                     {option}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div className="p-4 flex items-center justify-between gap-6">
+                    <div className="min-w-0">
+                        <div className="text-sm font-medium">{t.defaultProjectFlowMode}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{t.defaultProjectFlowModeDesc}</div>
+                    </div>
+                    <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-1 shrink-0">
+                        {([
+                            { id: 'parallel', label: t.projectFlowParallel },
+                            { id: 'sequential', label: t.projectFlowSequential },
+                        ] satisfies Array<{ id: DefaultProjectFlowMode; label: string }>).map((option) => {
+                            const selected = defaultProjectFlowMode === option.id;
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() => {
+                                        updateGtdSettings({ defaultProjectFlowMode: option.id });
+                                    }}
+                                    className={cn(
+                                        'rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40',
+                                        selected
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                                    )}
+                                >
+                                    {option.label}
                                 </button>
                             );
                         })}

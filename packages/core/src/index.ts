@@ -10,6 +10,7 @@ export type {
     CalendarSettings,
     ChecklistItem,
     CustomTimeEstimate,
+    DefaultProjectFlowMode,
     DiagnosticsSettings,
     FeatureSettings,
     FocusGroupBy,

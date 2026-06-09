@@ -28,6 +28,7 @@ import {
     sanitizePomodoroDurations,
     tFallback,
     translateText,
+    type DefaultProjectFlowMode,
     type FeatureSettings,
     type GtdSettings,
     type TaskEditorFieldId,
@@ -93,6 +94,9 @@ export function GtdSettingsScreen({
     const includeDailyFocusStep = settings.gtd?.dailyReview?.includeFocusStep !== false;
     const defaultScheduleTime = normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || '';
     const focusTaskLimit = normalizeFocusTaskLimit(settings.gtd?.focusTaskLimit);
+    const defaultProjectFlowMode: DefaultProjectFlowMode = settings.gtd?.defaultProjectFlowMode === 'sequential'
+        ? 'sequential'
+        : 'parallel';
     const autoArchiveDays = Number.isFinite(settings.gtd?.autoArchiveDays)
         ? Math.max(0, Math.floor(settings.gtd?.autoArchiveDays as number))
         : 7;
@@ -335,9 +339,23 @@ export function GtdSettingsScreen({
         'settings.focusTaskLimitDesc',
         tr('settings.focusTaskLimitDesc')
     );
+    const defaultProjectFlowModeLabel = tFallback(
+        t,
+        'settings.defaultProjectFlowMode',
+        'Default project flow'
+    );
+    const defaultProjectFlowModeDesc = tFallback(
+        t,
+        'settings.defaultProjectFlowModeDesc',
+        'Applies only when creating new projects.'
+    );
     const captureSettingsTitle = tFallback(t, 'settings.captureSettings', tr('settings.gtdMobile.captureDefaults'));
     const reviewSettingsTitle = tFallback(t, 'settings.reviewSettings', tr('settings.gtdMobile.reviewSteps'));
     const inboxSettingsTitle = tFallback(t, 'settings.inboxProcessing', tr('settings.inboxProcessing'));
+    const projectFlowModeOptions: Array<{ id: DefaultProjectFlowMode; label: string }> = [
+        { id: 'parallel', label: tFallback(t, 'settings.projectFlowParallel', 'Parallel') },
+        { id: 'sequential', label: tFallback(t, 'settings.projectFlowSequential', 'Sequential') },
+    ];
     const captureMethodOptions: { id: 'text' | 'audio'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
         { id: 'text', label: t('settings.captureDefaultText'), icon: 'text-outline' },
         { id: 'audio', label: t('settings.captureDefaultAudio'), icon: 'mic-outline' },
@@ -448,6 +466,37 @@ export function GtdSettingsScreen({
                                                 numberOfLines={1}
                                             >
                                                 {option}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                        <View style={[styles.settingRowColumn, { borderTopWidth: 1, borderTopColor: tc.border, gap: 12 }]}>
+                            <View>
+                                <Text style={[styles.settingLabel, { color: tc.text }]}>{defaultProjectFlowModeLabel}</Text>
+                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{defaultProjectFlowModeDesc}</Text>
+                            </View>
+                            <View style={[styles.gtdSegmentedControl, { backgroundColor: tc.bg, borderColor: tc.border }]}>
+                                {projectFlowModeOptions.map((option) => {
+                                    const selected = defaultProjectFlowMode === option.id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={option.id}
+                                            accessibilityRole="button"
+                                            accessibilityState={{ selected }}
+                                            style={[
+                                                styles.gtdSegmentedOption,
+                                                { backgroundColor: selected ? tc.filterBg : 'transparent' },
+                                            ]}
+                                            onPress={() => updateGtdSettings({ defaultProjectFlowMode: option.id })}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Text
+                                                style={[styles.gtdSegmentedOptionText, { color: selected ? tc.tint : tc.secondaryText }]}
+                                                numberOfLines={1}
+                                            >
+                                                {option.label}
                                             </Text>
                                         </TouchableOpacity>
                                     );

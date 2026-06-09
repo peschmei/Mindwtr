@@ -1120,12 +1120,15 @@ export const createSettingsActions = ({
             const focusGroupByUpdate = updates.gtd
                 ? Object.prototype.hasOwnProperty.call(updates.gtd, 'focusGroupBy')
                 : false;
+            const defaultProjectFlowModeUpdate = updates.gtd
+                ? Object.prototype.hasOwnProperty.call(updates.gtd, 'defaultProjectFlowMode')
+                : false;
 
             if ('language' in updates || 'weekStart' in updates || 'dateFormat' in updates || 'timeFormat' in updates) {
                 markSyncUpdated('language');
             }
 
-            if (defaultScheduleTimeUpdate || focusTaskLimitUpdate || focusGroupByUpdate) {
+            if (defaultScheduleTimeUpdate || focusTaskLimitUpdate || focusGroupByUpdate || defaultProjectFlowModeUpdate) {
                 markSyncUpdated('gtd');
             }
 

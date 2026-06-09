@@ -11,6 +11,7 @@ type DensityValue = NonNullable<AppearanceSettings['density']>;
 type TextSizeValue = NonNullable<AppearanceSettings['textSize']>;
 type MobileQuickAccessViewValue = NonNullable<AppearanceSettings['mobileQuickAccessView']>;
 type FocusGroupByValue = NonNullable<GtdSettings['focusGroupBy']>;
+type DefaultProjectFlowModeValue = NonNullable<GtdSettings['defaultProjectFlowMode']>;
 type SpeechToTextSettings = NonNullable<AiSettings['speechToText']>;
 type SpeechToTextProviderValue = NonNullable<SpeechToTextSettings['provider']>;
 type SpeechToTextModeValue = NonNullable<SpeechToTextSettings['mode']>;
@@ -73,6 +74,11 @@ const FOCUS_GROUP_BY_VALUE_FLAGS: Record<FocusGroupByValue, true> = {
     priority: true,
 };
 
+const DEFAULT_PROJECT_FLOW_MODE_VALUE_FLAGS: Record<DefaultProjectFlowModeValue, true> = {
+    parallel: true,
+    sequential: true,
+};
+
 const AI_PROVIDER_VALUE_FLAGS: Record<AIProviderId, true> = {
     gemini: true,
     openai: true,
@@ -128,6 +134,9 @@ export const SETTINGS_MOBILE_QUICK_ACCESS_VIEW_VALUE_SET = new Set<MobileQuickAc
 
 export const SETTINGS_FOCUS_GROUP_BY_VALUES = Object.keys(FOCUS_GROUP_BY_VALUE_FLAGS) as FocusGroupByValue[];
 export const SETTINGS_FOCUS_GROUP_BY_VALUE_SET = new Set<FocusGroupByValue>(SETTINGS_FOCUS_GROUP_BY_VALUES);
+
+export const SETTINGS_DEFAULT_PROJECT_FLOW_MODE_VALUES = Object.keys(DEFAULT_PROJECT_FLOW_MODE_VALUE_FLAGS) as DefaultProjectFlowModeValue[];
+export const SETTINGS_DEFAULT_PROJECT_FLOW_MODE_VALUE_SET = new Set<DefaultProjectFlowModeValue>(SETTINGS_DEFAULT_PROJECT_FLOW_MODE_VALUES);
 
 export const AI_PROVIDER_VALUES = Object.keys(AI_PROVIDER_VALUE_FLAGS) as AIProviderId[];
 export const AI_PROVIDER_VALUE_SET = new Set<AIProviderId>(AI_PROVIDER_VALUES);

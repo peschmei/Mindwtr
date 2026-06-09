@@ -182,11 +182,13 @@ export const sanitizeAppDataForRemote = (data: AppData): AppData => {
                 settings.gtd?.defaultScheduleTime !== undefined
                 || settings.gtd?.focusTaskLimit !== undefined
                 || settings.gtd?.focusGroupBy !== undefined
+                || settings.gtd?.defaultProjectFlowMode !== undefined
             ) {
                 next.gtd = {
                     ...(settings.gtd.defaultScheduleTime !== undefined ? { defaultScheduleTime: settings.gtd.defaultScheduleTime } : {}),
                     ...(settings.gtd.focusTaskLimit !== undefined ? { focusTaskLimit: settings.gtd.focusTaskLimit } : {}),
                     ...(settings.gtd.focusGroupBy !== undefined ? { focusGroupBy: settings.gtd.focusGroupBy } : {}),
+                    ...(settings.gtd.defaultProjectFlowMode !== undefined ? { defaultProjectFlowMode: settings.gtd.defaultProjectFlowMode } : {}),
                 };
             }
         }

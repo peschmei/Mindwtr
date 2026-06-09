@@ -75,6 +75,8 @@ export type TaskEditorPresentation = 'inline' | 'modal';
 
 export type InboxProcessingMode = 'guided' | 'quick';
 
+export type DefaultProjectFlowMode = 'parallel' | 'sequential';
+
 export type ProjectSequentialScope = 'project' | 'section';
 
 export interface Project {
@@ -281,6 +283,7 @@ export interface GtdSettings {
     defaultCaptureMethod?: 'text' | 'audio';
     focusTaskLimit?: number;
     focusGroupBy?: FocusGroupBy;
+    defaultProjectFlowMode?: DefaultProjectFlowMode;
     defaultScheduleTime?: string; // HH:mm, used to prefill manual scheduling fields.
     saveAudioAttachments?: boolean;
     inboxProcessing?: {

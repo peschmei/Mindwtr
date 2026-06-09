@@ -34,4 +34,30 @@ describe('SettingsGtdPage', () => {
             });
         });
     });
+
+    it('saves the default project flow mode', async () => {
+        const updateSettings = vi.fn().mockResolvedValue(undefined);
+        const showSaved = vi.fn();
+
+        const { getByRole } = render(
+            <SettingsGtdPage
+                t={labelFallback.en}
+                language="en"
+                settings={{ gtd: { defaultProjectFlowMode: 'parallel' } }}
+                updateSettings={updateSettings}
+                showSaved={showSaved}
+                autoArchiveDays={7}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /sequential/i }));
+
+        await waitFor(() => {
+            expect(updateSettings).toHaveBeenCalledWith({
+                gtd: {
+                    defaultProjectFlowMode: 'sequential',
+                },
+            });
+        });
+    });
 });

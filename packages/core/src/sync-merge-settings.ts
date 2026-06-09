@@ -2,6 +2,7 @@ import type { AiSettings, AppData, SavedFilter, SettingsSyncGroup, SettingsSyncP
 import {
     AI_PROVIDER_VALUE_SET,
     AI_REASONING_EFFORT_VALUE_SET,
+    SETTINGS_DEFAULT_PROJECT_FLOW_MODE_VALUE_SET,
     SETTINGS_DENSITY_VALUE_SET,
     SETTINGS_FOCUS_GROUP_BY_VALUE_SET,
     SETTINGS_KEYBINDING_STYLE_VALUE_SET,
@@ -412,6 +413,19 @@ export const sanitizeMergedSettingsForSync = (
                 delete next.gtd.focusGroupBy;
             }
         }
+
+        if (
+            next.gtd.defaultProjectFlowMode !== undefined
+            && !setContainsValue(SETTINGS_DEFAULT_PROJECT_FLOW_MODE_VALUE_SET, next.gtd.defaultProjectFlowMode)
+        ) {
+            next.gtd = {
+                ...next.gtd,
+                defaultProjectFlowMode: localSettings.gtd?.defaultProjectFlowMode,
+            };
+            if (next.gtd.defaultProjectFlowMode === undefined) {
+                delete next.gtd.defaultProjectFlowMode;
+            }
+        }
     }
 
     next.syncPreferences = sanitizeSyncPreferences(next.syncPreferences, localSettings.syncPreferences);
@@ -559,11 +573,13 @@ export const mergeSettingsForSync = (
             defaultScheduleTime: localSettings.gtd?.defaultScheduleTime,
             focusTaskLimit: localSettings.gtd?.focusTaskLimit,
             focusGroupBy: localSettings.gtd?.focusGroupBy,
+            defaultProjectFlowMode: localSettings.gtd?.defaultProjectFlowMode,
         },
         {
             defaultScheduleTime: incomingSettings.gtd?.defaultScheduleTime,
             focusTaskLimit: incomingSettings.gtd?.focusTaskLimit,
             focusGroupBy: incomingSettings.gtd?.focusGroupBy,
+            defaultProjectFlowMode: incomingSettings.gtd?.defaultProjectFlowMode,
         },
         (value) => {
             const nextGtd = { ...(merged.gtd ?? {}) };
@@ -581,6 +597,11 @@ export const mergeSettingsForSync = (
                 delete nextGtd.focusGroupBy;
             } else {
                 nextGtd.focusGroupBy = value.focusGroupBy;
+            }
+            if (value.defaultProjectFlowMode === undefined) {
+                delete nextGtd.defaultProjectFlowMode;
+            } else {
+                nextGtd.defaultProjectFlowMode = value.defaultProjectFlowMode;
             }
             if (Object.keys(nextGtd).length === 0) {
                 if (merged.gtd) {

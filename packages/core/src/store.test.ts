@@ -1734,6 +1734,17 @@ describe('TaskStore', () => {
         expect(projects[0].color).toBe('#ff0000');
     });
 
+    it('uses the configured default project flow mode for new projects', async () => {
+        const { addProject, updateSettings } = useTaskStore.getState();
+        await updateSettings({ gtd: { defaultProjectFlowMode: 'sequential' } });
+
+        const defaultedProject = await addProject('Sequential Project', '#ff0000');
+        const explicitParallelProject = await addProject('Parallel Project', '#00ff00', { isSequential: false });
+
+        expect(defaultedProject?.isSequential).toBe(true);
+        expect(explicitParallelProject?.isSequential).toBe(false);
+    });
+
     it('should soft-delete areas and unassign linked projects/tasks', async () => {
         const { addArea, addProject, addSection, addTask, deleteArea } = useTaskStore.getState();
         const area = await addArea('Work');
