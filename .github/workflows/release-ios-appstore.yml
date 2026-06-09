@@ -736,6 +736,51 @@ jobs:
           fi
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
 
+      - name: Record iOS dSYM UUIDs
+        run: |
+          set -euo pipefail
+          DSYM_DIR="$ARCHIVE_PATH/dSYMs"
+          DSYM_MANIFEST="$DSYM_DIR/dsym-uuids.txt"
+
+          if [ ! -d "$DSYM_DIR" ]; then
+            echo "::error::Archived dSYM directory not found: $DSYM_DIR"
+            exit 1
+          fi
+
+          {
+            echo "Mindwtr iOS dSYM UUIDs"
+            echo "App version: ${APP_VERSION}"
+            echo "Build number: ${APP_BUILD_NUMBER}"
+            echo "Git SHA: ${GITHUB_SHA}"
+            echo "Archive: ${ARCHIVE_PATH}"
+          } > "$DSYM_MANIFEST"
+
+          found_dsym=0
+          while IFS= read -r -d '' dwarf_file; do
+            found_dsym=1
+            {
+              echo
+              echo "File: ${dwarf_file#$DSYM_DIR/}"
+              dwarfdump --uuid "$dwarf_file"
+            } >> "$DSYM_MANIFEST"
+          done < <(find "$DSYM_DIR" -path '*/Contents/Resources/DWARF/*' -type f -print0)
+
+          if [ "$found_dsym" -ne 1 ]; then
+            echo "::error::No DWARF files found under archived dSYM directory: $DSYM_DIR"
+            exit 1
+          fi
+
+          cat "$DSYM_MANIFEST"
+
+      - name: Upload iOS dSYMs
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: mindwtr-ios-appstore-dsyms-${{ github.run_id }}
+          path: ${{ runner.temp }}/Mindwtr.xcarchive/dSYMs/
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Export IPA
         timeout-minutes: 10
         run: |
