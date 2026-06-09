@@ -62,6 +62,7 @@ interface TaskItemProps {
     showQuickDone?: boolean;
     showStatusSelect?: boolean;
     showProjectBadgeInActions?: boolean;
+    showProjectBadgeInMetadata?: boolean;
     actionsOverlay?: boolean;
     dragHandle?: ReactNode;
     focusToggle?: {
@@ -100,6 +101,7 @@ export const TaskItem = memo(function TaskItem({
     showQuickDone = true,
     showStatusSelect = true,
     showProjectBadgeInActions = true,
+    showProjectBadgeInMetadata = true,
     actionsOverlay = false,
     dragHandle,
     focusToggle,
@@ -1266,6 +1268,7 @@ export const TaskItem = memo(function TaskItem({
                                 showQuickDone={showQuickDone}
                                 showStatusSelect={showConfiguredStatusSelect}
                                 showProjectBadgeInActions={showProjectBadgeInActions}
+                                showProjectBadgeInMetadata={showProjectBadgeInMetadata}
                                 readOnly={effectiveReadOnly}
                                 compactMetaEnabled={compactMetaEnabled}
                                 dense={isCompact}

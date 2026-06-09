@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
-import type { Task } from '@mindwtr/core';
+import type { Project, Task } from '@mindwtr/core';
 import { safeFormatDate, useTaskStore } from '@mindwtr/core';
 
 import { LanguageProvider } from '../../contexts/language-context';
@@ -16,6 +16,17 @@ const baseTask: Task = {
     contexts: [],
     createdAt: new Date(Date.now() - (15 * 24 * 60 * 60 * 1000)).toISOString(),
     updatedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+};
+
+const baseProject: Project = {
+    id: 'project-1',
+    title: 'Project Alpha',
+    color: '#3b82f6',
+    order: 0,
+    status: 'active',
+    tagIds: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
 describe('TaskItemDisplay', () => {
@@ -286,6 +297,73 @@ describe('TaskItemDisplay', () => {
 
         expect(getByText('list-tag')).toBeInTheDocument();
         expect(queryByText('#list-tag')).not.toBeInTheDocument();
+    });
+
+    it('can suppress the expanded details project badge independently of action badges', () => {
+        const { getByText, queryByText, rerender } = render(
+            <LanguageProvider>
+                <TaskItemDisplay
+                    task={baseTask}
+                    project={baseProject}
+                    language="en"
+                    selectionMode={false}
+                    isViewOpen
+                    actions={{
+                        onToggleView: vi.fn(),
+                        onEdit: vi.fn(),
+                        onDelete: vi.fn(),
+                        onDuplicate: vi.fn(),
+                        onStatusChange: vi.fn(),
+                        openAttachment: vi.fn(),
+                    }}
+                    visibleAttachments={[]}
+                    recurrenceRule=""
+                    recurrenceStrategy="strict"
+                    prioritiesEnabled={false}
+                    timeEstimatesEnabled={false}
+                    isStagnant={false}
+                    showQuickDone={false}
+                    showProjectBadgeInActions={false}
+                    readOnly={false}
+                    t={(key: string) => key}
+                />
+            </LanguageProvider>
+        );
+
+        expect(getByText('Project Alpha')).toBeInTheDocument();
+
+        rerender(
+            <LanguageProvider>
+                <TaskItemDisplay
+                    task={baseTask}
+                    project={baseProject}
+                    language="en"
+                    selectionMode={false}
+                    isViewOpen
+                    actions={{
+                        onToggleView: vi.fn(),
+                        onEdit: vi.fn(),
+                        onDelete: vi.fn(),
+                        onDuplicate: vi.fn(),
+                        onStatusChange: vi.fn(),
+                        openAttachment: vi.fn(),
+                    }}
+                    visibleAttachments={[]}
+                    recurrenceRule=""
+                    recurrenceStrategy="strict"
+                    prioritiesEnabled={false}
+                    timeEstimatesEnabled={false}
+                    isStagnant={false}
+                    showQuickDone={false}
+                    showProjectBadgeInActions={false}
+                    showProjectBadgeInMetadata={false}
+                    readOnly={false}
+                    t={(key: string) => key}
+                />
+            </LanguageProvider>
+        );
+
+        expect(queryByText('Project Alpha')).not.toBeInTheDocument();
     });
 
     it('renders inline markdown inside expanded checklist item titles', () => {

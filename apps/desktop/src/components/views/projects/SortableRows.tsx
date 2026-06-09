@@ -150,6 +150,7 @@ export function SortableProjectTaskRow({
                     project={project}
                     enableDoubleClickEdit
                     showProjectBadgeInActions={false}
+                    showProjectBadgeInMetadata={false}
                     dragHandle={(
                         <button
                             type="button"

@@ -54,6 +54,7 @@ interface TaskItemDisplayProps {
     showQuickDone: boolean;
     showStatusSelect?: boolean;
     showProjectBadgeInActions?: boolean;
+    showProjectBadgeInMetadata?: boolean;
     readOnly: boolean;
     compactMetaEnabled?: boolean;
     dense?: boolean;
@@ -96,6 +97,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     showQuickDone,
     showStatusSelect = true,
     showProjectBadgeInActions = true,
+    showProjectBadgeInMetadata = true,
     readOnly,
     compactMetaEnabled = true,
     dense = false,
@@ -153,7 +155,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
         ? tFallback(t, 'task.dateIssue.startAfterDue', 'Starts after due date')
         : '';
     const hasMetadata = Boolean(
-        project
+        (showProjectBadgeInMetadata && project)
         || area
         || projectDeadlineLabel
         || completionLabel
@@ -350,7 +352,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     };
     const renderMetadataRow = (className?: string) => (
         <div className={cn("flex flex-wrap items-center text-xs", className)}>
-            {renderProjectBadge()}
+            {showProjectBadgeInMetadata && renderProjectBadge()}
             {renderProjectDeadlineMetadataBadge()}
             {!project && area && (
                 <MetadataBadge

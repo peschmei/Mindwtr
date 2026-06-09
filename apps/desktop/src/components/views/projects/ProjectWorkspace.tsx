@@ -822,6 +822,7 @@ export function ProjectWorkspace({
                     project={selectedProject}
                     enableDoubleClickEdit
                     showProjectBadgeInActions={false}
+                    showProjectBadgeInMetadata={false}
                     selectionMode={selectionMode}
                     isMultiSelected={multiSelectedIds.has(task.id)}
                     onToggleSelect={(options) => toggleMultiSelect(task.id, options)}
@@ -841,6 +842,7 @@ export function ProjectWorkspace({
                     project={selectedProject}
                     enableDoubleClickEdit
                     showProjectBadgeInActions={false}
+                    showProjectBadgeInMetadata={false}
                 />
             )}
         />
