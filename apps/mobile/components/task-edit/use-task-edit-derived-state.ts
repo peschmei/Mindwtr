@@ -196,7 +196,7 @@ export function useTaskEditDerivedState({
     const hasValue = useCallback((fieldId: TaskEditorFieldId) => {
         switch (fieldId) {
             case 'status':
-                return (editedTask.status ?? task?.status) !== 'inbox';
+                return false;
             case 'project':
                 return Boolean(getEditedTaskValue(editedTask, task, 'projectId'));
             case 'section':

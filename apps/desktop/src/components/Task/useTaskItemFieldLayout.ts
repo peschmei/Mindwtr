@@ -100,7 +100,7 @@ export function useTaskItemFieldLayout({
     const hasValue = useCallback((fieldId: TaskEditorFieldId) => {
         switch (fieldId) {
             case 'status':
-                return editStatus !== 'inbox';
+                return false;
             case 'project':
                 return Boolean(editProjectId || task.projectId);
             case 'section':

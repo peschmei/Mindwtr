@@ -60,6 +60,21 @@ describe('useTaskItemFieldLayout', () => {
         expect(result.current.sectionOpenDefaults.details).toBe(false);
     });
 
+    it('hides status when the task editor layout disables it even for non-inbox tasks', () => {
+        const { result } = renderHook(() => useTaskItemFieldLayout(buildParams({
+            settings: {
+                gtd: {
+                    taskEditor: {
+                        hidden: ['status'],
+                    },
+                },
+            },
+            editStatus: 'next',
+        })));
+
+        expect(result.current.basicFields).not.toContain('status');
+    });
+
     it('hides action-only fields while a task is being edited as reference', () => {
         const { result } = renderHook(() => useTaskItemFieldLayout(buildParams({
             editStatus: 'reference',

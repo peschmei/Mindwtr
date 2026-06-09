@@ -1,7 +1,9 @@
+import React from 'react';
+import renderer from 'react-test-renderer';
 import { describe, expect, it } from 'vitest';
-import type { Task } from '@mindwtr/core';
+import type { AppData, Task } from '@mindwtr/core';
 
-import { getMonthlyRecurrenceAnchorDate } from './use-task-edit-derived-state';
+import { getMonthlyRecurrenceAnchorDate, useTaskEditDerivedState } from './use-task-edit-derived-state';
 
 const baseTask: Task = {
     id: 'task-1',
@@ -38,5 +40,43 @@ describe('getMonthlyRecurrenceAnchorDate', () => {
         );
 
         expect(anchor.getDate()).toBe(10);
+    });
+});
+
+describe('useTaskEditDerivedState', () => {
+    it('hides status when the task editor layout disables it even for non-inbox tasks', () => {
+        let derived: ReturnType<typeof useTaskEditDerivedState> | undefined;
+        const settings: AppData['settings'] = {
+            gtd: {
+                taskEditor: {
+                    hidden: ['status'],
+                },
+            },
+        };
+
+        function Probe() {
+            derived = useTaskEditDerivedState({
+                task: baseTask,
+                editedTask: { status: 'next' },
+                settings,
+                projects: [],
+                sections: [],
+                prioritiesEnabled: true,
+                timeEstimatesEnabled: true,
+                contextInputDraft: '',
+                descriptionDraft: '',
+                tagInputDraft: '',
+                visibleAttachmentsLength: 0,
+                t: (key) => key,
+            });
+            return null;
+        }
+
+        renderer.act(() => {
+            renderer.create(React.createElement(Probe));
+        });
+
+        expect(derived?.basicFields).not.toContain('status');
+        expect(derived?.showStatusField).toBe(false);
     });
 });
