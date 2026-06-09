@@ -332,8 +332,20 @@ API_AVAILABLE(ios(10.0)) {
 
   it('keeps the Gradle compatibility rewrite in place', () => {
     const input = `apply plugin: 'maven'
+buildscript {
+  dependencies {
+    classpath 'com.android.tools.build:gradle:3.4.1'
+  }
+}
+
 android {
   compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
+}
+
+dependencies {
+    //noinspection GradleDynamicVersion
+    implementation 'com.facebook.react:react-native:+'  // From node_modules
+    implementation 'com.google.code.gson:gson:2.8.6'
 }
 
 afterEvaluate { project ->
@@ -345,5 +357,10 @@ afterEvaluate { project ->
     expect(output).not.toContain("apply plugin: 'maven'");
     expect(output).toContain("compileSdk safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)");
     expect(output).not.toContain('afterEvaluate { project ->');
+    expect(output.slice(0, output.indexOf('android {'))).not.toContain('notification-open-intents');
+    expect(output).toContain("classpath 'com.android.tools.build:gradle:3.4.1'");
+    expect(output).toContain("implementation project(':notification-open-intents')");
+    expect(output.indexOf("classpath 'com.android.tools.build:gradle:3.4.1'")).toBeLessThan(output.indexOf("implementation project(':notification-open-intents')"));
+    expect(applyGradleCompatPatchToSource(output).match(/notification-open-intents/g)).toHaveLength(2);
   });
 });

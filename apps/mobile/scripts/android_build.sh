@@ -30,6 +30,10 @@ if [[ "${FOSS_BUILD}" == "1" && "${SKIP_FDROID_PREP:-0}" != "1" ]]; then
   ./scripts/fdroid_prep.sh
 fi
 
+if [[ "${FOSS_BUILD}" == "1" ]]; then
+  node scripts/fdroid_patch_expo_application.js
+fi
+
 if [[ "${FOSS_BUILD}" == "1" && -n "${ANALYTICS_HEARTBEAT_URL:-}" && "${ANALYTICS_HEARTBEAT_DISABLED:-0}" != "1" ]]; then
   export ANALYTICS_HEARTBEAT_CHANNEL="${ANALYTICS_HEARTBEAT_CHANNEL:-fdroid}"
 fi
@@ -188,7 +192,13 @@ text = path.read_text()
 excludes_block = """
 
 configurations.all {
+    exclude group: 'com.android.billingclient'
+    exclude group: 'com.android.installreferrer'
+    exclude group: 'com.google.android.ads'
     exclude group: 'com.google.android.gms'
+    exclude group: 'com.google.android.play'
+    exclude group: 'com.google.android.play.core'
+    exclude group: 'com.google.android.ump'
     exclude group: 'com.google.firebase'
     exclude group: 'com.google.android.datatransport'
     exclude group: 'com.google.mlkit'

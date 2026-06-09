@@ -30,6 +30,24 @@ const applyGradleCompatPatchToSource = (original) => {
     next = `${next.slice(0, markerIndex).trimEnd()}\n\n// Legacy publishing tasks removed for modern Gradle compatibility.\n`;
   }
 
+  if (
+    !next.includes("project(':notification-open-intents')")
+    && next.includes('dependencies {')
+  ) {
+    const reactNativeDependencyIndex = next.search(/implementation ['"]com\.facebook\.react:react-native:\+['"]/);
+    if (reactNativeDependencyIndex >= 0) {
+      const dependencyBlockStart = next.lastIndexOf('dependencies {', reactNativeDependencyIndex);
+      const dependencyBlockEnd = next.indexOf('\n}', reactNativeDependencyIndex);
+      if (dependencyBlockStart >= 0 && dependencyBlockEnd >= 0) {
+        next = `${next.slice(0, dependencyBlockEnd)}
+    if (rootProject.findProject(':notification-open-intents') != null) {
+        implementation project(':notification-open-intents')
+    }
+${next.slice(dependencyBlockEnd)}`;
+      }
+    }
+  }
+
   return next;
 };
 

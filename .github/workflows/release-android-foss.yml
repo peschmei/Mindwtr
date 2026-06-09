@@ -214,6 +214,16 @@ jobs:
           fi
           echo "Verified APK permissions: CAMERA/storage/alert removed; RECORD_AUDIO present."
 
+      - name: Verify FOSS Google service cleanup
+        run: |
+          mapfile -t apk_matches < <(find apps/mobile/build -maxdepth 1 -type f -name 'mindwtr-*-arm64-v8a-foss.apk' | sort)
+          if [[ "${#apk_matches[@]}" -ne 1 ]]; then
+            echo "Expected exactly one arm64 FOSS APK for Google service verification, found ${#apk_matches[@]}" >&2
+            printf '%s\n' "${apk_matches[@]}" >&2
+            exit 1
+          fi
+          python3 apps/mobile/scripts/verify_foss_no_google_services.py "${apk_matches[0]}"
+
       - name: Collect Android FOSS artifacts
         run: |
           VERSION=${{ steps.version.outputs.version }}
