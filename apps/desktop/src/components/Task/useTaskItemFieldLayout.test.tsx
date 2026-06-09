@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { Task } from '@mindwtr/core';
 
+import { DEFAULT_TASK_EDITOR_ORDER } from './task-item-helpers';
 import { useTaskItemFieldLayout } from './useTaskItemFieldLayout';
 
 const baseTask: Task = {
@@ -73,6 +74,44 @@ describe('useTaskItemFieldLayout', () => {
         })));
 
         expect(result.current.basicFields).not.toContain('status');
+    });
+
+    it('hides every configured field when hidden fields have no task content', () => {
+        const { result } = renderHook(() => useTaskItemFieldLayout(buildParams({
+            settings: {
+                gtd: {
+                    taskEditor: {
+                        hidden: [...DEFAULT_TASK_EDITOR_ORDER],
+                    },
+                },
+            },
+            task: baseTask,
+            editStatus: 'next',
+            editProjectId: '',
+            editSectionId: '',
+            editAreaId: '',
+            editPriority: '',
+            editEnergyLevel: '',
+            editAssignedTo: '',
+            editContexts: '',
+            editDescription: '',
+            editDueDate: '',
+            editRecurrence: '',
+            editReviewAt: '',
+            editStartTime: '',
+            editTags: '',
+            editLocation: '',
+            editTimeEstimate: '',
+            visibleEditAttachmentsLength: 0,
+        })));
+
+        expect(result.current.showProjectField).toBe(false);
+        expect(result.current.showAreaField).toBe(false);
+        expect(result.current.showSectionField).toBe(false);
+        expect(result.current.basicFields).toEqual([]);
+        expect(result.current.schedulingFields).toEqual([]);
+        expect(result.current.organizationFields).toEqual([]);
+        expect(result.current.detailsFields).toEqual([]);
     });
 
     it('hides action-only fields while a task is being edited as reference', () => {
