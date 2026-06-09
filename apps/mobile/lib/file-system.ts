@@ -62,6 +62,14 @@ const ensureFileParentDirectory = (uri: string): void => {
   }
 };
 
+const prepareFileTarget = (uri: string): void => {
+  ensureFileParentDirectory(uri);
+  const targetInfo = ModernPaths.info(uri);
+  if (targetInfo.exists && targetInfo.isDirectory) {
+    new ModernDirectory(uri).delete();
+  }
+};
+
 const toLegacyInfo = (uri: string, options?: InfoOptions): FileInfoLike => {
   const pathInfo = ModernPaths.info(uri);
   if (!pathInfo.exists) {
@@ -153,10 +161,10 @@ export const writeAsStringAsync = async (uri: string, contents: string, options:
   withLegacyFallback(
     canUseModernApi()
       ? () => {
+          prepareFileTarget(uri);
           const file = new ModernFile(uri);
-          ensureFileParentDirectory(uri);
           if (!file.exists) {
-            file.create({ intermediates: true, overwrite: true });
+            file.create({ overwrite: true });
           }
           file.write(contents, { encoding: options.encoding ?? EncodingType.UTF8 });
         }
@@ -192,7 +200,7 @@ export const copyAsync = async ({ from, to }: RelocatingOptions): Promise<void> 
             new ModernDirectory(from).copy(new ModernDirectory(to));
             return;
           }
-          ensureFileParentDirectory(to);
+          prepareFileTarget(to);
           new ModernFile(from).copy(new ModernFile(to));
         }
       : null,
@@ -208,7 +216,7 @@ export const moveAsync = async ({ from, to }: RelocatingOptions): Promise<void> 
             new ModernDirectory(from).move(new ModernDirectory(to));
             return;
           }
-          ensureFileParentDirectory(to);
+          prepareFileTarget(to);
           new ModernFile(from).move(new ModernFile(to));
         }
       : null,
