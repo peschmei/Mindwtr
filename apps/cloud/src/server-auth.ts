@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { BEARER_TOKEN_PATTERN, logWarn } from './server-config';
 
 export function getToken(req: Request): string | null {
@@ -163,7 +163,13 @@ export function resolveAllowedAuthTokensFromEnv(env: Record<string, string | und
 
 export function isAuthorizedToken(token: string, allowedTokens: Set<string> | null): boolean {
     if (!allowedTokens) return true;
-    return allowedTokens.has(token);
+    const tokenDigest = createHash('sha256').update(token).digest();
+    let authorized = false;
+    for (const allowedToken of allowedTokens) {
+        const allowedDigest = createHash('sha256').update(allowedToken).digest();
+        authorized = timingSafeEqual(tokenDigest, allowedDigest) || authorized;
+    }
+    return authorized;
 }
 
 export function toRateLimitRoute(pathname: string): string {

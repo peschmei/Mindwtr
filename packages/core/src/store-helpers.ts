@@ -617,6 +617,8 @@ export const reserveNextProjectOrder = (
     tasks: Task[]
 ): number | undefined => {
     if (!projectId) return undefined;
+    // Reservations are scoped to the exact task-array snapshot used during a
+    // prepare loop. A new array intentionally resets the reservation sequence.
     if (reservedProjectOrdersRef !== tasks || !reservedProjectOrdersValue) {
         reservedProjectOrdersRef = tasks;
         reservedProjectOrdersValue = new Map<string, number>();
