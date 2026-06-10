@@ -330,6 +330,66 @@ describe('ProjectDetailModal task sorting', () => {
     });
 });
 
+describe('ProjectDetailModal project task virtualization', () => {
+    it('resets the static task list scroll window before reopening a project', () => {
+        const selectedProject = { ...project('active'), supportNotes: 'Draft' };
+        const selectedProjectTasks = Array.from({ length: 120 }, (_, index) => ({
+            id: `project-task-${index + 1}`,
+            title: `Project task ${index + 1}`,
+            status: 'next',
+            projectId: selectedProject.id,
+            createdAt: '2026-05-12T00:00:00.000Z',
+            updatedAt: '2026-05-12T00:00:00.000Z',
+        })) as Task[];
+        let tree!: ReturnType<typeof create>;
+
+        act(() => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps({
+                selectedProject,
+                selectedProjectTasks,
+            })} />);
+        });
+
+        act(() => {
+            tree.root.findByType(ScrollView).props.onScroll({
+                nativeEvent: {
+                    contentOffset: { y: 720 },
+                    layoutMeasurement: { height: 540 },
+                },
+            });
+        });
+
+        expect(taskListPropsSpy.mock.calls.at(-1)?.[0].staticListVirtualization).toEqual({
+            scrollOffsetY: 720,
+            viewportHeight: 540,
+        });
+
+        taskListPropsSpy.mockClear();
+
+        act(() => {
+            tree.update(<ProjectDetailModal {...createProjectDetailModalProps({
+                overlayVisible: false,
+                selectedProject: null,
+                selectedProjectTasks: [],
+            })} />);
+        });
+
+        expect(taskListPropsSpy).not.toHaveBeenCalled();
+
+        act(() => {
+            tree.update(<ProjectDetailModal {...createProjectDetailModalProps({
+                selectedProject,
+                selectedProjectTasks,
+            })} />);
+        });
+
+        expect(taskListPropsSpy.mock.calls.at(-1)?.[0].staticListVirtualization).toEqual({
+            scrollOffsetY: 0,
+            viewportHeight: 0,
+        });
+    });
+});
+
 describe('ProjectDetailModal keyboard handling', () => {
     it('uses Android height-based keyboard avoidance for project task quick-add', () => {
         setPlatform('android');

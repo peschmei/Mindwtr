@@ -433,6 +433,21 @@ export function ProjectDetailModal({
         setProjectTaskFilterOpenSignal((value) => value + 1);
     }, []);
 
+    const resetProjectDetailVirtualWindow = React.useCallback(() => {
+        projectDetailScrollOffsetRef.current = 0;
+        setProjectTaskListOffsetY(0);
+        setProjectDetailScrollWindow((current) => {
+            if (current.offsetY === 0 && current.viewportHeight === 0) {
+                return current;
+            }
+            return { offsetY: 0, viewportHeight: 0 };
+        });
+    }, []);
+
+    React.useEffect(() => {
+        resetProjectDetailVirtualWindow();
+    }, [resetProjectDetailVirtualWindow, selectedProject?.id]);
+
     React.useEffect(() => {
         setProjectTaskReorderMode(false);
     }, [overlayVisible, selectedProject?.id]);
