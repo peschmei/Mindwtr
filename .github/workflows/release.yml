@@ -1016,6 +1016,43 @@ jobs:
             echo "pkgver unchanged (${VERSION}); keep current pkgrel for now"
           fi
 
+      - name: Use release archive for source package
+        shell: bash
+        working-directory: aur-mindwtr
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("PKGBUILD")
+          text = path.read_text(encoding="utf-8")
+
+          archive_source = (
+              'source=("$pkgname-$pkgver.tar.gz::https://github.com/dongdongbh/Mindwtr/archive/refs/tags/v$pkgver.tar.gz"\n'
+              '        "$pkgname.desktop"\n'
+              ')'
+          )
+          text, replaced = re.subn(
+              r'source=\("git\+https://github\.com/dongdongbh/Mindwtr\.git#tag=v\$pkgver"\s*\n\s*"\$pkgname\.desktop"\s*\)',
+              archive_source,
+              text,
+              count=1,
+          )
+          if replaced:
+              print("Switched source package from git tag clone to GitHub release archive.")
+          elif "Mindwtr/archive/refs/tags/v$pkgver.tar.gz" in text:
+              print("Source package already uses the GitHub release archive.")
+          else:
+              raise SystemExit("Could not find the expected Mindwtr source entry in PKGBUILD")
+
+          text = text.replace('cd Mindwtr/apps/desktop/src-tauri', 'cd "$srcdir/Mindwtr-$pkgver/apps/desktop/src-tauri"')
+          text = text.replace('cd Mindwtr/apps/desktop', 'cd "$srcdir/Mindwtr-$pkgver/apps/desktop"')
+          text = text.replace('cd Mindwtr', 'cd "$srcdir/Mindwtr-$pkgver"')
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
       - name: Sync Tauri compatibility patch
         shell: bash
         working-directory: aur-mindwtr

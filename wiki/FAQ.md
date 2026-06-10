@@ -28,6 +28,12 @@ Issue and discussion replies are written by the maintainer. AI may be used to po
 
 For contributions, see the [LLM-assisted coding section in CONTRIBUTING.md](https://github.com/dongdongbh/Mindwtr/blob/main/docs/CONTRIBUTING.md#llm-assisted-coding-vibe-coding).
 
+### Why are there so many commits and issue reports?
+
+Mindwtr is a cross-platform end-user app, not a small CLI or library with one narrow command surface. It includes desktop and mobile clients, local-first persistence, sync backends, imports, notifications, quick capture, widgets, translations, installation channels, and GTD workflow decisions. That kind of product creates many small follow-up commits because UI polish, platform differences, packaging fixes, and edge-case reports are part of normal maintenance.
+
+The public issue count is also intentionally broad. GitHub issues include feature requests, UX improvements, platform-specific corner cases, release packaging reports, documentation gaps, and confirmed bugs. Many reports are not blockers for the main capture/organize/review workflow, but they are still tracked publicly so users can see what is known and what changed. Fast follow-up fixes are part of the maintenance model, not a sign that issues are ignored or hidden.
+
 ### Is there a roadmap or upcoming features page?
 
 We don’t maintain a fixed roadmap page. The living roadmap is the GitHub Issues list:
@@ -417,6 +423,18 @@ sudo pacman -S webkit2gtk-4.1
 # Debian/Ubuntu  
 sudo apt install libwebkit2gtk-4.1-0
 ```
+
+### Why is the AUR install or build directory so large?
+
+Use `mindwtr-bin` on Arch-based distributions unless you specifically want to build from source:
+
+```bash
+yay -S mindwtr-bin
+```
+
+`mindwtr-bin` installs the prebuilt GitHub release package and should be the small, fast AUR path. The source package, `mindwtr`, builds the desktop app locally and must download build dependencies for a Tauri, Rust, Bun, and React app. That can use substantially more disk space during the build.
+
+The source package is intended to fetch the release tag archive rather than the full Git history. If an AUR helper appears to download a very large Git checkout, check that you installed `mindwtr-bin` for the binary package path, or report the source-package behavior so the AUR recipe can be corrected.
 
 ### App crashes on startup (Mobile)
 
