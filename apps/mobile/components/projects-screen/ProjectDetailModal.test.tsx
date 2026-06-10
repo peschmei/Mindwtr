@@ -1,8 +1,8 @@
 import React from 'react';
-import { Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
+import { Alert, Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Project, Task } from '@mindwtr/core';
+import type { Project, Section, Task } from '@mindwtr/core';
 
 const mockScrollTo = vi.hoisted(() => vi.fn());
 const mockFindNodeHandle = vi.hoisted(() => vi.fn(() => 9001));
@@ -96,6 +96,15 @@ const project = (status: Project['status']): Project => ({
     updatedAt: '2026-05-12T00:00:00.000Z',
 });
 
+const section = (id: string, title: string): Section => ({
+    id,
+    projectId: 'project-1',
+    title,
+    order: 0,
+    createdAt: '2026-05-12T00:00:00.000Z',
+    updatedAt: '2026-05-12T00:00:00.000Z',
+});
+
 const themeColors = {
     bg: '#0f172a',
     cardBg: '#111827',
@@ -126,6 +135,7 @@ const setPlatform = (os: typeof Platform.OS) => {
 
 const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<typeof ProjectDetailModal>> = {}) => ({
     addProjectFileAttachment: vi.fn(),
+    addSection: vi.fn(),
     closeProjectDetail: vi.fn(),
     commitSelectedProjectNotes: vi.fn(),
     formatProjectDate: (value: string | undefined, fallback: string) => value || fallback,
@@ -147,6 +157,7 @@ const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<t
     onOpenAttachment: vi.fn(),
     onOpenTagPicker: vi.fn(),
     onRemoveProjectAttachment: vi.fn(),
+    deleteSection: vi.fn(),
     onSetLinkInput: vi.fn(),
     onSetLinkModalVisible: vi.fn(),
     onSetNotesExpanded: vi.fn(),
@@ -165,6 +176,7 @@ const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<t
     projectTaskSortBy: 'default' as const,
     selectedProject: { ...project('active'), supportNotes: 'Draft' },
     selectedProjectAreaName: 'No Area',
+    selectedProjectSections: [],
     selectedProjectNotes: 'Draft',
     selectedProjectNotesDirection: 'ltr' as const,
     selectedProjectNotesInputRef: { current: null },
@@ -189,10 +201,13 @@ const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<t
         'attachments.title': 'Attachments',
         'common.back': 'Back',
         'common.clear': 'Clear',
+        'common.delete': 'Delete',
+        'common.edit': 'Edit',
         'common.hideCompleted': 'Hide completed',
         'common.loading': 'Loading',
         'common.none': 'None',
         'common.notSet': 'Not set',
+        'common.save': 'Save',
         'common.showCompleted': 'Show completed',
         'markdown.edit': 'Edit',
         'markdown.expand': 'Expand',
@@ -200,11 +215,15 @@ const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<t
         'project.notes': 'Project notes',
         'projects.archive': 'Archive',
         'projects.areaLabel': 'Area',
+        'projects.addSection': 'Add Section',
+        'projects.deleteSectionConfirm': 'Are you sure you want to delete this section?',
         'projects.duplicate': 'Duplicate',
         'projects.notesPlaceholder': 'Notes',
         'projects.noArea': 'No Area',
         'projects.reactivate': 'Reactivate',
         'projects.reviewAt': 'Review',
+        'projects.sectionPlaceholder': 'Section title',
+        'projects.sectionsLabel': 'Sections',
         'projects.sequentialAcrossSections': 'Across sections',
         'projects.sequentialScope': 'Sequential Scope',
         'projects.sequentialWithinSections': 'Within sections',
@@ -212,6 +231,7 @@ const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<t
         'sort.default': 'Default',
         'sort.due': 'Due date',
         'sort.label': 'Sort',
+        'settings.manage': 'Manage',
         'status.active': 'Active',
         'status.someday': 'Someday',
         'status.waiting': 'Waiting',
@@ -221,6 +241,7 @@ const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<t
     }[key] ?? key),
     tc: themeColors,
     updateProject: vi.fn(),
+    updateSection: vi.fn(),
     ...overrides,
 });
 
@@ -267,6 +288,88 @@ describe('ProjectDetailModal notes editing', () => {
         });
 
         expect(commitSelectedProjectNotes).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('ProjectDetailModal section management', () => {
+    it('creates a section from project details', async () => {
+        const addSection = vi.fn().mockResolvedValue(section('section-created', 'Grammar'));
+        let tree!: ReturnType<typeof create>;
+
+        await act(async () => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps({ addSection })} />);
+        });
+
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-sections-button' }).props.onPress();
+        });
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-section-add-button' }).props.onPress();
+        });
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-section-title-input' }).props.onChangeText('Grammar');
+        });
+        await act(async () => {
+            await tree.root.findByProps({ testID: 'project-section-save-button' }).props.onPress();
+        });
+
+        expect(addSection).toHaveBeenCalledWith('project-1', 'Grammar');
+    });
+
+    it('renames an existing section from project details', async () => {
+        const updateSection = vi.fn().mockResolvedValue({ ok: true });
+        let tree!: ReturnType<typeof create>;
+
+        await act(async () => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps({
+                selectedProjectSections: [section('section-1', 'Planning')],
+                updateSection,
+            })} />);
+        });
+
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-sections-button' }).props.onPress();
+        });
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-section-edit-section-1' }).props.onPress();
+        });
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-section-title-input' }).props.onChangeText('Speaking');
+        });
+        await act(async () => {
+            await tree.root.findByProps({ testID: 'project-section-save-button' }).props.onPress();
+        });
+
+        expect(updateSection).toHaveBeenCalledWith('section-1', { title: 'Speaking' });
+    });
+
+    it('confirms before deleting a section from project details', async () => {
+        const deleteSection = vi.fn();
+        vi.spyOn(Alert, 'alert').mockImplementation(((_title, _message, buttons) => {
+            buttons?.[1]?.onPress?.();
+        }) as typeof Alert.alert);
+        let tree!: ReturnType<typeof create>;
+
+        await act(async () => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps({
+                deleteSection,
+                selectedProjectSections: [section('section-1', 'Planning')],
+            })} />);
+        });
+
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-sections-button' }).props.onPress();
+        });
+        await act(async () => {
+            tree.root.findByProps({ testID: 'project-section-delete-section-1' }).props.onPress();
+        });
+
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'Sections',
+            'Are you sure you want to delete this section?',
+            expect.any(Array),
+        );
+        expect(deleteSection).toHaveBeenCalledWith('section-1');
     });
 });
 

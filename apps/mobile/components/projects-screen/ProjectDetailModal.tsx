@@ -29,6 +29,7 @@ import {
     type MarkdownToolbarResult,
     type Project,
     type ProjectSequenceTaskCue,
+    type Section,
     type Task,
     type TaskSortBy,
     getSequentialProjectTaskCues,
@@ -48,6 +49,7 @@ import { projectsScreenStyles as styles } from './projects-screen.styles';
 
 type ProjectDetailModalProps = {
     addProjectFileAttachment: () => void | Promise<void>;
+    addSection: (projectId: string, title: string) => Promise<Section | null> | Section | null;
     closeProjectDetail: () => void;
     commitSelectedProjectNotes: () => void;
     formatProjectDate: (value: string | undefined, fallback: string) => string;
@@ -67,6 +69,7 @@ type ProjectDetailModalProps = {
     onOpenAreaPicker: () => void;
     onOpenTagPicker: () => void;
     onRemoveProjectAttachment: (id: string) => void;
+    deleteSection: (id: string) => Promise<unknown> | unknown;
     onSetLinkInput: (value: string) => void;
     onSetLinkModalVisible: (visible: boolean) => void;
     onSetNotesExpanded: React.Dispatch<React.SetStateAction<boolean>>;
@@ -87,6 +90,7 @@ type ProjectDetailModalProps = {
     projectTaskSortBy: Extract<TaskSortBy, 'default' | 'due'>;
     selectedProjectAreaName: string;
     selectedProject: Project | null;
+    selectedProjectSections?: Section[];
     selectedProjectTasks?: Task[];
     selectedProjectNotes: string;
     selectedProjectNotesDirection: 'ltr' | 'rtl';
@@ -104,6 +108,7 @@ type ProjectDetailModalProps = {
     t: (key: string) => string;
     tc: ThemeColors;
     updateProject: (id: string, updates: Partial<Project>) => void;
+    updateSection: (id: string, updates: Partial<Section>) => Promise<unknown> | unknown;
 };
 
 function getAndroidKeyboardFrame(event: { endCoordinates?: { screenY?: number; height?: number } }) {
@@ -123,6 +128,240 @@ function getAndroidKeyboardFrame(event: { endCoordinates?: { screenY?: number; h
         inset,
         visible: inset > 0 || keyboardTop < windowHeight,
     };
+}
+
+function ProjectSectionManagerModal({
+    addSection,
+    canManage,
+    deleteSection,
+    onClose,
+    projectId,
+    sections,
+    t,
+    tc,
+    updateSection,
+    visible,
+}: {
+    addSection: (projectId: string, title: string) => Promise<Section | null> | Section | null;
+    canManage: boolean;
+    deleteSection: (id: string) => Promise<unknown> | unknown;
+    onClose: () => void;
+    projectId: string;
+    sections: Section[];
+    t: (key: string) => string;
+    tc: ThemeColors;
+    updateSection: (id: string, updates: Partial<Section>) => Promise<unknown> | unknown;
+    visible: boolean;
+}) {
+    const [draft, setDraft] = React.useState('');
+    const [editingSectionId, setEditingSectionId] = React.useState<string | null>(null);
+    const [saving, setSaving] = React.useState(false);
+    const sectionTitle = tFallback(t, 'projects.sectionsLabel', 'Sections');
+    const addSectionLabel = tFallback(t, 'projects.addSection', 'Add Section');
+    const sectionPlaceholder = tFallback(t, 'projects.sectionPlaceholder', 'Section title');
+    const saveLabel = tFallback(t, 'common.save', 'Save');
+    const editLabel = tFallback(t, 'common.edit', 'Edit');
+    const cancelLabel = tFallback(t, 'common.cancel', 'Cancel');
+    const deleteLabel = tFallback(t, 'common.delete', 'Delete');
+    const noneLabel = tFallback(t, 'common.none', 'None');
+    const deleteConfirm = tFallback(
+        t,
+        'projects.deleteSectionConfirm',
+        'Are you sure you want to delete this section?'
+    );
+    const editing = sections.find((section) => section.id === editingSectionId);
+    const showEditor = canManage && editingSectionId !== null;
+
+    React.useEffect(() => {
+        if (visible) return;
+        setDraft('');
+        setEditingSectionId(null);
+        setSaving(false);
+    }, [visible]);
+
+    const openCreate = React.useCallback(() => {
+        setEditingSectionId('');
+        setDraft('');
+    }, []);
+
+    const openEdit = React.useCallback((section: Section) => {
+        setEditingSectionId(section.id);
+        setDraft(section.title);
+    }, []);
+
+    const closeEditor = React.useCallback(() => {
+        setEditingSectionId(null);
+        setDraft('');
+    }, []);
+
+    const saveSection = React.useCallback(async () => {
+        if (!canManage || saving) return;
+        const title = draft.trim();
+        if (!title) return;
+        setSaving(true);
+        try {
+            if (editingSectionId) {
+                await updateSection(editingSectionId, { title });
+            } else {
+                await addSection(projectId, title);
+            }
+            closeEditor();
+        } finally {
+            setSaving(false);
+        }
+    }, [addSection, canManage, closeEditor, draft, editingSectionId, projectId, saving, updateSection]);
+
+    const confirmDeleteSection = React.useCallback((section: Section) => {
+        if (!canManage) return;
+        Alert.alert(
+            sectionTitle,
+            deleteConfirm,
+            [
+                { text: cancelLabel, style: 'cancel' },
+                {
+                    text: deleteLabel,
+                    style: 'destructive',
+                    onPress: () => {
+                        void Promise.resolve(deleteSection(section.id));
+                        if (editingSectionId === section.id) closeEditor();
+                    },
+                },
+            ],
+        );
+    }, [canManage, cancelLabel, closeEditor, deleteConfirm, deleteLabel, deleteSection, editingSectionId, sectionTitle]);
+
+    return (
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+            onRequestClose={onClose}
+            accessibilityViewIsModal
+        >
+            <View style={styles.overlay}>
+                <View style={[styles.sectionManagerCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                    <View style={styles.sectionManagerHeader}>
+                        <Text style={[styles.sectionManagerTitle, { color: tc.text }]} accessibilityRole="header">
+                            {sectionTitle}
+                        </Text>
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={cancelLabel}
+                            onPress={onClose}
+                            style={styles.sectionManagerCloseButton}
+                        >
+                            <Ionicons name="close" size={20} color={tc.secondaryText} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {canManage ? (
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={addSectionLabel}
+                            onPress={openCreate}
+                            style={[styles.sectionManagerAddButton, { backgroundColor: tc.tint, borderColor: tc.tint }]}
+                            testID="project-section-add-button"
+                        >
+                            <Ionicons name="add" size={16} color={tc.onTint} />
+                            <Text style={[styles.sectionManagerAddButtonText, { color: tc.onTint }]} numberOfLines={1}>
+                                {addSectionLabel}
+                            </Text>
+                        </TouchableOpacity>
+                    ) : null}
+
+                    {showEditor ? (
+                        <View style={[styles.sectionEditor, { backgroundColor: tc.filterBg, borderColor: tc.border }]}>
+                            <Text style={[styles.sectionEditorLabel, { color: tc.secondaryText }]}>
+                                {editing ? sectionTitle : addSectionLabel}
+                            </Text>
+                            <TextInput
+                                value={draft}
+                                onChangeText={setDraft}
+                                placeholder={sectionPlaceholder}
+                                placeholderTextColor={tc.secondaryText}
+                                style={[styles.sectionEditorInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+                                autoCapitalize="sentences"
+                                returnKeyType="done"
+                                onSubmitEditing={saveSection}
+                                testID="project-section-title-input"
+                            />
+                            <View style={styles.sectionEditorActions}>
+                                <TouchableOpacity
+                                    accessibilityRole="button"
+                                    accessibilityLabel={cancelLabel}
+                                    onPress={closeEditor}
+                                    style={[styles.smallButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+                                >
+                                    <Text style={[styles.smallButtonText, { color: tc.secondaryText }]}>{cancelLabel}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    accessibilityRole="button"
+                                    accessibilityLabel={saveLabel}
+                                    disabled={!draft.trim() || saving}
+                                    onPress={saveSection}
+                                    style={[
+                                        styles.linkModalButton,
+                                        { backgroundColor: tc.tint },
+                                        (!draft.trim() || saving) && styles.linkModalButtonDisabled,
+                                    ]}
+                                    testID="project-section-save-button"
+                                >
+                                    <Text style={[styles.linkModalButtonText, { color: tc.onTint }]}>{saveLabel}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ) : null}
+
+                    {sections.length === 0 ? (
+                        <View style={[styles.sectionManagerEmpty, { backgroundColor: tc.filterBg, borderColor: tc.border }]}>
+                            <Text style={[styles.helperText, { color: tc.secondaryText }]}>{noneLabel}</Text>
+                        </View>
+                    ) : (
+                        <ScrollView
+                            style={[styles.sectionManagerList, { borderColor: tc.border, backgroundColor: tc.inputBg }]}
+                            contentContainerStyle={styles.sectionManagerListContent}
+                        >
+                            {sections.map((section) => (
+                                <View
+                                    key={section.id}
+                                    style={[styles.sectionManagerRow, { borderBottomColor: tc.border }]}
+                                    testID={`project-section-row-${section.id}`}
+                                >
+                                    <View style={styles.sectionManagerRowTitleWrap}>
+                                        <Text style={[styles.sectionManagerRowTitle, { color: tc.text }]} numberOfLines={1}>
+                                            {section.title}
+                                        </Text>
+                                    </View>
+                                    {canManage ? (
+                                        <View style={styles.sectionManagerRowActions}>
+                                            <TouchableOpacity
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`${editLabel}: ${section.title}`}
+                                                onPress={() => openEdit(section)}
+                                                style={[styles.smallButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+                                                testID={`project-section-edit-${section.id}`}
+                                            >
+                                                <Text style={[styles.smallButtonText, { color: tc.tint }]}>{editLabel}</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`${deleteLabel}: ${section.title}`}
+                                                onPress={() => confirmDeleteSection(section)}
+                                                style={[styles.smallButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+                                                testID={`project-section-delete-${section.id}`}
+                                            >
+                                                <Text style={[styles.smallButtonText, { color: tc.danger }]}>{deleteLabel}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ) : null}
+                                </View>
+                            ))}
+                        </ScrollView>
+                    )}
+                </View>
+            </View>
+        </Modal>
+    );
 }
 
 function ProjectDetailScrollFrame({
@@ -189,6 +428,7 @@ function ProjectDetailScrollFrame({
 
 export function ProjectDetailModal({
     addProjectFileAttachment,
+    addSection,
     closeProjectDetail,
     commitSelectedProjectNotes,
     formatProjectDate,
@@ -210,6 +450,7 @@ export function ProjectDetailModal({
     onOpenAttachment,
     onOpenTagPicker,
     onRemoveProjectAttachment,
+    deleteSection,
     onSetLinkInput,
     onSetLinkModalVisible,
     onSetNotesExpanded,
@@ -228,6 +469,7 @@ export function ProjectDetailModal({
     projectTaskSortBy,
     selectedProjectAreaName,
     selectedProject,
+    selectedProjectSections = [],
     selectedProjectTasks,
     selectedProjectNotes,
     selectedProjectNotesDirection,
@@ -245,8 +487,10 @@ export function ProjectDetailModal({
     t,
     tc,
     updateProject,
+    updateSection,
 }: ProjectDetailModalProps) {
     const [projectTaskReorderMode, setProjectTaskReorderMode] = React.useState(false);
+    const [sectionManagerVisible, setSectionManagerVisible] = React.useState(false);
     const [projectTaskFilterOpenSignal, setProjectTaskFilterOpenSignal] = React.useState(0);
     const [projectQuickAddFocusSignal, setProjectQuickAddFocusSignal] = React.useState(0);
     const [projectTaskListOffsetY, setProjectTaskListOffsetY] = React.useState(0);
@@ -262,6 +506,7 @@ export function ProjectDetailModal({
     const [projectDetailKeyboardBottomInset, setProjectDetailKeyboardBottomInset] = React.useState(0);
     const safeAreaEdges = getProjectDetailModalSafeAreaEdges(presentationStyle);
     const taskListOptions = getProjectDetailTaskListOptions(selectedProject, showCompletedTasks);
+    const canManageProjectSections = selectedProject?.status !== 'archived';
     const showCompletedLabel = showCompletedTasks
         ? tFallback(t, 'common.hideCompleted', 'Hide completed')
         : tFallback(t, 'common.showCompleted', 'Show completed');
@@ -304,6 +549,7 @@ export function ProjectDetailModal({
     }, [sequentialScopeHelpLabel, sequentialScopeHelpText]);
     const sortLabel = tFallback(t, 'sort.label', 'Sort');
     const taskControlsLabel = tFallback(t, 'common.tasks', 'Tasks');
+    const projectSectionsLabel = tFallback(t, 'projects.sectionsLabel', 'Sections');
     const projectTaskFilterActiveCount = (
         (projectTaskSortBy !== 'default' ? 1 : 0)
         + (selectedProject?.status !== 'archived' && showCompletedTasks ? 1 : 0)
@@ -450,6 +696,7 @@ export function ProjectDetailModal({
 
     React.useEffect(() => {
         setProjectTaskReorderMode(false);
+        setSectionManagerVisible(false);
     }, [overlayVisible, selectedProject?.id]);
 
     React.useEffect(() => {
@@ -885,6 +1132,47 @@ export function ProjectDetailModal({
                                         )}
 
                                         <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                                            <View style={styles.reviewLabelRow}>
+                                                <Text style={[styles.reviewLabel, { color: tc.text }]}>{projectSectionsLabel}</Text>
+                                                {(canManageProjectSections || selectedProjectSections.length > 0) ? (
+                                                    <TouchableOpacity
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={selectedProjectSections.length > 0
+                                                            ? tFallback(t, 'settings.manage', 'Manage')
+                                                            : tFallback(t, 'projects.addSection', 'Add Section')}
+                                                        onPress={() => setSectionManagerVisible(true)}
+                                                        style={[styles.smallButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+                                                        testID="project-sections-button"
+                                                    >
+                                                        <Text style={[styles.smallButtonText, { color: tc.tint }]}>
+                                                            {selectedProjectSections.length > 0
+                                                                ? tFallback(t, 'settings.manage', 'Manage')
+                                                                : tFallback(t, 'projects.addSection', 'Add Section')}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ) : null}
+                                            </View>
+                                            {selectedProjectSections.length === 0 ? (
+                                                <Text style={[styles.helperText, { color: tc.secondaryText }]}>
+                                                    {tFallback(t, 'common.none', 'None')}
+                                                </Text>
+                                            ) : (
+                                                <View style={styles.projectSectionPillRow}>
+                                                    {selectedProjectSections.map((section) => (
+                                                        <View
+                                                            key={section.id}
+                                                            style={[styles.projectSectionPill, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
+                                                        >
+                                                            <Text style={[styles.projectSectionPillText, { color: tc.text }]} numberOfLines={1}>
+                                                                {section.title}
+                                                            </Text>
+                                                        </View>
+                                                    ))}
+                                                </View>
+                                            )}
+                                        </View>
+
+                                        <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
                                             <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('projects.areaLabel')}</Text>
                                             <TouchableOpacity
                                                 style={[styles.reviewButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
@@ -1182,6 +1470,18 @@ export function ProjectDetailModal({
                                     />
                                 </View>
                                 </ProjectDetailScrollFrame>
+                                <ProjectSectionManagerModal
+                                    addSection={addSection}
+                                    canManage={canManageProjectSections}
+                                    deleteSection={deleteSection}
+                                    onClose={() => setSectionManagerVisible(false)}
+                                    projectId={selectedProject.id}
+                                    sections={selectedProjectSections}
+                                    t={t}
+                                    tc={tc}
+                                    updateSection={updateSection}
+                                    visible={sectionManagerVisible}
+                                />
                                 <ExpandedMarkdownEditor
                                     isOpen={notesFullscreen}
                                     onClose={onCloseNotesFullscreen}

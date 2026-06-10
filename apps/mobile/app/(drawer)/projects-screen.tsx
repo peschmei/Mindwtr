@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { View, Text, TextInput, TouchableOpacity, Alert, FlatList, Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AREA_PRESET_COLORS, Attachment, DEFAULT_PROJECT_COLOR, Project, shallow, Task, type TaskSortBy, useTaskStore } from '@mindwtr/core';
+import { AREA_PRESET_COLORS, Attachment, DEFAULT_PROJECT_COLOR, Project, shallow, Task, type Section, type TaskSortBy, useTaskStore } from '@mindwtr/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react-native';
 
@@ -48,11 +48,15 @@ export default function ProjectsScreen() {
   const {
     projects,
     tasks,
+    sections,
     addProject,
     updateProject,
     deleteProject,
     restoreProject,
     duplicateProject,
+    addSection,
+    updateSection,
+    deleteSection,
     toggleProjectFocus,
     addArea,
     updateArea,
@@ -65,11 +69,15 @@ export default function ProjectsScreen() {
   } = useTaskStore((state) => ({
     projects: state.projects,
     tasks: state.tasks,
+    sections: state.sections,
     addProject: state.addProject,
     updateProject: state.updateProject,
     deleteProject: state.deleteProject,
     restoreProject: state.restoreProject,
     duplicateProject: state.duplicateProject,
+    addSection: state.addSection,
+    updateSection: state.updateSection,
+    deleteSection: state.deleteSection,
     toggleProjectFocus: state.toggleProjectFocus,
     addArea: state.addArea,
     updateArea: state.updateArea,
@@ -247,6 +255,17 @@ export default function ProjectsScreen() {
     () => (selectedProject ? tasksByProjectId.get(selectedProject.id) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
     [tasksByProjectId, selectedProject?.id]
   );
+  const selectedProjectSections = useMemo<Section[]>(() => {
+    if (!selectedProject) return [];
+    return sections
+      .filter((section) => section.projectId === selectedProject.id && !section.deletedAt)
+      .sort((a, b) => {
+        const aOrder = Number.isFinite(a.order) ? a.order : 0;
+        const bOrder = Number.isFinite(b.order) ? b.order : 0;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.title.localeCompare(b.title);
+      });
+  }, [sections, selectedProject?.id]);
 
   const openProject = useCallback((project: Project) => {
     setSelectedProject(project);
@@ -744,6 +763,7 @@ export default function ProjectsScreen() {
 
       <ProjectDetailModal
         addProjectFileAttachment={addProjectFileAttachment}
+        addSection={addSection}
         closeProjectDetail={closeProjectDetail}
         commitSelectedProjectNotes={commitSelectedProjectNotes}
         formatProjectDate={formatProjectDate}
@@ -765,6 +785,7 @@ export default function ProjectsScreen() {
         onOpenAttachment={openAttachment}
         onOpenTagPicker={openTagPicker}
         onRemoveProjectAttachment={removeProjectAttachment}
+        deleteSection={deleteSection}
         onSetLinkInput={setLinkInput}
         onSetLinkModalVisible={setLinkModalVisible}
         onSetNotesExpanded={setNotesExpanded}
@@ -782,6 +803,7 @@ export default function ProjectsScreen() {
         presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'fullScreen'}
         projectTaskSortBy={projectTaskSortBy}
         selectedProject={selectedProject}
+        selectedProjectSections={selectedProjectSections}
         selectedProjectTasks={selectedProjectTasks}
         selectedProjectAreaName={selectedProjectAreaName}
         selectedProjectNotes={selectedProjectNotes}
@@ -800,6 +822,7 @@ export default function ProjectsScreen() {
         t={t}
         tc={tc}
         updateProject={updateProject}
+        updateSection={updateSection}
       />
 
       <TaskEditModal
