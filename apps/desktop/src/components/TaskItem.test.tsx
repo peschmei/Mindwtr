@@ -493,7 +493,8 @@ describe('TaskItem', () => {
         fireEvent.click(getByRole('menuitem', { name: /area/i }));
         const areaDialog = getByRole('dialog', { name: 'Area' });
         fireEvent.click(within(areaDialog).getByRole('button', { name: 'No Area' }));
-        fireEvent.click(within(areaDialog).getByRole('option', { name: 'Work' }));
+        const areaListbox = getByRole('listbox', { name: 'No Area' });
+        fireEvent.click(within(areaListbox).getByRole('option', { name: 'Work' }));
         fireEvent.click(within(areaDialog).getByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
