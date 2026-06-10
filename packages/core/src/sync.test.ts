@@ -1604,26 +1604,20 @@ describe('Sync Logic', () => {
         });
 
         it('clamps far-future timestamps during merge conflict evaluation', () => {
-            const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-01-01T00:00:00.000Z').getTime());
-            try {
-                const local = mockAppData([
-                    createMockTask('1', '2099-01-01T00:00:00.000Z'),
-                ]);
-                const incoming = mockAppData([
-                    createMockTask('1', '2026-01-01T00:00:00.000Z'),
-                ]);
+            const local = mockAppData([
+                createMockTask('1', '2099-01-01T00:00:00.000Z'),
+            ]);
+            const incoming = mockAppData([
+                createMockTask('1', '2026-01-01T00:00:00.000Z'),
+            ]);
 
-                const result = mergeAppDataWithStats(local, incoming);
-                expect(result.stats.tasks.maxClockSkewMs).toBeLessThanOrEqual(CLOCK_SKEW_THRESHOLD_MS);
-                expect(result.stats.tasks.futureTimestampClamps).toBe(1);
-                expect(result.stats.tasks.futureTimestampClampIds).toEqual(['1']);
-            } finally {
-                nowSpy.mockRestore();
-            }
+            const result = mergeAppDataWithStats(local, incoming, { nowIso: '2026-01-01T00:00:00.000Z' });
+            expect(result.stats.tasks.maxClockSkewMs).toBeLessThanOrEqual(CLOCK_SKEW_THRESHOLD_MS);
+            expect(result.stats.tasks.futureTimestampClamps).toBe(1);
+            expect(result.stats.tasks.futureTimestampClampIds).toEqual(['1']);
         });
 
         it('preserves relative ordering when both timestamps are clamped in the future', () => {
-            const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-01-01T00:00:00.000Z').getTime());
             const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
             try {
                 const localTask = {
@@ -1635,7 +1629,11 @@ describe('Sync Logic', () => {
                     title: 'aa newer future',
                 } satisfies Task;
 
-                const result = mergeAppDataWithStats(mockAppData([localTask]), mockAppData([incomingTask]));
+                const result = mergeAppDataWithStats(
+                    mockAppData([localTask]),
+                    mockAppData([incomingTask]),
+                    { nowIso: '2026-01-01T00:00:00.000Z' }
+                );
                 const merged = result.data;
 
                 expect(merged.tasks).toHaveLength(1);
@@ -1658,11 +1656,10 @@ describe('Sync Logic', () => {
                 });
             } finally {
                 warnSpy.mockRestore();
-                nowSpy.mockRestore();
             }
         });
 
-        it('captures merge time once per entity collection', () => {
+        it('does not use Date.now for entity clamping after normalizing the merge clock', () => {
             const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-01-01T00:00:00.000Z').getTime());
             try {
                 const local = mockAppData([
@@ -1676,7 +1673,7 @@ describe('Sync Logic', () => {
 
                 mergeAppDataWithStats(local, incoming);
 
-                expect(nowSpy).toHaveBeenCalledTimes(4);
+                expect(nowSpy).not.toHaveBeenCalled();
             } finally {
                 nowSpy.mockRestore();
             }

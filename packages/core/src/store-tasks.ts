@@ -386,6 +386,8 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 revBy: deviceId,
                 createdAt: now,
                 updatedAt: now,
+                deletedAt: undefined,
+                purgedAt: undefined,
                 ...referenceClears,
                 areaId: resolvedAreaId,
                 projectId: resolvedProjectId,

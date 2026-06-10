@@ -1437,18 +1437,30 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
           } else if (orphaned.length > 0) {
             mergedData = removeOrphanedAttachmentsFromData(mergedData);
           }
-          markFastSyncStateUnsafeIfRemotePayloadChanged();
-          mergedData.settings.attachments = {
-            ...mergedData.settings.attachments,
-            pendingRemoteDeletes: nextPendingRemoteDeletes.size > 0
-              ? Array.from(nextPendingRemoteDeletes.values())
-              : undefined,
+          mergedData = {
+            ...mergedData,
+            settings: {
+              ...mergedData.settings,
+              attachments: {
+                ...mergedData.settings.attachments,
+                pendingRemoteDeletes: nextPendingRemoteDeletes.size > 0
+                  ? Array.from(nextPendingRemoteDeletes.values())
+                  : undefined,
+              },
+            },
           };
         }
-        mergedData.settings.attachments = {
-          ...mergedData.settings.attachments,
-          lastCleanupAt: new Date().toISOString(),
+        mergedData = {
+          ...mergedData,
+          settings: {
+            ...mergedData.settings,
+            attachments: {
+              ...mergedData.settings.attachments,
+              lastCleanupAt: new Date().toISOString(),
+            },
+          },
         };
+        markFastSyncStateUnsafeIfRemotePayloadChanged();
         ensureLocalSnapshotFresh();
         await mobileStorage.saveData(mergedData);
         wroteLocal = true;

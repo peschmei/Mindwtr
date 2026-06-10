@@ -108,6 +108,8 @@ describe('TaskStore', () => {
             revBy: 'other-device',
             createdAt: '2000-01-01T00:00:00.000Z',
             updatedAt: '2000-01-01T00:00:00.000Z',
+            deletedAt: '2000-01-02T00:00:00.000Z',
+            purgedAt: '2000-01-03T00:00:00.000Z',
         });
 
         const task = useTaskStore.getState().tasks[0];
@@ -119,6 +121,8 @@ describe('TaskStore', () => {
         expect(task.revBy).not.toBe('other-device');
         expect(task.createdAt).not.toBe('2000-01-01T00:00:00.000Z');
         expect(task.updatedAt).not.toBe('2000-01-01T00:00:00.000Z');
+        expect(task.deletedAt).toBeUndefined();
+        expect(task.purgedAt).toBeUndefined();
     });
 
     it('should update a task', () => {

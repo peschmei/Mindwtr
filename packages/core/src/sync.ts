@@ -259,6 +259,7 @@ function mergeEntitiesWithStats<T extends MergeableEntity>(
     normalizeForComparison?: ComparisonNormalizer<T>,
     entityType: string = 'entity',
     signatureMemo: SyncSignatureMemo = createSyncSignatureMemo(),
+    nowIso?: string,
 ): { merged: T[]; stats: EntityMergeStats } {
     const localMap = new Map<string, T>(local.map((item) => [item.id, item]));
     const incomingMap = new Map<string, T>(incoming.map((item) => [item.id, item]));
@@ -271,7 +272,8 @@ function mergeEntitiesWithStats<T extends MergeableEntity>(
     let discardedLiveConflictWarnings = 0;
     let taskStatusResolutionWarnings = 0;
     let futureTimestampClampWarnings = 0;
-    const maxAllowedMergeTime = Date.now();
+    const nowTime = nowIso ? new Date(nowIso).getTime() : NaN;
+    const maxAllowedMergeTime = Number.isFinite(nowTime) ? nowTime : Date.now();
     const getStringField = (item: T, field: string): string | undefined => {
         const value = (item as Record<string, unknown>)[field];
         return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
@@ -715,8 +717,9 @@ function mergeAreas(
     local: SyncMergeArea[],
     incoming: SyncMergeArea[],
     signatureMemo: SyncSignatureMemo = createSyncSignatureMemo(),
+    nowIso?: string,
 ): { merged: Area[]; stats: EntityMergeStats } {
-    const result = mergeEntitiesWithStats(local, incoming, undefined, normalizeAreaForContentComparison, 'area', signatureMemo);
+    const result = mergeEntitiesWithStats(local, incoming, undefined, normalizeAreaForContentComparison, 'area', signatureMemo, nowIso);
     let fallbackOrder = result.merged.reduce((maxOrder, area) => {
         const order = typeof area.order === 'number' && Number.isFinite(area.order) ? area.order : -1;
         return Math.max(maxOrder, order);
@@ -847,7 +850,7 @@ export function mergeAppDataWithStats(local: AppData, incoming: AppData, options
                 uri,
                 localStatus,
             };
-        }, undefined, 'attachment', signatureMemo).merged;
+        }, undefined, 'attachment', signatureMemo, nowIso).merged;
 
         const normalized = merged.map((attachment) => {
             if (attachment.kind !== 'file') return attachment;
@@ -887,7 +890,8 @@ export function mergeAppDataWithStats(local: AppData, incoming: AppData, options
         },
         normalizeTaskForContentComparison,
         'task',
-        signatureMemo
+        signatureMemo,
+        nowIso
     );
 
     const projectsResult = mergeEntitiesWithStats(
@@ -899,7 +903,8 @@ export function mergeAppDataWithStats(local: AppData, incoming: AppData, options
         },
         normalizeProjectForContentComparison,
         'project',
-        signatureMemo
+        signatureMemo,
+        nowIso
     );
 
     const sectionsResult = mergeEntitiesWithStats(
@@ -908,10 +913,11 @@ export function mergeAppDataWithStats(local: AppData, incoming: AppData, options
         undefined,
         normalizeSectionForContentComparison,
         'section',
-        signatureMemo
+        signatureMemo,
+        nowIso
     );
 
-    const areasResult = mergeAreas(localNormalized.areas, incomingNormalized.areas, signatureMemo);
+    const areasResult = mergeAreas(localNormalized.areas, incomingNormalized.areas, signatureMemo, nowIso);
 
     const stats = {
         tasks: tasksResult.stats,
