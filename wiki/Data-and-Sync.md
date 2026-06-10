@@ -269,7 +269,7 @@ Delete-vs-live conflicts use the **last operation time**, not just the raw `upda
 - Inside that 30-second ambiguity window, a higher revision number still wins when available. Otherwise, Mindwtr preserves the live item instead of eagerly letting the tombstone win.
 - Practical effect: if you delete a task on one device within about 30 seconds of editing it on another device, the edited live task may reappear after sync. Delete it again after the devices have synced if you meant to remove it.
 
-Clock-skewed future timestamps are clamped during merge safety checks so a bad device clock does not dominate forever. If both sides are clamped into the future, Mindwtr still preserves their relative ordering instead of treating them as a false tie.
+Clock-skewed future timestamps more than 5 minutes ahead of the merge clock are clamped during merge safety checks so a bad device clock does not dominate forever. If both sides are clamped into the future, Mindwtr still preserves their relative ordering instead of treating them as a false tie.
 
 Detailed merge tie-breaks, retry behavior, and conflict examples live in [[Sync Algorithm]]. This page keeps the storage and operational overview only.
 

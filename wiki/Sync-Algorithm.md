@@ -66,7 +66,7 @@ Revisit ADR 0008 only if snapshot files regularly exceed 5 MB, sync round-trips 
 11. Clock skew telemetry:
    - Merge stats record the largest observed skew.
    - Warnings surface when skew exceeds 5 minutes.
-   - Future `updatedAt` values are clamped to the merge-time clock for comparison and counted in `futureTimestampClamps`.
+   - Future `updatedAt` values more than 5 minutes beyond the merge-time clock are clamped for comparison and counted in `futureTimestampClamps`.
    - If both sides of the same record are future-clamped, Mindwtr emits a bounded `Both merge candidates had future updatedAt timestamps clamped` diagnostic with the record ID and clamp time.
 12. Local edits during sync do not take a hard lock:
    - Desktop and mobile detect when local state changed during the sync write phase.

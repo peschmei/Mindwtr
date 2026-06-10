@@ -154,7 +154,7 @@ const parseMergeTimestamp = (value: unknown, maxAllowedMs?: number): MergeTimest
     if (!Number.isFinite(parsed)) {
         return { raw: -1, safe: -1, wasClamped: false };
     }
-    if (maxAllowedMs !== undefined && parsed > maxAllowedMs) {
+    if (maxAllowedMs !== undefined && parsed > maxAllowedMs + CLOCK_SKEW_THRESHOLD_MS) {
         return { raw: parsed, safe: maxAllowedMs, wasClamped: true };
     }
     return { raw: parsed, safe: parsed, wasClamped: false };
@@ -430,7 +430,7 @@ function mergeEntitiesWithStats<T extends MergeableEntity>(
                 return safeUpdatedTime;
             }
 
-            const safeDeletedTime = deletedTimeRaw > maxAllowedMergeTime ? maxAllowedMergeTime : deletedTimeRaw;
+            const safeDeletedTime = deletedTimeRaw > maxAllowedMergeTime + CLOCK_SKEW_THRESHOLD_MS ? maxAllowedMergeTime : deletedTimeRaw;
             return Math.max(safeUpdatedTime, safeDeletedTime);
         };
         let winner = comparableUpdatedTimeDiff > 0 ? normalizedIncomingItem : normalizedLocalItem;

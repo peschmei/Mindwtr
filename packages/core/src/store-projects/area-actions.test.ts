@@ -156,7 +156,8 @@ describe('area actions', () => {
 
         const merged = mergeAppData(
             { tasks: [], projects: [], sections: [], areas: [deletedArea], settings: {} },
-            { tasks: [], projects: [], sections: [], areas: [olderLiveArea], settings: {} }
+            { tasks: [], projects: [], sections: [], areas: [olderLiveArea], settings: {} },
+            { nowIso: deletedAt }
         );
 
         expect(merged.areas).toHaveLength(1);
