@@ -10,7 +10,7 @@ The free, open-source, cross-platform GTD app. Local-first, no account required.
 
 _New to GTD? Read [GTD in 15 minutes](https://hamberg.no/gtd) for a quick introduction._
 
-[Install](#installation) · [Getting Started](https://github.com/dongdongbh/Mindwtr/wiki/Getting-Started) · [Data & Sync](https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync) · [Cloud Deployment](https://github.com/dongdongbh/Mindwtr/wiki/Cloud-Deployment) · [MCP Server](https://github.com/dongdongbh/Mindwtr/wiki/MCP-Server)
+[Install](#installation) · [Getting Started](https://github.com/dongdongbh/Mindwtr/wiki/Getting-Started) · [FAQ](https://github.com/dongdongbh/Mindwtr/wiki/FAQ) · [Data & Sync](https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync) · [Cloud Deployment](https://github.com/dongdongbh/Mindwtr/wiki/Cloud-Deployment) · [MCP Server](https://github.com/dongdongbh/Mindwtr/wiki/MCP-Server)
 
 [![CI](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml/badge.svg)](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dongdongbh/Mindwtr?color=brightgreen)](LICENSE)
