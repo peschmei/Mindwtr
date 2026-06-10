@@ -183,26 +183,15 @@ describe('DailyReviewScreen', () => {
     vi.useRealTimers();
   });
 
-  it('shows the focus toggle on task rows during the focus step', async () => {
+  it('starts on the focus step when earlier daily stages are empty', async () => {
     let tree!: ReturnType<typeof create>;
 
     await act(async () => {
       tree = create(<DailyReviewScreen onClose={vi.fn()} />);
     });
 
-    const pressNextStep = async () => {
-      const nextStepLabel = tree.root.findByProps({ children: 'Next Step' });
-      const nextStepButton = nextStepLabel.parent;
-      if (!nextStepButton) {
-        throw new Error('Next step button not found');
-      }
-      await act(async () => {
-        nextStepButton.props.onPress();
-      });
-    };
-
-    await pressNextStep();
-    await pressNextStep();
+    expect(getAllText(tree)).toContain("Today's Focus");
+    expect(getAllText(tree)).toContain('Today');
 
     const taskRows = tree.root.findAllByType(SwipeableTaskItem);
     expect(taskRows).toHaveLength(1);
@@ -211,6 +200,17 @@ describe('DailyReviewScreen', () => {
   });
 
   it('skips the focus step when daily review focus is disabled', async () => {
+    storeState.tasks = [
+      {
+        id: 'waiting-task',
+        title: 'Waiting for invoice',
+        status: 'waiting',
+        contexts: [],
+        tags: [],
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
+      },
+    ];
     storeState.settings = {
       gtd: {
         dailyReview: {
@@ -223,20 +223,6 @@ describe('DailyReviewScreen', () => {
     await act(async () => {
       tree = create(<DailyReviewScreen onClose={vi.fn()} />);
     });
-
-    const pressNextStep = async () => {
-      const nextStepLabel = tree.root.findByProps({ children: 'Next Step' });
-      const nextStepButton = nextStepLabel.parent;
-      if (!nextStepButton) {
-        throw new Error('Next step button not found');
-      }
-      await act(async () => {
-        nextStepButton.props.onPress();
-      });
-    };
-
-    await pressNextStep();
-    await pressNextStep();
 
     const allText = getAllText(tree);
     expect(allText).toContain('Waiting');

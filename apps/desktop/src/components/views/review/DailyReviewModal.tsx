@@ -24,6 +24,13 @@ import { TaskItem } from '../../TaskItem';
 import { fetchExternalCalendarEvents, summarizeExternalCalendarWarnings } from '../../../lib/external-calendar-events';
 
 type DailyReviewStep = 'today' | 'focus' | 'inbox' | 'waiting' | 'completed';
+type DailyReviewStepDefinition = {
+    id: DailyReviewStep;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    hasWork: boolean;
+};
 const DAILY_REVIEW_STEP_STORAGE_KEY = 'mindwtr:dailyReview:currentStep';
 const DAILY_REVIEW_STEPS = new Set<DailyReviewStep>(['today', 'focus', 'inbox', 'waiting', 'completed']);
 
@@ -34,6 +41,7 @@ function isSameDay(a: Date, b: Date): boolean {
 function loadStoredDailyReviewStep(): DailyReviewStep {
     if (typeof window === 'undefined') return 'today';
     const stored = window.localStorage.getItem(DAILY_REVIEW_STEP_STORAGE_KEY);
+    if (stored === 'completed') return 'today';
     return stored && DAILY_REVIEW_STEPS.has(stored as DailyReviewStep) ? stored as DailyReviewStep : 'today';
 }
 
@@ -169,6 +177,10 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
     }, [currentStep, isProcessing]);
 
     useEffect(() => {
+        if (currentStep === 'completed') {
+            window.localStorage.removeItem(DAILY_REVIEW_STEP_STORAGE_KEY);
+            return;
+        }
         window.localStorage.setItem(DAILY_REVIEW_STEP_STORAGE_KEY, currentStep);
     }, [currentStep]);
 
@@ -236,31 +248,52 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
     const tomorrowCalendarEvents = getEventsForDay(tomorrow);
 
     const includeFocusStep = settings?.gtd?.dailyReview?.includeFocusStep !== false;
-    const steps: { id: DailyReviewStep; title: string; description: string; icon: LucideIcon }[] = (() => {
-        const visibleSteps: { id: DailyReviewStep; title: string; description: string; icon: LucideIcon }[] = [
-            { id: 'today', title: t('dailyReview.todayStep'), description: t('dailyReview.todayDesc'), icon: Calendar },
+    const steps: DailyReviewStepDefinition[] = useMemo(() => {
+        const todayHasWork = overdueTasks.length > 0
+            || dueTodayTasks.length > 0
+            || todayCalendarEvents.length > 0
+            || tomorrowCalendarEvents.length > 0
+            || Boolean(externalCalendarError);
+        const visibleSteps: DailyReviewStepDefinition[] = [
+            { id: 'today', title: t('dailyReview.todayStep'), description: t('dailyReview.todayDesc'), icon: Calendar, hasWork: todayHasWork },
         ];
-        if (inboxTasks.length > 0) {
-            visibleSteps.push({ id: 'inbox', title: t('dailyReview.inboxStep'), description: t('dailyReview.inboxDesc'), icon: CheckSquare });
-        }
+        visibleSteps.push({ id: 'inbox', title: t('dailyReview.inboxStep'), description: t('dailyReview.inboxDesc'), icon: CheckSquare, hasWork: inboxTasks.length > 0 });
         if (includeFocusStep) {
-            visibleSteps.push({ id: 'focus', title: t('dailyReview.focusStep'), description: t('dailyReview.focusDesc'), icon: CheckSquare });
+            visibleSteps.push({ id: 'focus', title: t('dailyReview.focusStep'), description: t('dailyReview.focusDesc'), icon: CheckSquare, hasWork: focusCandidates.length > 0 });
         }
         visibleSteps.push(
-            { id: 'waiting', title: t('dailyReview.waitingStep'), description: t('dailyReview.waitingDesc'), icon: ArrowRight },
-            { id: 'completed', title: t('dailyReview.completeTitle'), description: t('dailyReview.completeDesc'), icon: Check },
+            { id: 'waiting', title: t('dailyReview.waitingStep'), description: t('dailyReview.waitingDesc'), icon: ArrowRight, hasWork: waitingTasks.length > 0 },
+            { id: 'completed', title: t('dailyReview.completeTitle'), description: t('dailyReview.completeDesc'), icon: Check, hasWork: true },
         );
         return visibleSteps;
-    })();
+    }, [
+        dueTodayTasks.length,
+        externalCalendarError,
+        focusCandidates.length,
+        inboxTasks.length,
+        includeFocusStep,
+        overdueTasks.length,
+        t,
+        todayCalendarEvents.length,
+        tomorrowCalendarEvents.length,
+        waitingTasks.length,
+    ]);
+    const activeSteps = useMemo(
+        () => steps.filter((step) => step.hasWork || step.id === 'completed'),
+        [steps],
+    );
 
     useEffect(() => {
-        if (!steps.some((step) => step.id === currentStep)) {
-            setCurrentStep(steps[0].id);
+        if (!activeSteps.some((step) => step.id === currentStep)) {
+            setCurrentStep(activeSteps[0]?.id ?? 'completed');
         }
-    }, [currentStep, steps]);
+    }, [activeSteps, currentStep]);
 
-    const currentStepIndex = Math.max(0, steps.findIndex((s) => s.id === currentStep));
-    const activeStep = steps[currentStepIndex]?.id ?? 'today';
+    const activeStep = activeSteps.some((step) => step.id === currentStep)
+        ? currentStep
+        : activeSteps[0]?.id ?? 'completed';
+    const currentStepIndex = Math.max(0, steps.findIndex((s) => s.id === activeStep));
+    const activeStepIndex = activeSteps.findIndex((step) => step.id === activeStep);
     const progress = ((currentStepIndex) / (steps.length - 1)) * 100;
 
     const finishReview = () => {
@@ -269,16 +302,57 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
     };
 
     const nextStep = () => {
-        if (currentStepIndex < steps.length - 1) {
-            setCurrentStep(steps[currentStepIndex + 1].id);
+        if (activeStepIndex < 0) {
+            setCurrentStep(activeSteps[0]?.id ?? 'completed');
+            return;
+        }
+        if (activeStepIndex < activeSteps.length - 1) {
+            setCurrentStep(activeSteps[activeStepIndex + 1].id);
         }
     };
 
     const prevStep = () => {
-        if (currentStepIndex > 0) {
-            setCurrentStep(steps[currentStepIndex - 1].id);
+        if (activeStepIndex > 0) {
+            setCurrentStep(activeSteps[activeStepIndex - 1].id);
         }
     };
+
+    const renderStepRail = () => (
+        <div className="mt-3 flex flex-wrap gap-2">
+            {steps.map((step, index) => {
+                const skipped = !step.hasWork && step.id !== 'completed';
+                const complete = skipped || index < currentStepIndex;
+                const current = step.id === activeStep;
+                return (
+                    <div
+                        key={step.id}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px]",
+                            current
+                                ? "border-primary bg-primary/10 text-foreground"
+                                : complete
+                                    ? "border-green-500/30 bg-green-500/10 text-muted-foreground"
+                                    : "border-border bg-muted/30 text-muted-foreground",
+                        )}
+                    >
+                        <span
+                            className={cn(
+                                "flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold",
+                                current
+                                    ? "bg-primary text-primary-foreground"
+                                    : complete
+                                        ? "bg-green-500 text-white"
+                                        : "bg-muted text-muted-foreground",
+                            )}
+                        >
+                            {complete ? <Check className="h-3 w-3" strokeWidth={3} /> : index + 1}
+                        </span>
+                        <span className="max-w-[9rem] truncate">{step.title}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
 
     const renderTaskList = (list: Task[], emptyText: string) => {
         if (list.length === 0) {
@@ -561,6 +635,7 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
                                 style={{ width: `${progress}%` }}
                             />
                         </div>
+                        {renderStepRail()}
                     </div>
 
                     <div className="flex-1 overflow-y-auto pr-2">

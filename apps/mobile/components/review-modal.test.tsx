@@ -1,54 +1,60 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ReviewModal } from './review-modal';
 
-const storeState = {
-    tasks: [
-        {
-            id: 'inbox-1',
-            title: 'Inbox task',
-            status: 'inbox',
-            contexts: [],
-            tags: [],
-            createdAt: '2026-03-01T00:00:00.000Z',
-            updatedAt: '2026-03-01T00:00:00.000Z',
-        },
-        {
-            id: 'waiting-1',
-            title: 'Waiting task',
-            status: 'waiting',
-            contexts: [],
-            tags: [],
-            createdAt: '2026-03-01T00:00:00.000Z',
-            updatedAt: '2026-03-01T00:00:00.000Z',
-        },
-        {
-            id: 'project-task-1',
-            title: 'Project task',
-            status: 'next',
-            projectId: 'project-1',
-            contexts: ['@home'],
-            tags: [],
-            createdAt: '2026-03-01T00:00:00.000Z',
-            updatedAt: '2026-03-01T00:00:00.000Z',
-        },
-    ],
-    projects: [
-        {
-            id: 'project-1',
-            title: 'Project One',
-            status: 'active',
-            createdAt: '2026-03-01T00:00:00.000Z',
-            updatedAt: '2026-03-01T00:00:00.000Z',
-        },
-    ],
-    areas: [],
-    settings: {
-        ai: { enabled: false },
-        gtd: { weeklyReview: { includeContextStep: false } },
+const defaultTasks = [
+    {
+        id: 'inbox-1',
+        title: 'Inbox task',
+        status: 'inbox',
+        contexts: [],
+        tags: [],
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
     },
+    {
+        id: 'waiting-1',
+        title: 'Waiting task',
+        status: 'waiting',
+        contexts: [],
+        tags: [],
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+    {
+        id: 'project-task-1',
+        title: 'Project task',
+        status: 'next',
+        projectId: 'project-1',
+        contexts: ['@home'],
+        tags: [],
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+];
+
+const defaultProjects = [
+    {
+        id: 'project-1',
+        title: 'Project One',
+        status: 'active',
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+];
+
+const defaultSettings = {
+    ai: { enabled: false },
+    gtd: { weeklyReview: { includeContextStep: false } },
+};
+
+const storeState = {
+    tasks: defaultTasks.map((task) => ({ ...task })),
+    projects: defaultProjects.map((project) => ({ ...project })),
+    areas: [],
+    settings: { ...defaultSettings },
     updateTask: vi.fn(),
     deleteTask: vi.fn(),
     batchUpdateTasks: vi.fn(),
@@ -167,7 +173,20 @@ vi.mock('react-native-gesture-handler', () => ({
     GestureHandlerRootView: (props: any) => React.createElement('GestureHandlerRootView', props, props.children),
 }));
 
+const flattenText = (value: unknown): string => {
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    if (Array.isArray(value)) return value.map((item) => flattenText(item)).join('');
+    return '';
+};
+
 describe('ReviewModal', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        storeState.tasks = defaultTasks.map((task) => ({ ...task }));
+        storeState.projects = defaultProjects.map((project) => ({ ...project }));
+        storeState.settings = { ...defaultSettings };
+    });
+
     it('advances and goes back through weekly review steps', async () => {
         let tree!: ReturnType<typeof create>;
 
@@ -175,11 +194,6 @@ describe('ReviewModal', () => {
             tree = create(<ReviewModal visible onClose={vi.fn()} />);
         });
 
-        const flattenText = (value: unknown): string => {
-            if (typeof value === 'string' || typeof value === 'number') return String(value);
-            if (Array.isArray(value)) return value.map((item) => flattenText(item)).join('');
-            return '';
-        };
         const hasText = (text: string) =>
             tree.root.findAll((node) => flattenText(node.props?.children).includes(text)).length > 0;
 
@@ -208,5 +222,22 @@ describe('ReviewModal', () => {
         });
 
         expect(hasText('Inbox')).toBe(true);
+    });
+
+    it('starts on all clear when every weekly review stage is empty', async () => {
+        storeState.tasks = [];
+        storeState.projects = [];
+        let tree!: ReturnType<typeof create>;
+
+        await act(async () => {
+            tree = create(<ReviewModal visible onClose={vi.fn()} />);
+        });
+
+        const hasText = (text: string) =>
+            tree.root.findAll((node) => flattenText(node.props?.children).includes(text)).length > 0;
+
+        expect(hasText('Review Complete!')).toBe(true);
+        expect(hasText('Inbox')).toBe(true);
+        expect(hasText('Calendar')).toBe(true);
     });
 });

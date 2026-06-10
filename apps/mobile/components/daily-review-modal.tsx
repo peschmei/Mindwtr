@@ -33,6 +33,12 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { fetchExternalCalendarEvents } from '../lib/external-calendar';
 
 type DailyReviewStep = 'today' | 'focus' | 'inbox' | 'waiting' | 'complete';
+type DailyReviewStepDefinition = {
+    hasWork: boolean;
+    id: DailyReviewStep;
+    title: string;
+    description: string;
+};
 
 interface DailyReviewModalProps {
     visible: boolean;
@@ -198,36 +204,64 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
         return sortTasksBy(waiting, sortBy);
     }, [activeTasks, sortBy]);
 
-    const steps: { id: DailyReviewStep; title: string; description: string }[] = useMemo(() => {
-        const list: { id: DailyReviewStep; title: string; description: string }[] = [
-            { id: 'today', title: t('dailyReview.todayStep'), description: t('dailyReview.todayDesc') },
-            { id: 'inbox', title: t('dailyReview.inboxStep'), description: t('dailyReview.inboxDesc') },
+    const steps: DailyReviewStepDefinition[] = useMemo(() => {
+        const todayHasWork = overdueTasks.length > 0
+            || dueTodayTasks.length > 0
+            || todayEvents.length > 0
+            || tomorrowEvents.length > 0
+            || Boolean(externalError);
+        const list: DailyReviewStepDefinition[] = [
+            { id: 'today', title: t('dailyReview.todayStep'), description: t('dailyReview.todayDesc'), hasWork: todayHasWork },
+            { id: 'inbox', title: t('dailyReview.inboxStep'), description: t('dailyReview.inboxDesc'), hasWork: inboxTasks.length > 0 },
         ];
         if (includeFocusStep) {
-            list.push({ id: 'focus', title: t('dailyReview.focusStep'), description: t('dailyReview.focusDesc') });
+            list.push({ id: 'focus', title: t('dailyReview.focusStep'), description: t('dailyReview.focusDesc'), hasWork: focusCandidates.length > 0 });
         }
         list.push(
-            { id: 'waiting', title: t('dailyReview.waitingStep'), description: t('dailyReview.waitingDesc') },
-            { id: 'complete', title: t('dailyReview.completeTitle'), description: t('dailyReview.completeDesc') },
+            { id: 'waiting', title: t('dailyReview.waitingStep'), description: t('dailyReview.waitingDesc'), hasWork: waitingTasks.length > 0 },
+            { id: 'complete', title: t('dailyReview.completeTitle'), description: t('dailyReview.completeDesc'), hasWork: true },
         );
         return list;
-    }, [includeFocusStep, t]);
+    }, [
+        dueTodayTasks.length,
+        externalError,
+        focusCandidates.length,
+        inboxTasks.length,
+        includeFocusStep,
+        overdueTasks.length,
+        t,
+        todayEvents.length,
+        tomorrowEvents.length,
+        waitingTasks.length,
+    ]);
+    const activeSteps = useMemo(
+        () => steps.filter((step) => step.hasWork || step.id === 'complete'),
+        [steps],
+    );
 
-    const currentIndex = steps.findIndex((s) => s.id === currentStep);
+    const displayedStep = activeSteps.some((step) => step.id === currentStep)
+        ? currentStep
+        : activeSteps[0]?.id ?? 'complete';
+    const currentIndex = steps.findIndex((s) => s.id === displayedStep);
     const safeCurrentIndex = Math.max(0, currentIndex);
+    const activeStepIndex = activeSteps.findIndex((step) => step.id === displayedStep);
     const progress = (safeCurrentIndex / Math.max(1, steps.length - 1)) * 100;
 
     useEffect(() => {
-        if (steps.some((step) => step.id === currentStep)) return;
-        setCurrentStep(steps[0].id);
-    }, [currentStep, steps]);
+        if (activeSteps.some((step) => step.id === currentStep)) return;
+        setCurrentStep(activeSteps[0]?.id ?? 'complete');
+    }, [activeSteps, currentStep]);
 
     const next = () => {
-        if (currentIndex < steps.length - 1) setCurrentStep(steps[currentIndex + 1].id);
+        if (activeStepIndex < 0) {
+            setCurrentStep(activeSteps[0]?.id ?? 'complete');
+            return;
+        }
+        if (activeStepIndex < activeSteps.length - 1) setCurrentStep(activeSteps[activeStepIndex + 1].id);
     };
 
     const back = () => {
-        if (currentIndex > 0) setCurrentStep(steps[currentIndex - 1].id);
+        if (activeStepIndex > 0) setCurrentStep(activeSteps[activeStepIndex - 1].id);
     };
 
     const openTask = (task: Task) => {
@@ -249,6 +283,66 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
         onClose();
         openContextsScreen(token);
     };
+
+    const renderStepRail = () => (
+        <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.stepRail, { borderBottomColor: tc.border }]}
+            contentContainerStyle={styles.stepRailContent}
+        >
+            {steps.map((step, index) => {
+                const skipped = !step.hasWork && step.id !== 'complete';
+                const complete = skipped || index < safeCurrentIndex;
+                const current = step.id === displayedStep;
+                return (
+                    <View
+                        key={step.id}
+                        style={[
+                            styles.stepRailItem,
+                            {
+                                backgroundColor: current
+                                    ? `${tc.tint}1A`
+                                    : complete
+                                        ? `${tc.success}1A`
+                                        : tc.filterBg,
+                                borderColor: current
+                                    ? tc.tint
+                                    : complete
+                                        ? `${tc.success}66`
+                                        : tc.border,
+                            },
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.stepRailBadge,
+                                {
+                                    backgroundColor: current
+                                        ? tc.tint
+                                        : complete
+                                            ? tc.success
+                                            : tc.border,
+                                },
+                            ]}
+                        >
+                            {complete ? (
+                                <CheckCircle2 size={12} color="#FFFFFF" strokeWidth={2.8} />
+                            ) : (
+                                <Text style={styles.stepRailBadgeText}>{index + 1}</Text>
+                            )}
+                        </View>
+                        <Text
+                            style={[styles.stepRailText, { color: current ? tc.text : tc.secondaryText }]}
+                            numberOfLines={1}
+                        >
+                            {step.title}
+                        </Text>
+                    </View>
+                );
+            })}
+        </ScrollView>
+    );
 
     const renderTaskList = (list: Task[], options?: { showFocusToggle?: boolean; hideStatusBadge?: boolean }) => (
         <FlatList
@@ -313,7 +407,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
     };
 
     const renderStep = () => {
-        switch (currentStep) {
+        switch (displayedStep) {
             case 'today': {
                 const topTasks = [...overdueTasks, ...dueTodayTasks].slice(0, 8);
                 const totalToday = overdueTasks.length + dueTodayTasks.length;
@@ -512,10 +606,11 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                 <View style={[styles.progressTrack, { backgroundColor: tc.border }]}>
                     <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: tc.tint }]} />
                 </View>
+                {renderStepRail()}
 
                 <View style={styles.content}>{renderStep()}</View>
 
-                {currentStep !== 'complete' && (
+                {displayedStep !== 'complete' && (
                     <View
                         style={[
                             styles.footer,
@@ -528,8 +623,8 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                     >
                         <TouchableOpacity
                             onPress={back}
-                            disabled={currentIndex === 0}
-                            style={[styles.footerButton, { backgroundColor: tc.filterBg, opacity: currentIndex === 0 ? 0.5 : 1 }]}
+                            disabled={activeStepIndex <= 0}
+                            style={[styles.footerButton, { backgroundColor: tc.filterBg, opacity: activeStepIndex <= 0 ? 0.5 : 1 }]}
                         >
                             <Text style={[styles.footerButtonText, { color: tc.text }]}>{t('review.back')}</Text>
                         </TouchableOpacity>
@@ -623,6 +718,44 @@ const styles = StyleSheet.create({
     },
     progressFill: {
         height: '100%',
+    },
+    stepRail: {
+        borderBottomWidth: 1,
+        maxHeight: 48,
+    },
+    stepRailContent: {
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    stepRailItem: {
+        minWidth: 104,
+        maxWidth: 148,
+        height: 32,
+        borderRadius: 999,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 8,
+    },
+    stepRailBadge: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    stepRailBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '800',
+    },
+    stepRailText: {
+        flex: 1,
+        minWidth: 0,
+        fontSize: 12,
+        fontWeight: '700',
     },
     content: {
         flex: 1,

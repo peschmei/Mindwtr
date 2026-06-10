@@ -29,6 +29,13 @@ import { fetchExternalCalendarEvents, summarizeExternalCalendarWarnings } from '
 import { useUiStore } from '../../../store/ui-store';
 
 type ReviewStep = 'inbox' | 'ai' | 'calendar' | 'waiting' | 'contexts' | 'projects' | 'someday' | 'completed';
+type ReviewStepDefinition = {
+    id: ReviewStep;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    hasWork: boolean;
+};
 type CalendarReviewEntry = {
     task: Task;
     date: Date;
@@ -162,38 +169,88 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
             }))
             .sort((a, b) => (b.tasks.length - a.tasks.length) || a.context.localeCompare(b.context));
     }, [tasks, projectMap]);
+    const inboxTasks = useMemo(() => tasks.filter((task) => (
+        task.status === 'inbox'
+        && !task.deletedAt
+        && isTaskInActiveProject(task, projectMap)
+    )), [projectMap, tasks]);
+    const waitingTasks = useMemo(() => tasks.filter((task) => (
+        task.status === 'waiting'
+        && !task.deletedAt
+        && isTaskInActiveProject(task, projectMap)
+    )), [projectMap, tasks]);
+    const waitingDue = useMemo(() => waitingTasks.filter((task) => isDueForReview(task.reviewAt)), [waitingTasks]);
+    const waitingFuture = useMemo(() => waitingTasks.filter((task) => !isDueForReview(task.reviewAt)), [waitingTasks]);
+    const somedayTasks = useMemo(() => tasks.filter((task) => (
+        task.status === 'someday'
+        && !task.deletedAt
+        && isTaskInActiveProject(task, projectMap)
+    )), [projectMap, tasks]);
+    const somedayDue = useMemo(() => somedayTasks.filter((task) => isDueForReview(task.reviewAt)), [somedayTasks]);
+    const somedayFuture = useMemo(() => somedayTasks.filter((task) => !isDueForReview(task.reviewAt)), [somedayTasks]);
+    const activeProjects = useMemo(
+        () => projects.filter((project) => project.status === 'active' && !project.deletedAt),
+        [projects],
+    );
+    const dueProjects = useMemo(() => activeProjects.filter((project) => isDueForReview(project.reviewAt)), [activeProjects]);
+    const futureProjects = useMemo(() => activeProjects.filter((project) => !isDueForReview(project.reviewAt)), [activeProjects]);
+    const orderedProjects = useMemo(() => [...dueProjects, ...futureProjects], [dueProjects, futureProjects]);
 
-    const steps = useMemo<{ id: ReviewStep; title: string; description: string; icon: LucideIcon }[]>(() => {
-        const list: { id: ReviewStep; title: string; description: string; icon: LucideIcon }[] = [
-            { id: 'inbox', title: t('review.inboxStep'), description: t('review.inboxStepDesc'), icon: CheckSquare },
+    const steps = useMemo<ReviewStepDefinition[]>(() => {
+        const calendarHasWork = calendarReviewItems.length > 0
+            || externalCalendarReviewItems.length > 0
+            || Boolean(externalCalendarError);
+        const list: ReviewStepDefinition[] = [
+            { id: 'inbox', title: t('review.inboxStep'), description: t('review.inboxStepDesc'), icon: CheckSquare, hasWork: inboxTasks.length > 0 },
         ];
         if (aiEnabled) {
-            list.push({ id: 'ai', title: t('review.aiStep'), description: t('review.aiStepDesc'), icon: Sparkles });
+            list.push({ id: 'ai', title: t('review.aiStep'), description: t('review.aiStepDesc'), icon: Sparkles, hasWork: staleItems.length > 0 });
         }
         list.push(
-            { id: 'calendar', title: t('review.calendarStep'), description: t('review.calendarStepDesc'), icon: Calendar },
-            { id: 'waiting', title: t('review.waitingStep'), description: t('review.waitingStepDesc'), icon: ArrowRight },
+            { id: 'calendar', title: t('review.calendarStep'), description: t('review.calendarStepDesc'), icon: Calendar, hasWork: calendarHasWork },
+            { id: 'waiting', title: t('review.waitingStep'), description: t('review.waitingStepDesc'), icon: ArrowRight, hasWork: waitingTasks.length > 0 },
         );
         if (includeContextStep) {
-            list.push({ id: 'contexts', title: t('review.contexts'), description: t('review.contextsStepDesc'), icon: MapPin });
+            list.push({ id: 'contexts', title: t('review.contexts'), description: t('review.contextsStepDesc'), icon: MapPin, hasWork: contextReviewGroups.length > 0 });
         }
         list.push(
-            { id: 'projects', title: t('review.projectsStep'), description: t('review.projectsStepDesc'), icon: Layers },
-            { id: 'someday', title: t('review.somedayStep'), description: t('review.somedayStepDesc'), icon: Archive },
-            { id: 'completed', title: t('review.allDone'), description: t('review.allDoneDesc'), icon: Check },
+            { id: 'projects', title: t('review.projectsStep'), description: t('review.projectsStepDesc'), icon: Layers, hasWork: orderedProjects.length > 0 },
+            { id: 'someday', title: t('review.somedayStep'), description: t('review.somedayStepDesc'), icon: Archive, hasWork: somedayTasks.length > 0 },
+            { id: 'completed', title: t('review.allDone'), description: t('review.allDoneDesc'), icon: Check, hasWork: true },
         );
         return list;
-    }, [aiEnabled, includeContextStep, t]);
+    }, [
+        aiEnabled,
+        calendarReviewItems.length,
+        contextReviewGroups.length,
+        externalCalendarError,
+        externalCalendarReviewItems.length,
+        inboxTasks.length,
+        includeContextStep,
+        orderedProjects.length,
+        somedayTasks.length,
+        staleItems.length,
+        t,
+        waitingTasks.length,
+    ]);
+    const activeSteps = useMemo(
+        () => steps.filter((step) => step.hasWork || step.id === 'completed'),
+        [steps],
+    );
 
-    const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
+    const displayedStep = activeSteps.some((step) => step.id === currentStep)
+        ? currentStep
+        : activeSteps[0]?.id ?? 'completed';
+    const currentStepIndex = steps.findIndex((step) => step.id === displayedStep);
     const safeStepIndex = currentStepIndex >= 0 ? currentStepIndex : 0;
+    const activeStepIndex = activeSteps.findIndex((step) => step.id === displayedStep);
     const progress = (safeStepIndex / Math.max(1, steps.length - 1)) * 100;
 
     useEffect(() => {
-        if (!steps.some((step) => step.id === currentStep)) {
-            setCurrentStep(steps[0].id);
+        if (!activeSteps.some((step) => step.id === currentStep)) {
+            setCurrentStep(activeSteps[0]?.id ?? 'completed');
         }
-    }, [currentStep, steps]);
+    }, [activeSteps, currentStep]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -236,24 +293,57 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
     }, []);
 
     const nextStep = () => {
-        if (currentStepIndex < 0) {
-            setCurrentStep(steps[0].id);
+        if (activeStepIndex < 0) {
+            setCurrentStep(activeSteps[0]?.id ?? 'completed');
             return;
         }
-        if (currentStepIndex < steps.length - 1) {
-            setCurrentStep(steps[currentStepIndex + 1].id);
+        if (activeStepIndex < activeSteps.length - 1) {
+            setCurrentStep(activeSteps[activeStepIndex + 1].id);
         }
     };
 
     const prevStep = () => {
-        if (currentStepIndex < 0) {
-            setCurrentStep(steps[0].id);
-            return;
-        }
-        if (currentStepIndex > 0) {
-            setCurrentStep(steps[currentStepIndex - 1].id);
+        if (activeStepIndex > 0) {
+            setCurrentStep(activeSteps[activeStepIndex - 1].id);
         }
     };
+
+    const renderStepRail = () => (
+        <div className="mt-3 flex flex-wrap gap-2">
+            {steps.map((step, index) => {
+                const skipped = !step.hasWork && step.id !== 'completed';
+                const complete = skipped || index < safeStepIndex;
+                const current = step.id === displayedStep;
+                return (
+                    <div
+                        key={step.id}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px]",
+                            current
+                                ? "border-primary bg-primary/10 text-foreground"
+                                : complete
+                                    ? "border-green-500/30 bg-green-500/10 text-muted-foreground"
+                                    : "border-border bg-muted/30 text-muted-foreground",
+                        )}
+                    >
+                        <span
+                            className={cn(
+                                "flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold",
+                                current
+                                    ? "bg-primary text-primary-foreground"
+                                    : complete
+                                        ? "bg-green-500 text-white"
+                                        : "bg-muted text-muted-foreground",
+                            )}
+                        >
+                            {complete ? <Check className="h-3 w-3" strokeWidth={3} /> : index + 1}
+                        </span>
+                        <span className="max-w-[9rem] truncate">{step.title}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
 
     const isActionableSuggestion = (suggestion: ReviewSuggestion) => {
         if (suggestion.id.startsWith('project:')) return false;
@@ -460,13 +550,8 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
     };
 
     const renderStepContent = () => {
-        switch (currentStep) {
+        switch (displayedStep) {
             case 'inbox': {
-                const inboxTasks = tasks.filter((task) => (
-                    task.status === 'inbox'
-                    && !task.deletedAt
-                    && isTaskInActiveProject(task, projectMap)
-                ));
                 return (
                     <div className="space-y-4">
                         <div className="bg-muted/30 p-4 rounded-lg border border-border">
@@ -525,13 +610,6 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                 );
 
             case 'waiting': {
-                const waitingTasks = tasks.filter((task) => (
-                    task.status === 'waiting'
-                    && !task.deletedAt
-                    && isTaskInActiveProject(task, projectMap)
-                ));
-                const waitingDue = waitingTasks.filter((task) => isDueForReview(task.reviewAt));
-                const waitingFuture = waitingTasks.filter((task) => !isDueForReview(task.reviewAt));
                 return (
                     <div className="space-y-4">
                         <p className="text-muted-foreground">
@@ -690,10 +768,6 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
             }
 
             case 'projects': {
-                const activeProjects = projects.filter((project) => project.status === 'active' && !project.deletedAt);
-                const dueProjects = activeProjects.filter((project) => isDueForReview(project.reviewAt));
-                const futureProjects = activeProjects.filter((project) => !isDueForReview(project.reviewAt));
-                const orderedProjects = [...dueProjects, ...futureProjects];
                 return (
                     <div className="space-y-6">
                         <p className="text-muted-foreground">{t('review.projectsHint')}</p>
@@ -752,13 +826,6 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
             }
 
             case 'someday': {
-                const somedayTasks = tasks.filter((task) => (
-                    task.status === 'someday'
-                    && !task.deletedAt
-                    && isTaskInActiveProject(task, projectMap)
-                ));
-                const somedayDue = somedayTasks.filter((task) => isDueForReview(task.reviewAt));
-                const somedayFuture = somedayTasks.filter((task) => !isDueForReview(task.reviewAt));
                 return (
                     <div className="space-y-4">
                         <p className="text-muted-foreground">
@@ -859,13 +926,14 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                                 style={{ width: `${progress}%` }}
                             />
                         </div>
+                        {renderStepRail()}
                     </div>
 
                     <div className="flex-1 overflow-y-auto pr-2">
                         {renderStepContent()}
                     </div>
 
-                    {currentStep !== 'completed' && (
+                    {displayedStep !== 'completed' && (
                         <div className="flex justify-between items-center pt-3.5 border-t border-border mt-5">
                             <button
                                 onClick={prevStep}

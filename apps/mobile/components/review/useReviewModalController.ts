@@ -48,6 +48,13 @@ export type ReviewStep =
     | 'someday'
     | 'completed';
 
+export type ReviewStepDefinition = {
+    Icon: LucideIcon;
+    hasWork: boolean;
+    id: ReviewStep;
+    title: string;
+};
+
 export type ExternalCalendarDaySummary = {
     dayStart: Date;
     events: ExternalCalendarEvent[];
@@ -109,52 +116,6 @@ export function useReviewModalController({
     const aiEnabled = settings?.ai?.enabled === true;
     const includeContextStep = settings?.gtd?.weeklyReview?.includeContextStep !== false;
     const aiProvider = (settings?.ai?.provider ?? 'openai') as AIProviderId;
-
-    const steps = useMemo<{ Icon: LucideIcon; id: ReviewStep; title: string }[]>(() => {
-        const list: { Icon: LucideIcon; id: ReviewStep; title: string }[] = [
-            { id: 'inbox', title: labels.inbox, Icon: Inbox },
-        ];
-        if (aiEnabled) {
-            list.push({ id: 'ai', title: labels.ai, Icon: Sparkles });
-        }
-        list.push(
-            { id: 'calendar', title: labels.calendar, Icon: CalendarIcon },
-            { id: 'waiting', title: labels.waiting, Icon: Clock },
-        );
-        if (includeContextStep) {
-            list.push({ id: 'contexts', title: labels.contexts, Icon: Tag });
-        }
-        list.push(
-            { id: 'projects', title: labels.projects, Icon: FolderOpen },
-            { id: 'someday', title: labels.someday, Icon: Lightbulb },
-            { id: 'completed', title: labels.done, Icon: CheckCircle2 },
-        );
-        return list;
-    }, [aiEnabled, includeContextStep, labels]);
-
-    const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
-    const safeStepIndex = currentStepIndex >= 0 ? currentStepIndex : 0;
-    const progress = (safeStepIndex / Math.max(1, steps.length - 1)) * 100;
-
-    const nextStep = useCallback(() => {
-        if (currentStepIndex < 0) {
-            setCurrentStep(steps[0].id);
-            return;
-        }
-        if (currentStepIndex < steps.length - 1) {
-            setCurrentStep(steps[currentStepIndex + 1].id);
-        }
-    }, [currentStepIndex, steps]);
-
-    const prevStep = useCallback(() => {
-        if (currentStepIndex < 0) {
-            setCurrentStep(steps[0].id);
-            return;
-        }
-        if (currentStepIndex > 0) {
-            setCurrentStep(steps[currentStepIndex - 1].id);
-        }
-    }, [currentStepIndex, steps]);
 
     const handleClose = useCallback(() => {
         setCurrentStep('inbox');
@@ -283,12 +244,6 @@ export function useReviewModalController({
         acc[item.id] = item.title;
         return acc;
     }, {} as Record<string, string>), [staleItems]);
-
-    useEffect(() => {
-        if (!steps.some((step) => step.id === currentStep)) {
-            setCurrentStep(steps[0].id);
-        }
-    }, [currentStep, steps]);
 
     const isActionableSuggestion = useCallback((suggestion: ReviewSuggestion) => {
         if (suggestion.id.startsWith('project:')) return false;
@@ -522,6 +477,77 @@ export function useReviewModalController({
         };
     }), [areaById, orderedProjects, tasks, tc.tint]);
 
+    const steps = useMemo<ReviewStepDefinition[]>(() => {
+        const calendarHasWork = calendarReviewItems.length > 0
+            || externalCalendarReviewItems.length > 0
+            || Boolean(externalCalendarError);
+        const list: ReviewStepDefinition[] = [
+            { id: 'inbox', title: labels.inbox, Icon: Inbox, hasWork: inboxTasks.length > 0 },
+        ];
+        if (aiEnabled) {
+            list.push({ id: 'ai', title: labels.ai, Icon: Sparkles, hasWork: staleItems.length > 0 });
+        }
+        list.push(
+            { id: 'calendar', title: labels.calendar, Icon: CalendarIcon, hasWork: calendarHasWork },
+            { id: 'waiting', title: labels.waiting, Icon: Clock, hasWork: waitingTasks.length > 0 },
+        );
+        if (includeContextStep) {
+            list.push({ id: 'contexts', title: labels.contexts, Icon: Tag, hasWork: contextReviewGroups.length > 0 });
+        }
+        list.push(
+            { id: 'projects', title: labels.projects, Icon: FolderOpen, hasWork: projectReviewEntries.length > 0 },
+            { id: 'someday', title: labels.someday, Icon: Lightbulb, hasWork: somedayTasks.length > 0 },
+            { id: 'completed', title: labels.done, Icon: CheckCircle2, hasWork: true },
+        );
+        return list;
+    }, [
+        aiEnabled,
+        calendarReviewItems.length,
+        contextReviewGroups.length,
+        externalCalendarError,
+        externalCalendarReviewItems.length,
+        inboxTasks.length,
+        includeContextStep,
+        labels,
+        projectReviewEntries.length,
+        somedayTasks.length,
+        staleItems.length,
+        waitingTasks.length,
+    ]);
+    const activeSteps = useMemo(
+        () => steps.filter((step) => step.hasWork || step.id === 'completed'),
+        [steps],
+    );
+    const displayedStep = activeSteps.some((step) => step.id === currentStep)
+        ? currentStep
+        : activeSteps[0]?.id ?? 'completed';
+    const currentStepIndex = steps.findIndex((step) => step.id === displayedStep);
+    const safeStepIndex = currentStepIndex >= 0 ? currentStepIndex : 0;
+    const activeStepIndex = activeSteps.findIndex((step) => step.id === displayedStep);
+    const progress = (safeStepIndex / Math.max(1, steps.length - 1)) * 100;
+
+    useEffect(() => {
+        if (!activeSteps.some((step) => step.id === currentStep)) {
+            setCurrentStep(activeSteps[0]?.id ?? 'completed');
+        }
+    }, [activeSteps, currentStep]);
+
+    const nextStep = useCallback(() => {
+        if (activeStepIndex < 0) {
+            setCurrentStep(activeSteps[0]?.id ?? 'completed');
+            return;
+        }
+        if (activeStepIndex < activeSteps.length - 1) {
+            setCurrentStep(activeSteps[activeStepIndex + 1].id);
+        }
+    }, [activeStepIndex, activeSteps]);
+
+    const prevStep = useCallback(() => {
+        if (activeStepIndex > 0) {
+            setCurrentStep(activeSteps[activeStepIndex - 1].id);
+        }
+    }, [activeStepIndex, activeSteps]);
+
     const handleNavigateToProject = useCallback((projectId: string) => {
         onClose();
         openProjectScreen(projectId);
@@ -548,7 +574,7 @@ export function useReviewModalController({
         closeEditModal,
         closeProjectTaskPrompt,
         contextReviewGroups,
-        currentStep,
+        currentStep: displayedStep,
         editingTask,
         expandedContextGroups,
         expandedExternalDays,

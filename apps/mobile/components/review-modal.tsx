@@ -96,6 +96,69 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
     const closeLabel = t('common.close');
     const closeText = closeLabel && closeLabel !== 'common.close' ? closeLabel : 'Close';
 
+    const renderStepRail = () => (
+        <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.stepRail, { borderBottomColor: tc.border }]}
+            contentContainerStyle={styles.stepRailContent}
+        >
+            {steps.map((step, index) => {
+                const skipped = !step.hasWork && step.id !== 'completed';
+                const complete = skipped || index < safeStepIndex;
+                const current = step.id === currentStep;
+                return (
+                    <View
+                        key={step.id}
+                        style={[
+                            styles.stepRailItem,
+                            {
+                                backgroundColor: current
+                                    ? `${tc.tint}1A`
+                                    : complete
+                                        ? `${tc.success}1A`
+                                        : tc.filterBg,
+                                borderColor: current
+                                    ? tc.tint
+                                    : complete
+                                        ? `${tc.success}66`
+                                        : tc.border,
+                            },
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.stepRailBadge,
+                                {
+                                    backgroundColor: current
+                                        ? tc.tint
+                                        : complete
+                                            ? tc.success
+                                            : tc.border,
+                                },
+                            ]}
+                        >
+                            {complete ? (
+                                <CheckCircle2 size={12} color="#FFFFFF" strokeWidth={2.8} />
+                            ) : (
+                                <Text style={styles.stepRailBadgeText}>{index + 1}</Text>
+                            )}
+                        </View>
+                        <Text
+                            style={[
+                                styles.stepRailText,
+                                { color: current ? tc.text : tc.secondaryText },
+                            ]}
+                            numberOfLines={1}
+                        >
+                            {step.title}
+                        </Text>
+                    </View>
+                );
+            })}
+        </ScrollView>
+    );
+
     const renderTaskList = (taskList: Task[]) => (
         <FlatList
             data={taskList}
@@ -617,6 +680,7 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                     <View style={[styles.progressContainer, { backgroundColor: tc.border }]}>
                         <View style={[styles.progressBar, { width: `${progress}%` }]} />
                     </View>
+                    {renderStepRail()}
 
                     <View style={styles.content}>
                         {renderStepContent()}
