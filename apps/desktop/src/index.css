@@ -4,10 +4,10 @@
 
 /*
  * Z-INDEX SCALE
- *   z-10  — inline overlays anchored to a relative parent (action buttons, floating labels)
- *   z-20  — popovers and dropdowns (AreaSelector, ProjectSelector, SectionSelector)
- *   z-50  — modals, global search, toast host, skip-link
- *   z-70  — modal-over-modal (ExpandedMarkdownEditor opened from another modal)
+ *   z-10    — inline overlays anchored to a relative parent (action buttons, floating labels)
+ *   z-20    — inline popovers and dropdowns (SectionSelector, SidebarAreaFilter)
+ *   z-50    — modals, global search, toast host, skip-link
+ *   z-[70]  — modal-over-modal and portaled selectors that must escape clipped surfaces
  * New overlays should pick from this scale, not invent new values.
  *
  * MODAL BACKDROP

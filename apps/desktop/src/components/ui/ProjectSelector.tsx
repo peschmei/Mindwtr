@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { Project } from '@mindwtr/core';
 import { ChevronDown, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { ModalPortal } from '../ModalPortal';
 import { useDropdownPosition } from './use-dropdown-position';
 
 interface ProjectSelectorProps {
@@ -48,7 +49,7 @@ export function ProjectSelector({
     const dropdownRef = useRef<HTMLDivElement>(null);
     const projectPool = allProjects ?? projects;
     const selected = projectPool.find((p) => p.id === value);
-    const { dropdownClassName, listMaxHeight } = useDropdownPosition({
+    const { fixedDropdownStyle, listMaxHeight } = useDropdownPosition({
         open,
         containerRef,
         dropdownRef,
@@ -72,7 +73,8 @@ export function ProjectSelector({
     useEffect(() => {
         if (!open) return;
         const handleClick = (event: MouseEvent) => {
-            if (!containerRef.current?.contains(event.target as Node)) {
+            const target = event.target as Node;
+            if (!containerRef.current?.contains(target) && !dropdownRef.current?.contains(target)) {
                 setOpen(false);
             }
         };
@@ -175,83 +177,86 @@ export function ProjectSelector({
                 <ChevronDown className="h-3.5 w-3.5 opacity-70" />
             </button>
             {open && (
-                <div
-                    ref={dropdownRef}
-                    className={cn(
-                        'absolute z-50 w-full rounded-md border border-border bg-popover text-popover-foreground shadow-lg p-1 text-xs',
-                        dropdownClassName,
-                        menuClassName,
-                    )}
-                    onKeyDown={handleDropdownKeyDown}
-                >
-                    <input
-                        autoFocus
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        onKeyDown={handleSearchKeyDown}
-                        placeholder={searchPlaceholder}
-                        aria-label={searchPlaceholder}
-                        className="w-full mb-1 rounded border border-border bg-muted/40 px-2 py-1 text-[inherit]"
-                    />
-                    <div role="listbox" aria-label={placeholder}>
-                        <button
-                            type="button"
-                            data-selector-option="true"
-                            data-selector-option-kind="none"
-                            role="option"
-                            aria-selected={value === ''}
-                            onClick={() => {
-                                onChange('');
-                                closeDropdown();
-                            }}
-                            className={cn(
-                                'w-full text-left px-2 py-1 rounded hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
-                                value === '' && 'bg-muted/70'
-                            )}
-                        >
-                            {noProjectLabel}
-                        </button>
-                        {!hasExactMatch && query.trim() && onCreateProject && (
+                <ModalPortal>
+                    <div
+                        ref={dropdownRef}
+                        data-selector-dropdown="true"
+                        style={fixedDropdownStyle}
+                        className={cn(
+                            'z-[70] rounded-md border border-border bg-popover text-popover-foreground shadow-lg p-1 text-xs',
+                            menuClassName,
+                        )}
+                        onKeyDown={handleDropdownKeyDown}
+                    >
+                        <input
+                            autoFocus
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            onKeyDown={handleSearchKeyDown}
+                            placeholder={searchPlaceholder}
+                            aria-label={searchPlaceholder}
+                            className="w-full mb-1 rounded border border-border bg-muted/40 px-2 py-1 text-[inherit]"
+                        />
+                        <div role="listbox" aria-label={placeholder}>
                             <button
                                 type="button"
                                 data-selector-option="true"
-                                data-selector-option-kind="create"
+                                data-selector-option-kind="none"
                                 role="option"
-                                aria-selected={false}
-                                onClick={handleCreate}
-                                className="w-full text-left px-2 py-1 rounded hover:bg-muted/50 focus:bg-muted/50 focus:outline-none text-primary flex items-center gap-2"
+                                aria-selected={value === ''}
+                                onClick={() => {
+                                    onChange('');
+                                    closeDropdown();
+                                }}
+                                className={cn(
+                                    'w-full text-left px-2 py-1 rounded hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
+                                    value === '' && 'bg-muted/70'
+                                )}
                             >
-                                <Plus className="h-3.5 w-3.5" />
-                                {createProjectLabel} &quot;{query.trim()}&quot;
+                                {noProjectLabel}
                             </button>
-                        )}
-                        <div className="overflow-y-auto" style={{ maxHeight: listMaxHeight }}>
-                            {filtered.map((project) => (
+                            {!hasExactMatch && query.trim() && onCreateProject && (
                                 <button
-                                    key={project.id}
                                     type="button"
                                     data-selector-option="true"
-                                    data-selector-option-kind="item"
+                                    data-selector-option-kind="create"
                                     role="option"
-                                    aria-selected={project.id === value}
-                                    onClick={() => {
-                                        onChange(project.id);
-                                        closeDropdown();
-                                    }}
-                                    className={cn(
-                                        'w-full text-left px-2 py-1 rounded hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
-                                        project.id === value && 'bg-muted/70'
-                                    )}
+                                    aria-selected={false}
+                                    onClick={handleCreate}
+                                    className="w-full text-left px-2 py-1 rounded hover:bg-muted/50 focus:bg-muted/50 focus:outline-none text-primary flex items-center gap-2"
                                 >
-                                    {project.title}
+                                    <Plus className="h-3.5 w-3.5" />
+                                    {createProjectLabel} &quot;{query.trim()}&quot;
                                 </button>
-                            ))}
-                            {filtered.length === 0 && (
-                                <div className="px-2 py-1 text-muted-foreground">{emptyStateLabel}</div>
                             )}
+                            <div className="overflow-y-auto" style={{ maxHeight: listMaxHeight }}>
+                                {filtered.map((project) => (
+                                    <button
+                                        key={project.id}
+                                        type="button"
+                                        data-selector-option="true"
+                                        data-selector-option-kind="item"
+                                        role="option"
+                                        aria-selected={project.id === value}
+                                        onClick={() => {
+                                            onChange(project.id);
+                                            closeDropdown();
+                                        }}
+                                        className={cn(
+                                            'w-full text-left px-2 py-1 rounded hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
+                                            project.id === value && 'bg-muted/70'
+                                        )}
+                                    >
+                                        {project.title}
+                                    </button>
+                                ))}
+                                {filtered.length === 0 && (
+                                    <div className="px-2 py-1 text-muted-foreground">{emptyStateLabel}</div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                </ModalPortal>
             )}
         </div>
     );

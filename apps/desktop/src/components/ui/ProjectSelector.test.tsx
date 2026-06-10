@@ -62,7 +62,7 @@ function mockSelectorGeometry({
                 toJSON: () => ({}),
             } as DOMRect;
         }
-        if (this instanceof HTMLElement && this.classList.contains('absolute')) {
+        if (this instanceof HTMLElement && this.dataset.selectorDropdown === 'true') {
             return {
                 bottom: triggerBottom + dropdownHeight,
                 height: dropdownHeight,
@@ -127,7 +127,10 @@ describe('ProjectSelector', () => {
 
         fireEvent.click(getByRole('button', { name: 'Select project' }));
 
-        expect(getByRole('listbox', { name: 'Select project' }).closest('.absolute')).toHaveClass('z-50');
+        const dropdown = getByRole('listbox', { name: 'Select project' }).closest('[data-selector-dropdown="true"]');
+        expect(dropdown).toHaveClass('z-[70]');
+        expect(dropdown?.parentElement).toBe(document.body);
+        expect(dropdown).toHaveStyle({ position: 'fixed' });
     });
 
     it('keeps the menu below the selector when compact vertical space is available', async () => {
@@ -137,7 +140,7 @@ describe('ProjectSelector', () => {
             triggerTop: 250,
             viewportHeight: 520,
         });
-        const { container, getByRole } = render(
+        const { getByRole } = render(
             <ProjectSelector
                 projects={projects}
                 value=""
@@ -149,12 +152,18 @@ describe('ProjectSelector', () => {
 
         fireEvent.click(getByRole('button', { name: 'Select project' }));
 
-        const dropdown = getByRole('listbox', { name: 'Select project' }).closest('.absolute');
+        const listbox = getByRole('listbox', { name: 'Select project' });
+        const dropdown = listbox.closest('[data-selector-dropdown="true"]');
         await waitFor(() => {
-            expect(container.querySelector('[style*="max-height"]')).toHaveStyle({ maxHeight: '148px' });
+            expect(listbox.querySelector('[style*="max-height"]')).toHaveStyle({ maxHeight: '148px' });
+            expect(dropdown).toHaveStyle({
+                position: 'fixed',
+                top: '284px',
+                bottom: 'auto',
+                left: '0px',
+                width: '320px',
+            });
         });
-        expect(dropdown).toHaveClass('top-full');
-        expect(dropdown).not.toHaveClass('bottom-full');
     });
 
     it('opens above only when the minimum usable menu cannot fit below', async () => {
@@ -164,7 +173,7 @@ describe('ProjectSelector', () => {
             triggerTop: 260,
             viewportHeight: 420,
         });
-        const { container, getByRole } = render(
+        const { getByRole } = render(
             <ProjectSelector
                 projects={projects}
                 value=""
@@ -176,12 +185,18 @@ describe('ProjectSelector', () => {
 
         fireEvent.click(getByRole('button', { name: 'Select project' }));
 
-        const dropdown = getByRole('listbox', { name: 'Select project' }).closest('.absolute');
+        const listbox = getByRole('listbox', { name: 'Select project' });
+        const dropdown = listbox.closest('[data-selector-dropdown="true"]');
         await waitFor(() => {
-            expect(container.querySelector('[style*="max-height"]')).toHaveStyle({ maxHeight: '168px' });
+            expect(listbox.querySelector('[style*="max-height"]')).toHaveStyle({ maxHeight: '168px' });
+            expect(dropdown).toHaveStyle({
+                position: 'fixed',
+                top: 'auto',
+                bottom: '164px',
+                left: '0px',
+                width: '320px',
+            });
         });
-        expect(dropdown).toHaveClass('bottom-full');
-        expect(dropdown).not.toHaveClass('top-full');
     });
 
     it('suppresses create when an exact match exists outside the filtered list', () => {
