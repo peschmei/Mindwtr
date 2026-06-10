@@ -134,4 +134,72 @@ describe('openai provider auth behavior', () => {
         ]);
         expect(body.response_format).toEqual({ type: 'json_object' });
     });
+
+    it('falls back to reasoning_content when an OpenAI-compatible endpoint returns empty content', async () => {
+        const fetchMock = vi.fn(async () =>
+            new Response(
+                JSON.stringify({
+                    choices: [
+                        {
+                            message: {
+                                content: '',
+                                reasoning_content: JSON.stringify({
+                                    question: 'What is the next action?',
+                                    options: [{ label: 'Do it', action: 'do' }],
+                                }),
+                            },
+                        },
+                    ],
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } },
+            ));
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+        const provider = createOpenAIProvider({
+            provider: 'openai',
+            endpoint: 'http://localhost:11434/v1/chat/completions',
+            apiKey: '',
+            model: 'qwen-local',
+        });
+
+        const result = await provider.clarifyTask({ title: 'Plan trip' });
+
+        expect(result.question).toBe('What is the next action?');
+    });
+
+    it('reads text from OpenAI-compatible content part arrays', async () => {
+        const fetchMock = vi.fn(async () =>
+            new Response(
+                JSON.stringify({
+                    choices: [
+                        {
+                            message: {
+                                content: [
+                                    {
+                                        type: 'text',
+                                        text: JSON.stringify({
+                                            question: 'What is the next action?',
+                                            options: [{ label: 'Do it', action: 'do' }],
+                                        }),
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } },
+            ));
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+        const provider = createOpenAIProvider({
+            provider: 'openai',
+            endpoint: 'http://localhost:11434/v1/chat/completions',
+            apiKey: '',
+            model: 'qwen-local',
+        });
+
+        const result = await provider.clarifyTask({ title: 'Plan trip' });
+
+        expect(result.question).toBe('What is the next action?');
+    });
 });

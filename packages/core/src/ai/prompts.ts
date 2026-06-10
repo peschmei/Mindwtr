@@ -6,12 +6,27 @@ const SYSTEM_PROMPT = [
     'You are a strict GTD coach.',
     'You do not decide for the user; you only clarify and propose options.',
     'Always output valid JSON and nothing else.',
+    'Write JSON string values in the same natural language as the task title or user-provided content; keep JSON keys exactly as requested.',
 ].join(' ');
+
+const addScheduleFields = (
+    payload: Record<string, unknown>,
+    input: { startTime?: string; dueDate?: string; reviewAt?: string }
+) => {
+    const schedule: Record<string, string> = {};
+    if (input.startTime) schedule.startTime = input.startTime;
+    if (input.dueDate) schedule.dueDate = input.dueDate;
+    if (input.reviewAt) schedule.reviewAt = input.reviewAt;
+    if (Object.keys(schedule).length > 0) {
+        payload.schedule = schedule;
+    }
+};
 
 export function buildClarifyPrompt(input: ClarifyInput): { system: string; user: string } {
     const contexts = (input.contexts || []).filter(Boolean);
     const projectTasks = (input.projectTasks || []).filter(Boolean);
     const payload: Record<string, unknown> = { title: input.title, contexts };
+    addScheduleFields(payload, input);
     if (input.projectTitle || projectTasks.length > 0) {
         payload.project = {
             title: input.projectTitle || '',
@@ -19,6 +34,7 @@ export function buildClarifyPrompt(input: ClarifyInput): { system: string; user:
         };
     }
     const user = [
+        `Current time: ${new Date().toISOString()}.`,
         'Task:',
         JSON.stringify(payload),
         'Goal: turn this into a concrete next action.',
@@ -26,6 +42,7 @@ export function buildClarifyPrompt(input: ClarifyInput): { system: string; user:
         '1) If vague, ask a single clarifying question.',
         '2) Suggest 2-4 concrete options.',
         '3) Prefer verbs at the start.',
+        '4) Respect schedule.startTime, schedule.dueDate, and schedule.reviewAt. If startTime or reviewAt is in the future, avoid "do this now" framing; suggest preparation or defer-aware clarification instead.',
         'Output JSON with:',
         '{ "question": string, "options": [{ "label": string, "action": string }], "suggestedAction"?: { "title": string, "timeEstimate"?: string, "context"?: string, "isProject"?: boolean } }',
     ].join('\n');
@@ -63,12 +80,16 @@ export function buildReviewAnalysisPrompt(items: ReviewSnapshotItem[]): { system
         : 'Analyze this list of stale items (untouched for >14 days).';
     const user = [
         'You are a ruthless GTD coach.',
+        `Current time: ${new Date().toISOString()}.`,
         scope,
         'For each item, suggest ONE action:',
         '- "someday": move to Someday/Maybe.',
         '- "archive": archive it (likely done or irrelevant).',
         '- "breakdown": too big; needs subtasks.',
         '- "keep": still valid, do nothing.',
+        'Scheduling rules:',
+        '- If startTime or reviewAt is in the future, choose "keep" unless another explicit reason in the item says otherwise.',
+        '- Do not suggest "archive" or claim an item is likely done only because a future-dated item has not changed recently.',
         'Return strictly valid JSON:',
         '{ "suggestions": [{ "id": "task_id", "action": "someday|archive|breakdown|keep", "reason": "..." }] }',
         'Items:',
@@ -86,13 +107,13 @@ export function buildCopilotPrompt(input: { title: string; contexts?: string[]; 
         'Predict the likely context, tags, and time estimate.',
         'Rules:',
         '- If uncertain, return null values.',
-        '- Context must match one from the list or be a standard GTD context (@phone, @computer, @errands, @office, @home).',
-        '- Tags must match one from the list or be empty. Use #tag format.',
+        '- Context must match one from contextCandidates or be null.',
+        '- Prefer tags from tagCandidates. If none fit and one concise reusable tag is obvious, propose it in #tag format; otherwise return an empty array.',
         '- timeEstimate must be one of: 5min, 10min, 15min, 30min, 1hr, 2hr, 3hr, 4hr, 4hr+.',
         'Output JSON:',
         '{ "context": "@phone", "tags": ["#creative"], "timeEstimate": "15min" }',
         'Task:',
-        JSON.stringify({ title: input.title, contexts, tags }),
+        JSON.stringify({ title: input.title, contextCandidates: contexts, tagCandidates: tags }),
     ].join('\n');
 
     return { system: SYSTEM_PROMPT, user };

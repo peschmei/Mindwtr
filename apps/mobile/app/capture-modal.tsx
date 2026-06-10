@@ -217,7 +217,7 @@ export default function CaptureScreen() {
           abortController ? { signal: abortController.signal } : undefined
         );
         if (cancelled || !copilotMountedRef.current) return;
-        if (!suggestion.context && (!timeEstimatesEnabled || !suggestion.timeEstimate)) {
+        if (!suggestion.context && (!timeEstimatesEnabled || !suggestion.timeEstimate) && !suggestion.tags?.length) {
           setCopilotSuggestion(null);
         } else {
           setCopilotSuggestion(suggestion);

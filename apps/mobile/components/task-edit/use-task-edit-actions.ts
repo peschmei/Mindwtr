@@ -612,6 +612,9 @@ export function useTaskEditActions({
             const response = await provider.clarifyTask({
                 title,
                 contexts: contextOptions,
+                startTime: editedTask.startTime ?? task.startTime,
+                dueDate: editedTask.dueDate ?? task.dueDate,
+                reviewAt: editedTask.reviewAt ?? task.reviewAt,
                 ...(projectContext ?? {}),
             });
             const actions: AIResponseAction[] = response.options.slice(0, 3).map((option) => ({

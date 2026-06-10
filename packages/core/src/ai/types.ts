@@ -17,6 +17,9 @@ export interface ReviewSnapshotItem {
     title: string;
     daysStale: number;
     status: 'next' | 'waiting' | 'project';
+    startTime?: string;
+    dueDate?: string;
+    reviewAt?: string;
 }
 
 export interface ReviewSuggestion {
@@ -70,6 +73,9 @@ export interface BreakdownResponse {
 export interface ClarifyInput {
     title: string;
     contexts?: string[];
+    startTime?: string;
+    dueDate?: string;
+    reviewAt?: string;
     projectTitle?: string;
     projectTasks?: string[];
 }

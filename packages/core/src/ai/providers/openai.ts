@@ -12,6 +12,42 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const resolveTimeoutMs = (value?: number) =>
     typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMEOUT_MS;
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const extractText = (value: unknown): string => {
+    if (typeof value === 'string') return value.trim();
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => {
+                if (typeof item === 'string') return item;
+                if (!isRecord(item)) return '';
+                const text = item.text ?? item.content;
+                return typeof text === 'string' ? text : '';
+            })
+            .filter(Boolean)
+            .join('\n')
+            .trim();
+    }
+    if (isRecord(value)) {
+        const text = value.text ?? value.content;
+        if (typeof text === 'string') return text.trim();
+        if (Array.isArray(value.summary)) return extractText(value.summary);
+        if (typeof value.summary === 'string') return value.summary.trim();
+    }
+    return '';
+};
+
+const extractOpenAIMessageText = (message: unknown): string => {
+    if (!isRecord(message)) return '';
+    const contentText = extractText(message.content);
+    if (contentText) return contentText;
+
+    const reasoningContent = extractText(message.reasoning_content);
+    if (reasoningContent) return reasoningContent;
+
+    return extractText(message.reasoning);
+};
+
 async function buildOpenAIError(response: Response, usingOfficialOpenAI: boolean): Promise<Error> {
     const status = response.status;
     let message = '';
@@ -136,10 +172,10 @@ async function requestOpenAI(config: AIProviderConfig, prompt: { system: string;
     }
 
     const result = await response.json() as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{ message?: unknown }>;
     };
 
-    const text = result.choices?.[0]?.message?.content;
+    const text = extractOpenAIMessageText(result.choices?.[0]?.message);
     if (!text) {
         throw new Error('OpenAI returned no content.');
     }

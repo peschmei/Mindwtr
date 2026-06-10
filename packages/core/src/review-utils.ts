@@ -26,6 +26,9 @@ export function getStaleItems(
             title: task.title,
             daysStale,
             status: task.status === 'waiting' ? 'waiting' : 'next',
+            startTime: task.startTime,
+            dueDate: task.dueDate,
+            reviewAt: task.reviewAt,
         });
     });
 
@@ -41,6 +44,8 @@ export function getStaleItems(
             title: project.title,
             daysStale,
             status: 'project',
+            dueDate: project.dueDate,
+            reviewAt: project.reviewAt,
         });
     });
 
