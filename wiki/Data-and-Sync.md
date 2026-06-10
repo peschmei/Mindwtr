@@ -571,6 +571,16 @@ The `data.json` file structure:
       "updatedAt": "2025-01-10T15:30:00Z"
     }
   ],
+  "sections": [
+    {
+      "id": "uuid",
+      "projectId": "project-uuid",
+      "title": "Section title",
+      "order": 1,
+      "createdAt": "2025-01-01T10:00:00Z",
+      "updatedAt": "2025-01-10T15:30:00Z"
+    }
+  ],
   "areas": [
     {
       "id": "uuid",
