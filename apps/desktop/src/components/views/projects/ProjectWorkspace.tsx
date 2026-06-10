@@ -722,12 +722,27 @@ export function ProjectWorkspace({
         if (!highlightTaskId) return;
         const exists = [...orderedProjectTaskList, ...projectReferenceTasks].some((task) => task.id === highlightTaskId);
         if (!exists) return;
-        const el = document.querySelector(`[data-task-id="${highlightTaskId}"]`) as HTMLElement | null;
-        if (el) {
-            el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }
+        let retryTimer: number | null = null;
+        let cancelled = false;
+        let attempts = 0;
+        const scrollHighlightedTask = () => {
+            if (cancelled) return;
+            const el = document.querySelector(`[data-task-id="${highlightTaskId}"]`) as HTMLElement | null;
+            if (el) {
+                el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                return;
+            }
+            if (attempts >= 8) return;
+            attempts += 1;
+            retryTimer = window.setTimeout(scrollHighlightedTask, 50);
+        };
+        scrollHighlightedTask();
         const timer = window.setTimeout(() => setHighlightTask(null), 4000);
-        return () => window.clearTimeout(timer);
+        return () => {
+            cancelled = true;
+            if (retryTimer !== null) window.clearTimeout(retryTimer);
+            window.clearTimeout(timer);
+        };
     }, [highlightTaskId, orderedProjectTaskList, projectReferenceTasks, setHighlightTask]);
 
     const { taskIdsByContainer, taskIdToContainer } = useMemo(() => {

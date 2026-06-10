@@ -281,11 +281,28 @@ export function useListSelection({
         setSelectedIndex(index);
         if (shouldVirtualize) {
             scrollToVirtualIndex(index, 'center');
-        }
-
-        const element = document.querySelector(`[data-task-id="${highlightTaskId}"]`) as HTMLElement | null;
-        if (element && typeof (element as { scrollIntoView?: (options?: ScrollIntoViewOptions) => void }).scrollIntoView === 'function') {
-            element.scrollIntoView({ block: 'center' });
+        } else {
+            let retryTimer: number | null = null;
+            let cancelled = false;
+            let attempts = 0;
+            const scrollHighlightedTask = () => {
+                if (cancelled) return;
+                const element = document.querySelector(`[data-task-id="${highlightTaskId}"]`) as HTMLElement | null;
+                if (element && typeof (element as { scrollIntoView?: (options?: ScrollIntoViewOptions) => void }).scrollIntoView === 'function') {
+                    element.scrollIntoView({ block: 'center' });
+                    return;
+                }
+                if (attempts >= 8) return;
+                attempts += 1;
+                retryTimer = window.setTimeout(scrollHighlightedTask, 50);
+            };
+            scrollHighlightedTask();
+            const timer = window.setTimeout(() => setHighlightTask(null), 4000);
+            return () => {
+                cancelled = true;
+                if (retryTimer !== null) window.clearTimeout(retryTimer);
+                window.clearTimeout(timer);
+            };
         }
 
         const timer = window.setTimeout(() => setHighlightTask(null), 4000);

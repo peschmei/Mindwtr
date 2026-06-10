@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Project, Task } from '@mindwtr/core';
@@ -218,6 +218,41 @@ describe('ProjectWorkspace Select mode', () => {
         });
         expect(setHighlightTask).toHaveBeenCalledWith('created-task');
         expect(useUiStore.getState().editingTaskId).toBe('created-task');
+    });
+
+    it('retries scrolling to a highlighted project task after navigation', async () => {
+        vi.useFakeTimers();
+        const highlightedTask = task('task-1', 'Highlighted task');
+        const scrollIntoView = vi.fn();
+        let highlightQueryCount = 0;
+        const originalQuerySelector = document.querySelector.bind(document);
+        const querySelectorSpy = vi.spyOn(document, 'querySelector').mockImplementation((selector) => {
+            if (selector === '[data-task-id="task-1"]') {
+                highlightQueryCount += 1;
+                return highlightQueryCount === 1
+                    ? null
+                    : ({ scrollIntoView } as unknown as Element);
+            }
+            return originalQuerySelector(selector);
+        });
+
+        try {
+            renderWorkspace({
+                allTasks: [highlightedTask],
+                highlightTaskId: highlightedTask.id,
+            });
+
+            expect(scrollIntoView).not.toHaveBeenCalled();
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(50);
+            });
+
+            expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' });
+        } finally {
+            querySelectorSpy.mockRestore();
+            vi.useRealTimers();
+        }
     });
 
     it('selects all visible project tasks and clears the selection', () => {
