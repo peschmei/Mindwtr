@@ -2,6 +2,8 @@ import type { AppData, Attachment } from './types';
 import { normalizeSavedFilters } from './saved-filters';
 import { SYNC_FILE_NAME } from './sync-service-utils';
 
+const MISSING_ATTACHMENT_TIMESTAMP_SENTINEL = '1970-01-01T00:00:00.000Z';
+
 export type SoftDeletable = {
     deletedAt?: string | null;
 };
@@ -131,10 +133,9 @@ export const sanitizeAppDataForRemote = (data: AppData): AppData => {
             const hasCloudKey = hasNonEmptyValue(attachment.cloudKey);
             if (!attachment.deletedAt) {
                 if ((ownerDeleted && !hasCloudKey) || (attachment.localStatus === 'missing' && !hasCloudKey)) {
-                    const nowIso = new Date().toISOString();
                     const fallbackUpdatedAt = hasNonEmptyValue(attachment.updatedAt)
                         ? attachment.updatedAt
-                        : nowIso;
+                        : MISSING_ATTACHMENT_TIMESTAMP_SENTINEL;
                     return {
                         ...attachment,
                         deletedAt: fallbackUpdatedAt,

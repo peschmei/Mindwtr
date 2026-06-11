@@ -488,4 +488,20 @@ describe('sync-helpers computeSyncPayloadFingerprint', () => {
 
         expect(computeSyncPayloadFingerprint(left)).not.toBe(computeSyncPayloadFingerprint(right));
     });
+
+    it('uses a deterministic fallback timestamp for missing file attachments', () => {
+        const data = createData([
+            fileAttachment({
+                updatedAt: '',
+                localStatus: 'missing',
+                cloudKey: undefined,
+            }),
+        ]);
+
+        const sanitized = sanitizeAppDataForRemote(data);
+        const attachment = sanitized.tasks[0].attachments?.[0];
+        expect(attachment?.updatedAt).toBe('1970-01-01T00:00:00.000Z');
+        expect(attachment?.deletedAt).toBe('1970-01-01T00:00:00.000Z');
+        expect(computeSyncPayloadFingerprint(data)).toBe(computeSyncPayloadFingerprint(data));
+    });
 });
