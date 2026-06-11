@@ -16,6 +16,7 @@ import {
     replaceEntityInArray,
     replaceEntityInMap,
     type ProjectOrderReserver,
+    toVisibleTask,
     updateVisibleTasks,
 } from './store-helpers';
 import { logWarn } from './logger';
@@ -94,6 +95,41 @@ const normalizeOptionalReferenceId = (value: unknown): string | undefined => (
 );
 const normalizeProjectIdInput = normalizeOptionalReferenceId;
 
+const applyVisibleTaskChanges = (
+    visibleTasks: Task[],
+    changedTasks: readonly Task[],
+    addedTasks: readonly Task[] = []
+): Task[] => {
+    if (changedTasks.length === 0 && addedTasks.length === 0) return visibleTasks;
+    const changedById = new Map(changedTasks.map((task) => [task.id, task]));
+    const emittedIds = new Set<string>();
+    let changed = false;
+    const nextVisibleTasks: Task[] = [];
+
+    for (const visibleTask of visibleTasks) {
+        const updatedTask = changedById.get(visibleTask.id);
+        if (!updatedTask) {
+            nextVisibleTasks.push(visibleTask);
+            emittedIds.add(visibleTask.id);
+            continue;
+        }
+        changed = true;
+        emittedIds.add(visibleTask.id);
+        if (isTaskVisible(updatedTask)) {
+            nextVisibleTasks.push(toVisibleTask(updatedTask));
+        }
+    }
+
+    for (const task of [...changedTasks, ...addedTasks]) {
+        if (emittedIds.has(task.id) || !isTaskVisible(task)) continue;
+        nextVisibleTasks.push(toVisibleTask(task));
+        emittedIds.add(task.id);
+        changed = true;
+    }
+
+    return changed ? nextVisibleTasks : visibleTasks;
+};
+
 type MutateTasksOptions = {
     selectTasks: (state: TaskStore) => Task[];
     buildUpdates: (task: Task, context: { now: string }) => Partial<Task>;
@@ -120,7 +156,6 @@ const mutateTasks = async (
         if (selectedTasks.length === 0 && !deviceState.updated) {
             return state;
         }
-        let nextVisibleTasks = state.tasks;
         const changedTasks = selectedTasks.map((task) => {
             const updatedTask: Task = {
                 ...task,
@@ -129,11 +164,11 @@ const mutateTasks = async (
                 rev: nextRevision(task.rev),
                 revBy: deviceState.deviceId,
             };
-            if (options.updateVisible !== false) {
-                nextVisibleTasks = updateVisibleTasks(nextVisibleTasks, task, updatedTask);
-            }
             return updatedTask;
         });
+        const nextVisibleTasks = options.updateVisible !== false
+            ? applyVisibleTaskChanges(state.tasks, changedTasks)
+            : state.tasks;
         const nextAllTasks = changedTasks.length > 0
             ? replaceEntitiesInArray(state._allTasks, changedTasks)
             : state._allTasks;
@@ -893,7 +928,6 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
 
         set((state) => {
             const deviceState = ensureDeviceId(state.settings);
-            let newVisibleTasks = state.tasks;
             let nextRecurringTasks: Task[] = [];
             const changedTasks: Task[] = [];
             const newAllTasksBase = [...state._allTasks];
@@ -923,7 +957,6 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 if (nextRecurringTask && !duplicateFollowUp) {
                     nextRecurringTasks = [...nextRecurringTasks, nextRecurringTask];
                 }
-                newVisibleTasks = updateVisibleTasks(newVisibleTasks, task, updatedTask);
                 newAllTasksBase[index] = updatedTask;
                 changedTasks.push(updatedTask);
             }
@@ -931,11 +964,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             const newAllTasks = nextRecurringTasks.length > 0
                 ? [...newAllTasksBase, ...nextRecurringTasks]
                 : newAllTasksBase;
-            if (nextRecurringTasks.length > 0) {
-                nextRecurringTasks.forEach((task) => {
-                    newVisibleTasks = updateVisibleTasks(newVisibleTasks, null, task);
-                });
-            }
+            const newVisibleTasks = applyVisibleTaskChanges(state.tasks, changedTasks, nextRecurringTasks);
 
             snapshot = buildSaveSnapshot(state, {
                 tasks: newAllTasks,
