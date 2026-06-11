@@ -36,6 +36,12 @@ const renderWithProviders = () => {
     );
 };
 
+const getRenderedTaskTitles = (column: HTMLElement, titles: string[]): string[] => (
+    Array.from(column.querySelectorAll('[role="listitem"]'))
+        .map((item) => titles.find((title) => item.textContent?.includes(title)))
+        .filter((title): title is string => Boolean(title))
+);
+
 describe('BoardView', () => {
     beforeEach(() => {
         window.localStorage.clear();
@@ -172,9 +178,34 @@ describe('BoardView', () => {
         const { getByRole } = renderWithProviders();
 
         const column = getByRole('list', { name: /next actions tasks list/i });
-        const titles = Array.from(column.querySelectorAll('[role="listitem"]')).map(
-            (item) => ['Task Q', 'Task W', 'Task E', 'Task R'].find((title) => item.textContent?.includes(title)),
-        );
+        const titles = getRenderedTaskTitles(column, ['Task Q', 'Task W', 'Task E', 'Task R']);
+        expect(titles).toEqual(['Task E', 'Task Q', 'Task W', 'Task R']);
+    });
+
+    it('keeps manual board order when a non-default task sort is selected', () => {
+        const baseTask = {
+            status: 'next' as const,
+            tags: [],
+            contexts: [],
+            createdAt: '2026-05-18T12:00:00.000Z',
+            updatedAt: '2026-05-18T12:00:00.000Z',
+        };
+        useTaskStore.setState({
+            tasks: [
+                { ...baseTask, id: 'task-q', title: 'Task Q', boardOrder: 1, createdAt: '2026-05-18T12:00:00.000Z' },
+                { ...baseTask, id: 'task-w', title: 'Task W', boardOrder: 2, createdAt: '2026-05-19T12:00:00.000Z' },
+                { ...baseTask, id: 'task-e', title: 'Task E', boardOrder: 0, createdAt: '2026-05-20T12:00:00.000Z' },
+                { ...baseTask, id: 'task-r', title: 'Task R', createdAt: '2026-05-21T12:00:00.000Z' },
+            ],
+            projects: [],
+            areas: [],
+            settings: { taskSortBy: 'created-desc' },
+        });
+
+        const { getByRole } = renderWithProviders();
+
+        const column = getByRole('list', { name: /next actions tasks list/i });
+        const titles = getRenderedTaskTitles(column, ['Task Q', 'Task W', 'Task E', 'Task R']);
         expect(titles).toEqual(['Task E', 'Task Q', 'Task W', 'Task R']);
     });
 });
