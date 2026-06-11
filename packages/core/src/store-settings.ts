@@ -69,6 +69,51 @@ export const clearDerivedCache = () => {
 
 const settingsValueChanged = (left: unknown, right: unknown): boolean => JSON.stringify(left ?? null) !== JSON.stringify(right ?? null);
 
+const getAutoArchiveDays = (settings: AppData['settings']): number => {
+    const configuredArchiveDays = settings.gtd?.autoArchiveDays;
+    return Number.isFinite(configuredArchiveDays)
+        ? Math.max(0, Math.floor(configuredArchiveDays as number))
+        : 7;
+};
+
+const autoArchiveStaleCompletedTasks = (
+    tasks: Task[],
+    settings: AppData['settings'],
+    context: { nowIso: string; nowMs: number; deviceId: string; enabled?: boolean }
+): { tasks: Task[]; didAutoArchive: boolean } => {
+    const archiveDays = getAutoArchiveDays(settings);
+    if (context.enabled === false || archiveDays <= 0) {
+        return { tasks, didAutoArchive: false };
+    }
+
+    const cutoffMs = context.nowMs - archiveDays * 24 * 60 * 60 * 1000;
+    let didAutoArchive = false;
+    const archivedTasks = tasks.map((task): Task => {
+        if (task.deletedAt) return task;
+        if (task.status !== 'done') return task;
+        const completedAt = safeParseDate(task.completedAt)?.getTime() ?? NaN;
+        const updatedAt = safeParseDate(task.updatedAt)?.getTime() ?? NaN;
+        const resolvedCompletedAt = Number.isFinite(completedAt) ? completedAt : updatedAt;
+        if (!Number.isFinite(resolvedCompletedAt) || resolvedCompletedAt <= 0) return task;
+        if (resolvedCompletedAt >= cutoffMs) return task;
+        didAutoArchive = true;
+        return {
+            ...task,
+            status: 'archived' as const,
+            completedAt: Number.isFinite(completedAt) ? task.completedAt : task.updatedAt || context.nowIso,
+            isFocusedToday: false,
+            updatedAt: context.nowIso,
+            rev: nextRevision(task.rev),
+            revBy: context.deviceId,
+        };
+    });
+
+    return {
+        tasks: didAutoArchive ? archivedTasks : tasks,
+        didAutoArchive,
+    };
+};
+
 const mergeSettingsUpdates = (
     settings: AppData['settings'],
     updates: Partial<AppData['settings']>
@@ -662,34 +707,14 @@ export const createSettingsActions = ({
             });
 
             // Auto-archive stale completed items to keep day-to-day UI fast/clean.
-            const configuredArchiveDays = settings.gtd?.autoArchiveDays;
-            const archiveDays = Number.isFinite(configuredArchiveDays)
-                ? Math.max(0, Math.floor(configuredArchiveDays as number))
-                : 7;
-            const shouldAutoArchive = archiveDays > 0;
-            const cutoffMs = shouldAutoArchive ? Date.now() - archiveDays * 24 * 60 * 60 * 1000 : 0;
-            let didAutoArchive = false;
-            if (shouldAutoArchive && shouldRunAutoArchive) {
-                allTasks = allTasks.map((task) => {
-                    if (task.deletedAt) return task;
-                    if (task.status !== 'done') return task;
-                    const completedAt = safeParseDate(task.completedAt)?.getTime() ?? NaN;
-                    const updatedAt = safeParseDate(task.updatedAt)?.getTime() ?? NaN;
-                    const resolvedCompletedAt = Number.isFinite(completedAt) ? completedAt : updatedAt;
-                    if (!Number.isFinite(resolvedCompletedAt) || resolvedCompletedAt <= 0) return task;
-                    if (resolvedCompletedAt >= cutoffMs) return task;
-                    didAutoArchive = true;
-                    return {
-                        ...task,
-                        status: 'archived',
-                        completedAt: Number.isFinite(completedAt) ? task.completedAt : task.updatedAt || nowIso,
-                        isFocusedToday: false,
-                        updatedAt: nowIso,
-                        rev: nextRevision(task.rev),
-                        revBy: nextSettings.deviceId,
-                    };
-                });
-            }
+            const autoArchiveResult = autoArchiveStaleCompletedTasks(allTasks, settings, {
+                nowIso,
+                nowMs,
+                deviceId: deviceState.deviceId,
+                enabled: shouldRunAutoArchive,
+            });
+            allTasks = autoArchiveResult.tasks;
+            const didAutoArchive = autoArchiveResult.didAutoArchive;
             let didProjectOrderMigration = false;
             let didAreaMigration = didNormalizeAreaTimestamps;
             let didRunAreaDedupePass = false;
@@ -1158,38 +1183,14 @@ export const createSettingsActions = ({
             const newSettings = syncUpdated ? { ...nextSettings, syncPreferencesUpdatedAt: nextSyncUpdatedAt } : nextSettings;
             const shouldTrackChange = shouldTrackSettingsChange(state.settings, newSettings, updates);
             if (archiveDaysUpdate) {
-                const configuredArchiveDays = newSettings.gtd?.autoArchiveDays;
-                const archiveDays = Number.isFinite(configuredArchiveDays)
-                    ? Math.max(0, Math.floor(configuredArchiveDays as number))
-                    : 7;
-                const shouldAutoArchive = archiveDays > 0;
-                const cutoffMs = shouldAutoArchive ? Date.now() - archiveDays * 24 * 60 * 60 * 1000 : 0;
-                let didAutoArchive = false;
+                const autoArchiveResult = autoArchiveStaleCompletedTasks(state._allTasks, newSettings, {
+                    nowIso,
+                    nowMs: Date.now(),
+                    deviceId: deviceState.deviceId,
+                });
+                const newAllTasks = autoArchiveResult.tasks;
 
-                let newAllTasks = state._allTasks;
-                if (shouldAutoArchive) {
-                    newAllTasks = newAllTasks.map((task) => {
-                        if (task.deletedAt) return task;
-                        if (task.status !== 'done') return task;
-                        const completedAt = safeParseDate(task.completedAt)?.getTime() ?? NaN;
-                        const updatedAt = safeParseDate(task.updatedAt)?.getTime() ?? NaN;
-                        const resolvedCompletedAt = Number.isFinite(completedAt) ? completedAt : updatedAt;
-                        if (!Number.isFinite(resolvedCompletedAt) || resolvedCompletedAt <= 0) return task;
-                        if (resolvedCompletedAt >= cutoffMs) return task;
-                        didAutoArchive = true;
-                        return {
-                            ...task,
-                            status: 'archived',
-                            isFocusedToday: false,
-                            updatedAt: nowIso,
-                            completedAt: Number.isFinite(completedAt) ? task.completedAt : task.updatedAt || nowIso,
-                            rev: nextRevision(task.rev),
-                            revBy: deviceState.deviceId,
-                        };
-                    });
-                }
-
-                if (didAutoArchive) {
+                if (autoArchiveResult.didAutoArchive) {
                     const newVisibleTasks = selectVisibleTasks(newAllTasks);
                     snapshot = buildSaveSnapshot(state, { tasks: newAllTasks, settings: newSettings });
                     return {
