@@ -6,6 +6,7 @@ import {
     createCurrentRecurringCalendarTask,
     expandCalendarRecurringTasks,
     createProjectedRecurringTask,
+    formatRecurrenceLabel,
     getProjectedRecurringTaskId,
     isProjectedRecurringTask,
     normalizeRecurrenceForLoad,
@@ -13,6 +14,36 @@ import {
 import type { Task } from './types';
 
 describe('recurrence', () => {
+    const t = (key: string) => ({
+        'recurrence.daily': 'Daily',
+        'recurrence.weekly': 'Weekly',
+        'recurrence.repeatEvery': 'Repeat every',
+        'recurrence.dayUnit': 'day(s)',
+        'recurrence.weekUnit': 'week(s)',
+        'recurrence.endsAfterCount': 'After',
+        'recurrence.endsOnDate': 'On date',
+        'recurrence.occurrenceUnit': 'occurrence(s)',
+        'recurrence.afterCompletionShort': 'after completion',
+    }[key] ?? key);
+
+    it('formats daily recurrence intervals for display', () => {
+        const label = formatRecurrenceLabel({
+            recurrence: { rule: 'daily', rrule: 'FREQ=DAILY;INTERVAL=3' },
+            t,
+        });
+
+        expect(label).toBe('Daily · Repeat every 3 day(s)');
+    });
+
+    it('formats recurrence end metadata for display', () => {
+        const label = formatRecurrenceLabel({
+            recurrence: { rule: 'weekly', strategy: 'fluid', rrule: 'FREQ=WEEKLY;INTERVAL=2;COUNT=4' },
+            t,
+        });
+
+        expect(label).toBe('Weekly · after completion · Repeat every 2 week(s) · After 4 occurrence(s)');
+    });
+
     it('builds and parses weekly BYDAY rules', () => {
         const rrule = buildRRuleString('weekly', ['WE', 'MO']);
         expect(rrule).toBe('FREQ=WEEKLY;BYDAY=MO,WE');

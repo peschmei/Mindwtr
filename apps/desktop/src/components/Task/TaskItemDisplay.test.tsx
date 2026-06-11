@@ -141,6 +141,45 @@ describe('TaskItemDisplay', () => {
         expect(getByText('Starts after due date')).toBeInTheDocument();
     });
 
+    it('shows the daily recurrence interval in task metadata', () => {
+        const { getByText } = render(
+            <LanguageProvider>
+                <TaskItemDisplay
+                    task={{
+                        ...baseTask,
+                        recurrence: { rule: 'daily', rrule: 'FREQ=DAILY;INTERVAL=3' },
+                    }}
+                    language="en"
+                    selectionMode={false}
+                    isViewOpen={false}
+                    actions={{
+                        onToggleView: vi.fn(),
+                        onEdit: vi.fn(),
+                        onDelete: vi.fn(),
+                        onDuplicate: vi.fn(),
+                        onStatusChange: vi.fn(),
+                        openAttachment: vi.fn(),
+                    }}
+                    visibleAttachments={[]}
+                    recurrenceRule="daily"
+                    recurrenceStrategy="strict"
+                    prioritiesEnabled={false}
+                    timeEstimatesEnabled={false}
+                    isStagnant={false}
+                    showQuickDone={false}
+                    readOnly={false}
+                    t={(key: string) => ({
+                        'recurrence.daily': 'Daily',
+                        'recurrence.repeatEvery': 'Repeat every',
+                        'recurrence.dayUnit': 'day(s)',
+                    }[key] ?? key)}
+                />
+            </LanguageProvider>
+        );
+
+        expect(getByText('Daily · Repeat every 3 day(s)')).toBeInTheDocument();
+    });
+
     it('wraps long task titles instead of truncating them', () => {
         const longTitle = 'This is a task for a project in a narrow split-screen workspace';
 

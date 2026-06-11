@@ -60,7 +60,11 @@ const translate = vi.hoisted(() => {
     'projects.nextActionPromptAddButton': 'Add next action',
     'task.aria.delete': 'Delete task',
     'task.deleteConfirmBody': 'Move this task to Trash?',
+    'taskEdit.recurrenceLabel': 'Recurrence',
     'taskEdit.startDateLabel': 'Start',
+    'recurrence.daily': 'Daily',
+    'recurrence.repeatEvery': 'Repeat every',
+    'recurrence.dayUnit': 'day(s)',
   };
   return (key: string) => labels[key] ?? key;
 });
@@ -104,6 +108,20 @@ vi.mock('@mindwtr/core', () => {
       };
     },
     formatFocusTaskLimitText: (template: string, limit: number) => template.replace('{{count}}', String(limit)),
+    formatRecurrenceLabel: ({ recurrence, t }: any) => {
+      const rule = typeof recurrence === 'string' ? recurrence : recurrence?.rule;
+      if (!rule) return '';
+      const intervalMatch = typeof recurrence === 'object'
+        ? /INTERVAL=(\d+)/.exec(recurrence.rrule || '')
+        : null;
+      const interval = intervalMatch ? Number(intervalMatch[1]) : 1;
+      return [
+        t(`recurrence.${rule}`),
+        rule === 'daily' && interval > 1
+          ? `${t('recurrence.repeatEvery')} ${interval} ${t('recurrence.dayUnit')}`
+          : undefined,
+      ].filter(Boolean).join(' · ');
+    },
     shallow: (value: unknown) => value,
     getChecklistProgress,
     getTaskAgeLabel,
@@ -212,6 +230,7 @@ vi.mock('../contexts/toast-context', () => ({
 vi.mock('lucide-react-native', () => ({
   ArrowRight: (props: any) => React.createElement('ArrowRight', props),
   Check: (props: any) => React.createElement('Check', props),
+  Repeat: (props: any) => React.createElement('Repeat', props),
   RotateCcw: (props: any) => React.createElement('RotateCcw', props),
   Trash2: (props: any) => React.createElement('Trash2', props),
 }));
@@ -414,6 +433,43 @@ describe('SwipeableTaskItem', () => {
     });
 
     expect(onLongPressAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows recurring task metadata in the mobile row', () => {
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(
+        <SwipeableTaskItem
+          task={{
+            id: 'task-1',
+            title: 'Water plants',
+            status: 'next',
+            recurrence: { rule: 'daily', rrule: 'FREQ=DAILY;INTERVAL=3' },
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          } as any}
+          isDark={false}
+          tc={{
+            taskItemBg: '#111111',
+            border: '#222222',
+            text: '#ffffff',
+            secondaryText: '#999999',
+            tint: '#3b82f6',
+            warning: '#f59e0b',
+          } as any}
+          onPress={vi.fn()}
+          onStatusChange={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+    });
+
+    expect(hasText(tree, 'Daily · Repeat every 3 day(s)')).toBe(true);
+    expect(tree.root.findAll((node) => (node.type as unknown) === 'Repeat')).toHaveLength(1);
+    expect(tree.root.findAll((node) => (
+      node.props.accessibilityLabel === 'Water plants. Status: Next. Recurrence: Daily · Repeat every 3 day(s)'
+      && Array.isArray(node.props.accessibilityActions)
+    )).length).toBeGreaterThan(0);
   });
 
   it('uses long press to toggle selection when no custom long-press action is present', () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { CheckSquare, Square } from 'lucide-react-native';
-import { getAttachmentDisplayTitle, getRecurrenceCountValue, getRecurrenceUntilValue, hasTimeComponent, parseRRuleString, tFallback } from '@mindwtr/core';
+import { formatRecurrenceLabel, getAttachmentDisplayTitle, hasTimeComponent, tFallback } from '@mindwtr/core';
 import type {
   Attachment,
   Area,
@@ -60,8 +60,6 @@ function TaskEditViewTabComponent({
   formatTimeEstimateLabel,
   formatDate,
   formatDueDate,
-  getRecurrenceRuleValue,
-  getRecurrenceStrategyValue,
   applyChecklistUpdate,
   visibleAttachments,
   openAttachment,
@@ -145,27 +143,7 @@ function TaskEditViewTabComponent({
   const timeEstimateLabel = mergedTask.timeEstimate
     ? (formatTimeEstimateLabel(mergedTask.timeEstimate as TimeEstimate) || String(mergedTask.timeEstimate))
     : undefined;
-  const recurrenceRule = getRecurrenceRuleValue(mergedTask.recurrence);
-  const recurrenceStrategy = getRecurrenceStrategyValue(mergedTask.recurrence);
-  const recurrenceCount = getRecurrenceCountValue(mergedTask.recurrence);
-  const recurrenceUntil = getRecurrenceUntilValue(mergedTask.recurrence);
-  const recurrenceInterval = mergedTask.recurrence && typeof mergedTask.recurrence === 'object' && mergedTask.recurrence.rrule
-    ? parseRRuleString(mergedTask.recurrence.rrule).interval
-    : undefined;
-  const recurrenceParts = recurrenceRule
-    ? [
-        `${t(`recurrence.${recurrenceRule}`) || recurrenceRule}${recurrenceStrategy === 'fluid' ? ` · ${t('recurrence.afterCompletionShort')}` : ''}`,
-        recurrenceRule === 'weekly' && recurrenceInterval && recurrenceInterval > 1
-          ? `${t('recurrence.repeatEvery')} ${recurrenceInterval} ${t('recurrence.weekUnit')}`
-          : undefined,
-        recurrenceRule === 'monthly' && recurrenceInterval && recurrenceInterval > 1
-          ? `${t('recurrence.repeatEvery')} ${recurrenceInterval} ${t('recurrence.monthUnit')}`
-          : undefined,
-        recurrenceUntil ? `${t('recurrence.endsOnDate')} ${formatDate(recurrenceUntil)}` : undefined,
-        recurrenceCount ? `${t('recurrence.endsAfterCount')} ${recurrenceCount} ${t('recurrence.occurrenceUnit')}` : undefined,
-      ].filter(Boolean)
-    : [];
-  const recurrenceLabel = recurrenceParts.length > 0 ? recurrenceParts.join(' · ') : undefined;
+  const recurrenceLabel = formatRecurrenceLabel({ recurrence: mergedTask.recurrence, t, formatDate }) || undefined;
   const hasReminderHandoffSchedule = hasTimeComponent(mergedTask.startTime) || hasTimeComponent(mergedTask.dueDate);
 
   return (

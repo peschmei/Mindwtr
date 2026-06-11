@@ -1,6 +1,6 @@
 import { addDays, addMonths, addWeeks, format } from 'date-fns';
 
-import { safeParseDate } from './date';
+import { safeFormatDate, safeParseDate } from './date';
 import { generateUUID as uuidv4 } from './uuid';
 import type { Recurrence, RecurrenceByDay, RecurrenceRule, RecurrenceStrategy, RecurrenceWeekday, Task, TaskStatus, ChecklistItem, Attachment } from './types';
 
@@ -34,6 +34,12 @@ type BuildRRuleOptions = {
     weekStart?: RecurrenceWeekday;
     count?: number;
     until?: string;
+};
+
+type FormatRecurrenceLabelOptions = {
+    recurrence: Task['recurrence'];
+    t: (key: string) => string;
+    formatDate?: (value: string) => string;
 };
 
 export type ProjectedRecurringTask = Task & {
@@ -391,6 +397,32 @@ export function getRecurrenceCompletedOccurrencesValue(value: Task['recurrence']
         return undefined;
     }
     return Math.floor(recurrence.completedOccurrences);
+}
+
+export function formatRecurrenceLabel({ recurrence, t, formatDate }: FormatRecurrenceLabelOptions): string {
+    const rule = getRecurrenceRule(recurrence);
+    if (!rule) return '';
+
+    const strategy = getRecurrenceStrategy(recurrence);
+    const interval = getRecurrenceInterval(recurrence);
+    const until = getRecurrenceUntilValue(recurrence);
+    const count = getRecurrenceCountValue(recurrence);
+    const unitKey = rule === 'daily'
+        ? 'recurrence.dayUnit'
+        : rule === 'weekly'
+            ? 'recurrence.weekUnit'
+            : rule === 'monthly'
+                ? 'recurrence.monthUnit'
+                : undefined;
+
+    return [
+        `${t(`recurrence.${rule}`) || rule}${strategy === 'fluid' ? ` · ${t('recurrence.afterCompletionShort')}` : ''}`,
+        unitKey && interval > 1
+            ? `${t('recurrence.repeatEvery')} ${interval} ${t(unitKey)}`
+            : undefined,
+        until ? `${t('recurrence.endsOnDate')} ${(formatDate ?? ((value: string) => safeFormatDate(value, 'P')))(until)}` : undefined,
+        count ? `${t('recurrence.endsAfterCount')} ${count} ${t('recurrence.occurrenceUnit')}` : undefined,
+    ].filter(Boolean).join(' · ');
 }
 
 function getRecurrenceFieldAnchorDay(

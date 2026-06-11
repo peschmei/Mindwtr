@@ -400,6 +400,7 @@ export {
     createCurrentRecurringCalendarTask,
     expandCalendarRecurringTasks,
     createProjectedRecurringTask,
+    formatRecurrenceLabel,
     getProjectedRecurringTaskId,
     getRecurrenceCompletedOccurrencesValue,
     getRecurrenceCountValue,

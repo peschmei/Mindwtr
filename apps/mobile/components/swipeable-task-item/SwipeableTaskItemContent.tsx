@@ -1,5 +1,6 @@
 import React, { type ReactNode, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Repeat } from 'lucide-react-native';
 import {
     getInlineMarkdownPreview,
     getTaskAgeLabel,
@@ -47,6 +48,7 @@ interface SwipeableTaskItemContentProps {
     onToggleFocus: () => void;
     projects: Project[];
     projectDeadlineLabel?: string;
+    recurrenceLabel?: string;
     sequenceCue?: ProjectSequenceTaskCue;
     areas: Area[];
     selectionMode: boolean;
@@ -86,6 +88,7 @@ export function SwipeableTaskItemContent({
     onToggleFocus,
     projects,
     projectDeadlineLabel,
+    recurrenceLabel,
     sequenceCue,
     selectionMode,
     showChecklist,
@@ -309,6 +312,23 @@ export function SwipeableTaskItemContent({
                 {dateIssueLabel}
             </Text>,
             'date-issue'
+        );
+    }
+
+    if (recurrenceLabel) {
+        addMetaPart(
+            renderMetaItem({
+                key: 'recurrence',
+                children: (
+                    <>
+                        <Repeat size={12} color={tc.secondaryText} strokeWidth={2} />
+                        <Text key="recurrence-label" style={[styles.metaText, { color: tc.secondaryText }]} numberOfLines={1}>
+                            {recurrenceLabel}
+                        </Text>
+                    </>
+                ),
+            }),
+            'recurrence'
         );
     }
 

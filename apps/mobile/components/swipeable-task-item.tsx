@@ -2,6 +2,7 @@ import { Text, Pressable, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import {
     formatFocusTaskLimitText,
+    formatRecurrenceLabel,
     getProjectNextActionPromptData,
     getStatusColor,
     hasTimeComponent,
@@ -312,6 +313,7 @@ export function SwipeableTaskItem({
     };
 
     const leftAction = getLeftAction();
+    const recurrenceLabel = formatRecurrenceLabel({ recurrence: task.recurrence, t });
     const longPressAccessibilityHint = onLongPressAction && onLongPressActionLabel
         ? ` Long press for ${onLongPressActionLabel.toLowerCase()}.`
         : '';
@@ -372,6 +374,7 @@ export function SwipeableTaskItem({
         })(),
         sequenceCue === 'available' ? sequenceLabel : null,
         projectDeadlineLabel,
+        recurrenceLabel ? `${tFallback(t, 'taskEdit.recurrenceLabel', 'Recurrence')}: ${recurrenceLabel}` : null,
     ].filter(Boolean).join('. ');
 
     const handlePress = () => {
@@ -492,6 +495,7 @@ export function SwipeableTaskItem({
             onProjectPress={onProjectPress}
             onTagPress={onTagPress}
             projectDeadlineLabel={projectDeadlineLabel}
+            recurrenceLabel={recurrenceLabel}
             onToggleChecklist={toggleChecklist}
             onToggleChecklistItem={toggleChecklistItem}
             onToggleFocus={toggleFocus}
