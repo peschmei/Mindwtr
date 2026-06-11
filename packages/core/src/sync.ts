@@ -491,45 +491,7 @@ function mergeEntitiesWithStats<T extends MergeableEntity>(
             };
         };
 
-        if (hasRevision) {
-            if (localDeleted !== incomingDeleted) {
-                const resolution = resolveDeleteVsLiveWinner(normalizedLocalItem, normalizedIncomingItem);
-                winner = resolution.winner;
-                deleteVsLiveOperationDiffMs = resolution.operationDiffMs;
-                if (resolution.preservedLiveInAmbiguousWindow) {
-                    ambiguousResurrectionWarnings += 1;
-                    if (ambiguousResurrectionWarnings <= 5) {
-                        logWarn('Preserved live item during ambiguous delete-vs-live merge', {
-                            scope: 'sync',
-                            category: 'sync',
-                            context: {
-                                entityType,
-                                id,
-                                operationDiffMs: resolution.operationDiffMs,
-                                localDeletedAt: normalizedLocalItem.deletedAt,
-                                incomingDeletedAt: normalizedIncomingItem.deletedAt,
-                                localUpdatedAt: normalizedLocalItem.updatedAt,
-                                incomingUpdatedAt: normalizedIncomingItem.updatedAt,
-                                localRev,
-                                incomingRev,
-                                localRevBy: localRevBy || undefined,
-                                incomingRevBy: incomingRevBy || undefined,
-                            },
-                        });
-                    }
-                }
-            } else if (revDiff !== 0) {
-                winner = revDiff > 0 ? normalizedLocalItem : normalizedIncomingItem;
-            } else if (comparableUpdatedTimeDiff !== 0) {
-                winner = comparableUpdatedTimeDiff > 0 ? normalizedIncomingItem : normalizedLocalItem;
-            // Only use revBy when both sides provide it; otherwise older clients without revBy
-            // fall back to deterministic convergence instead of silently losing to partial metadata.
-            } else if (revByDiff && localRevBy && incomingRevBy) {
-                winner = incomingRevBy > localRevBy ? normalizedIncomingItem : normalizedLocalItem;
-            } else {
-                winner = chooseDeterministicWinner(normalizedLocalItem, normalizedIncomingItem, signatureMemo);
-            }
-        } else if (localDeleted !== incomingDeleted) {
+        if (localDeleted !== incomingDeleted) {
             const resolution = resolveDeleteVsLiveWinner(normalizedLocalItem, normalizedIncomingItem);
             winner = resolution.winner;
             deleteVsLiveOperationDiffMs = resolution.operationDiffMs;
@@ -554,6 +516,18 @@ function mergeEntitiesWithStats<T extends MergeableEntity>(
                         },
                     });
                 }
+            }
+        } else if (hasRevision) {
+            if (revDiff !== 0) {
+                winner = revDiff > 0 ? normalizedLocalItem : normalizedIncomingItem;
+            } else if (comparableUpdatedTimeDiff !== 0) {
+                winner = comparableUpdatedTimeDiff > 0 ? normalizedIncomingItem : normalizedLocalItem;
+            // Only use revBy when both sides provide it; otherwise older clients without revBy
+            // fall back to deterministic convergence instead of silently losing to partial metadata.
+            } else if (revByDiff && localRevBy && incomingRevBy) {
+                winner = incomingRevBy > localRevBy ? normalizedIncomingItem : normalizedLocalItem;
+            } else {
+                winner = chooseDeterministicWinner(normalizedLocalItem, normalizedIncomingItem, signatureMemo);
             }
         } else {
             const hasInvalidTimestamp = localUpdatedTime.raw < 0 || incomingUpdatedTime.raw < 0;
