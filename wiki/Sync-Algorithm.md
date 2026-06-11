@@ -28,7 +28,7 @@ Revisit ADR 0008 only if snapshot files regularly exceed 5 MB, sync round-trips 
 3. If both exist, merge uses revision-aware LWW:
    - When revision metadata exists, compare `rev` first (higher wins). `rev` is a per-entity edit counter, not a vector clock, so several offline edits on one device can beat one newer edit on another device.
    - If revisions tie, compare `updatedAt` (newer wins).
-   - If timestamps tie, apply deterministic tie-break by normalized content signature.
+   - If timestamps tie, compare `revBy` lexicographically when both sides have different device IDs, then apply the deterministic tie-break by normalized content signature.
    - Legacy entities without revision metadata treat `updatedAt` values within the 5-minute clock-skew threshold as an ambiguous tie and use the deterministic signature winner. Outside that window, newer `updatedAt` wins.
 4. Soft-deletes use operation time:
    - Operation time = `max(updatedAt, deletedAt)` for tombstones.
@@ -36,6 +36,7 @@ Revisit ADR 0008 only if snapshot files regularly exceed 5 MB, sync round-trips 
    - If the delete-vs-live operation times are within 30 seconds of each other and the revision numbers tie, Mindwtr preserves the live item instead of immediately letting the tombstone win. This is the deliberate ambiguous-window rule that can make a just-deleted task reappear after a concurrent edit on another device.
    - If revisions differ inside that 30-second window, the higher revision still wins.
    - Legacy records without revision metadata prefer the tombstone inside that same window.
+   - Backup restore is the one deliberate exception outside the ambiguous window: if the live side has `revBy = "backup-restore"` and its operation time is at least the tombstone operation time, the restored live item wins.
    - When a delete wins over a live edit, Mindwtr emits a bounded `syncConflictDiscarded` diagnostic entry with entity type, ID, operation timing, and revision metadata.
    - When the ambiguous-window live item is preserved, Mindwtr emits a bounded `Preserved live item during ambiguous delete-vs-live merge` diagnostic entry and stores conflict metadata in sync history/settings.
 5. Invalid `deletedAt` falls back to `updatedAt` for conservative operation timing.
