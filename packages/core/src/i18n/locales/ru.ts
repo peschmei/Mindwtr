@@ -467,6 +467,7 @@ export const ruOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Обработка входящих сообщений',
         'dailyReview.inboxDesc': 'Уточните новые входные данные в нужных списках.',
         'dailyReview.waitingStep': 'Ожидание',
+        'dailyReview.followUpToday': 'Связаться сегодня',
         'dailyReview.waitingDesc': 'Следите за всем, что причитается.',
         'dailyReview.completeTitle': 'Готовый',
         'dailyReview.completeDesc': 'Вы ясны и готовы к участию.',

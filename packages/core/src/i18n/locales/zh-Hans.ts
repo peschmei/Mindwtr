@@ -529,6 +529,7 @@ export const zhHans: Record<string, string> = {
         'dailyReview.inboxStep': '处理收集箱',
         'dailyReview.inboxDesc': '将新的输入整理到合适的清单。',
         'dailyReview.waitingStep': '等待中',
+        'dailyReview.followUpToday': '今天跟进',
         'dailyReview.waitingDesc': '跟进需要行动或已到期的等待事项。',
         'dailyReview.completeTitle': '准备就绪',
         'dailyReview.completeDesc': '系统已更新，开始行动吧。',

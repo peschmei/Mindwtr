@@ -16,6 +16,7 @@ import {
     safeParseDueDate,
     shouldShowTaskForStart,
     sortTasksBy,
+    tFallback,
     type ExternalCalendarEvent,
     type Task,
     type TaskSortBy,
@@ -72,11 +73,17 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
     const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
 
     const today = useMemo(() => new Date(), []);
+    const followUpTodayReviewAt = useMemo(
+        () => new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString(),
+        [today],
+    );
     const tomorrow = useMemo(() => {
         const d = new Date(today);
         d.setDate(d.getDate() + 1);
         return d;
     }, [today]);
+    const followUpTodayLabel = tFallback(t, 'dailyReview.followUpToday', 'Follow up today');
+    const reviewDueLabel = tFallback(t, 'agenda.reviewDue', 'Review Due');
 
     useEffect(() => {
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -273,6 +280,9 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
         setIsTaskModalVisible(false);
         setEditingTask(null);
     };
+    const handleFollowUpToday = (task: Task) => {
+        void updateTask(task.id, { reviewAt: followUpTodayReviewAt });
+    };
     const handleNavigateToProject = (projectId: string) => {
         closeTask();
         onClose();
@@ -344,24 +354,49 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
         </ScrollView>
     );
 
-    const renderTaskList = (list: Task[], options?: { showFocusToggle?: boolean; hideStatusBadge?: boolean }) => (
+    const renderTaskList = (list: Task[], options?: { showFocusToggle?: boolean; hideStatusBadge?: boolean; showFollowUpToday?: boolean }) => (
         <FlatList
             data={list}
-            renderItem={({ item: task }) => (
-                <SwipeableTaskItem
-                    task={task}
-                    isDark={isDark}
-                    tc={tc}
-                    onPress={() => openTask(task)}
-                    onStatusChange={(status) => updateTask(task.id, { status: status as TaskStatus })}
-                    onDelete={() => { void deleteTask(task.id); }}
-                    showFocusToggle={options?.showFocusToggle}
-                    hideStatusBadge={options?.hideStatusBadge}
-                    onProjectPress={handleNavigateToProject}
-                    onContextPress={handleNavigateToToken}
-                    onTagPress={handleNavigateToToken}
-                />
-            )}
+            renderItem={({ item: task }) => {
+                const taskRow = (
+                    <SwipeableTaskItem
+                        task={task}
+                        isDark={isDark}
+                        tc={tc}
+                        onPress={() => openTask(task)}
+                        onStatusChange={(status) => updateTask(task.id, { status: status as TaskStatus })}
+                        onDelete={() => { void deleteTask(task.id); }}
+                        showFocusToggle={options?.showFocusToggle}
+                        hideStatusBadge={options?.hideStatusBadge}
+                        onProjectPress={handleNavigateToProject}
+                        onContextPress={handleNavigateToToken}
+                        onTagPress={handleNavigateToToken}
+                    />
+                );
+                if (!options?.showFollowUpToday) return taskRow;
+                const reviewDue = isDueForReview(task.reviewAt, today);
+                return (
+                    <View style={styles.waitingTaskActionItem}>
+                        {taskRow}
+                        <TouchableOpacity
+                            style={[
+                                styles.followUpButton,
+                                { borderColor: tc.border, backgroundColor: tc.cardBg, opacity: reviewDue ? 0.65 : 1 },
+                            ]}
+                            onPress={() => handleFollowUpToday(task)}
+                            disabled={reviewDue}
+                            hitSlop={6}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${followUpTodayLabel}: ${task.title}`}
+                        >
+                            <Clock size={14} color={tc.tint} strokeWidth={2.2} />
+                            <Text style={[styles.followUpButtonText, { color: tc.text }]}>
+                                {reviewDue ? reviewDueLabel : followUpTodayLabel}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+            }}
             keyExtractor={(task) => task.id}
             style={styles.taskList}
             initialNumToRender={12}
@@ -559,7 +594,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                                 <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('review.waitingEmpty')}</Text>
                             </View>
                         ) : (
-                            renderTaskList(waitingTasks.slice(0, 8))
+                            renderTaskList(waitingTasks.slice(0, 8), { showFollowUpToday: true })
                         )}
                     </View>
                 );
@@ -917,6 +952,24 @@ const styles = StyleSheet.create({
     },
     taskList: {
         flex: 1,
+    },
+    waitingTaskActionItem: {
+        gap: 8,
+    },
+    followUpButton: {
+        alignSelf: 'flex-start',
+        minHeight: 36,
+        borderWidth: 1,
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    followUpButtonText: {
+        fontSize: 12,
+        fontWeight: '700',
     },
     emptyState: {
         alignItems: 'center',

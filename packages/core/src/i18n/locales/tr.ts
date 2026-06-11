@@ -474,6 +474,7 @@ export const trOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Gelen Kutusunu İşle',
         'dailyReview.inboxDesc': 'Yeni girişleri doğru listelere netleştirin.',
         'dailyReview.waitingStep': 'Bekleniyor',
+        'dailyReview.followUpToday': 'Bugün takip et',
         'dailyReview.waitingDesc': 'Vadesi gelen her şeyi takip edin.',
         'dailyReview.completeTitle': 'Hazır',
         'dailyReview.completeDesc': 'Açıksınız ve etkileşime geçmeye hazırsınız.',

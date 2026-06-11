@@ -9,6 +9,7 @@ import {
     safeParseDate,
     safeParseDueDate,
     sortTasksBy,
+    tFallback,
     type ExternalCalendarEvent,
     type Task,
     type TaskSortBy,
@@ -71,8 +72,11 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
 
     const [today] = useState(() => new Date());
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const followUpTodayReviewAt = startOfToday.toISOString();
     const sortBy = (settings?.taskSortBy ?? 'default') as TaskSortBy;
     const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
+    const followUpTodayLabel = tFallback(t, 'dailyReview.followUpToday', 'Follow up today');
+    const reviewDueLabel = tFallback(t, 'agenda.reviewDue', 'Review Due');
 
     const projectMap = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
 
@@ -354,7 +358,11 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
         </div>
     );
 
-    const renderTaskList = (list: Task[], emptyText: string) => {
+    const handleFollowUpToday = (task: Task) => {
+        void updateTask(task.id, { reviewAt: followUpTodayReviewAt });
+    };
+
+    const renderTaskList = (list: Task[], emptyText: string, options?: { showFollowUpToday?: boolean }) => {
         if (list.length === 0) {
             return (
                 <div className="text-center py-12 text-muted-foreground">
@@ -365,7 +373,23 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
         return (
             <div className="divide-y divide-border/30">
                 {list.slice(0, 10).map((task) => (
-                    <TaskItem key={task.id} task={task} showProjectBadgeInActions={false} />
+                    <div key={task.id} className={cn(options?.showFollowUpToday && "py-2")}>
+                        <TaskItem task={task} showProjectBadgeInActions={false} />
+                        {options?.showFollowUpToday && (
+                            <div className="mt-2 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => handleFollowUpToday(task)}
+                                    disabled={isDueForReview(task.reviewAt, today)}
+                                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                                    aria-label={`${followUpTodayLabel}: ${task.title}`}
+                                >
+                                    <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+                                    {isDueForReview(task.reviewAt, today) ? reviewDueLabel : followUpTodayLabel}
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 ))}
             </div>
         );
@@ -565,7 +589,7 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
                                 <span className="font-bold text-foreground">{waitingTasks.length}</span> {t('common.tasks')}
                             </p>
                         </div>
-                        {renderTaskList(waitingTasks, t('review.waitingEmpty'))}
+                        {renderTaskList(waitingTasks, t('review.waitingEmpty'), { showFollowUpToday: true })}
                     </div>
                 );
 

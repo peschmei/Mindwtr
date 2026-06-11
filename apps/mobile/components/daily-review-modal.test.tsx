@@ -67,6 +67,10 @@ vi.mock('@mindwtr/core', () => {
       return start <= new Date(2026, 2, 15, 23, 59, 59, 999);
     },
     sortTasksBy: (tasks: unknown[]) => tasks,
+    tFallback: (t: (key: string) => string, key: string, fallback: string) => {
+      const value = t(key);
+      return value === key ? fallback : value;
+    },
   };
 });
 
@@ -84,6 +88,7 @@ vi.mock('../contexts/language-context', () => ({
         'dailyReview.focusStep': "Today's Focus",
         'dailyReview.focusDesc': 'Optional focus.',
         'dailyReview.focusSelected': 'focused',
+        'dailyReview.followUpToday': 'Follow up today',
         'dailyReview.inboxStep': 'Inbox',
         'dailyReview.inboxDesc': 'Review inbox.',
         'dailyReview.waitingStep': 'Waiting',
@@ -94,6 +99,7 @@ vi.mock('../contexts/language-context', () => ({
         'review.of': 'of',
         'review.nextStepBtn': 'Next Step',
         'review.back': 'Back',
+        'agenda.reviewDue': 'Review Due',
         'common.tasks': 'tasks',
         'calendar.events': 'Events',
         'calendar.noTasks': 'No tasks',
@@ -227,6 +233,38 @@ describe('DailyReviewScreen', () => {
     const allText = getAllText(tree);
     expect(allText).toContain('Waiting');
     expect(allText).not.toContain("Today's Focus");
+  });
+
+  it('sets a waiting item to follow up today without changing its status', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 2, 15, 10, 30, 0));
+    storeState.tasks = [
+      {
+        id: 'waiting-task',
+        title: 'Waiting for invoice',
+        status: 'waiting',
+        contexts: [],
+        tags: [],
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
+      },
+    ];
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(<DailyReviewScreen onClose={vi.fn()} />);
+    });
+
+    const followUpButton = tree.root.find((node) =>
+      node.props?.accessibilityLabel === 'Follow up today: Waiting for invoice'
+    );
+    await act(async () => {
+      followUpButton.props.onPress();
+    });
+
+    expect(storeState.updateTask).toHaveBeenCalledWith('waiting-task', {
+      reviewAt: new Date(2026, 2, 15, 0, 0, 0, 0).toISOString(),
+    });
   });
 
   it('collapses calendar events without hiding today tasks', async () => {

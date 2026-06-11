@@ -506,6 +506,7 @@ export const deOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Posteingang verarbeiten',
         'dailyReview.inboxDesc': 'Neue Eingaben klären in der Rechte-Liste.',
         'dailyReview.waitingStep': 'Warten auf',
+        'dailyReview.followUpToday': 'Heute nachfassen',
         'dailyReview.waitingDesc': 'Alle fälligen Angelegenheiten verfolgen.',
         'dailyReview.completeTitle': 'Bereit',
         'dailyReview.completeDesc': 'Sie haben alles abgeklärt und sind bereit zu starten.',

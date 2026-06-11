@@ -587,6 +587,7 @@ export const en: Record<string, string> = {
         'dailyReview.inboxStep': 'Process Inbox',
         'dailyReview.inboxDesc': 'Clarify new inputs into the right lists.',
         'dailyReview.waitingStep': 'Waiting For',
+        'dailyReview.followUpToday': 'Follow up today',
         'dailyReview.waitingDesc': 'Follow up on anything that’s due.',
         'dailyReview.completeTitle': 'Ready',
         'dailyReview.completeDesc': 'You’re clear and ready to engage.',

@@ -468,6 +468,7 @@ export const ptOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Caixa de entrada do processo',
         'dailyReview.inboxDesc': 'Esclareça novas entradas nas listas certas.',
         'dailyReview.waitingStep': 'Aguardando',
+        'dailyReview.followUpToday': 'Acompanhar hoje',
         'dailyReview.waitingDesc': 'Acompanhe tudo o que for devido.',
         'dailyReview.completeTitle': 'Preparar',
         'dailyReview.completeDesc': 'Você está livre e pronto para se envolver.',

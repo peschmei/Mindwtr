@@ -465,6 +465,7 @@ export const plOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Przetwarzaj skrzynkę odbiorczą',
         'dailyReview.inboxDesc': 'Doprecyzuj nowe pozycje i przypisz je do właściwych list.',
         'dailyReview.waitingStep': 'Oczekujące',
+        'dailyReview.followUpToday': 'Przypomnij dziś',
         'dailyReview.waitingDesc': 'Dopilnuj spraw, które już wymagają reakcji.',
         'dailyReview.completeTitle': 'Gotowy',
         'dailyReview.completeDesc': 'Masz jasność i możesz działać.',

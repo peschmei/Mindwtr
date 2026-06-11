@@ -434,6 +434,7 @@ export const esOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Procesa la Bandeja de entrada',
         'dailyReview.inboxDesc': 'Aclara tus capturas en las listas que les correspondan.',
         'dailyReview.waitingStep': 'En espera',
+        'dailyReview.followUpToday': 'Hacer seguimiento hoy',
         'dailyReview.waitingDesc': 'Haz un seguimiento en las tareas vencidas.',
         'dailyReview.completeTitle': 'Listo',
         'dailyReview.completeDesc': 'Todo claro. Estás listo para ponerte en acción.',

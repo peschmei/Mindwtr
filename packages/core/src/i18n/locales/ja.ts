@@ -467,6 +467,7 @@ export const jaOverrides: Record<string, string> = {
         'dailyReview.inboxStep': '受信箱を処理する',
         'dailyReview.inboxDesc': '新しい入力を適切なリストに明確にします。',
         'dailyReview.waitingStep': '待っています',
+        'dailyReview.followUpToday': '今日フォローアップ',
         'dailyReview.waitingDesc': '期限が迫っているものはすべてフォローアップしてください。',
         'dailyReview.completeTitle': '準備ができて',
         'dailyReview.completeDesc': 'あなたは明確で、取り組む準備ができています。',

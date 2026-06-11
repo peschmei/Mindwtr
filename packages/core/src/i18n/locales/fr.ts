@@ -459,6 +459,7 @@ export const frOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Boîte de réception de processus',
         'dailyReview.inboxDesc': 'Clarifiez les nouvelles entrées dans les bonnes listes.',
         'dailyReview.waitingStep': 'En attendant',
+        'dailyReview.followUpToday': 'Suivre aujourd’hui',
         'dailyReview.waitingDesc': 'Faites le suivi de tout ce qui est dû.',
         'dailyReview.completeTitle': 'Prêt',
         'dailyReview.completeDesc': 'Vous êtes clair et prêt à vous engager.',

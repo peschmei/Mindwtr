@@ -541,6 +541,7 @@ export const itOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Elabora Entrata',
         'dailyReview.inboxDesc': 'Chiarisci le nuove voci e smistale negli elenchi giusti.',
         'dailyReview.waitingStep': 'In attesa',
+        'dailyReview.followUpToday': 'Segui oggi',
         'dailyReview.waitingDesc': 'Sollecita tutto ciò che è in scadenza.',
         'dailyReview.completeTitle': 'Pronto',
         'dailyReview.completeDesc': 'Hai fatto chiarezza e sei pronto per agire.',

@@ -461,6 +461,7 @@ export const koOverrides: Record<string, string> = {
         'dailyReview.inboxStep': '받은 편지함 처리',
         'dailyReview.inboxDesc': '올바른 목록에 새로운 입력을 명확히 합니다.',
         'dailyReview.waitingStep': '기다리는 중',
+        'dailyReview.followUpToday': '오늘 후속 조치',
         'dailyReview.waitingDesc': '기한이 있는 모든 사항에 대해 후속 조치를 취하세요.',
         'dailyReview.completeTitle': '준비가 된',
         'dailyReview.completeDesc': '당신은 명확하고 참여할 준비가 되어 있습니다.',

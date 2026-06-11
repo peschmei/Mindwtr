@@ -549,6 +549,7 @@ export const csOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'Zpracovat schránku',
         'dailyReview.inboxDesc': 'Ujasněte nové vstupy a zařaďte je do správných seznamů.',
         'dailyReview.waitingStep': 'Čekám na',
+        'dailyReview.followUpToday': 'Sledovat dnes',
         'dailyReview.waitingDesc': 'Urgujte vše, co je po termínu.',
         'dailyReview.completeTitle': 'Připraveno',
         'dailyReview.completeDesc': 'Máte jasno a můžete se pustit do práce.',

@@ -464,6 +464,7 @@ export const hiOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'प्रक्रिया इनबॉक्स',
         'dailyReview.inboxDesc': 'नए इनपुट को सही सूचियों में स्पष्ट करें।',
         'dailyReview.waitingStep': 'के लिए इंतजार',
+        'dailyReview.followUpToday': 'आज फ़ॉलो अप करें',
         'dailyReview.waitingDesc': 'जो भी देय हो उसका पालन करें।',
         'dailyReview.completeTitle': 'तैयार',
         'dailyReview.completeDesc': 'आप स्पष्ट हैं और संलग्न होने के लिए तैयार हैं।',

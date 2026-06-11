@@ -530,6 +530,7 @@ export const arOverrides: Record<string, string> = {
         'dailyReview.inboxStep': 'علبة الوارد للعملية',
         'dailyReview.inboxDesc': 'قم بتوضيح المدخلات الجديدة في القوائم الصحيحة.',
         'dailyReview.waitingStep': 'في انتظار',
+        'dailyReview.followUpToday': 'متابعة اليوم',
         'dailyReview.waitingDesc': 'متابعة أي شيء مستحق.',
         'dailyReview.completeTitle': 'مستعد',
         'dailyReview.completeDesc': 'أنت واضح وجاهز للمشاركة.',
