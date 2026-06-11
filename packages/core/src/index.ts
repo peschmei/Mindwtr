@@ -290,10 +290,12 @@ export {
     isLikelyOfflineSyncError,
     isRemoteSyncBackend,
     isSyncFilePath,
+    LEGACY_SYNC_FILE_NAME,
     normalizePath,
     normalizeSyncBackend,
     resolveSyncBackend,
     sanitizeSyncErrorMessage,
+    SYNC_FILE_NAME,
 } from './sync-service-utils';
 export type {
     AutoSyncConfig,

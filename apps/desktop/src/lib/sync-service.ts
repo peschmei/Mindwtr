@@ -43,6 +43,8 @@ import {
     createAbortableFetch,
     getTranslationsSync,
     isSupportedLanguage,
+    LEGACY_SYNC_FILE_NAME,
+    SYNC_FILE_NAME,
     type CloudProvider,
     type PendingAttachmentUpload,
 } from '@mindwtr/core';
@@ -145,8 +147,6 @@ export type ExternalSyncChange = {
     lastSyncAt?: string;
 };
 
-const SYNC_FILE_NAME = 'data.json';
-const LEGACY_SYNC_FILE_NAME = 'mindwtr-sync.json';
 const DROPBOX_AUTH_RETRY_LIMIT = 1;
 const WEBDAV_READ_RETRY_OPTIONS = {
     maxAttempts: 5,

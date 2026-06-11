@@ -5,9 +5,11 @@ import {
   isLikelyOfflineSyncError as isCoreLikelyOfflineSyncError,
   isRemoteSyncBackend as isCoreRemoteSyncBackend,
   isSyncFilePath as isCoreSyncFilePath,
+  LEGACY_SYNC_FILE_NAME,
   resolveSyncBackend,
   sanitizeSyncErrorMessage,
   summarizeMergeStats,
+  SYNC_FILE_NAME,
   type MergeStats,
   type SyncBackend as CoreSyncBackend,
 } from '@mindwtr/core';
@@ -15,8 +17,6 @@ import {
 export type SyncBackend = CoreSyncBackend | 'cloudkit';
 export type SyncFailureKind = 'offline' | 'auth' | 'permission' | 'rateLimited' | 'misconfigured' | 'conflict' | 'unknown';
 
-const SYNC_FILE_NAME = 'data.json';
-const LEGACY_SYNC_FILE_NAME = 'mindwtr-sync.json';
 const FILE_EXTENSION_PATTERN = /\.[A-Za-z0-9]{1,16}$/;
 const READONLY_ERROR_PATTERN = /isn't writable|not writable|read-only|read only|permission denied|EACCES/i;
 const IOS_TEMP_INBOX_PATTERN = /\/tmp\/[^/\s]*-Inbox\//i;

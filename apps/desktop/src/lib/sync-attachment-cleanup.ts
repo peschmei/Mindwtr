@@ -7,7 +7,9 @@ import {
     findDeletedAttachmentsForFileCleanup,
     findOrphanedAttachments,
     getErrorStatus,
+    LEGACY_SYNC_FILE_NAME,
     type CloudProvider,
+    SYNC_FILE_NAME,
     webdavDeleteFile,
 } from '@mindwtr/core';
 
@@ -41,8 +43,6 @@ export type AttachmentCleanupDeps = {
 type PendingRemoteAttachmentDeleteEntry = PendingRemoteAttachmentDelete;
 
 const LOCAL_ATTACHMENTS_DIR = `mindwtr/${ATTACHMENTS_DIR_NAME}`;
-const SYNC_FILE_NAME = 'data.json';
-const LEGACY_SYNC_FILE_NAME = 'mindwtr-sync.json';
 
 export const cleanupAttachmentTempFiles = async (deps: Pick<AttachmentCleanupDeps, 'isTauriRuntimeEnv' | 'logSyncWarning'>): Promise<void> => {
     if (!deps.isTauriRuntimeEnv()) return;

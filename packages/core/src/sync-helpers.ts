@@ -1,7 +1,6 @@
 import type { AppData, Attachment } from './types';
 import { normalizeSavedFilters } from './saved-filters';
-
-const SYNC_FILE_NAME = 'data.json';
+import { SYNC_FILE_NAME } from './sync-service-utils';
 
 export type SoftDeletable = {
     deletedAt?: string | null;

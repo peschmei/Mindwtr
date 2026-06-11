@@ -12,8 +12,8 @@ export type AutoSyncConfig = {
     isDropboxConnected?: boolean;
 };
 
-const DEFAULT_SYNC_FILE_NAME = 'data.json';
-const DEFAULT_LEGACY_SYNC_FILE_NAME = 'mindwtr-sync.json';
+export const SYNC_FILE_NAME = 'data.json';
+export const LEGACY_SYNC_FILE_NAME = 'mindwtr-sync.json';
 const AI_KEY_PATTERNS = [
     /sk-[A-Za-z0-9-]{10,}/g,
     /sk-ant-[A-Za-z0-9-]{10,}/g,
@@ -48,8 +48,8 @@ export const normalizePath = (input: string): string => input.replace(/\\/g, '/'
 
 export const isSyncFilePath = (
     path: string,
-    syncFileName = DEFAULT_SYNC_FILE_NAME,
-    legacySyncFileName = DEFAULT_LEGACY_SYNC_FILE_NAME
+    syncFileName = SYNC_FILE_NAME,
+    legacySyncFileName = LEGACY_SYNC_FILE_NAME
 ): boolean => {
     const normalized = normalizePath(path);
     return normalized.endsWith(`/${syncFileName}`) || normalized.endsWith(`/${legacySyncFileName}`);
@@ -86,8 +86,8 @@ export const canAutoSync = (config: AutoSyncConfig): boolean => {
 
 export const getFileSyncDir = (
     syncPath: string,
-    syncFileName = DEFAULT_SYNC_FILE_NAME,
-    legacySyncFileName = DEFAULT_LEGACY_SYNC_FILE_NAME
+    syncFileName = SYNC_FILE_NAME,
+    legacySyncFileName = LEGACY_SYNC_FILE_NAME
 ): string => {
     if (!syncPath) return '';
     const trimmed = syncPath.replace(/[\\/]+$/, '');

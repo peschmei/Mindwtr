@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from './file-system';
 import { Directory as ExpoDirectory, File as ExpoFile } from 'expo-file-system';
-import { AppData, decodeUriSafe, sleep } from '@mindwtr/core';
+import { AppData, decodeUriSafe, LEGACY_SYNC_FILE_NAME, sleep, SYNC_FILE_NAME } from '@mindwtr/core';
 import { Platform } from 'react-native';
 import { logError, logInfo, logWarn } from './app-log';
 import { createSyncPathBookmark } from './sync-path-bookmarks';
@@ -17,9 +17,7 @@ interface PickResult extends AppData {
     __icloud?: boolean;
 }
 
-const SYNC_FILE_NAME = 'data.json';
 const BACKUP_FILE_NAME = 'data.json.bak';
-const LEGACY_SYNC_FILE_NAME = 'mindwtr-sync.json';
 const READONLY_FOLDER_MESSAGE = 'Selected folder is read-only. Please choose a writable folder or make it available offline.';
 const ICLOUD_EVICTED_MESSAGE =
     'Sync file has been offloaded by iCloud Optimize Storage. ' +
