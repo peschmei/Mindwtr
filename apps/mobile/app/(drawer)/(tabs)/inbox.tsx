@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Brain, ListChecks } from 'lucide-react-native';
 
 import { isTaskInActiveProject, shallow, useTaskStore } from '@mindwtr/core';
 import { TaskList } from '../../../components/task-list';
@@ -48,27 +49,28 @@ export default function InboxScreen() {
   const headerButtons = (
     <View style={styles.headerButtonsRow}>
       <TouchableOpacity
-        style={[styles.processHeaderButton, styles.mindSweepButton, { borderColor: tc.tint }]}
+        style={[styles.headerIconButton, styles.mindSweepButton, { borderColor: tc.tint, backgroundColor: tc.filterBg }]}
         onPress={() => router.push('/mind-sweep-modal')}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel={t('mindSweep.launchButton')}
       >
-        <Text style={[styles.mindSweepButtonText, { color: tc.tint }]}>
-          {t('mindSweep.launchButton')}
-        </Text>
+        <Brain size={17} color={tc.tint} strokeWidth={2.2} />
       </TouchableOpacity>
       {inboxTasks.length > 0 ? (
         <TouchableOpacity
-          style={[styles.processHeaderButton, { backgroundColor: tc.tint }]}
+          style={[styles.headerIconButton, styles.processHeaderButton, { backgroundColor: tc.tint }]}
           onPress={() => setShowProcessing(true)}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel={t('inbox.processButton')}
+          accessibilityLabel={`${t('inbox.processButton')} (${inboxTasks.length})`}
         >
-          <Text style={styles.processHeaderButtonText}>
-            ▷ {t('inbox.processButton')} ({inboxTasks.length})
-          </Text>
+          <ListChecks size={17} color={tc.onTint} strokeWidth={2.2} />
+          <View style={[styles.processCountBadge, { backgroundColor: tc.bg, borderColor: tc.tint }]}>
+            <Text style={[styles.processCountText, { color: tc.tint }]} numberOfLines={1}>
+              {inboxTasks.length > 99 ? '99+' : inboxTasks.length}
+            </Text>
+          </View>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -110,21 +112,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  processHeaderButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  processHeaderButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+  processHeaderButton: {
+    position: 'relative',
   },
   mindSweepButton: {
     borderWidth: 1,
   },
-  mindSweepButtonText: {
-    fontSize: 12,
+  processCountBadge: {
+    position: 'absolute',
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    right: -5,
+    top: -5,
+  },
+  processCountText: {
+    fontSize: 9,
     fontWeight: '700',
   },
 });
