@@ -405,6 +405,16 @@ const normalizeTaskUpdateForStore = ({
             isFocusedToday: false,
         };
     }
+    if (
+        hasOwnField(updates, 'status')
+        && updates.status !== task.status
+        && !hasOwnField(updates, 'boardOrder')
+    ) {
+        adjustedUpdates = {
+            ...adjustedUpdates,
+            boardOrder: undefined,
+        };
+    }
     if (!Object.prototype.hasOwnProperty.call(updates, 'projectId')) {
         return adjustedUpdates;
     }

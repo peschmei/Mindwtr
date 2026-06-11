@@ -29,6 +29,7 @@ const CONTENT_DIFF_IGNORED_KEYS = new Set([
     'purgedAt',
     'order',
     'orderNum',
+    'boardOrder',
 ]);
 
 const SIGNATURE_OPAQUE_KEYS = new Set([

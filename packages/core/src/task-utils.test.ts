@@ -16,6 +16,7 @@ import {
     groupCompletedTasksLast,
     isTaskFutureStart,
     shouldShowTaskForStart,
+    sortTasksByBoardOrder,
     splitCompletedTasks,
 } from './task-utils';
 import { Project, Task } from './types';
@@ -701,6 +702,30 @@ describe('task-utils', () => {
             ], new Set(['p1']), { now, sectionScopedProjectIds: new Set(['p1']) });
 
             expect([...firstTaskIds]).toEqual(['section-a-first', 'section-b-first']);
+        });
+    });
+
+    describe('sortTasksByBoardOrder', () => {
+        const boardTask = (id: string, boardOrder?: number) => ({ id, boardOrder });
+
+        it('sorts tasks with boardOrder ascending ahead of tasks without one', () => {
+            const sorted = sortTasksByBoardOrder([
+                boardTask('no-order-1'),
+                boardTask('third', 2),
+                boardTask('first', 0),
+                boardTask('no-order-2'),
+                boardTask('second', 1),
+            ]);
+
+            expect(sorted.map((task) => task.id)).toEqual(['first', 'second', 'third', 'no-order-1', 'no-order-2']);
+        });
+
+        it('keeps the incoming order when no task has a boardOrder', () => {
+            const input = [boardTask('a'), boardTask('b'), boardTask('c')];
+
+            const sorted = sortTasksByBoardOrder(input);
+
+            expect(sorted.map((task) => task.id)).toEqual(['a', 'b', 'c']);
         });
     });
 });

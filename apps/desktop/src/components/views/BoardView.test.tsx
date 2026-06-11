@@ -10,16 +10,22 @@ vi.mock('@dnd-kit/core', () => ({
     DragOverlay: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     PointerSensor: class {},
     useDroppable: () => ({ setNodeRef: () => {} }),
-    useDraggable: () => ({
+    useSensor: () => ({}),
+    useSensors: () => ([]),
+    closestCorners: () => null,
+}));
+
+vi.mock('@dnd-kit/sortable', () => ({
+    SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    verticalListSortingStrategy: {},
+    useSortable: () => ({
         attributes: {},
         listeners: {},
         setNodeRef: () => {},
         transform: null,
+        transition: undefined,
         isDragging: false,
     }),
-    useSensor: () => ({}),
-    useSensors: () => ([]),
-    closestCorners: () => null,
 }));
 
 const renderWithProviders = () => {
@@ -141,5 +147,34 @@ describe('BoardView', () => {
 
         expect(getByText('Active project next action')).toBeInTheDocument();
         expect(queryByText('Someday project next action')).not.toBeInTheDocument();
+    });
+
+    it('orders column tasks by boardOrder ahead of tasks without one', () => {
+        const baseTask = {
+            status: 'next' as const,
+            tags: [],
+            contexts: [],
+            createdAt: '2026-05-18T12:00:00.000Z',
+            updatedAt: '2026-05-18T12:00:00.000Z',
+        };
+        useTaskStore.setState({
+            tasks: [
+                { ...baseTask, id: 'task-q', title: 'Task Q', boardOrder: 1 },
+                { ...baseTask, id: 'task-w', title: 'Task W', boardOrder: 2 },
+                { ...baseTask, id: 'task-e', title: 'Task E', boardOrder: 0 },
+                { ...baseTask, id: 'task-r', title: 'Task R' },
+            ],
+            projects: [],
+            areas: [],
+            settings: {},
+        });
+
+        const { getByRole } = renderWithProviders();
+
+        const column = getByRole('list', { name: /next actions tasks list/i });
+        const titles = Array.from(column.querySelectorAll('[role="listitem"]')).map(
+            (item) => ['Task Q', 'Task W', 'Task E', 'Task R'].find((title) => item.textContent?.includes(title)),
+        );
+        expect(titles).toEqual(['Task E', 'Task Q', 'Task W', 'Task R']);
     });
 });

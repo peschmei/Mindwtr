@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY } from './board-view.utils';
+import { resolveBoardColumnReorder, resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY } from './board-view.utils';
 
 describe('resolveBoardDropColumnIndex', () => {
     it('keeps current column when drag is below trigger distance', () => {
@@ -92,5 +92,59 @@ describe('resolveBoardDropColumnIndexFromY', () => {
             currentColumnIndex: 1,
             columnBounds: [],
         })).toBe(1);
+    });
+});
+
+describe('resolveBoardColumnReorder', () => {
+    const columnTasks = [
+        { id: 'task-q', top: 0, height: 60 },
+        { id: 'task-w', top: 68, height: 60 },
+        { id: 'task-e', top: 136, height: 60 },
+        { id: 'task-r', top: 204, height: 60 },
+    ];
+
+    it('moves a task to the top when its drag center lands above the first card', () => {
+        expect(resolveBoardColumnReorder({
+            taskId: 'task-e',
+            dragCenterY: 10,
+            columnTasks,
+        })).toEqual(['task-e', 'task-q', 'task-w', 'task-r']);
+    });
+
+    it('moves a task downward past later cards', () => {
+        expect(resolveBoardColumnReorder({
+            taskId: 'task-q',
+            dragCenterY: 240,
+            columnTasks,
+        })).toEqual(['task-w', 'task-e', 'task-r', 'task-q']);
+    });
+
+    it('moves a task into the middle of the column', () => {
+        expect(resolveBoardColumnReorder({
+            taskId: 'task-r',
+            dragCenterY: 80,
+            columnTasks,
+        })).toEqual(['task-q', 'task-r', 'task-w', 'task-e']);
+    });
+
+    it('returns null when the position does not change', () => {
+        expect(resolveBoardColumnReorder({
+            taskId: 'task-w',
+            dragCenterY: 98,
+            columnTasks,
+        })).toBeNull();
+    });
+
+    it('returns null for unknown tasks or invalid coordinates', () => {
+        expect(resolveBoardColumnReorder({
+            taskId: 'missing',
+            dragCenterY: 100,
+            columnTasks,
+        })).toBeNull();
+        expect(resolveBoardColumnReorder({
+            taskId: 'task-q',
+            dragCenterY: Number.NaN,
+            columnTasks,
+        })).toBeNull();
     });
 });

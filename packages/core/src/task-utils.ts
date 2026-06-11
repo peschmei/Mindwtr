@@ -625,6 +625,19 @@ export function sortTasksBy(tasks: Task[], sortBy: TaskSortBy = 'default'): Task
     }
 }
 
+/**
+ * Stable sort for Board columns: tasks with a manual boardOrder come first
+ * in ascending order; tasks without one keep their incoming relative order.
+ */
+export function sortTasksByBoardOrder<T extends Pick<Task, 'boardOrder'>>(tasks: T[]): T[] {
+    return [...tasks].sort((a, b) => {
+        const aOrder = Number.isFinite(a.boardOrder) ? (a.boardOrder as number) : Number.POSITIVE_INFINITY;
+        const bOrder = Number.isFinite(b.boardOrder) ? (b.boardOrder as number) : Number.POSITIVE_INFINITY;
+        if (aOrder === bOrder) return 0;
+        return aOrder - bOrder;
+    });
+}
+
 export function splitCompletedTasks<T extends Pick<Task, 'status'>>(tasks: T[]): {
     activeTasks: T[];
     completedTasks: T[];

@@ -246,6 +246,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   sectionId TEXT,
   areaId TEXT,
   orderNum INTEGER,
+  boardOrder INTEGER,
   isFocusedToday INTEGER,
   timeEstimate TEXT,
   suppressMindwtrReminders INTEGER,

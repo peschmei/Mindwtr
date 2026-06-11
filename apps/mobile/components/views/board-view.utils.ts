@@ -84,3 +84,47 @@ export const resolveBoardDropColumnIndexFromY = ({
 
     return nearest.index;
 };
+
+type ColumnTaskLayout = {
+    id: string;
+    top: number;
+    height: number;
+};
+
+type ResolveBoardColumnReorderArgs = {
+    taskId: string;
+    dragCenterY: number;
+    columnTasks: ColumnTaskLayout[];
+};
+
+/**
+ * Resolve a same-column drop into the new top-to-bottom id order.
+ * Returns null when the dragged task keeps its position or inputs are invalid.
+ */
+export const resolveBoardColumnReorder = ({
+    taskId,
+    dragCenterY,
+    columnTasks,
+}: ResolveBoardColumnReorderArgs): string[] | null => {
+    if (!Number.isFinite(dragCenterY)) return null;
+
+    const sortedTasks = [...columnTasks]
+        .filter((item) => Number.isFinite(item.top) && Number.isFinite(item.height) && item.height >= 0)
+        .sort((a, b) => a.top - b.top);
+    if (!sortedTasks.some((item) => item.id === taskId)) return null;
+
+    const others = sortedTasks.filter((item) => item.id !== taskId);
+    let insertIndex = 0;
+    for (const item of others) {
+        if (dragCenterY > item.top + (item.height / 2)) {
+            insertIndex += 1;
+        }
+    }
+
+    const orderedIds = others.map((item) => item.id);
+    orderedIds.splice(insertIndex, 0, taskId);
+
+    const currentIds = sortedTasks.map((item) => item.id);
+    const unchanged = orderedIds.every((id, index) => id === currentIds[index]);
+    return unchanged ? null : orderedIds;
+};

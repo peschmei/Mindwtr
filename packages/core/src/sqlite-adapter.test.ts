@@ -123,6 +123,7 @@ describeSqlite('SqliteAdapter', () => {
                     projectArchivedAt: archivedAt,
                     rev: 5,
                     revBy: 'device-desktop',
+                    boardOrder: 4,
                     tags: ['#docs', '#writing'],
                     contexts: ['@computer'],
                     recurrence: {
@@ -246,6 +247,7 @@ describeSqlite('SqliteAdapter', () => {
         expect(task.projectArchivedAt).toBe(archivedAt);
         expect(task.rev).toBe(5);
         expect(task.revBy).toBe('device-desktop');
+        expect(task.boardOrder).toBe(4);
 
         const project = loaded.projects[0];
         expect(project.title).toBe('Mindwtr');
@@ -826,6 +828,7 @@ describeSqlite('SqliteAdapter', () => {
         const columns = allSql<{ name: string }>(db, 'PRAGMA table_info(tasks)');
         const names = columns.map((col) => col.name);
         expect(names).toContain('orderNum');
+        expect(names).toContain('boardOrder');
         expect(names).toContain('areaId');
         expect(names).toContain('sectionId');
         expect(names).toContain('purgedAt');

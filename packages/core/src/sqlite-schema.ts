@@ -1,4 +1,4 @@
-export const SQLITE_SCHEMA_VERSION = 7;
+export const SQLITE_SCHEMA_VERSION = 8;
 
 export const SQLITE_BASE_SCHEMA = `
 PRAGMA journal_mode = WAL;
@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   sectionId TEXT REFERENCES sections(id) ON DELETE SET NULL,
   areaId TEXT REFERENCES areas(id) ON DELETE SET NULL,
   orderNum INTEGER,
+  boardOrder INTEGER,
   isFocusedToday INTEGER,
   timeEstimate TEXT,
   suppressMindwtrReminders INTEGER,

@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
-import { isTaskInActiveProject, useTaskStore } from '@mindwtr/core';
+import { isTaskInActiveProject, sortTasksByBoardOrder, useTaskStore } from '@mindwtr/core';
 import type { Task, TaskStatus } from '@mindwtr/core';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/theme-context';
@@ -18,7 +18,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { TaskEditModal } from '../task-edit-modal';
-import { resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY } from './board-view.utils';
+import { resolveBoardColumnReorder, resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY } from './board-view.utils';
 
 const COLUMNS: { id: TaskStatus; label: string; labelKey: string; color: string }[] = [
   { id: 'inbox', label: 'Inbox', labelKey: 'status.inbox', color: '#6B7280' },
@@ -342,7 +342,7 @@ function Column({
 }
 
 export function BoardView() {
-  const { tasks, projects, areas, updateTask, deleteTask, duplicateTask } = useTaskStore();
+  const { tasks, projects, areas, updateTask, deleteTask, duplicateTask, reorderBoardTasks } = useTaskStore();
   const { isDark } = useTheme();
   const tc = useThemeColors();
   const { t } = useLanguage();
@@ -394,7 +394,7 @@ export function BoardView() {
     ));
     const grouped: Record<string, Task[]> = {};
     COLUMNS.forEach(col => {
-      grouped[col.id] = activeTasks.filter(t => t.status === col.id);
+      grouped[col.id] = sortTasksByBoardOrder(activeTasks.filter(t => t.status === col.id));
     });
     return grouped;
   }, [tasks, projects, resolvedAreaFilter, areaById]);
@@ -441,9 +441,10 @@ export function BoardView() {
     if (currentColumnIndex < 0) return;
 
     let newColumnIndex = currentColumnIndex;
+    let dragCenterY: number | null = null;
     const dragStartMetrics = dragStartMetricsRef.current;
     if (dragStartMetrics?.taskId === taskId) {
-      const dragCenterY = dragStartMetrics.topY + effectiveTranslationY + (dragStartMetrics.height / 2);
+      dragCenterY = dragStartMetrics.topY + effectiveTranslationY + (dragStartMetrics.height / 2);
       const columnBounds = getColumnBounds();
       if (columnBounds.length > 0) {
         newColumnIndex = resolveBoardDropColumnIndexFromY({
@@ -466,11 +467,32 @@ export function BoardView() {
       });
     }
 
-    if (newColumnIndex >= 0 && newColumnIndex < COLUMNS.length) {
-      const newStatus = COLUMNS[newColumnIndex].id;
-      updateTask(taskId, { status: newStatus });
+    if (newColumnIndex < 0 || newColumnIndex >= COLUMNS.length) return;
+
+    if (newColumnIndex === currentColumnIndex) {
+      if (dragCenterY === null || !currentStatus) return;
+      const columnTaskLayouts = (tasksByStatus[currentStatus] || [])
+        .map((columnTask) => {
+          const top = getTaskTopInContent(columnTask.id);
+          const height = taskLayoutsRef.current[columnTask.id]?.height;
+          if (top === null || typeof height !== 'number' || !Number.isFinite(height)) return null;
+          return { id: columnTask.id, top, height };
+        })
+        .filter((item): item is { id: string; top: number; height: number } => item !== null);
+      const orderedIds = resolveBoardColumnReorder({
+        taskId,
+        dragCenterY,
+        columnTasks: columnTaskLayouts,
+      });
+      if (orderedIds) {
+        void reorderBoardTasks(currentStatus, orderedIds);
+      }
+      return;
     }
-  }, [getColumnBounds, tasks, updateTask]);
+
+    const newStatus = COLUMNS[newColumnIndex].id;
+    updateTask(taskId, { status: newStatus });
+  }, [getColumnBounds, getTaskTopInContent, reorderBoardTasks, tasks, tasksByStatus, updateTask]);
 
   const handleTap = useCallback((task: Task) => {
     setEditingTask(task);

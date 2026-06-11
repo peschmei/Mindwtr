@@ -2,7 +2,6 @@ import React from 'react';
 import {
     DndContext,
     DragOverlay,
-    useDraggable,
     useDroppable,
     DragEndEvent,
     DragStartEvent,
@@ -11,9 +10,12 @@ import {
     useSensor,
     useSensors,
 } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { TaskItem } from '../TaskItem';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { shallow, useTaskStore, sortTasksBy, safeParseDate, translateWithFallback, isTaskInActiveProject } from '@mindwtr/core';
+import { shallow, useTaskStore, sortTasksBy, sortTasksByBoardOrder, safeParseDate, translateWithFallback, isTaskInActiveProject } from '@mindwtr/core';
+import { resolveBoardDragEnd } from './board-view-dnd';
 import type { Task, TaskStatus } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
@@ -112,9 +114,11 @@ function DroppableColumn({
                         </button>
                     </div>
                 ) : (
-                    tasks.map((task) => (
-                        <DraggableTask key={task.id} task={task} dragLabel={dragLabel} />
-                    ))
+                    <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+                        {tasks.map((task) => (
+                            <DraggableTask key={task.id} task={task} dragLabel={dragLabel} />
+                        ))}
+                    </SortableContext>
                 )}
             </div>
         </div>
@@ -122,13 +126,14 @@ function DroppableColumn({
 }
 
 function DraggableTask({ task, dragLabel }: { task: Task; dragLabel: string }) {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: task.id,
         data: { task },
     });
 
-    const style = transform ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    const style = transform || transition ? {
+        transform: CSS.Transform.toString(transform),
+        transition,
     } : undefined;
 
     if (isDragging) {
@@ -179,10 +184,11 @@ function DraggableTask({ task, dragLabel }: { task: Task; dragLabel: string }) {
 
 export function BoardView() {
     const perf = usePerformanceMonitor('BoardView');
-    const { tasks, moveTask, settings, projects, areas } = useTaskStore(
+    const { tasks, moveTask, reorderBoardTasks, settings, projects, areas } = useTaskStore(
         (state) => ({
             tasks: state.tasks,
             moveTask: state.moveTask,
+            reorderBoardTasks: state.reorderBoardTasks,
             settings: state.settings,
             projects: state.projects,
             areas: state.areas,
@@ -268,28 +274,6 @@ export function BoardView() {
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveTask(event.active.data.current?.task || null);
-    };
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-
-        if (over && active.id !== over.id) {
-            const status = over.id as TaskStatus;
-            if (COLUMNS.some(c => c.id === status)) {
-                const currentTask = tasks.find((task) => task.id === active.id);
-                if (currentTask) {
-                    if (activeTask && currentTask.status !== activeTask.status) {
-                        setActiveTask(null);
-                        return;
-                    }
-                    if (currentTask.status !== status) {
-                        moveTask(active.id as string, status);
-                    }
-                }
-            }
-        }
-
-        setActiveTask(null);
     };
 
     // Sort tasks for consistency, filter out deleted
@@ -390,11 +374,36 @@ export function BoardView() {
                 return !computeSequential || sequentialProjectFirstTasks.has(task.id);
             });
             if (sortBy === 'default') {
-                return sortByProjectOrder(list);
+                list = sortByProjectOrder(list);
             }
         }
-        return list;
+        return sortBy === 'default' ? sortTasksByBoardOrder(list) : list;
     }, [computeSequential, filteredTasks, projectMap, sequentialProjectFirstTasks, sortBy, sortByProjectOrder]);
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveTask(null);
+        if (!over) return;
+
+        const currentTask = tasks.find((task) => task.id === active.id);
+        if (activeTask && currentTask && currentTask.status !== activeTask.status) return;
+
+        const overTask = over.data.current?.task as Task | undefined;
+        const action = resolveBoardDragEnd({
+            activeId: String(active.id),
+            overId: String(over.id),
+            columnIds: COLUMNS.map((column) => column.id),
+            activeStatus: currentTask?.status,
+            overStatus: overTask?.status,
+            columnTaskIds: currentTask ? getColumnTasks(currentTask.status).map((task) => task.id) : [],
+            canReorder: sortBy === 'default',
+        });
+        if (action.type === 'move') {
+            moveTask(action.taskId, action.status);
+        } else if (action.type === 'reorder') {
+            void reorderBoardTasks(action.status, action.orderedIds);
+        }
+    };
 
     const resolveText = React.useCallback((key: string, fallback: string) => {
         return translateWithFallback(t, key, fallback);

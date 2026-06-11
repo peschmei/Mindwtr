@@ -1,5 +1,5 @@
 import { buildSaveSnapshot, ensureDeviceId, getNextDataChangeAt, getTaskOrder, nextRevision, selectVisibleTasks } from '../store-helpers';
-import type { OrderingActions, Project, ProjectActionContext, Section, Task } from './shared';
+import type { OrderingActions, Project, ProjectActionContext, Section, Task, TaskStatus } from './shared';
 
 export const createOrderingActions = ({
     set,
@@ -164,6 +164,68 @@ export const createOrderingActions = ({
                     ...task,
                     order: nextOrder as number,
                     orderNum: nextOrder as number,
+                    updatedAt: now,
+                    rev: nextRevision(task.rev),
+                    revBy: deviceState.deviceId,
+                };
+            });
+
+            const newVisibleTasks = selectVisibleTasks(newAllTasks);
+            snapshot = buildSaveSnapshot(state, {
+                tasks: newAllTasks,
+                ...(deviceState.updated ? { settings: deviceState.settings } : {}),
+            });
+            return {
+                tasks: newVisibleTasks,
+                _allTasks: newAllTasks,
+                lastDataChangeAt: getNextDataChangeAt(state.lastDataChangeAt, changeAt),
+                ...(deviceState.updated ? { settings: deviceState.settings } : {}),
+            };
+        });
+        if (snapshot) {
+            debouncedSave(snapshot, (msg) => set({ error: msg }));
+        }
+    },
+
+    reorderBoardTasks: async (status: TaskStatus, orderedIds: string[]) => {
+        if (!status || orderedIds.length === 0) return;
+        const changeAt = Date.now();
+        const now = new Date().toISOString();
+        let snapshot = null;
+        set((state) => {
+            const deviceState = ensureDeviceId(state.settings);
+            const allTasks = state._allTasks;
+            const isInColumn = (task: Task) => task.status === status && !task.deletedAt;
+
+            const columnTasks = allTasks.filter(isInColumn);
+            const columnTaskIds = new Set(columnTasks.map((task) => task.id));
+            const validOrderedIds = orderedIds.filter((id) => columnTaskIds.has(id));
+            if (validOrderedIds.length === 0) return state;
+
+            const orderedSet = new Set(validOrderedIds);
+            const remaining = columnTasks
+                .filter((task) => !orderedSet.has(task.id))
+                .sort((a, b) => {
+                    const aOrder = Number.isFinite(a.boardOrder) ? (a.boardOrder as number) : Number.POSITIVE_INFINITY;
+                    const bOrder = Number.isFinite(b.boardOrder) ? (b.boardOrder as number) : Number.POSITIVE_INFINITY;
+                    if (aOrder !== bOrder) return aOrder - bOrder;
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                });
+
+            const finalIds = [...validOrderedIds, ...remaining.map((task) => task.id)];
+            const orderById = new Map<string, number>();
+            finalIds.forEach((id, index) => {
+                orderById.set(id, index);
+            });
+
+            const newAllTasks = allTasks.map((task) => {
+                if (!isInColumn(task)) return task;
+                const nextOrder = orderById.get(task.id);
+                if (!Number.isFinite(nextOrder)) return task;
+                if (task.boardOrder === nextOrder) return task;
+                return {
+                    ...task,
+                    boardOrder: nextOrder as number,
                     updatedAt: now,
                     rev: nextRevision(task.rev),
                     revBy: deviceState.deviceId,

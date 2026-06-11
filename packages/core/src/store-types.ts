@@ -118,6 +118,8 @@ export interface TaskStore {
     reorderProjects: (orderedIds: string[], areaId?: string) => Promise<void>;
     /** Reorder tasks within a project or section */
     reorderProjectTasks: (projectId: string, orderedIds: string[], sectionId?: string | null) => Promise<void>;
+    /** Reorder tasks within a Board status column by id list */
+    reorderBoardTasks: (status: TaskStatus, orderedIds: string[]) => Promise<void>;
 
     // Tag Actions
     /** Delete a tag from tasks and projects */
