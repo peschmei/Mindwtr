@@ -297,6 +297,16 @@ export type {
 } from './sync-service-utils';
 
 export {
+    buildFastSyncScope,
+    parseFastSyncState,
+    serializeFastSyncState,
+} from './sync-fast-sync';
+export type {
+    FastSyncScopeContext,
+    FastSyncState,
+} from './sync-fast-sync';
+
+export {
     buildTaskUpdatesFromSpeechResult,
     extractWaitingPerson,
     FOCUS_NEXT_DUE_SOON_WINDOW_DAYS,
