@@ -3,6 +3,7 @@ import { normalizeProjectSequentialScope } from './project-utils';
 import { normalizeTaskForLoad } from './task-status';
 import { SYNC_REPAIR_REV_BY } from './sync-types';
 import { isValidRevision, nextRevision, normalizeRevision } from './sync-revision';
+import { resolveTaskContainerHierarchy } from './task-container-rules';
 
 export const normalizeAppData = (data: AppData): AppData => ({
     tasks: Array.isArray(data.tasks) ? data.tasks : [],
@@ -216,23 +217,26 @@ export const repairMergedSyncReferences = (data: AppData, nowIso: string): AppDa
             changed = true;
         }
 
-        if (nextSectionId) {
-            const section = liveSections.get(nextSectionId);
-            if (!section) {
-                nextSectionId = undefined;
-                changed = true;
-            } else if (!nextProjectId) {
-                nextProjectId = section.projectId;
-                nextAreaId = undefined;
-                changed = true;
-            } else if (section.projectId !== nextProjectId) {
-                nextSectionId = undefined;
-                changed = true;
-            }
+        if (nextAreaId && deletedAreaIds.has(nextAreaId)) {
+            nextAreaId = undefined;
+            changed = true;
         }
 
-        if (nextAreaId && (nextProjectId || deletedAreaIds.has(nextAreaId))) {
-            nextAreaId = undefined;
+        const sectionProjectId = nextSectionId ? liveSections.get(nextSectionId)?.projectId : undefined;
+        const resolvedContainer = resolveTaskContainerHierarchy({
+            projectId: nextProjectId,
+            sectionId: nextSectionId,
+            areaId: nextAreaId,
+            sectionProjectId,
+        });
+        if (
+            resolvedContainer.projectId !== nextProjectId
+            || resolvedContainer.sectionId !== nextSectionId
+            || resolvedContainer.areaId !== nextAreaId
+        ) {
+            nextProjectId = resolvedContainer.projectId;
+            nextSectionId = resolvedContainer.sectionId;
+            nextAreaId = resolvedContainer.areaId;
             changed = true;
         }
 

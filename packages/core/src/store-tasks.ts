@@ -24,6 +24,7 @@ import { generateUUID as uuidv4 } from './uuid';
 import { normalizeRecurrenceForLoad } from './recurrence';
 import { normalizeFocusTaskLimit } from './focus-utils';
 import { getTaskFocusEligibility, isTaskFutureStart } from './task-utils';
+import { resolveTaskContainerHierarchy } from './task-container-rules';
 
 const stripAttachmentRemoteMetadata = (attachments: Task['attachments']): Task['attachments'] =>
     attachments?.map((attachment) => (
@@ -256,26 +257,46 @@ const resolveTaskContainerAssignment = ({
         if (resolvedProjectId && section.projectId !== resolvedProjectId) {
             return { ok: false, error: 'Section does not belong to project' };
         }
-        resolvedProjectId = section.projectId;
+        const resolved = resolveTaskContainerHierarchy({
+            projectId: resolvedProjectId,
+            sectionId: resolvedSectionId,
+            areaId: areaId === undefined ? undefined : normalizeOptionalReferenceId(areaId),
+            sectionProjectId: section.projectId,
+        });
+        return {
+            ok: true,
+            projectId: resolved.projectId,
+            sectionId: resolved.sectionId,
+            areaId: resolved.areaId,
+        };
     }
 
     if (resolvedProjectId) {
+        const resolved = resolveTaskContainerHierarchy({
+            projectId: resolvedProjectId,
+            sectionId: undefined,
+            areaId: areaId === undefined ? undefined : normalizeOptionalReferenceId(areaId),
+        });
         return {
             ok: true,
-            projectId: resolvedProjectId,
-            sectionId: resolvedSectionId,
-            areaId: undefined,
+            projectId: resolved.projectId,
+            sectionId: resolved.sectionId,
+            areaId: resolved.areaId,
         };
     }
 
     const areaValidation = validateExistingAreaId(areaId, allAreas);
     if (!areaValidation.ok) return areaValidation;
-
-    return {
-        ok: true,
+    const resolved = resolveTaskContainerHierarchy({
         projectId: undefined,
         sectionId: undefined,
         areaId: areaValidation.areaId,
+    });
+    return {
+        ok: true,
+        projectId: resolved.projectId,
+        sectionId: resolved.sectionId,
+        areaId: resolved.areaId,
     };
 };
 
