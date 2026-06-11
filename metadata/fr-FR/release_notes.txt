@@ -1,3 +1,3 @@
-- Les builds configures peuvent envoyer des retours depuis les reglages.
-- Estimations de temps, indices de sequence, couleurs d'urgence et prochaines actions par echeance ameliorent la planification.
-- Synchro des pieces jointes iCloud, grandes listes, Markdown, repetitions et anciens fichiers joints sont plus fiables.
+- Guided Mind Sweep capture les elements personnels et de travail directement dans l'Inbox.
+- Personnes, ordre du tableau, traitement d'inbox et suivis du jour ameliorent l'organisation.
+- Sync fichier iOS, nettoyage des pieces jointes, import Dataview, actions mobiles et texte partage sont plus stables.

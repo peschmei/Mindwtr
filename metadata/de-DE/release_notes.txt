@@ -1,3 +1,3 @@
-- Feedback kann in konfigurierten Builds aus den Einstellungen gesendet werden.
-- Eigene Zeitschaetzungen, Projekt-Sequenzhinweise, Faelligkeitsfarben und Deadline-Naechstaktionen verbessern die Planung.
-- iCloud-Anhangs-Sync, grosse Listen, Markdown-Bearbeitung, Wiederholungen und alte Anhaenge sind zuverlaessiger.
+- Guided Mind Sweep erfasst private und berufliche Punkte direkt in der Inbox.
+- Personenplanung, Board-Sortierung, Inbox-Verarbeitung und Heute-Follow-ups verbessern die Organisation.
+- iOS-Dateisync, Anhangsbereinigung, Obsidian-Dataview-Import, mobile Inbox-Aktionen und Teilen-Text sind stabiler.

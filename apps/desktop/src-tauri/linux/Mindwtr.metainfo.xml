@@ -88,6 +88,25 @@
   <url type="bugtracker">https://github.com/dongdongbh/Mindwtr/issues</url>
   <url type="vcs-browser">https://github.com/dongdongbh/Mindwtr</url>
   <releases>
+    <release version="0.9.10" date="2026-06-11">
+      <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.10</url>
+      <description>
+        <p>Mindwtr 0.9.10 adds Guided Mind Sweep, people planning, board ordering, Obsidian metadata import, and safer desktop sync and attachment cleanup.</p>
+        <p xml:lang="de">Mindwtr 0.9.10 fuegt Guided Mind Sweep, Personenplanung, Board-Sortierung, Obsidian-Metadatenimport sowie sichereren Desktop-Sync und Anhangsbereinigung hinzu.</p>
+        <ul>
+          <li>Added Guided Mind Sweep in Inbox with personal and work prompt groups.</li>
+          <li xml:lang="de">Guided Mind Sweep in der Inbox mit privaten und beruflichen Prompt-Gruppen hinzugefuegt.</li>
+          <li>Added people/assignee planning and MCP people tools.</li>
+          <li xml:lang="de">Personen- und Verantwortlichenplanung sowie MCP-Personenwerkzeuge hinzugefuegt.</li>
+          <li>Added board column ordering, quick process submit, and weekly inbox processing.</li>
+          <li xml:lang="de">Board-Spaltensortierung, Schnellverarbeitung und woechentliche Inbox-Verarbeitung hinzugefuegt.</li>
+          <li>Imported Obsidian Dataview metadata and improved sync merge guidance.</li>
+          <li xml:lang="de">Obsidian-Dataview-Metadaten importiert und Sync-Merge-Hinweise verbessert.</li>
+          <li>Made desktop sync and attachments safer with bounded requests, tombstone fixes, and remote-delete cleanup.</li>
+          <li xml:lang="de">Desktop-Sync und Anhaenge durch begrenzte Anfragen, Tombstone-Fixes und Remote-Loeschbereinigung sicherer gemacht.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.9" date="2026-06-08">
       <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v0.9.9</url>
       <description>
