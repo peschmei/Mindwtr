@@ -932,6 +932,52 @@ describe('TaskStore', () => {
         expect(purged.purgedAt).toBeTruthy();
         expect(purged.attachments?.[0]?.cloudKey).toBeUndefined();
         expect(purged.attachments?.[0]?.localStatus).toBeUndefined();
+        expect(useTaskStore.getState().settings.attachments?.pendingRemoteDeletes).toEqual([
+            { cloudKey: 'attachments/doc.txt', title: 'doc.txt' },
+        ]);
+    });
+
+    it('queues remote attachment deletes when purging all deleted tasks', () => {
+        const { addTask, deleteTask, purgeDeletedTasks } = useTaskStore.getState();
+        addTask('First deleted attachment', {
+            attachments: [
+                {
+                    id: 'a1',
+                    kind: 'file',
+                    title: 'first.txt',
+                    uri: '/tmp/first.txt',
+                    cloudKey: 'attachments/first.txt',
+                    localStatus: 'available',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            ],
+        });
+        addTask('Second deleted attachment', {
+            attachments: [
+                {
+                    id: 'a2',
+                    kind: 'file',
+                    title: 'second.txt',
+                    uri: '/tmp/second.txt',
+                    cloudKey: 'attachments/second.txt',
+                    localStatus: 'available',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            ],
+        });
+
+        for (const task of useTaskStore.getState()._allTasks) {
+            deleteTask(task.id);
+        }
+        purgeDeletedTasks();
+
+        expect(useTaskStore.getState()._allTasks.every((task) => task.purgedAt)).toBe(true);
+        expect(useTaskStore.getState().settings.attachments?.pendingRemoteDeletes).toEqual([
+            { cloudKey: 'attachments/first.txt', title: 'first.txt' },
+            { cloudKey: 'attachments/second.txt', title: 'second.txt' },
+        ]);
     });
 
     it('skips fetch while edits are in progress', async () => {

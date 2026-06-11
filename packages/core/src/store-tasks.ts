@@ -1,4 +1,4 @@
-import type { AppData, Task, TaskStatus } from './types';
+import type { AppData, PendingRemoteAttachmentDelete, Task, TaskStatus } from './types';
 import type { StorageAdapter, TaskQueryOptions } from './storage';
 import type { StoreActionResult, TaskStore } from './store-types';
 import {
@@ -36,6 +36,43 @@ const stripAttachmentRemoteMetadata = (attachments: Task['attachments']): Task['
             }
             : attachment
     ));
+
+const collectPendingRemoteDeletesForTasks = (tasks: readonly Task[]): PendingRemoteAttachmentDelete[] => {
+    const byCloudKey = new Map<string, PendingRemoteAttachmentDelete>();
+    for (const task of tasks) {
+        for (const attachment of task.attachments || []) {
+            if (attachment.kind !== 'file' || !attachment.cloudKey) continue;
+            if (byCloudKey.has(attachment.cloudKey)) continue;
+            byCloudKey.set(attachment.cloudKey, {
+                cloudKey: attachment.cloudKey,
+                title: attachment.title || attachment.cloudKey,
+            });
+        }
+    }
+    return Array.from(byCloudKey.values());
+};
+
+const appendPendingRemoteDeletes = (
+    settings: TaskStore['settings'],
+    pendingDeletes: readonly PendingRemoteAttachmentDelete[],
+): TaskStore['settings'] => {
+    if (pendingDeletes.length === 0) return settings;
+    const byCloudKey = new Map<string, PendingRemoteAttachmentDelete>();
+    for (const existing of settings.attachments?.pendingRemoteDeletes || []) {
+        byCloudKey.set(existing.cloudKey, existing);
+    }
+    for (const pending of pendingDeletes) {
+        if (byCloudKey.has(pending.cloudKey)) continue;
+        byCloudKey.set(pending.cloudKey, pending);
+    }
+    return {
+        ...settings,
+        attachments: {
+            ...settings.attachments,
+            pendingRemoteDeletes: Array.from(byCloudKey.values()),
+        },
+    };
+};
 
 const normalizeOptionalTaskField = (value: string | undefined): string => value ?? '';
 
@@ -134,6 +171,7 @@ const applyVisibleTaskChanges = (
 type MutateTasksOptions = {
     selectTasks: (state: TaskStore) => Task[];
     buildUpdates: (task: Task, context: { now: string }) => Partial<Task>;
+    buildSettings?: (state: TaskStore, selectedTasks: readonly Task[], context: { now: string; settings: TaskStore['settings'] }) => TaskStore['settings'] | undefined;
     updateVisible?: boolean;
     missingMessage?: string;
     ensureDeviceIdWhenEmpty?: boolean;
@@ -173,9 +211,15 @@ const mutateTasks = async (
         const nextAllTasks = changedTasks.length > 0
             ? replaceEntitiesInArray(state._allTasks, changedTasks)
             : state._allTasks;
+        const updatedSettings = options.buildSettings?.(state, selectedTasks, {
+            now,
+            settings: deviceState.settings,
+        });
+        const nextSettings = updatedSettings ?? deviceState.settings;
+        const settingsChanged = Boolean(updatedSettings) || deviceState.updated;
         snapshot = buildSaveSnapshot(state, {
             tasks: nextAllTasks,
-            ...(deviceState.updated ? { settings: deviceState.settings } : {}),
+            ...(settingsChanged ? { settings: nextSettings } : {}),
         });
         return {
             tasks: nextVisibleTasks,
@@ -184,7 +228,7 @@ const mutateTasks = async (
                 ? replaceEntitiesInMap(state._tasksById, changedTasks)
                 : state._tasksById,
             lastDataChangeAt: getNextDataChangeAt(state.lastDataChangeAt, changeAt),
-            ...(deviceState.updated ? { settings: deviceState.settings } : {}),
+            ...(settingsChanged ? { settings: nextSettings } : {}),
         };
     });
     if (snapshot) {
@@ -775,6 +819,12 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 purgedAt: now,
                 attachments: stripAttachmentRemoteMetadata(task.attachments),
             }),
+            buildSettings: (_state, selectedTasks, { settings }) => {
+                const pendingDeletes = collectPendingRemoteDeletesForTasks(selectedTasks);
+                return pendingDeletes.length > 0
+                    ? appendPendingRemoteDeletes(settings, pendingDeletes)
+                    : undefined;
+            },
             missingMessage: 'Task not found',
         });
     },
@@ -789,6 +839,12 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 purgedAt: now,
                 attachments: stripAttachmentRemoteMetadata(task.attachments),
             }),
+            buildSettings: (_state, selectedTasks, { settings }) => {
+                const pendingDeletes = collectPendingRemoteDeletesForTasks(selectedTasks);
+                return pendingDeletes.length > 0
+                    ? appendPendingRemoteDeletes(settings, pendingDeletes)
+                    : undefined;
+            },
             updateVisible: false,
             ensureDeviceIdWhenEmpty: true,
         });
