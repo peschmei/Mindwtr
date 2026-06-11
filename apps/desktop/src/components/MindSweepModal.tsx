@@ -19,6 +19,10 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
     const [capturedByGroup, setCapturedByGroup] = useState<Record<string, string[]>>({});
     const [addFailed, setAddFailed] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const startButtonRef = useRef<HTMLButtonElement>(null);
+    const finishButtonRef = useRef<HTMLButtonElement>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
+    const lastActiveElement = useRef<HTMLElement | null>(null);
     const titleId = useId();
 
     const groups = getMindSweepGroups(scope);
@@ -27,21 +31,43 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
     const group = !isIntro && !isSummary ? groups[stepIndex] : null;
     const capturedCount = Object.values(capturedByGroup).reduce((sum, items) => sum + items.length, 0);
 
+    const getFocusable = () => {
+        const root = modalRef.current;
+        if (!root) return [];
+        return Array.from(
+            root.querySelectorAll<HTMLElement>(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+            ),
+        ).filter((el) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+    };
+
     useEffect(() => {
         if (isOpen) {
+            lastActiveElement.current = document.activeElement as HTMLElement | null;
             setScope('all');
             setStepIndex(INTRO_STEP);
             setDraft('');
             setCapturedByGroup({});
             setAddFailed(false);
+        } else if (lastActiveElement.current) {
+            lastActiveElement.current.focus();
+            lastActiveElement.current = null;
         }
     }, [isOpen]);
 
     useEffect(() => {
-        if (group) {
-            setTimeout(() => inputRef.current?.focus(), 50);
-        }
-    }, [group]);
+        if (!isOpen) return;
+        const handle = window.setTimeout(() => {
+            if (group) {
+                inputRef.current?.focus();
+            } else if (isSummary) {
+                finishButtonRef.current?.focus();
+            } else {
+                startButtonRef.current?.focus();
+            }
+        }, 50);
+        return () => window.clearTimeout(handle);
+    }, [group, isOpen, isSummary]);
 
     const handleAdd = useCallback(async () => {
         const title = draft.trim();
@@ -59,15 +85,6 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
             setAddFailed(true);
         }
     }, [addTask, draft, group]);
-
-    useEffect(() => {
-        if (!isOpen) return;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [isOpen, onClose]);
 
     if (!isOpen) return null;
 
@@ -87,8 +104,38 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
                 onClick={onClose}
             >
                 <div
+                    ref={modalRef}
                     className="bg-background border border-border rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 flex flex-col gap-4"
                     onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                            event.preventDefault();
+                            onClose();
+                            return;
+                        }
+
+                        if (event.key === 'Tab') {
+                            const focusable = getFocusable();
+                            if (focusable.length === 0) return;
+                            const first = focusable[0];
+                            const last = focusable[focusable.length - 1];
+                            const active = document.activeElement as HTMLElement | null;
+
+                            if (!active || !focusable.includes(active)) {
+                                event.preventDefault();
+                                first.focus();
+                                return;
+                            }
+
+                            if (event.shiftKey && active === first) {
+                                event.preventDefault();
+                                last.focus();
+                            } else if (!event.shiftKey && active === last) {
+                                event.preventDefault();
+                                first.focus();
+                            }
+                        }
+                    }}
                 >
                     <div className="flex items-center justify-between">
                         <h2 id={titleId} className="text-lg font-semibold flex items-center gap-2">
@@ -126,6 +173,7 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
                                 </div>
                             </div>
                             <button
+                                ref={startButtonRef}
                                 onClick={() => setStepIndex(0)}
                                 className="w-full bg-primary text-primary-foreground py-2.5 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                             >
@@ -214,6 +262,7 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
                                 <p className="text-sm text-muted-foreground">{t('mindSweep.summaryHint')}</p>
                             )}
                             <button
+                                ref={finishButtonRef}
                                 onClick={onClose}
                                 className="w-full bg-primary text-primary-foreground py-2.5 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                             >

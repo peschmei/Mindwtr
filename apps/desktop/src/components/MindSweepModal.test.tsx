@@ -19,6 +19,29 @@ describe('MindSweepLauncher', () => {
         expect(getByText('mindSweep.scopeWork')).toBeInTheDocument();
     });
 
+    it('traps focus inside the modal and restores focus on close', async () => {
+        const { getByRole, queryByRole } = render(
+            <MindSweepLauncher t={t} addTask={vi.fn().mockResolvedValue(undefined)} />,
+        );
+        const launcher = getByRole('button', { name: 'mindSweep.launchButton' });
+        launcher.focus();
+        fireEvent.click(launcher);
+
+        const start = getByRole('button', { name: 'mindSweep.start' });
+        await waitFor(() => expect(start).toHaveFocus());
+
+        fireEvent.keyDown(start, { key: 'Tab' });
+        const close = getByRole('button', { name: 'mindSweep.close' });
+        expect(close).toHaveFocus();
+
+        fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
+        expect(start).toHaveFocus();
+
+        fireEvent.keyDown(start, { key: 'Escape' });
+        await waitFor(() => expect(queryByRole('dialog')).toBeNull());
+        expect(launcher).toHaveFocus();
+    });
+
     it('steps into the first group and captures items to the inbox', async () => {
         const { addTask, getByText, getByPlaceholderText } = openFlow();
         fireEvent.click(getByText('mindSweep.start'));
