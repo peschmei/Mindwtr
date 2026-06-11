@@ -305,23 +305,32 @@ export const runDropboxAuthorized = async <T,>(
 };
 
 export const loadWebDavConfig = async (): Promise<WebDavConfig | null> => {
-  const url = await AsyncStorage.getItem(WEBDAV_URL_KEY);
+  const [url, username, password, allowInsecureHttp] = await Promise.all([
+    AsyncStorage.getItem(WEBDAV_URL_KEY),
+    AsyncStorage.getItem(WEBDAV_USERNAME_KEY),
+    AsyncStorage.getItem(WEBDAV_PASSWORD_KEY),
+    AsyncStorage.getItem(WEBDAV_ALLOW_INSECURE_HTTP_KEY),
+  ]);
   if (!url) return null;
   return {
     url,
-    username: (await AsyncStorage.getItem(WEBDAV_USERNAME_KEY)) || '',
-    password: (await AsyncStorage.getItem(WEBDAV_PASSWORD_KEY)) || '',
-    allowInsecureHttp: (await AsyncStorage.getItem(WEBDAV_ALLOW_INSECURE_HTTP_KEY)) === 'true',
+    username: username || '',
+    password: password || '',
+    allowInsecureHttp: allowInsecureHttp === 'true',
   };
 };
 
 export const loadCloudConfig = async (): Promise<CloudConfig | null> => {
-  const url = await AsyncStorage.getItem(CLOUD_URL_KEY);
+  const [url, token, allowInsecureHttp] = await Promise.all([
+    AsyncStorage.getItem(CLOUD_URL_KEY),
+    AsyncStorage.getItem(CLOUD_TOKEN_KEY),
+    AsyncStorage.getItem(CLOUD_ALLOW_INSECURE_HTTP_KEY),
+  ]);
   if (!url) return null;
   return {
     url,
-    token: (await AsyncStorage.getItem(CLOUD_TOKEN_KEY)) || '',
-    allowInsecureHttp: (await AsyncStorage.getItem(CLOUD_ALLOW_INSECURE_HTTP_KEY)) === 'true',
+    token: token || '',
+    allowInsecureHttp: allowInsecureHttp === 'true',
   };
 };
 
