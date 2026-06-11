@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import type { AppData, Task } from '@mindwtr/core';
+import { cloudHeadJson, cloudPutJson, type AppData, type Task } from '@mindwtr/core';
 import { corsOrigin, errorResponse, preflightResponse } from './server-config';
 import { __cloudTestUtils, startCloudServer } from './server';
 
@@ -1045,6 +1045,61 @@ describe('cloud server api', () => {
         expect(getResponse.status).toBe(200);
         const data = await getResponse.json() as AppData;
         expect(data.people).toEqual(seedData.people);
+    });
+
+    test('returns fast-sync fingerprints for real self-hosted two-device writes', async () => {
+        const dataUrl = `${baseUrl}/v1/data`;
+        const firstDeviceData: AppData = {
+            tasks: [makeTestTask({ id: 'device-a-task', title: 'Device A task' })],
+            projects: [],
+            sections: [],
+            areas: [],
+            people: [],
+            settings: {},
+        };
+        const secondDeviceData: AppData = {
+            tasks: [makeTestTask({ id: 'device-b-task', title: 'Device B task' })],
+            projects: [],
+            sections: [],
+            areas: [],
+            people: [],
+            settings: {},
+        };
+
+        const firstWrite = await cloudPutJson(dataUrl, firstDeviceData, {
+            token: integrationToken,
+            allowInsecureHttp: true,
+        });
+        expect(firstWrite.serverMergedRemoteData).toBe(false);
+        expect(firstWrite.fingerprint).toMatch(/^cloud:v1:etag=/);
+        expect(firstWrite.etag).toBeTruthy();
+
+        const firstHead = await cloudHeadJson(dataUrl, {
+            token: integrationToken,
+            allowInsecureHttp: true,
+        });
+        expect(firstHead.fingerprint).toBe(firstWrite.fingerprint);
+
+        const secondWrite = await cloudPutJson(dataUrl, secondDeviceData, {
+            token: integrationToken,
+            allowInsecureHttp: true,
+        });
+        expect(secondWrite.serverMergedRemoteData).toBe(true);
+        expect(secondWrite.fingerprint).toMatch(/^cloud:v1:etag=/);
+
+        const secondHead = await cloudHeadJson(dataUrl, {
+            token: integrationToken,
+            allowInsecureHttp: true,
+        });
+        expect(secondHead.fingerprint).toBe(secondWrite.fingerprint);
+
+        const mergedResponse = await fetch(dataUrl, { headers: authHeaders });
+        expect(mergedResponse.status).toBe(200);
+        const mergedData = await mergedResponse.json() as AppData;
+        expect(mergedData.tasks.map((task) => task.id).sort()).toEqual([
+            'device-a-task',
+            'device-b-task',
+        ]);
     });
 
     test('returns data metadata for HEAD /v1/data without a body', async () => {
