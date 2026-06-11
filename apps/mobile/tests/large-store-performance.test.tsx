@@ -306,11 +306,6 @@ vi.mock('@/hooks/use-mobile-area-filter', () => ({
   useMobileAreaFilter: () => ({ areaById: new Map(), resolvedAreaFilter: '__all__' }),
 }));
 
-vi.mock('@/lib/area-filter', () => ({
-  projectMatchesAreaFilter: () => true,
-  taskMatchesAreaFilter: () => true,
-}));
-
 vi.mock('@/lib/task-meta-navigation', () => ({
   openContextsScreen: vi.fn(),
   openProjectScreen: vi.fn(),

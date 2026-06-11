@@ -206,10 +206,6 @@ vi.mock('@/hooks/use-manual-pull-sync', () => ({
   }),
 }));
 
-vi.mock('@/lib/area-filter', () => ({
-  taskMatchesAreaFilter: () => true,
-}));
-
 vi.mock('@/lib/task-meta-navigation', () => ({
   openContextsScreen: vi.fn(),
   openProjectScreen: vi.fn(),

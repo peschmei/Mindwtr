@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { Area } from '@mindwtr/core';
 import { Check, ChevronDown, Layers } from 'lucide-react';
 
-import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '../../lib/area-filter';
+import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '@mindwtr/core';
 import { cn } from '../../lib/utils';
 import { useDropdownPosition } from './use-dropdown-position';
 

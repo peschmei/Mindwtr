@@ -46,6 +46,7 @@ vi.mock('react-native', async () => {
 vi.mock('@mindwtr/core', () => ({
   useTaskStore: () => mocks.storeState,
   safeFormatDate: vi.fn(() => 'May 12, 2026, 8:30 AM'),
+  taskMatchesAreaFilter: vi.fn(() => true),
 }));
 
 vi.mock('../contexts/language-context', () => ({
@@ -74,10 +75,6 @@ vi.mock('@/hooks/use-mobile-area-filter', () => ({
     areaById: new Map(),
     resolvedAreaFilter: '__all__',
   }),
-}));
-
-vi.mock('@/lib/area-filter', () => ({
-  taskMatchesAreaFilter: () => true,
 }));
 
 vi.mock('@/lib/task-meta-navigation', () => ({

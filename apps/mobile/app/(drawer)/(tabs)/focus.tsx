@@ -71,7 +71,7 @@ import {
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { PullSyncIndicator } from '@/components/PullSyncIndicator';
 import { useManualPullSync } from '@/hooks/use-manual-pull-sync';
-import { projectMatchesAreaFilter, taskMatchesAreaFilter } from '@/lib/area-filter';
+import { projectMatchesAreaFilter, taskMatchesAreaFilter } from '@mindwtr/core';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];

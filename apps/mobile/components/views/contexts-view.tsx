@@ -30,7 +30,7 @@ import { useLanguage } from '../../contexts/language-context';
 
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { taskMatchesAreaFilter } from '@/lib/area-filter';
+import { taskMatchesAreaFilter } from '@mindwtr/core';
 import { openProjectScreen } from '@/lib/task-meta-navigation';
 import { useToast } from '@/contexts/toast-context';
 import { TaskEditModal } from '../task-edit-modal';

@@ -12,7 +12,7 @@ import {
     matchesGlobalQuickAddShortcut,
     normalizeGlobalQuickAddShortcut,
 } from '../lib/global-quick-add-shortcut';
-import { AREA_FILTER_ALL } from '../lib/area-filter';
+import { AREA_FILTER_ALL } from '@mindwtr/core';
 
 export type KeybindingStyle = 'vim' | 'emacs';
 

@@ -30,7 +30,7 @@ import { useUiStore } from '../store/ui-store';
 import { useObsidianStore } from '../store/obsidian-store';
 import { reportError } from '../lib/report-error';
 import { ToastHost } from './ToastHost';
-import { AREA_FILTER_ALL, resolveAreaFilter, taskMatchesAreaFilter } from '../lib/area-filter';
+import { AREA_FILTER_ALL, resolveAreaFilter, taskMatchesAreaFilter } from '@mindwtr/core';
 import { SyncService } from '../lib/sync-service';
 import { SidebarAreaFilter } from './ui/SidebarAreaFilter';
 import { hasCalendarTaskDragData } from '../lib/calendar-task-drag';

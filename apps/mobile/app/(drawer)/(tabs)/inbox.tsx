@@ -9,7 +9,7 @@ import { ErrorBoundary } from '../../../components/ErrorBoundary';
 import { useLanguage } from '../../../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
-import { taskMatchesAreaFilter } from '@/lib/area-filter';
+import { taskMatchesAreaFilter } from '@mindwtr/core';
 import { useQuickCapture } from '../../../contexts/quick-capture-context';
 
 export default function InboxScreen() {

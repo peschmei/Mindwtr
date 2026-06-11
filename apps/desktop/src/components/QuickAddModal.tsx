@@ -35,7 +35,7 @@ import {
 import { QUICK_ADD_MAIN_WINDOW_LABEL, QUICK_ADD_SAVED_EVENT } from '../lib/quick-add-saved-event';
 import { TaskInput } from './Task/TaskInput';
 import { AreaSelector } from './ui/AreaSelector';
-import { AREA_FILTER_ALL, AREA_FILTER_NONE, resolveAreaFilter } from '../lib/area-filter';
+import { AREA_FILTER_ALL, AREA_FILTER_NONE, resolveAreaFilter } from '@mindwtr/core';
 
 const AUDIO_CAPTURE_DIR = 'mindwtr/audio-captures';
 const QUICK_ADD_IMAGE_CAPTURE_DIR = 'mindwtr/quick-add-images';

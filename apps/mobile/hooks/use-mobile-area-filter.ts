@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { type FilterSettings, useTaskStore } from '@mindwtr/core';
 
-import { AREA_FILTER_ALL, AREA_FILTER_NONE, resolveAreaFilter, type AreaFilterValue } from '../lib/area-filter';
+import { AREA_FILTER_ALL, AREA_FILTER_NONE, resolveAreaFilter, type AreaFilterValue } from '@mindwtr/core';
 
 let staleAreaFilterResetInFlight: string | null = null;
 

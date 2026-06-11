@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Area } from '@mindwtr/core';
 
-import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '../../lib/area-filter';
+import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '@mindwtr/core';
 import { SidebarAreaFilter } from './SidebarAreaFilter';
 
 const areas: Area[] = [
