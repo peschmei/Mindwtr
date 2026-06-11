@@ -1075,3 +1075,11 @@ export type {
     ParsedOmniFocusProject,
     ParsedOmniFocusTask,
 } from './omnifocus-import';
+
+export {
+    MIND_SWEEP_GROUPS,
+    getMindSweepGroups,
+    type MindSweepGroup,
+    type MindSweepGroupScope,
+    type MindSweepScope,
+} from './mind-sweep';
