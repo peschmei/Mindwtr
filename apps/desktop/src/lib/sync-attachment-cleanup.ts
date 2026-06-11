@@ -1,4 +1,5 @@
 import {
+    applyAttachmentCleanupResult,
     type AppData,
     type Attachment,
     type PendingRemoteAttachmentDelete,
@@ -6,7 +7,6 @@ import {
     findDeletedAttachmentsForFileCleanup,
     findOrphanedAttachments,
     getErrorStatus,
-    removeOrphanedAttachmentsFromData,
     type CloudProvider,
     webdavDeleteFile,
 } from '@mindwtr/core';
@@ -121,17 +121,7 @@ export const cleanupOrphanedAttachments = async (
     const lastCleanupAt = new Date().toISOString();
     if (cleanupTargets.size === 0 && remoteCleanupTargets.size === 0) {
         await cleanupAttachmentTempFiles(deps);
-        return {
-            ...appData,
-            settings: {
-                ...appData.settings,
-                attachments: {
-                    ...appData.settings.attachments,
-                    lastCleanupAt,
-                    pendingRemoteDeletes: undefined,
-                },
-            },
-        };
+        return applyAttachmentCleanupResult(appData, { lastCleanupAt });
     }
 
     let webdavConfig: WebDavConfig | null = null;
@@ -252,17 +242,10 @@ export const cleanupOrphanedAttachments = async (
 
     await cleanupAttachmentTempFiles(deps);
 
-    const cleaned = orphaned.length > 0 ? removeOrphanedAttachmentsFromData(appData) : appData;
     const pendingRemoteDeletes = Array.from(nextPendingRemoteDeletes.values());
-    return {
-        ...cleaned,
-        settings: {
-            ...cleaned.settings,
-            attachments: {
-                ...cleaned.settings.attachments,
-                lastCleanupAt,
-                pendingRemoteDeletes: pendingRemoteDeletes.length > 0 ? pendingRemoteDeletes : undefined,
-            },
-        },
-    };
+    return applyAttachmentCleanupResult(appData, {
+        lastCleanupAt,
+        orphanedAttachments: orphaned,
+        pendingRemoteDeletes,
+    });
 };

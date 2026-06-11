@@ -1,4 +1,4 @@
-import type { AppData, Attachment } from './types';
+import type { AppData, Attachment, PendingRemoteAttachmentDelete } from './types';
 
 export interface CleanupResult {
     orphanedCount: number;
@@ -85,5 +85,37 @@ export function removeAttachmentsByIdFromData(appData: AppData, attachmentIds: I
             ...project,
             attachments: project.attachments?.filter((attachment) => !ids.has(attachment.id)),
         })),
+    };
+}
+
+export type AttachmentCleanupApplyResult = {
+    lastCleanupAt: string;
+    pendingRemoteDeletes?: readonly PendingRemoteAttachmentDelete[];
+    orphanedAttachments?: readonly Attachment[];
+    processedOrphanedIds?: Iterable<string>;
+    reachedBatchLimit?: boolean;
+};
+
+export function applyAttachmentCleanupResult(appData: AppData, result: AttachmentCleanupApplyResult): AppData {
+    const hasOrphaned = (result.orphanedAttachments?.length ?? 0) > 0;
+    const cleaned = hasOrphaned
+        ? result.reachedBatchLimit
+            ? removeAttachmentsByIdFromData(appData, result.processedOrphanedIds ?? [])
+            : removeOrphanedAttachmentsFromData(appData)
+        : appData;
+    const pendingRemoteDeletes = result.pendingRemoteDeletes?.length
+        ? [...result.pendingRemoteDeletes]
+        : undefined;
+
+    return {
+        ...cleaned,
+        settings: {
+            ...cleaned.settings,
+            attachments: {
+                ...cleaned.settings.attachments,
+                lastCleanupAt: result.lastCleanupAt,
+                pendingRemoteDeletes,
+            },
+        },
     };
 }

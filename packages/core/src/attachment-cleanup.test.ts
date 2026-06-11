@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    applyAttachmentCleanupResult,
     findDeletedAttachmentsForFileCleanup,
     findOrphanedAttachments,
     removeAttachmentsByIdFromData,
@@ -282,5 +283,84 @@ describe('removeAttachmentsByIdFromData', () => {
         const cleaned = removeAttachmentsByIdFromData(data, ['drop-task', 'drop-project']);
         expect(cleaned.tasks[0].attachments?.map((attachment) => attachment.id)).toEqual(['keep-task']);
         expect(cleaned.projects[0].attachments ?? []).toHaveLength(0);
+    });
+});
+
+describe('applyAttachmentCleanupResult', () => {
+    it('stores cleanup metadata and removes all orphaned attachments when not batch-limited', () => {
+        const data = buildData();
+        data.tasks.push({
+            id: 't1',
+            title: 'Task',
+            status: 'done',
+            contexts: [],
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            deletedAt: '2026-01-01T00:00:00.000Z',
+            attachments: [
+                {
+                    id: 'a1',
+                    kind: 'file',
+                    title: 'file',
+                    uri: '/tmp/file',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            ],
+        });
+
+        const orphaned = findOrphanedAttachments(data);
+        const cleaned = applyAttachmentCleanupResult(data, {
+            lastCleanupAt: '2026-01-02T00:00:00.000Z',
+            orphanedAttachments: orphaned,
+            pendingRemoteDeletes: [{ cloudKey: 'attachments/missing.txt', attempts: 1 }],
+        });
+
+        expect(cleaned.tasks[0].attachments).toEqual([]);
+        expect(cleaned.settings.attachments?.lastCleanupAt).toBe('2026-01-02T00:00:00.000Z');
+        expect(cleaned.settings.attachments?.pendingRemoteDeletes).toEqual([
+            { cloudKey: 'attachments/missing.txt', attempts: 1 },
+        ]);
+    });
+
+    it('removes only processed orphaned attachments when batch-limited', () => {
+        const data = buildData();
+        data.tasks.push({
+            id: 't1',
+            title: 'Task',
+            status: 'done',
+            contexts: [],
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            deletedAt: '2026-01-01T00:00:00.000Z',
+            attachments: [
+                {
+                    id: 'processed',
+                    kind: 'file',
+                    title: 'processed',
+                    uri: '/tmp/processed',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+                {
+                    id: 'deferred',
+                    kind: 'file',
+                    title: 'deferred',
+                    uri: '/tmp/deferred',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            ],
+        });
+
+        const cleaned = applyAttachmentCleanupResult(data, {
+            lastCleanupAt: '2026-01-02T00:00:00.000Z',
+            orphanedAttachments: findOrphanedAttachments(data),
+            processedOrphanedIds: ['processed'],
+            reachedBatchLimit: true,
+        });
+
+        expect(cleaned.tasks[0].attachments?.map((attachment) => attachment.id)).toEqual(['deferred']);
+        expect(cleaned.settings.attachments?.pendingRemoteDeletes).toBeUndefined();
     });
 });

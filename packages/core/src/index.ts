@@ -809,12 +809,14 @@ export type {
 } from './attachment-progress';
 
 export {
+    applyAttachmentCleanupResult,
     findDeletedAttachmentsForFileCleanup,
     findOrphanedAttachments,
     removeAttachmentsByIdFromData,
     removeOrphanedAttachmentsFromData,
 } from './attachment-cleanup';
 export type {
+    AttachmentCleanupApplyResult,
     CleanupResult,
 } from './attachment-cleanup';
 
