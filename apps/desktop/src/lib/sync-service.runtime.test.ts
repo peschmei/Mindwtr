@@ -866,7 +866,7 @@ describe('desktop sync-service runtime', () => {
 
         const getDataCalls = invokeMock.mock.calls.filter(([command]) => command === 'get_data');
         expect(result).toEqual({ success: true, stats: emptyStats });
-        expect(getDataCalls).toHaveLength(2);
+        expect(getDataCalls).toHaveLength(1);
         expect(performSyncCycleMock).toHaveBeenCalledTimes(1);
         expect(headFetchMock).toHaveBeenCalled();
         expect(freshRemoteFingerprint).not.toBe(cachedRemoteFingerprint);

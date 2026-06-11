@@ -1136,7 +1136,7 @@ export class SyncService {
         run.setStep('attachments_prepare');
         await yieldToRenderer();
         try {
-            const localData = await readLocalDataForSync();
+            const localData = await SyncService.readLocalDataForSyncCycle(context);
             const result = await runCorePreSyncAttachmentPhase({
                 backend: context.backend,
                 cloudProvider: context.cloudProvider,
@@ -1167,6 +1167,7 @@ export class SyncService {
 
             if (result.mutated) {
                 context.preSyncedLocalData = result.data ?? localData;
+                context.localDataCache = null;
                 run.ensureLocalSnapshotFresh();
             }
         } catch (error) {
