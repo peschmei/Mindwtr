@@ -1,4 +1,5 @@
 import type { AppData, Attachment, Area, Person, Project, SavedFilter, Section, Task } from './types';
+import { prunePendingRemoteAttachmentDeletes } from './attachment-cleanup';
 
 const DEFAULT_TOMBSTONE_RETENTION_DAYS = 90;
 const MIN_TOMBSTONE_RETENTION_DAYS = 1;
@@ -168,6 +169,23 @@ export const purgeExpiredTombstones = (
             savedFilters: savedFilterPrune.next,
         };
     }
+    const pendingRemoteDeletes = data.settings.attachments?.pendingRemoteDeletes;
+    const nextPendingRemoteDeletes = prunePendingRemoteAttachmentDeletes(pendingRemoteDeletes, nowIso);
+    const removedPendingRemoteDeletes = Math.max(
+        0,
+        (pendingRemoteDeletes?.length ?? 0) - nextPendingRemoteDeletes.length,
+    );
+    if (removedPendingRemoteDeletes > 0) {
+        nextSettings = {
+            ...nextSettings,
+            attachments: {
+                ...nextSettings.attachments,
+                pendingRemoteDeletes: nextPendingRemoteDeletes.length > 0
+                    ? nextPendingRemoteDeletes
+                    : undefined,
+            },
+        };
+    }
 
     return {
         data: {
@@ -186,6 +204,6 @@ export const purgeExpiredTombstones = (
         removedPersonTombstones,
         removedAttachmentTombstones,
         removedSavedFilterTombstones,
-        removedPendingRemoteDeletes: 0,
+        removedPendingRemoteDeletes,
     };
 };

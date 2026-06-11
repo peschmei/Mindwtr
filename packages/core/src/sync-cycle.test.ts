@@ -482,7 +482,6 @@ describe('performSyncCycle', () => {
         expect(keptTask).toBeTruthy();
         expect(keptTask!.attachments).toBeUndefined();
         expect(saved!.settings.attachments?.pendingRemoteDeletes?.map((entry) => entry.cloudKey)).toEqual([
-            'attachments/stale.bin',
             'attachments/recent.bin',
         ]);
     });

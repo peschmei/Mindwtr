@@ -6,6 +6,7 @@ import {
     findOrphanedAttachments,
     isAttachmentCloudResourceReferenced,
     isAttachmentLocalResourceReferenced,
+    PENDING_REMOTE_ATTACHMENT_DELETE_MAX_ATTEMPTS,
     removeAttachmentsByIdFromData,
     removeOrphanedAttachmentsFromData,
 } from './attachment-cleanup';
@@ -460,6 +461,39 @@ describe('applyAttachmentCleanupResult', () => {
         expect(cleaned.settings.attachments?.lastCleanupAt).toBe('2026-01-02T00:00:00.000Z');
         expect(cleaned.settings.attachments?.pendingRemoteDeletes).toEqual([
             { cloudKey: 'attachments/missing.txt', attempts: 1 },
+        ]);
+    });
+
+    it('drops pending remote attachment deletes after max attempts or expiry', () => {
+        const data = buildData();
+
+        const cleaned = applyAttachmentCleanupResult(data, {
+            lastCleanupAt: '2026-02-01T00:00:00.000Z',
+            pendingRemoteDeletes: [
+                {
+                    cloudKey: 'attachments/too-many.txt',
+                    attempts: PENDING_REMOTE_ATTACHMENT_DELETE_MAX_ATTEMPTS,
+                    lastErrorAt: '2026-01-31T00:00:00.000Z',
+                },
+                {
+                    cloudKey: 'attachments/too-old.txt',
+                    attempts: 1,
+                    lastErrorAt: '2025-12-01T00:00:00.000Z',
+                },
+                {
+                    cloudKey: 'attachments/recent.txt',
+                    attempts: 1,
+                    lastErrorAt: '2026-01-31T00:00:00.000Z',
+                },
+            ],
+        });
+
+        expect(cleaned.settings.attachments?.pendingRemoteDeletes).toEqual([
+            {
+                cloudKey: 'attachments/recent.txt',
+                attempts: 1,
+                lastErrorAt: '2026-01-31T00:00:00.000Z',
+            },
         ]);
     });
 

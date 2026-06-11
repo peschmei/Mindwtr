@@ -1,5 +1,8 @@
 import type { AppData, Attachment, PendingRemoteAttachmentDelete } from './types';
 
+export const PENDING_REMOTE_ATTACHMENT_DELETE_MAX_ATTEMPTS = 12;
+export const PENDING_REMOTE_ATTACHMENT_DELETE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 export interface CleanupResult {
     orphanedCount: number;
     cleanedIds: string[];
@@ -147,6 +150,38 @@ export type AttachmentCleanupApplyResult = {
     reachedBatchLimit?: boolean;
 };
 
+const parseTimestampMs = (value: unknown): number | null => {
+    if (typeof value !== 'string' || value.trim().length === 0) return null;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+export function shouldRetainPendingRemoteAttachmentDelete(
+    entry: PendingRemoteAttachmentDelete,
+    nowIso: string,
+): boolean {
+    const attempts = typeof entry.attempts === 'number' && Number.isFinite(entry.attempts)
+        ? Math.max(0, Math.floor(entry.attempts))
+        : 0;
+    if (attempts >= PENDING_REMOTE_ATTACHMENT_DELETE_MAX_ATTEMPTS) return false;
+
+    const lastErrorMs = parseTimestampMs(entry.lastErrorAt);
+    if (lastErrorMs === null) return true;
+    const nowMs = parseTimestampMs(nowIso);
+    if (nowMs === null) return true;
+    return nowMs - lastErrorMs <= PENDING_REMOTE_ATTACHMENT_DELETE_MAX_AGE_MS;
+}
+
+export function prunePendingRemoteAttachmentDeletes(
+    pendingRemoteDeletes: readonly PendingRemoteAttachmentDelete[] | undefined,
+    nowIso: string,
+): PendingRemoteAttachmentDelete[] {
+    if (!pendingRemoteDeletes?.length) return [];
+    return pendingRemoteDeletes.filter((entry) =>
+        shouldRetainPendingRemoteAttachmentDelete(entry, nowIso)
+    );
+}
+
 export function applyAttachmentCleanupResult(appData: AppData, result: AttachmentCleanupApplyResult): AppData {
     const hasOrphaned = (result.orphanedAttachments?.length ?? 0) > 0;
     const cleaned = hasOrphaned
@@ -154,8 +189,12 @@ export function applyAttachmentCleanupResult(appData: AppData, result: Attachmen
             ? removeAttachmentsByIdFromData(appData, result.processedOrphanedIds ?? [])
             : removeOrphanedAttachmentsFromData(appData)
         : appData;
-    const pendingRemoteDeletes = result.pendingRemoteDeletes?.length
-        ? [...result.pendingRemoteDeletes]
+    const pendingRemoteDeletes = prunePendingRemoteAttachmentDeletes(
+        result.pendingRemoteDeletes,
+        result.lastCleanupAt,
+    );
+    const nextPendingRemoteDeletes = pendingRemoteDeletes.length
+        ? pendingRemoteDeletes
         : undefined;
 
     return {
@@ -165,7 +204,7 @@ export function applyAttachmentCleanupResult(appData: AppData, result: Attachmen
             attachments: {
                 ...cleaned.settings.attachments,
                 lastCleanupAt: result.lastCleanupAt,
-                pendingRemoteDeletes,
+                pendingRemoteDeletes: nextPendingRemoteDeletes,
             },
         },
     };

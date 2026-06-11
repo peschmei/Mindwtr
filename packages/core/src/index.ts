@@ -833,8 +833,12 @@ export {
     isAttachmentCloudResourceReferenced,
     isAttachmentLocalResourceReferenced,
     normalizeAttachmentCleanupUri,
+    PENDING_REMOTE_ATTACHMENT_DELETE_MAX_AGE_MS,
+    PENDING_REMOTE_ATTACHMENT_DELETE_MAX_ATTEMPTS,
+    prunePendingRemoteAttachmentDeletes,
     removeAttachmentsByIdFromData,
     removeOrphanedAttachmentsFromData,
+    shouldRetainPendingRemoteAttachmentDelete,
 } from './attachment-cleanup';
 export type {
     AttachmentCleanupApplyResult,
