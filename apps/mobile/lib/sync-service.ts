@@ -567,11 +567,29 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         await ensureCloudKitReady({ signal: requestAbortController.signal });
       }
 
+      const readLocalDataForSyncCycle = async (): Promise<AppData> => {
+        const currentChangeAt = useTaskStore.getState().lastDataChangeAt;
+        if (localDataCache && localDataCache.changeAt === currentChangeAt) {
+          localSnapshotChangeAt = currentChangeAt;
+          return localDataCache.data;
+        }
+        const inMemorySnapshot = getInMemoryAppDataSnapshot();
+        const baseData = preSyncedLocalData
+          ? mergeAppData(preSyncedLocalData, inMemorySnapshot)
+          : mergeAppData(await mobileStorage.getData(), inMemorySnapshot);
+        const data = await injectExternalCalendars(baseData);
+        localSnapshotChangeAt = useTaskStore.getState().lastDataChangeAt;
+        localDataCache = {
+          changeAt: localSnapshotChangeAt,
+          data,
+        };
+        return data;
+      };
+
       // Pre-sync local attachments only when attachment metadata shows real work.
       const attachmentPrepareStartedAt = Date.now();
       try {
-        const persistedData = await mobileStorage.getData();
-        const localData = mergeAppData(persistedData, getInMemoryAppDataSnapshot());
+        const localData = await readLocalDataForSyncCycle();
         const hasAttachmentWork = await hasPendingAttachmentSyncWork(localData);
         if (hasPendingSyncSideEffects(localData) || hasAttachmentWork) {
           startVisibleSyncActivity();
@@ -623,6 +641,7 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
           if (preSyncResult.mutated) {
             // Capture pre-sync attachment mutations before stale-snapshot checks so we can persist them on abort.
             preSyncedLocalData = preSyncResult.data ?? localData;
+            localDataCache = null;
             ensureLocalSnapshotFresh();
           }
           logSyncInfo('Attachment pre-sync complete', {
@@ -856,25 +875,6 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         if (!fileSyncPath) throw new Error('No sync folder configured');
         await writeSyncFile(fileSyncPath, sanitized);
         remoteDataForCompare = sanitized;
-      };
-
-      const readLocalDataForSyncCycle = async (): Promise<AppData> => {
-        const currentChangeAt = useTaskStore.getState().lastDataChangeAt;
-        if (localDataCache && localDataCache.changeAt === currentChangeAt) {
-          localSnapshotChangeAt = currentChangeAt;
-          return localDataCache.data;
-        }
-        const inMemorySnapshot = getInMemoryAppDataSnapshot();
-        const baseData = preSyncedLocalData
-          ? mergeAppData(preSyncedLocalData, inMemorySnapshot)
-          : mergeAppData(await mobileStorage.getData(), inMemorySnapshot);
-        const data = await injectExternalCalendars(baseData);
-        localSnapshotChangeAt = useTaskStore.getState().lastDataChangeAt;
-        localDataCache = {
-          changeAt: localSnapshotChangeAt,
-          data,
-        };
-        return data;
       };
 
       const readRemoteFingerprintForFastCheck = async (): Promise<string | null> => {

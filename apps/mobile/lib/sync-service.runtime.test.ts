@@ -462,7 +462,7 @@ describe('mobile sync-service runtime', () => {
     const result = await syncServiceModule.performMobileSync();
 
     expect(result).toEqual({ success: true, stats: emptyStats });
-    expect(storageMocks.getData).toHaveBeenCalledTimes(2);
+    expect(storageMocks.getData).toHaveBeenCalledTimes(1);
     expect(coreMocks.webdavHeadFile).toHaveBeenCalledTimes(2);
     expect(coreMocks.webdavGetJson).toHaveBeenCalledTimes(1);
     expect(coreMocks.performSyncCycle).toHaveBeenCalledTimes(1);
