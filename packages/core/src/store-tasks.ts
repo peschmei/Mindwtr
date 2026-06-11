@@ -250,6 +250,7 @@ const prepareTaskUpdatesForStore = ({
     allProjects,
     allSections,
     allAreas,
+    reserveProjectOrder,
 }: {
     task: Task;
     updates: Partial<Task>;
@@ -257,46 +258,52 @@ const prepareTaskUpdatesForStore = ({
     allProjects: AppData['projects'];
     allSections: AppData['sections'];
     allAreas: AppData['areas'];
+    reserveProjectOrder?: boolean;
 }): { ok: true; updates: Partial<Task> } | { ok: false; error: string } => {
-    const resolveEffectiveContainer = (candidateUpdates: Partial<Task>) => resolveTaskContainerAssignment({
-        projectId: hasOwnField(candidateUpdates, 'projectId') ? candidateUpdates.projectId : task.projectId,
-        sectionId: hasOwnField(candidateUpdates, 'sectionId') ? candidateUpdates.sectionId : task.sectionId,
-        areaId: hasOwnField(candidateUpdates, 'areaId') ? candidateUpdates.areaId : task.areaId,
+    const hasProjectUpdate = hasOwnField(updates, 'projectId');
+    const nextProjectId = hasProjectUpdate
+        ? normalizeProjectIdInput(updates.projectId)
+        : task.projectId;
+    const projectChanged = (task.projectId ?? undefined) !== (nextProjectId ?? undefined);
+    const candidateSectionId = hasOwnField(updates, 'sectionId')
+        ? updates.sectionId
+        : hasProjectUpdate && projectChanged
+            ? undefined
+            : task.sectionId;
+    const candidateAreaId = hasOwnField(updates, 'areaId')
+        ? updates.areaId
+        : hasProjectUpdate && projectChanged && nextProjectId
+            ? undefined
+            : task.areaId;
+    const containerResolution = resolveTaskContainerAssignment({
+        projectId: nextProjectId,
+        sectionId: candidateSectionId,
+        areaId: candidateAreaId,
         allProjects,
         allSections,
         allAreas,
     });
+    if (!containerResolution.ok) return containerResolution;
 
-    let adjustedUpdates = normalizeTaskUpdateForStore({
-        task,
-        updates,
-        allTasks,
-    });
-
-    const firstResolution = resolveEffectiveContainer(adjustedUpdates);
-    if (!firstResolution.ok) return firstResolution;
-
-    adjustedUpdates = normalizeTaskUpdateForStore({
+    const adjustedUpdates = normalizeTaskUpdateForStore({
         task,
         updates: {
-            ...adjustedUpdates,
-            projectId: firstResolution.projectId,
-            sectionId: firstResolution.sectionId,
-            areaId: firstResolution.areaId,
+            ...updates,
+            projectId: containerResolution.projectId,
+            sectionId: containerResolution.sectionId,
+            areaId: containerResolution.areaId,
         },
         allTasks,
+        reserveProjectOrder,
     });
-
-    const finalResolution = resolveEffectiveContainer(adjustedUpdates);
-    if (!finalResolution.ok) return finalResolution;
 
     return {
         ok: true,
         updates: {
             ...adjustedUpdates,
-            projectId: finalResolution.projectId,
-            sectionId: finalResolution.sectionId,
-            areaId: finalResolution.areaId,
+            projectId: containerResolution.projectId,
+            sectionId: containerResolution.sectionId,
+            areaId: containerResolution.areaId,
         },
     };
 };
@@ -305,11 +312,14 @@ const normalizeTaskUpdateForStore = ({
     task,
     updates,
     allTasks,
+    reserveProjectOrder,
 }: {
     task: Task;
     updates: Partial<Task>;
     allTasks: Task[];
+    reserveProjectOrder?: boolean;
 }): Partial<Task> => {
+    const shouldReserveProjectOrder = reserveProjectOrder !== false;
     let adjustedUpdates = updates;
     if (hasOwnField(updates, 'recurrence')) {
         adjustedUpdates = {
@@ -348,7 +358,7 @@ const normalizeTaskUpdateForStore = ({
         const shouldClearSection = !Object.prototype.hasOwnProperty.call(updates, 'sectionId');
         const hasTaskOrderOverride = hasOrder || hasOrderNum;
         if (nextProjectId) {
-            if (!hasTaskOrderOverride) {
+            if (shouldReserveProjectOrder && !hasTaskOrderOverride) {
                 const nextOrder = reserveNextProjectOrder(nextProjectId, allTasks);
                 adjustedUpdates = {
                     ...adjustedUpdates,
@@ -385,6 +395,29 @@ const normalizeTaskUpdateForStore = ({
     }
 
     return adjustedUpdates;
+};
+
+const reserveProjectOrderForPreparedUpdates = ({
+    task,
+    updates,
+    allTasks,
+}: {
+    task: Task;
+    updates: Partial<Task>;
+    allTasks: Task[];
+}): Partial<Task> => {
+    if (!hasOwnField(updates, 'projectId')) return updates;
+    if (hasOwnField(updates, 'order') || hasOwnField(updates, 'orderNum')) return updates;
+    const nextProjectId = typeof updates.projectId === 'string' && updates.projectId.trim().length > 0
+        ? updates.projectId
+        : undefined;
+    if (!nextProjectId || (task.projectId ?? undefined) === nextProjectId) return updates;
+    const nextOrder = reserveNextProjectOrder(nextProjectId, allTasks);
+    return {
+        ...updates,
+        order: nextOrder,
+        orderNum: nextOrder,
+    };
 };
 
 export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackImmediateSave }: TaskActionContext): TaskActions => ({
@@ -819,6 +852,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 allProjects: state._allProjects,
                 allSections: state._allSections,
                 allAreas: state._allAreas,
+                reserveProjectOrder: false,
             });
             if (!preparedUpdates.ok) {
                 set({ error: preparedUpdates.error });
@@ -840,7 +874,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 const task = newAllTasksBase[index];
                 const preparedUpdates = preparedUpdatesById.get(task.id);
                 if (!preparedUpdates) continue;
-                const adjustedUpdates = normalizeTaskUpdateForStore({
+                const adjustedUpdates = reserveProjectOrderForPreparedUpdates({
                     task,
                     updates: preparedUpdates,
                     allTasks: newAllTasksBase,
