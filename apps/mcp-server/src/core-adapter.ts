@@ -179,8 +179,9 @@ const ensureCoreReady = async (options: DbOptions) => {
       addTask: async ({ title, props }) => {
         const state = core.useTaskStore.getState();
         await state.fetchData();
-        const before = new Set(state._allTasks.map((t) => t.id));
-        ensureActionSucceeded('create task', await state.addTask(title, props));
+        const refreshedState = core.useTaskStore.getState();
+        const before = new Set(refreshedState._allTasks.map((t) => t.id));
+        ensureActionSucceeded('create task', await refreshedState.addTask(title, props));
         await core.flushPendingSave();
         const after = core.useTaskStore.getState()._allTasks;
         const created = after.find((t) => !before.has(t.id));
