@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -53,13 +53,37 @@ const tr = (key: string) => ({
   'settings.feedbackInvalidEmail': 'Enter a valid email.',
   'settings.feedbackMessage': 'Message',
   'settings.feedbackMessagePlaceholder': 'Tell us what happened or what would help.',
+  'settings.feedbackMessagePlaceholderBug': 'What did you expect, and what happened instead?',
+  'settings.feedbackMessagePlaceholderFeature': 'What are you trying to do, and what would help?',
+  'settings.feedbackMessagePlaceholderOther': 'Tell us what is on your mind.',
+  'settings.feedbackWhere': 'Where did this happen?',
+  'settings.feedbackWhereMessagePrefix': 'Where',
+  'settings.feedbackWhereInbox': 'Inbox',
+  'settings.feedbackWhereFocus': 'Focus',
+  'settings.feedbackWhereProjects': 'Projects',
+  'settings.feedbackWhereReview': 'Review',
+  'settings.feedbackWhereSettings': 'Settings',
+  'settings.feedbackWhereSync': 'Sync',
+  'settings.feedbackWhereImportExport': 'Import or export',
+  'settings.feedbackWhereNotifications': 'Notifications',
+  'settings.feedbackWhereOther': 'Other',
   'settings.feedbackPrivacy': 'Task content is not attached.',
   'settings.feedbackRequired': 'Enter a message.',
   'settings.feedbackSending': 'Sending...',
   'settings.feedbackSent': 'Thanks for the feedback.',
   'settings.feedbackSubmit': 'Send feedback',
   'settings.feedbackUnavailable': 'Feedback is not configured in this build.',
+  'settings.feedbackUnavailableDesc': 'Use GitHub issue templates instead.',
+  'settings.feedbackOpenGitHubIssue': 'Open GitHub issue',
 }[key] ?? key);
+
+const findTouchableByText = (tree: ReturnType<typeof create>, label: string) => {
+  const match = tree.root.findAllByType(TouchableOpacity).find((node) =>
+    node.findAllByType(Text).some((textNode) => textNode.props.children === label)
+  );
+  if (!match) throw new Error(`Touchable not found: ${label}`);
+  return match;
+};
 
 describe('FeedbackSettingsModal', () => {
   afterEach(() => {
@@ -93,5 +117,91 @@ describe('FeedbackSettingsModal', () => {
     const backdropPressables = tree.root.findAllByType(Pressable);
     expect(backdropPressables).toHaveLength(1);
     expect(backdropPressables[0].props.style).toBe(styles.feedbackModalBackdropPressable);
+  });
+
+  it('uses category-specific placeholders and hides bug location outside bug reports', () => {
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <FeedbackSettingsModal
+          visible
+          isConfigured
+          tr={tr}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+        />,
+      );
+    });
+
+    expect(tree.root.findAllByType(TextInput)[0].props.placeholder).toBe(
+      'What did you expect, and what happened instead?',
+    );
+    expect(tree.root.findAllByType(Text).some((node) => node.props.children === 'Sync')).toBe(true);
+
+    act(() => {
+      findTouchableByText(tree, 'Feature request').props.onPress();
+    });
+
+    expect(tree.root.findAllByType(TextInput)[0].props.placeholder).toBe(
+      'What are you trying to do, and what would help?',
+    );
+    expect(tree.root.findAllByType(Text).some((node) => node.props.children === 'Sync')).toBe(false);
+  });
+
+  it('includes selected bug location when submitting', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <FeedbackSettingsModal
+          visible
+          isConfigured
+          tr={tr}
+          onClose={vi.fn()}
+          onSubmit={onSubmit}
+        />,
+      );
+    });
+
+    act(() => {
+      findTouchableByText(tree, 'Sync').props.onPress();
+      tree.root.findAllByType(TextInput)[0].props.onChangeText('CloudKit sync failed');
+    });
+    await act(async () => {
+      findTouchableByText(tree, 'Send feedback').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'bug',
+      message: 'Where: Sync\n\nCloudKit sync failed',
+    }));
+  });
+
+  it('routes unconfigured builds to GitHub issues', () => {
+    const onOpenIssue = vi.fn();
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <FeedbackSettingsModal
+          visible
+          isConfigured={false}
+          tr={tr}
+          onClose={vi.fn()}
+          onOpenIssue={onOpenIssue}
+          onSubmit={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => {
+      expect(findTouchableByText(tree, 'Send feedback').props.disabled).toBe(true);
+      findTouchableByText(tree, 'Open GitHub issue').props.onPress();
+    });
+
+    expect(onOpenIssue).toHaveBeenCalled();
   });
 });

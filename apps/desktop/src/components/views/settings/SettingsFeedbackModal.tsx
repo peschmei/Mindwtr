@@ -15,6 +15,21 @@ type Labels = {
     feedbackCategoryOther: string;
     feedbackMessage: string;
     feedbackMessagePlaceholder: string;
+    feedbackMessagePlaceholderBug: string;
+    feedbackMessagePlaceholderFeature: string;
+    feedbackMessagePlaceholderOther: string;
+    feedbackWhere: string;
+    feedbackWherePlaceholder: string;
+    feedbackWhereMessagePrefix: string;
+    feedbackWhereInbox: string;
+    feedbackWhereFocus: string;
+    feedbackWhereProjects: string;
+    feedbackWhereReview: string;
+    feedbackWhereSettings: string;
+    feedbackWhereSync: string;
+    feedbackWhereImportExport: string;
+    feedbackWhereNotifications: string;
+    feedbackWhereOther: string;
     feedbackEmail: string;
     feedbackEmailPlaceholder: string;
     feedbackIncludeDiagnostics: string;
@@ -25,6 +40,8 @@ type Labels = {
     feedbackSent: string;
     feedbackFailed: string;
     feedbackUnavailable: string;
+    feedbackUnavailableDesc: string;
+    feedbackOpenGitHubIssue: string;
     feedbackRequired: string;
     feedbackInvalidEmail: string;
     close: string;
@@ -42,6 +59,7 @@ type SettingsFeedbackModalProps = {
     isConfigured: boolean;
     t: Labels;
     onClose: () => void;
+    onOpenIssue?: () => void;
     onSubmit: (input: FeedbackSubmitInput) => Promise<void>;
 };
 
@@ -51,16 +69,32 @@ const categoryIcons: Record<FeedbackCategory, typeof Bug> = {
     other: MessageSquare,
 };
 
+const feedbackLocations = [
+    'inbox',
+    'focus',
+    'projects',
+    'review',
+    'settings',
+    'sync',
+    'importExport',
+    'notifications',
+    'other',
+] as const;
+
+type FeedbackLocation = typeof feedbackLocations[number];
+
 export function SettingsFeedbackModal({
     isConfigured,
     isOpen,
     onClose,
+    onOpenIssue,
     onSubmit,
     t,
 }: SettingsFeedbackModalProps) {
     const [category, setCategory] = useState<FeedbackCategory>('bug');
     const [message, setMessage] = useState('');
     const [email, setEmail] = useState('');
+    const [bugLocation, setBugLocation] = useState<FeedbackLocation | ''>('');
     const [includeDiagnostics, setIncludeDiagnostics] = useState(false);
     const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
     const [error, setError] = useState<string | null>(null);
@@ -75,6 +109,22 @@ export function SettingsFeedbackModal({
         feature: t.feedbackCategoryFeature,
         other: t.feedbackCategoryOther,
     };
+    const messagePlaceholders: Record<FeedbackCategory, string> = {
+        bug: t.feedbackMessagePlaceholderBug || t.feedbackMessagePlaceholder,
+        feature: t.feedbackMessagePlaceholderFeature || t.feedbackMessagePlaceholder,
+        other: t.feedbackMessagePlaceholderOther || t.feedbackMessagePlaceholder,
+    };
+    const locationLabels: Record<FeedbackLocation, string> = {
+        inbox: t.feedbackWhereInbox,
+        focus: t.feedbackWhereFocus,
+        projects: t.feedbackWhereProjects,
+        review: t.feedbackWhereReview,
+        settings: t.feedbackWhereSettings,
+        sync: t.feedbackWhereSync,
+        importExport: t.feedbackWhereImportExport,
+        notifications: t.feedbackWhereNotifications,
+        other: t.feedbackWhereOther,
+    };
 
     useEffect(() => {
         if (!isOpen) return;
@@ -87,6 +137,7 @@ export function SettingsFeedbackModal({
     useEffect(() => {
         if (category === 'bug') return;
         setIncludeDiagnostics(false);
+        setBugLocation('');
     }, [category]);
 
     if (!isOpen || typeof document === 'undefined') return null;
@@ -96,7 +147,6 @@ export function SettingsFeedbackModal({
     const emailValid = !trimmedEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
     const canSubmit = isConfigured && trimmedMessage.length > 0 && emailValid && status !== 'sending';
     const visibleError = error
-        ?? (!isConfigured ? t.feedbackUnavailable : null)
         ?? (trimmedEmail && !emailValid ? t.feedbackInvalidEmail : null);
 
     const handleSubmit = async () => {
@@ -110,16 +160,20 @@ export function SettingsFeedbackModal({
         }
         setStatus('sending');
         setError(null);
+        const submittedMessage = category === 'bug' && bugLocation
+            ? `${t.feedbackWhereMessagePrefix}: ${locationLabels[bugLocation]}\n\n${trimmedMessage}`
+            : trimmedMessage;
         try {
             await onSubmit({
                 category,
                 email: trimmedEmail || undefined,
                 includeDiagnostics: category === 'bug' && includeDiagnostics,
-                message: trimmedMessage,
+                message: submittedMessage,
             });
             setStatus('sent');
             setMessage('');
             setEmail('');
+            setBugLocation('');
             setIncludeDiagnostics(false);
         } catch {
             setStatus('error');
@@ -201,6 +255,30 @@ export function SettingsFeedbackModal({
                             </div>
                         </div>
 
+                        {category === 'bug' && (
+                            <label className="block space-y-2">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    {t.feedbackWhere}
+                                </span>
+                                <select
+                                    value={bugLocation}
+                                    onChange={(event) => {
+                                        setBugLocation(event.target.value as FeedbackLocation | '');
+                                        setError(null);
+                                    }}
+                                    aria-label={t.feedbackWhere}
+                                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                                >
+                                    <option value="">{t.feedbackWherePlaceholder}</option>
+                                    {feedbackLocations.map((location) => (
+                                        <option key={location} value={location}>
+                                            {locationLabels[location]}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
+
                         <label className="block space-y-2">
                             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 {t.feedbackMessage}
@@ -212,7 +290,7 @@ export function SettingsFeedbackModal({
                                     setMessage(event.target.value);
                                     setError(null);
                                 }}
-                                placeholder={t.feedbackMessagePlaceholder}
+                                placeholder={messagePlaceholders[category]}
                                 maxLength={4000}
                                 className="min-h-32 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/40"
                             />
@@ -270,6 +348,22 @@ export function SettingsFeedbackModal({
                         <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
                             {t.feedbackPrivacy}
                         </p>
+
+                        {!isConfigured && (
+                            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                                <div className="font-medium">{t.feedbackUnavailable}</div>
+                                <div className="mt-1 text-xs leading-5">{t.feedbackUnavailableDesc}</div>
+                                {onOpenIssue && (
+                                    <button
+                                        type="button"
+                                        className="mt-2 text-xs font-medium text-primary underline underline-offset-2"
+                                        onClick={onOpenIssue}
+                                    >
+                                        {t.feedbackOpenGitHubIssue}
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {visibleError && (
                             <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">

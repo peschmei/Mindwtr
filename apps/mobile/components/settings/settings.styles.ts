@@ -460,6 +460,23 @@ export const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '700',
     },
+    feedbackLocationGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    feedbackLocationChip: {
+        minHeight: 36,
+        borderRadius: 18,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+    },
+    feedbackLocationChipText: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
     feedbackTextArea: {
         minHeight: 126,
         borderWidth: 1,
@@ -514,6 +531,20 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 18,
         fontWeight: '600',
+    },
+    feedbackNoticeDescription: {
+        fontSize: 12,
+        lineHeight: 18,
+        marginTop: 4,
+    },
+    feedbackNoticeLink: {
+        alignSelf: 'flex-start',
+        marginTop: 8,
+    },
+    feedbackNoticeLinkText: {
+        fontSize: 12,
+        fontWeight: '700',
+        textDecorationLine: 'underline',
     },
     feedbackActions: {
         borderTopWidth: 1,

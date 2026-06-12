@@ -79,6 +79,7 @@ export function AboutSettingsScreen({
     }, [isFossBuild]);
 
     const openLink = (url: string) => Linking.openURL(url);
+    const GITHUB_ISSUES_URL = 'https://github.com/dongdongbh/Mindwtr/issues/new/choose';
     const GITHUB_RELEASES_API = 'https://api.github.com/repos/dongdongbh/Mindwtr/releases/latest';
     const GITHUB_RELEASES_URL = 'https://github.com/dongdongbh/Mindwtr/releases/latest';
     const ANDROID_PACKAGE_NAME = Constants.expoConfig?.android?.package || Application.applicationId || 'tech.dongdongbh.mindwtr';
@@ -468,6 +469,7 @@ export function AboutSettingsScreen({
                 isConfigured={Boolean(feedbackEndpointUrl)}
                 tr={tr}
                 onClose={() => setFeedbackOpen(false)}
+                onOpenIssue={() => openLink(GITHUB_ISSUES_URL)}
                 onSubmit={handleSubmitFeedback}
             />
         </SafeAreaView>

@@ -22,6 +22,21 @@ type Labels = {
     feedbackCategoryOther: string;
     feedbackMessage: string;
     feedbackMessagePlaceholder: string;
+    feedbackMessagePlaceholderBug: string;
+    feedbackMessagePlaceholderFeature: string;
+    feedbackMessagePlaceholderOther: string;
+    feedbackWhere: string;
+    feedbackWherePlaceholder: string;
+    feedbackWhereMessagePrefix: string;
+    feedbackWhereInbox: string;
+    feedbackWhereFocus: string;
+    feedbackWhereProjects: string;
+    feedbackWhereReview: string;
+    feedbackWhereSettings: string;
+    feedbackWhereSync: string;
+    feedbackWhereImportExport: string;
+    feedbackWhereNotifications: string;
+    feedbackWhereOther: string;
     feedbackEmail: string;
     feedbackEmailPlaceholder: string;
     feedbackIncludeDiagnostics: string;
@@ -32,6 +47,8 @@ type Labels = {
     feedbackSent: string;
     feedbackFailed: string;
     feedbackUnavailable: string;
+    feedbackUnavailableDesc: string;
+    feedbackOpenGitHubIssue: string;
     feedbackRequired: string;
     feedbackInvalidEmail: string;
     close: string;
@@ -160,6 +177,7 @@ export function SettingsAboutPage({
                 isConfigured={feedbackConfigured}
                 isOpen={feedbackOpen}
                 onClose={() => setFeedbackOpen(false)}
+                onOpenIssue={() => onOpenLink('https://github.com/dongdongbh/Mindwtr/issues/new/choose')}
                 onSubmit={onSubmitFeedback}
                 t={t}
             />
