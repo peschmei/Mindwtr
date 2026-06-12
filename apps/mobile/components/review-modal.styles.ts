@@ -147,6 +147,38 @@ export const styles = StyleSheet.create({
         lineHeight: 20,
         marginTop: 4,
     },
+    mindSweepNudge: {
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 16,
+        gap: 10,
+    },
+    mindSweepNudgeText: {
+        gap: 4,
+    },
+    mindSweepNudgeTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    mindSweepNudgeBody: {
+        fontSize: 13,
+        lineHeight: 19,
+    },
+    mindSweepNudgeButton: {
+        alignSelf: 'flex-start',
+        minHeight: 36,
+        borderWidth: 1,
+        borderRadius: 18,
+        paddingHorizontal: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    mindSweepNudgeButtonText: {
+        fontSize: 13,
+        fontWeight: '700',
+    },
     emptyState: {
         flex: 1,
         alignItems: 'center',

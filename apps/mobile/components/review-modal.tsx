@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Modal, ScrollView, Text, TextInput, Toucha
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { safeFormatDate, safeParseDate, type Task } from '@mindwtr/core';
 import {
+    Brain,
     Calendar as CalendarIcon,
     CheckCircle2,
     Clock,
@@ -21,6 +22,7 @@ import { useLanguage } from '../contexts/language-context';
 import { SwipeableTaskItem } from './swipeable-task-item';
 import { TaskEditModal } from './task-edit-modal';
 import { InboxProcessingModal } from './inbox-processing-modal';
+import { MindSweepModalContent } from './mind-sweep-modal-content';
 import { ErrorBoundary } from './ErrorBoundary';
 import {
     type CalendarTaskReviewEntry,
@@ -40,6 +42,7 @@ export const checkReviewTime = () => true;
 export function ReviewModal({ visible, onClose }: ReviewModalProps) {
     const { t } = useLanguage();
     const [showInboxProcessing, setShowInboxProcessing] = useState(false);
+    const [showMindSweep, setShowMindSweep] = useState(false);
     const {
         aiEnabled,
         aiError,
@@ -104,7 +107,33 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
         if (!visible && showInboxProcessing) {
             setShowInboxProcessing(false);
         }
-    }, [showInboxProcessing, visible]);
+        if (!visible && showMindSweep) {
+            setShowMindSweep(false);
+        }
+    }, [showInboxProcessing, showMindSweep, visible]);
+
+    const renderMindSweepNudge = () => (
+        <View style={[styles.mindSweepNudge, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+            <View style={styles.mindSweepNudgeText}>
+                <Text style={[styles.mindSweepNudgeTitle, { color: tc.text }]}>{t('mindSweep.title')}</Text>
+                <Text style={[styles.mindSweepNudgeBody, { color: tc.secondaryText }]}>
+                    {t('mindSweep.intro')}
+                </Text>
+            </View>
+            <TouchableOpacity
+                testID="review-mind-sweep-button"
+                style={[styles.mindSweepNudgeButton, { borderColor: tc.tint }]}
+                onPress={() => setShowMindSweep(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('mindSweep.launchButton')}
+            >
+                <Brain size={16} color={tc.tint} strokeWidth={2.2} />
+                <Text style={[styles.mindSweepNudgeButtonText, { color: tc.tint }]}>
+                    {t('mindSweep.launchButton')}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
 
     const renderStepRail = () => (
         <ScrollView
@@ -349,6 +378,7 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                                 {labels.inboxGuide}
                             </Text>
                         </View>
+                        {renderMindSweepNudge()}
                         {inboxTasks.length > 0 && (
                             <TouchableOpacity
                                 style={[styles.processButton, { backgroundColor: tc.tint }]}
@@ -663,6 +693,7 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                         <Text style={[styles.description, { color: tc.secondaryText }]}>
                             {labels.completeDesc}
                         </Text>
+                        {renderMindSweepNudge()}
                         <TouchableOpacity style={styles.primaryButton} onPress={handleFinish}>
                             <Text style={styles.primaryButtonText}>
                                 {labels.finish}
@@ -739,6 +770,15 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                         onClose={() => setShowInboxProcessing(false)}
                     />
                 </ErrorBoundary>
+
+                <Modal
+                    visible={visible && showMindSweep}
+                    animationType="slide"
+                    presentationStyle="pageSheet"
+                    onRequestClose={() => setShowMindSweep(false)}
+                >
+                    <MindSweepModalContent onClose={() => setShowMindSweep(false)} />
+                </Modal>
 
                 <Modal
                     visible={Boolean(projectTaskPrompt)}

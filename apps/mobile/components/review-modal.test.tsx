@@ -63,6 +63,15 @@ const storeState = {
 
 vi.mock('@mindwtr/core', () => ({
     useTaskStore: () => storeState,
+    shallow: vi.fn((a, b) => a === b),
+    getMindSweepGroups: vi.fn(() => [
+        {
+            id: 'test-group',
+            scope: 'personal',
+            titleKey: 'mindSweep.group.test.title',
+            promptKeys: ['mindSweep.group.test.p1'],
+        },
+    ]),
     createAIProvider: vi.fn(),
     getStaleItems: vi.fn(() => []),
     isDueForReview: vi.fn(() => false),
@@ -144,6 +153,7 @@ vi.mock('lucide-react-native', () => {
         return Icon;
     };
     return {
+        Brain: icon('Brain'),
         X: icon('X'),
         Inbox: icon('Inbox'),
         Sparkles: icon('Sparkles'),
@@ -234,6 +244,22 @@ describe('ReviewModal', () => {
         });
 
         expect(hasText('Inbox')).toBe(true);
+    });
+
+    it('opens mind sweep from the weekly review nudge', async () => {
+        let tree!: ReturnType<typeof create>;
+
+        await act(async () => {
+            tree = create(<ReviewModal visible onClose={vi.fn()} />);
+        });
+
+        const nudge = tree.root.findByProps({ testID: 'review-mind-sweep-button' });
+
+        await act(async () => {
+            nudge.props.onPress();
+        });
+
+        expect(tree.root.findByProps({ testID: 'mind-sweep-start' })).toBeDefined();
     });
 
     it('starts on all clear when every weekly review stage is empty', async () => {

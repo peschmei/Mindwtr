@@ -101,7 +101,10 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                onClick={onClose}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onClose();
+                }}
             >
                 <div
                     ref={modalRef}
@@ -110,6 +113,7 @@ export function MindSweepModal({ isOpen, onClose, t, addTask }: MindSweepModalPr
                     onKeyDown={(event) => {
                         if (event.key === 'Escape') {
                             event.preventDefault();
+                            event.stopPropagation();
                             onClose();
                             return;
                         }

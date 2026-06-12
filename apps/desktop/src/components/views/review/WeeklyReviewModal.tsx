@@ -22,6 +22,7 @@ import { Archive, ArrowRight, Calendar, Check, CheckSquare, ChevronLeft, Layers,
 
 import { TaskItem } from '../../TaskItem';
 import { ModalPortal } from '../../ModalPortal';
+import { MindSweepLauncher } from '../../MindSweepModal';
 import { PromptModal } from '../../PromptModal';
 import { InboxProcessor } from '../InboxProcessor';
 import { cn } from '../../../lib/utils';
@@ -491,6 +492,16 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
         })();
     };
 
+    const renderMindSweepNudge = () => (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+                <div className="text-sm font-semibold text-foreground">{t('mindSweep.title')}</div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{t('mindSweep.intro')}</p>
+            </div>
+            <MindSweepLauncher t={t} addTask={addTask} />
+        </div>
+    );
+
     const renderCalendarList = (items: CalendarReviewEntry[]) => {
         if (items.length === 0) {
             return <div className="text-sm text-muted-foreground">{t('calendar.noTasks')}</div>;
@@ -578,6 +589,7 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                                 <span className="font-bold text-foreground">{inboxTasks.length}</span> {t('review.inboxZeroDesc')}
                             </p>
                         </div>
+                        {renderMindSweepNudge()}
                         <InboxProcessor
                             t={t}
                             isInbox
@@ -902,6 +914,9 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                         <p className="text-muted-foreground text-lg max-w-md mx-auto">
                             {t('review.completeDesc')}
                         </p>
+                        <div className="mx-auto max-w-lg text-left">
+                            {renderMindSweepNudge()}
+                        </div>
                         <button
                             onClick={onClose}
                             className="bg-primary text-primary-foreground px-8 py-3 rounded-lg text-lg font-medium hover:bg-primary/90 transition-colors"
