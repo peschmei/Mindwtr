@@ -159,6 +159,22 @@ interface Area {
 }
 ```
 
+### Person
+
+```typescript
+interface Person {
+    id: string;
+    name: string;
+    note?: string;
+    referenceLink?: string;
+    rev?: number;                  // Monotonic revision counter for sync
+    revBy?: string;                // Device ID that issued `rev`
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string;            // Soft-delete tombstone for sync
+}
+```
+
 ### Attachment
 
 ```typescript
@@ -183,6 +199,7 @@ interface AppData {
     projects: Project[];
     sections: Section[];
     areas: Area[];
+    people?: Person[];
     settings: {
         theme?: 'light' | 'dark' | 'system';
         language?: 'en' | 'zh' | 'zh-Hant' | 'es' | 'hi' | 'ar' | 'de' | 'ru' | 'ja' | 'fr' | 'pt' | 'pl' | 'ko' | 'it' | 'tr' | 'nl' | 'system';
@@ -239,6 +256,7 @@ function MyComponent() {
 | `tasks`     | `Task[]`              | All visible (non-deleted) tasks |
 | `projects`  | `Project[]`           | All visible projects            |
 | `areas`     | `Area[]`              | All areas                       |
+| `people`    | `Person[]`            | All visible managed people      |
 | `settings`  | `AppData['settings']` | App settings                    |
 | `isLoading` | `boolean`             | Loading state                   |
 | `error`     | `string \| null`      | Error message                   |
@@ -328,6 +346,22 @@ reorderAreas(orderedIds: string[]): Promise<void>;
 ```
 
 Area delete/restore is intentionally cascading. A child project, section, or task that was deleted separately keeps its own tombstone when the area is restored.
+
+#### Person Operations
+
+```typescript
+// Create
+addPerson(name: string, initialProps?: Partial<Person>): Promise<Person | null>;
+
+// Update metadata
+updatePerson(id: string, updates: Partial<Person>): Promise<StoreActionResult>;
+
+// Rename and optionally update exact task assignments
+renamePerson(id: string, name: string, options?: { updateTasks?: boolean }): Promise<StoreActionResult>;
+
+// Delete (soft, does not clear task assignments)
+deletePerson(id: string): Promise<StoreActionResult>;
+```
 
 #### Section Operations
 

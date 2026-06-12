@@ -323,6 +323,10 @@ Any MCP-compatible client can work as long as it can launch a **stdio** server w
   - Input: `{ id, includeDeleted? }`
 - `mindwtr_list_areas`
   - Input: `{}`
+- `mindwtr_list_people`
+  - Input: `{ includeDeleted? }`
+- `mindwtr_get_person`
+  - Input: `{ id, includeDeleted? }`
 - `mindwtr_get_task`
   - Input: `{ id, includeDeleted? }`
 - `mindwtr_add_task` **(requires `--write`)**
@@ -353,8 +357,16 @@ Any MCP-compatible client can work as long as it can launch a **stdio** server w
   - Input: `{ id, name?, color?, icon? }`
 - `mindwtr_delete_area` **(requires `--write`)**
   - Input: `{ id }`
+- `mindwtr_add_person` **(requires `--write`)**
+  - Input: `{ name, note?, referenceLink? }`
+- `mindwtr_update_person` **(requires `--write`)**
+  - Input: `{ id, name?, note?, referenceLink? }`
+- `mindwtr_rename_person` **(requires `--write`)**
+  - Input: `{ id, name, updateTasks? }`
+- `mindwtr_delete_person` **(requires `--write`)**
+  - Input: `{ id }`
 
-All tools return JSON text payloads with the resulting task, project, section, area, or collection payload.
+All tools return JSON text payloads with the resulting task, project, section, area, person, or collection payload.
 
 ---
 
@@ -385,12 +397,18 @@ Then test:
 - `mindwtr_list_projects`
 - `mindwtr_get_project` (use returned project id)
 - `mindwtr_list_areas`
+- `mindwtr_list_people`
 - `mindwtr_add_project`
 - `mindwtr_update_project`
 - `mindwtr_delete_project`
 - `mindwtr_add_area`
 - `mindwtr_update_area`
 - `mindwtr_delete_area`
+- `mindwtr_add_person`
+- `mindwtr_update_person`
+- `mindwtr_rename_person`
+- `mindwtr_get_person` (use returned person id)
+- `mindwtr_delete_person`
 - `mindwtr_list_tasks` with `dueDateFrom`, `dueDateTo`, `sortBy`, `sortOrder`
 
 If the list returns tasks and add/complete works, the server is healthy.

@@ -53,6 +53,8 @@ On desktop:
 3. Set start and end times. Mindwtr checks the slot against scheduled tasks and visible external events.
 4. Save the task, or adjust timing later from the task editor, day view, or selected-day list.
 
+On wide desktop layouts, **Plan next actions** lists unscheduled next actions for the selected day, including due-but-unscheduled actions. Use it to place a next action into the calendar without opening search. Due dates remain deadlines; scheduling adds a `startTime`.
+
 On mobile:
 
 1. Open **Calendar -> Schedule Tasks** from the day view.

@@ -158,7 +158,11 @@ Only `--write` is supported for write access (no alternate aliases).
 | `mindwtr_list_tasks`    | List tasks           | No                 |
 | `mindwtr_list_projects` | List projects        | No                 |
 | `mindwtr_get_project`   | Fetch one project    | No                 |
+| `mindwtr_list_sections` | List sections        | No                 |
+| `mindwtr_get_section`   | Fetch one section    | No                 |
 | `mindwtr_list_areas`    | List areas           | No                 |
+| `mindwtr_list_people`   | List people          | No                 |
+| `mindwtr_get_person`    | Fetch one person     | No                 |
 | `mindwtr_get_task`      | Fetch one task by ID | No                 |
 | `mindwtr_add_task`      | Create task          | Yes                |
 | `mindwtr_update_task`   | Update task          | Yes                |
@@ -168,16 +172,27 @@ Only `--write` is supported for write access (no alternate aliases).
 | `mindwtr_add_project`   | Create project       | Yes                |
 | `mindwtr_update_project`| Update project       | Yes                |
 | `mindwtr_delete_project`| Soft-delete project  | Yes                |
+| `mindwtr_add_section`   | Create section       | Yes                |
+| `mindwtr_update_section`| Update section       | Yes                |
+| `mindwtr_delete_section`| Soft-delete section  | Yes                |
 | `mindwtr_add_area`      | Create area          | Yes                |
 | `mindwtr_update_area`   | Update area          | Yes                |
 | `mindwtr_delete_area`   | Soft-delete area     | Yes                |
+| `mindwtr_add_person`    | Create person        | Yes                |
+| `mindwtr_update_person` | Update person        | Yes                |
+| `mindwtr_rename_person` | Rename person        | Yes                |
+| `mindwtr_delete_person` | Soft-delete person   | Yes                |
 
 ### Read Tools
 
 - **`mindwtr_list_tasks`**: List tasks with filters (status, project, date range, search).
 - **`mindwtr_list_projects`**: List all projects.
 - **`mindwtr_get_project`**: Get details of a specific project by ID.
+- **`mindwtr_list_sections`**: List project sections, optionally filtered by project.
+- **`mindwtr_get_section`**: Get details of a specific section by ID.
 - **`mindwtr_list_areas`**: List all areas.
+- **`mindwtr_list_people`**: List managed people records.
+- **`mindwtr_get_person`**: Get details of a specific person by ID.
 - **`mindwtr_get_task`**: Get details of a specific task by ID.
 
 ### Write Tools (Requires `--write`)
@@ -190,13 +205,21 @@ Only `--write` is supported for write access (no alternate aliases).
 - **`mindwtr_add_project`**: Create a new project, including optional `dueDate` and `reviewAt`.
 - **`mindwtr_update_project`**: Update a project, including optional `dueDate` and `reviewAt`.
 - **`mindwtr_delete_project`**: Soft-delete a project.
+- **`mindwtr_add_section`**: Create a section inside a project.
+- **`mindwtr_update_section`**: Update a project section.
+- **`mindwtr_delete_section`**: Soft-delete a project section. Tasks in that section are kept and moved to no section by core.
 - **`mindwtr_add_area`**: Create a new area.
 - **`mindwtr_update_area`**: Update an area.
 - **`mindwtr_delete_area`**: Soft-delete an area.
+- **`mindwtr_add_person`**: Create a managed person for assignees and waiting-for tasks.
+- **`mindwtr_update_person`**: Update managed person metadata.
+- **`mindwtr_rename_person`**: Rename a managed person and optionally update exact task assignments.
+- **`mindwtr_delete_person`**: Soft-delete a managed person without clearing task assignments.
 
 Schema note:
 - Task write tools cover `dueDate`, `startTime`, and `reviewAt` (on update).
 - Project write tools cover both `dueDate` and `reviewAt`.
+- Person write tools cover `name`, `note`, `referenceLink`, and optional assignment updates on rename.
 - For the exact canonical inputs, use [apps/mcp-server/README.md](https://github.com/dongdongbh/Mindwtr/blob/main/apps/mcp-server/README.md).
 
 ## Permission Matrix
@@ -208,7 +231,11 @@ Use this matrix when deciding whether to run the server in read-only mode or wit
 | `mindwtr_list_tasks`    | Task rows (filtered) | None                | Allowed        | Allowed        |
 | `mindwtr_list_projects` | Project rows         | None                | Allowed        | Allowed        |
 | `mindwtr_get_project`   | Single project by ID | None                | Allowed        | Allowed        |
+| `mindwtr_list_sections` | Section rows         | None                | Allowed        | Allowed        |
+| `mindwtr_get_section`   | Single section by ID | None                | Allowed        | Allowed        |
 | `mindwtr_list_areas`    | Area rows            | None                | Allowed        | Allowed        |
+| `mindwtr_list_people`   | Person rows          | None                | Allowed        | Allowed        |
+| `mindwtr_get_person`    | Single person by ID  | None                | Allowed        | Allowed        |
 | `mindwtr_get_task`      | Single task by ID    | None                | Allowed        | Allowed        |
 | `mindwtr_add_task`      | Task table           | Insert              | Denied         | Allowed        |
 | `mindwtr_update_task`   | Task table           | Update              | Denied         | Allowed        |
@@ -218,9 +245,16 @@ Use this matrix when deciding whether to run the server in read-only mode or wit
 | `mindwtr_add_project`   | Project table        | Insert              | Denied         | Allowed        |
 | `mindwtr_update_project`| Project table        | Update              | Denied         | Allowed        |
 | `mindwtr_delete_project`| Project table        | Soft-delete         | Denied         | Allowed        |
+| `mindwtr_add_section`   | Section table        | Insert              | Denied         | Allowed        |
+| `mindwtr_update_section`| Section table        | Update              | Denied         | Allowed        |
+| `mindwtr_delete_section`| Section table        | Soft-delete         | Denied         | Allowed        |
 | `mindwtr_add_area`      | Area table           | Insert              | Denied         | Allowed        |
 | `mindwtr_update_area`   | Area table           | Update              | Denied         | Allowed        |
 | `mindwtr_delete_area`   | Area table           | Soft-delete         | Denied         | Allowed        |
+| `mindwtr_add_person`    | People table         | Insert              | Denied         | Allowed        |
+| `mindwtr_update_person` | People table         | Update              | Denied         | Allowed        |
+| `mindwtr_rename_person` | People table/tasks   | Rename/update refs  | Denied         | Allowed        |
+| `mindwtr_delete_person` | People table         | Soft-delete         | Denied         | Allowed        |
 
 Practical guidance:
 
@@ -355,6 +389,40 @@ If you need more than 500 tasks, page with `limit` + `offset` instead of expecti
 { "id": "project-uuid" }
 ```
 
+### `mindwtr_list_sections`
+
+**Input fields**
+
+- `projectId`: string (optional)
+- `includeDeleted`: boolean (optional)
+
+**Response**
+
+```json
+{
+  "sections": [
+    {
+      "id": "section-uuid",
+      "projectId": "project-uuid",
+      "title": "Planning"
+    }
+  ]
+}
+```
+
+### `mindwtr_get_section`
+
+**Input fields**
+
+- `id`: string (section UUID)
+- `includeDeleted`: boolean (optional)
+
+**Example**
+
+```json
+{ "id": "section-uuid" }
+```
+
 ### `mindwtr_list_areas`
 
 **Input fields**
@@ -372,6 +440,38 @@ If you need more than 500 tasks, page with `limit` + `offset` instead of expecti
     }
   ]
 }
+```
+
+### `mindwtr_list_people`
+
+**Input fields**
+
+- `includeDeleted`: boolean (optional)
+
+**Response**
+
+```json
+{
+  "people": [
+    {
+      "id": "person-uuid",
+      "name": "Alex"
+    }
+  ]
+}
+```
+
+### `mindwtr_get_person`
+
+**Input fields**
+
+- `id`: string (person UUID)
+- `includeDeleted`: boolean (optional)
+
+**Example**
+
+```json
+{ "id": "person-uuid" }
 ```
 
 ### `mindwtr_get_task`
@@ -477,6 +577,29 @@ If you need more than 500 tasks, page with `limit` + `offset` instead of expecti
 
 - `id`: string (project UUID)
 
+### `mindwtr_add_section` (write)
+
+**Input fields**
+
+- `projectId`: string
+- `title`: string
+- `description`: string or `null` (optional)
+- `order`: number (optional)
+- `isCollapsed`: boolean (optional)
+
+### `mindwtr_update_section` (write)
+
+**Input fields**
+
+- `id`: string (section UUID)
+- `title`, `description`, `order`, `isCollapsed`
+
+### `mindwtr_delete_section` (write)
+
+**Input fields**
+
+- `id`: string (section UUID)
+
 ### `mindwtr_add_area` (write)
 
 **Input fields**
@@ -497,6 +620,35 @@ If you need more than 500 tasks, page with `limit` + `offset` instead of expecti
 **Input fields**
 
 - `id`: string (area UUID)
+
+### `mindwtr_add_person` (write)
+
+**Input fields**
+
+- `name`: string
+- `note`: string or `null` (optional)
+- `referenceLink`: string or `null` (optional)
+
+### `mindwtr_update_person` (write)
+
+**Input fields**
+
+- `id`: string (person UUID)
+- `name`, `note`, `referenceLink`
+
+### `mindwtr_rename_person` (write)
+
+**Input fields**
+
+- `id`: string (person UUID)
+- `name`: string
+- `updateTasks`: boolean (optional)
+
+### `mindwtr_delete_person` (write)
+
+**Input fields**
+
+- `id`: string (person UUID)
 
 ---
 
