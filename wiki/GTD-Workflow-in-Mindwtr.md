@@ -166,6 +166,16 @@ Sequential projects can use a project-wide scope or a section scope. Use section
 - Set **start date** for when to begin
 - Set **review date** (tickler) for periodic check-ins
 
+### Dates vs. Status
+
+Mindwtr keeps task status and task dates separate. Status is the GTD state you choose, such as `inbox`, `next`, `waiting`, or `someday`. Dates control when and why a task appears; they do not automatically promote a task to `next`.
+
+- **Start date** is a defer/availability gate. A future start hides the task from Focus by default. When the start date arrives, the task becomes visible according to its existing status.
+- **Review date** is a tickler. When due, it surfaces a non-inbox task for reconsideration without changing its status.
+- **Due date** is a deadline. It drives deadline display, reminders, and sorting pressure without changing status.
+
+Some processing actions set status and dates together. For example, choosing **Later** while processing the Inbox moves the item to `next` and sets a start date. That action changes the status; the start date does not promote the task later on its own.
+
 ---
 
 ## 4. Reflect (Weekly Review)
