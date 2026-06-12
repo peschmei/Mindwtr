@@ -467,6 +467,52 @@ describe('ProjectDetailModal task sorting', () => {
         expect(onProjectTaskSortByChange).toHaveBeenCalledWith('due');
     });
 
+    it('keeps project task controls outside the scrolling task list', () => {
+        const onOpenProjectQuickAdd = vi.fn();
+        const onProjectTaskSortByChange = vi.fn();
+        const onToggleShowCompletedTasks = vi.fn();
+        let tree!: ReturnType<typeof create>;
+
+        act(() => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps({
+                onOpenProjectQuickAdd,
+                onProjectTaskSortByChange,
+                onToggleShowCompletedTasks,
+                selectedProjectSections: [
+                    section('section-1', 'Research'),
+                    section('section-2', 'Design'),
+                ],
+            })} />);
+        });
+
+        expect(taskListPropsSpy.mock.calls.at(-1)?.[0].headerAccessory).toBeUndefined();
+        expect(taskListPropsSpy.mock.calls.at(-1)?.[0].externalFilterOpenSignal).toBe(0);
+
+        act(() => {
+            tree.root.findByProps({ testID: 'project-task-filter-button' }).props.onPress();
+        });
+
+        expect(taskListPropsSpy.mock.calls.at(-1)?.[0].externalFilterOpenSignal).toBe(1);
+
+        act(() => {
+            tree.root.findByProps({ testID: 'project-add-task-button' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-task-sort-toggle' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-pinned-show-completed-toggle' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-task-reorder-toggle' }).props.onPress();
+        });
+
+        expect(onOpenProjectQuickAdd).toHaveBeenCalledWith(expect.objectContaining({ id: 'project-1' }));
+        expect(onProjectTaskSortByChange).toHaveBeenCalledWith('due');
+        expect(onToggleShowCompletedTasks).toHaveBeenCalledTimes(1);
+        expect(tree.root.findByProps({ testID: 'project-task-reorder-toggle' }).props.accessibilityState).toEqual({ selected: true });
+    });
+
     it('clears project-local filter sheet controls with the task filters', () => {
         const onProjectTaskSortByChange = vi.fn();
         const onToggleShowCompletedTasks = vi.fn();

@@ -551,6 +551,7 @@ export function ProjectDetailModal({
     updateSection,
 }: ProjectDetailModalProps) {
     const [projectTaskReorderMode, setProjectTaskReorderMode] = React.useState(false);
+    const [projectTaskFilterOpenSignal, setProjectTaskFilterOpenSignal] = React.useState(0);
     const [sectionManagerVisible, setSectionManagerVisible] = React.useState(false);
     const projectDetailScrollRef = React.useRef<ScrollView | null>(null);
     const projectDetailScrollOffsetRef = React.useRef(0);
@@ -606,6 +607,8 @@ export function ProjectDetailModal({
         Alert.alert(sequentialScopeHelpLabel, sequentialScopeHelpText);
     }, [sequentialScopeHelpLabel, sequentialScopeHelpText]);
     const sortLabel = tFallback(t, 'sort.label', 'Sort');
+    const sortDefaultLabel = tFallback(t, 'sort.default', 'Default');
+    const sortDueLabel = tFallback(t, 'sort.due', 'Due date');
     const taskControlsLabel = tFallback(t, 'common.tasks', 'Tasks');
     const projectSectionsLabel = tFallback(t, 'projects.sectionsLabel', 'Sections');
     const projectTaskFilterActiveCount = (
@@ -638,49 +641,127 @@ export function ProjectDetailModal({
         if (!selectedProject || !taskListOptions.allowAdd) return;
         onOpenProjectQuickAdd(selectedProject);
     }, [onOpenProjectQuickAdd, selectedProject, taskListOptions.allowAdd]);
-    const projectTaskHeaderAccessory = selectedProject ? (
-        <View style={styles.projectTaskHeaderActions}>
-            {taskListOptions.enableProjectReorder && hasProjectTaskOrderTargets && !projectTaskReorderMode ? (
-                <TouchableOpacity
-                    accessibilityLabel={projectOrderLabel}
-                    accessibilityRole="button"
-                    onPress={() => setProjectTaskReorderMode(true)}
-                    style={[
-                        styles.projectTaskHeaderIconButton,
-                        {
-                            backgroundColor: tc.filterBg,
-                            borderColor: tc.border,
-                        },
-                    ]}
-                    testID="project-task-reorder-toggle"
-                >
-                    <Ionicons
-                        name="swap-vertical-outline"
-                        size={18}
-                        color={tc.secondaryText}
-                    />
-                </TouchableOpacity>
-            ) : null}
-            {taskListOptions.allowAdd && !projectTaskReorderMode ? (
+    const openProjectTaskFilters = React.useCallback(() => {
+        setProjectTaskFilterOpenSignal((value) => value + 1);
+    }, []);
+    const toggleProjectTaskSort = React.useCallback(() => {
+        onProjectTaskSortByChange(projectTaskSortBy === 'due' ? 'default' : 'due');
+    }, [onProjectTaskSortByChange, projectTaskSortBy]);
+    const toggleProjectTaskReorderMode = React.useCallback(() => {
+        setProjectTaskReorderMode((value) => !value);
+    }, []);
+    const projectTaskPinnedToolbar = selectedProject ? (
+        <View style={[styles.projectTaskPinnedToolbar, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
+            {taskListOptions.allowAdd ? (
                 <TouchableOpacity
                     accessibilityLabel={addProjectTaskLabel}
                     accessibilityRole="button"
                     onPress={openProjectQuickAdd}
                     style={[
-                        styles.projectTaskHeaderAddButton,
+                        styles.projectTaskPinnedAddButton,
                         { backgroundColor: tc.tint, borderColor: tc.tint },
                     ]}
                     testID="project-add-task-button"
                 >
                     <Ionicons name="add" size={18} color={tc.onTint} />
                     <Text
-                        style={[styles.projectTaskHeaderAddText, { color: tc.onTint }]}
+                        style={[styles.projectTaskPinnedAddText, { color: tc.onTint }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.82}
                     >
                         {addProjectTaskLabel}
                     </Text>
+                </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+                accessibilityLabel={tFallback(t, 'filters.label', 'Filters')}
+                accessibilityRole="button"
+                onPress={openProjectTaskFilters}
+                style={[
+                    styles.projectTaskPinnedIconButton,
+                    {
+                        backgroundColor: projectTaskFilterActiveCount > 0 ? `${tc.tint}20` : tc.filterBg,
+                        borderColor: projectTaskFilterActiveCount > 0 ? tc.tint : tc.border,
+                    },
+                ]}
+                testID="project-task-filter-button"
+            >
+                <Ionicons
+                    name="options-outline"
+                    size={18}
+                    color={projectTaskFilterActiveCount > 0 ? tc.tint : tc.secondaryText}
+                />
+                {projectTaskFilterActiveCount > 0 ? (
+                    <View style={[styles.projectTaskPinnedBadge, { backgroundColor: tc.tint }]}>
+                        <Text style={[styles.projectTaskPinnedBadgeText, { color: tc.onTint }]}>
+                            {projectTaskFilterActiveCount}
+                        </Text>
+                    </View>
+                ) : null}
+            </TouchableOpacity>
+            <TouchableOpacity
+                accessibilityLabel={`${sortLabel}: ${projectTaskSortBy === 'due' ? sortDueLabel : sortDefaultLabel}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: projectTaskSortBy === 'due' }}
+                onPress={toggleProjectTaskSort}
+                style={[
+                    styles.projectTaskPinnedIconButton,
+                    {
+                        backgroundColor: projectTaskSortBy === 'due' ? tc.tint : tc.filterBg,
+                        borderColor: projectTaskSortBy === 'due' ? tc.tint : tc.border,
+                    },
+                ]}
+                testID="project-task-sort-toggle"
+            >
+                <Ionicons
+                    name="swap-vertical-outline"
+                    size={18}
+                    color={projectTaskSortBy === 'due' ? tc.onTint : tc.secondaryText}
+                />
+            </TouchableOpacity>
+            {selectedProject.status !== 'archived' ? (
+                <TouchableOpacity
+                    accessibilityLabel={showCompletedLabel}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: showCompletedTasks }}
+                    onPress={onToggleShowCompletedTasks}
+                    style={[
+                        styles.projectTaskPinnedIconButton,
+                        {
+                            backgroundColor: showCompletedTasks ? `${tc.tint}20` : tc.filterBg,
+                            borderColor: showCompletedTasks ? tc.tint : tc.border,
+                        },
+                    ]}
+                    testID="project-pinned-show-completed-toggle"
+                >
+                    <Ionicons
+                        name={showCompletedTasks ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                        size={18}
+                        color={showCompletedTasks ? tc.tint : tc.secondaryText}
+                    />
+                </TouchableOpacity>
+            ) : null}
+            {taskListOptions.enableProjectReorder && hasProjectTaskOrderTargets ? (
+                <TouchableOpacity
+                    accessibilityLabel={projectTaskReorderMode ? tFallback(t, 'common.done', 'Done') : projectOrderLabel}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: projectTaskReorderMode }}
+                    onPress={toggleProjectTaskReorderMode}
+                    style={[
+                        styles.projectTaskPinnedIconButton,
+                        {
+                            backgroundColor: projectTaskReorderMode ? tc.tint : tc.filterBg,
+                            borderColor: projectTaskReorderMode ? tc.tint : tc.border,
+                        },
+                    ]}
+                    testID="project-task-reorder-toggle"
+                >
+                    <Ionicons
+                        name={projectTaskReorderMode ? 'checkmark' : 'reorder-three-outline'}
+                        size={18}
+                        color={projectTaskReorderMode ? tc.onTint : tc.secondaryText}
+                    />
                 </TouchableOpacity>
             ) : null}
         </View>
@@ -934,6 +1015,7 @@ export function ProjectDetailModal({
                                         returnKeyType="done"
                                     />
                                 </View>
+                                {projectTaskPinnedToolbar}
                                 <ProjectDetailScrollFrame
                                     backgroundColor={tc.bg}
                                     keyboardBottomInset={projectDetailKeyboardBottomInset}
@@ -1439,7 +1521,6 @@ export function ProjectDetailModal({
                                         statusFilter="all"
                                         title={selectedProject.title}
                                         filterSheetAccessory={projectTaskFilterAccessory}
-                                        headerAccessory={projectTaskHeaderAccessory}
                                         extraFilterActiveCount={projectTaskFilterActiveCount}
                                         onClearExtraFilters={clearProjectTaskFilters}
                                         showHeader={false}
@@ -1453,6 +1534,7 @@ export function ProjectDetailModal({
                                             viewportHeight: projectDetailScrollWindow.viewportHeight,
                                         }}
                                         enableBulkActions
+                                        externalFilterOpenSignal={projectTaskFilterOpenSignal}
                                         showSort={false}
                                         enableProjectReorder={taskListOptions.enableProjectReorder}
                                         projectSortBy={projectTaskSortBy}

@@ -165,26 +165,28 @@ export const projectsScreenStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    projectTaskHeaderActions: {
+    projectTaskPinnedToolbar: {
+        minHeight: 56,
+        borderBottomWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
         gap: 8,
-        flexShrink: 0,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
     },
-    projectTaskHeaderIconButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+    projectTaskPinnedIconButton: {
+        width: 42,
+        height: 40,
+        borderRadius: 20,
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    projectTaskHeaderAddButton: {
-        minWidth: 108,
-        maxWidth: 150,
-        height: 36,
-        borderRadius: 18,
+    projectTaskPinnedAddButton: {
+        minWidth: 118,
+        maxWidth: 168,
+        height: 40,
+        borderRadius: 20,
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
@@ -192,11 +194,26 @@ export const projectsScreenStyles = StyleSheet.create({
         gap: 5,
         paddingHorizontal: 12,
     },
-    projectTaskHeaderAddText: {
+    projectTaskPinnedAddText: {
         minWidth: 0,
         flexShrink: 1,
         fontSize: 13,
         fontWeight: '700',
+    },
+    projectTaskPinnedBadge: {
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 4,
+        position: 'absolute',
+        right: -3,
+        top: -3,
+    },
+    projectTaskPinnedBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
     },
     projectContent: {
         flex: 1,
