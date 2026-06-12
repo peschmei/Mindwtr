@@ -14,6 +14,7 @@ type DesktopAutoSyncControllerOptions = {
     isRuntimeActive: () => boolean;
     shouldPauseWindowSync?: () => boolean;
     hasPendingLocalChanges?: () => boolean;
+    logInfo?: (message: string, extra?: Record<string, string>) => void;
     now?: () => number;
     setTimer?: typeof setTimeout;
     clearTimer?: typeof clearTimeout;
@@ -64,6 +65,10 @@ export const createDesktopAutoSyncController = (
     let periodicSyncTimer: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
 
+    const trace = (message: string, extra?: Record<string, string>) => {
+        options.logInfo?.(message, extra);
+    };
+
     const clearSyncDebounce = () => {
         if (!syncDebounceTimer) return;
         clearTimer(syncDebounceTimer);
@@ -95,6 +100,7 @@ export const createDesktopAutoSyncController = (
             periodicSyncTimer = null;
             if (disposed) return;
             if (options.isRuntimeActive() && !options.shouldPauseWindowSync?.()) {
+                trace('Auto sync trigger', { source: 'periodic' });
                 void requestSync().catch((error) => options.reportError('Sync failed', error));
             }
             schedulePeriodicSync();
@@ -122,8 +128,13 @@ export const createDesktopAutoSyncController = (
             if (nowMs - lastAutoSyncAt < effectiveMinIntervalMs) {
                 if (!syncThrottleTimer) {
                     const waitMs = Math.max(0, effectiveMinIntervalMs - (nowMs - lastAutoSyncAt));
+                    trace('Auto sync throttled', {
+                        waitMs: String(waitMs),
+                        minIntervalMs: String(effectiveMinIntervalMs),
+                    });
                     syncThrottleTimer = setTimer(() => {
                         syncThrottleTimer = null;
+                        trace('Auto sync trigger', { source: 'throttle' });
                         void requestSync(0);
                     }, waitMs);
                 }
@@ -133,9 +144,16 @@ export const createDesktopAutoSyncController = (
             if (!(await options.canSync())) return;
 
             lastAutoSyncAt = nowMs;
+            trace('Auto sync run start', {
+                minIntervalMs: String(effectiveMinIntervalMs),
+            });
             await options.flushPendingSave().catch((error) => options.reportError('Save failed', error));
 
             const result = await options.performSync();
+            trace('Auto sync run complete', {
+                success: String(result.success),
+                error: result.error ?? '',
+            });
             if (!result.success && result.error) {
                 options.onSyncFailure?.(result.error);
             }
@@ -155,11 +173,13 @@ export const createDesktopAutoSyncController = (
         handleFocus: () => {
             if (!canRunWindowSync()) return;
             if (now() - lastAutoSyncAt > focusMinIntervalMs) {
+                trace('Auto sync trigger', { source: 'focus' });
                 void requestSync().catch((error) => options.reportError('Sync failed', error));
             }
         },
         handleBlur: () => {
             if (!shouldRunBlurSync()) return;
+            trace('Auto sync trigger', { source: 'blur' });
             void requestSync().catch((error) => options.reportError('Sync failed', error));
         },
         handleDataChange: () => {
@@ -167,9 +187,14 @@ export const createDesktopAutoSyncController = (
             const hadTimer = !!syncDebounceTimer;
             clearSyncDebounce();
             const debounceMs = hadTimer ? debounceContinuousChangeMs : debounceFirstChangeMs;
+            trace('Auto sync data change queued', {
+                debounceMs: String(debounceMs),
+                hadTimer: String(hadTimer),
+            });
             syncDebounceTimer = setTimer(() => {
                 syncDebounceTimer = null;
                 if (!options.isRuntimeActive()) return;
+                trace('Auto sync trigger', { source: 'data-change' });
                 void requestSync().catch((error) => options.reportError('Sync failed', error));
             }, debounceMs);
         },
@@ -178,6 +203,7 @@ export const createDesktopAutoSyncController = (
             initialSyncTimer = setTimer(() => {
                 initialSyncTimer = null;
                 if (!options.isRuntimeActive()) return;
+                trace('Auto sync trigger', { source: 'initial' });
                 void requestSync().catch((error) => options.reportError('Sync failed', error));
             }, initialSyncDelayMs);
         },

@@ -53,7 +53,7 @@ import { SyncService } from './lib/sync-service';
 import type { ExternalSyncChange, ExternalSyncChangeResolution } from './lib/sync-service';
 import * as LocalDataWatcher from './lib/local-data-watcher';
 import { getInstallSourceOrFallback, isFlatpakRuntime, isTauriRuntime } from './lib/runtime';
-import { logError } from './lib/app-log';
+import { logError, logInfo } from './lib/app-log';
 import { createDesktopAutoSyncController } from './lib/auto-sync-controller';
 import { canDesktopAutoSync } from './lib/desktop-auto-sync-eligibility';
 import { beginSettingsOpenTrace, markSettingsOpenTrace, wrapSettingsOpenImport } from './lib/settings-open-diagnostics';
@@ -626,6 +626,9 @@ function App() {
                 || useUiStore.getState().editingTaskId !== null
             ),
             hasPendingLocalChanges: () => SyncService.hasPendingLocalChangesForAutoSync(),
+            logInfo: (message, extra) => {
+                void logInfo(message, { scope: 'sync', extra });
+            },
         });
 
         const focusListener = () => {

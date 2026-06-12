@@ -247,6 +247,41 @@ const logSyncInfo = (message: string, extra?: Record<string, string>) => {
     void syncServiceDependencies.logInfo(message, { scope: 'sync', extra });
 };
 
+const buildSyncPayloadTraceExtra = (
+    data: AppData | null | undefined,
+    extra: Record<string, string> = {},
+): Record<string, string> => {
+    if (!data) {
+        return { ...extra, hasData: 'false' };
+    }
+
+    const areas = Array.isArray(data.areas) ? data.areas : [];
+    const areaIds = areas
+        .map((area) => `${area.id}${area.deletedAt ? ':deleted' : ''}`)
+        .sort();
+    return {
+        ...extra,
+        hasData: 'true',
+        tasks: String(Array.isArray(data.tasks) ? data.tasks.length : 0),
+        projects: String(Array.isArray(data.projects) ? data.projects.length : 0),
+        sections: String(Array.isArray(data.sections) ? data.sections.length : 0),
+        areas: String(areas.length),
+        deletedAreas: String(areas.filter((area) => Boolean(area.deletedAt)).length),
+        areaIdsSample: areaIds.slice(0, 24).join(','),
+        areaIdsTruncated: String(areaIds.length > 24),
+        pendingRemoteWrite: String(Boolean(data.settings?.pendingRemoteWriteAt)),
+        fingerprint: computeSyncPayloadFingerprint(data),
+    };
+};
+
+const logSyncPayloadTrace = (
+    message: string,
+    data: AppData | null | undefined,
+    extra?: Record<string, string>,
+): void => {
+    logSyncInfo(message, buildSyncPayloadTraceExtra(data, extra));
+};
+
 const logPendingAttachmentUploads = (
     message: string,
     backend: string,
@@ -585,6 +620,10 @@ export class SyncService {
             SyncService.queuedSyncOptions = nextOptions;
         }
         const queuedOptions = SyncService.queuedSyncOptions ?? nextOptions;
+        logSyncInfo('Sync trace follow-up requested', {
+            hasQueuedOptions: String(Boolean(queuedOptions)),
+            preferLatest: String(preferLatest),
+        });
         if (queuedOptions) {
             SyncService.syncOrchestrator.requestFollowUp(queuedOptions);
             return;
@@ -1437,6 +1476,9 @@ export class SyncService {
             ? sanitizeAppDataForRemote(context.remoteDataForCompare)
             : null;
         if (remoteSanitized && areSyncPayloadsEqual(remoteSanitized, sanitized)) {
+            logSyncPayloadTrace('Sync trace remote write skipped unchanged payload', sanitized, {
+                backend: context.backend,
+            });
             return;
         }
 
@@ -1450,6 +1492,10 @@ export class SyncService {
                 context.lastRemoteWriteFingerprint = writeResult.fingerprint;
                 context.remoteDataForCompare = sanitized;
                 context.webdavRemoteCorrupted = false;
+                logSyncPayloadTrace('Sync trace remote write completed', sanitized, {
+                    backend: context.backend,
+                    remoteFingerprint: writeResult.fingerprint ?? '',
+                });
                 return;
             }
             const config = await SyncService.getWebDavConfig();
@@ -1469,6 +1515,10 @@ export class SyncService {
             context.lastRemoteWriteFingerprint = writeResult.fingerprint;
             context.remoteDataForCompare = sanitized;
             context.webdavRemoteCorrupted = false;
+            logSyncPayloadTrace('Sync trace remote write completed', sanitized, {
+                backend: context.backend,
+                remoteFingerprint: writeResult.fingerprint ?? '',
+            });
             return;
         }
 
@@ -1940,9 +1990,25 @@ export class SyncService {
             }
 
             const syncResult = await syncServiceDependencies.performSyncCycle({
-                readLocal: () => SyncService.readLocalDataForSyncCycle(context),
-                readRemote: () => SyncService.readRemoteDataByBackend(run),
+                readLocal: async () => {
+                    const data = await SyncService.readLocalDataForSyncCycle(context);
+                    logSyncPayloadTrace('Sync trace read local payload', data, {
+                        backend: context.backend,
+                    });
+                    return data;
+                },
+                readRemote: async () => {
+                    const data = await SyncService.readRemoteDataByBackend(run);
+                    logSyncPayloadTrace('Sync trace read remote payload', data, {
+                        backend: context.backend,
+                    });
+                    return data;
+                },
                 writeLocal: async (data) => {
+                    logSyncPayloadTrace('Sync trace write local payload', data, {
+                        backend: context.backend,
+                        step: context.step,
+                    });
                     run.ensureLocalSnapshotFresh();
                     await run.persistLocalDataWithTracking(data);
                 },
@@ -1962,6 +2028,9 @@ export class SyncService {
                 flushPendingLocalBeforeRetryRead: syncServiceDependencies.flushPendingSave,
                 prepareRemoteWrite: (data) => SyncService.prepareRemoteWriteData(run, data),
                 writeRemote: async (data) => {
+                    logSyncPayloadTrace('Sync trace write remote payload', data, {
+                        backend: context.backend,
+                    });
                     run.ensureLocalSnapshotFresh();
                     await SyncService.writeRemoteDataByBackend(run, data);
                 },
@@ -1983,6 +2052,13 @@ export class SyncService {
             }
             const stats = syncResult.stats;
             let mergedData = syncResult.data;
+            logSyncPayloadTrace('Sync trace core result payload', mergedData, {
+                backend: context.backend,
+                areaStatsLocal: String(stats.areas.localTotal),
+                areaStatsIncoming: String(stats.areas.incomingTotal),
+                areaStatsMerged: String(stats.areas.mergedTotal),
+                areaStatsIncomingOnly: String(stats.areas.incomingOnly),
+            });
             let canRecordFastSyncState = true;
             const markFastSyncStateUnsafe = () => {
                 canRecordFastSyncState = false;
@@ -1996,6 +2072,9 @@ export class SyncService {
             if (mergedData !== preAttachmentMergedData) {
                 markFastSyncStateUnsafe();
             }
+            logSyncPayloadTrace('Sync trace post-attachment payload', mergedData, {
+                backend: context.backend,
+            });
 
             await cleanupAttachmentTempFiles(getAttachmentCleanupDeps());
 
