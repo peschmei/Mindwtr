@@ -281,6 +281,10 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 2,
   },
+  scheduleResultsSubtitle: {
+    fontSize: 12,
+    paddingHorizontal: 2,
+  },
   taskItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',

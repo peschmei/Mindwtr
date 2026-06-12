@@ -292,6 +292,7 @@ export function CalendarView() {
     selectedDateDeadlines,
     selectedDateExternalEvents,
     selectedDateLongLabel,
+    selectedDatePlanningLabel,
     selectedDateScheduled,
     selectedDateTimedEvents,
     selectedDayModeLabel,
@@ -1005,6 +1006,9 @@ export function CalendarView() {
                   <Text style={[styles.scheduleResultsTitle, { color: tc.secondaryText }]}>
                     {tr('calendar.planningTitle')}
                   </Text>
+                  <Text style={[styles.scheduleResultsSubtitle, { color: tc.secondaryText }]}>
+                    {selectedDatePlanningLabel}
+                  </Text>
                   {planningTasks.map((task) => {
                     const slotLabel = getScheduleSlotLabel(selectedDate, task);
                     return (
@@ -1473,6 +1477,9 @@ export function CalendarView() {
               <Text style={[styles.scheduleDate, { color: tc.secondaryText }]}>
                 {tr('calendar.planningTitle')}
               </Text>
+              <Text style={[styles.scheduleResultsSubtitle, { color: tc.secondaryText }]}>
+                {selectedDatePlanningLabel}
+              </Text>
               <View style={styles.scheduleItems}>
                 {planningTasks.map((task) => {
                   const slotLabel = getScheduleSlotLabel(selectedDate, task);
@@ -1770,6 +1777,9 @@ export function CalendarView() {
               <View style={styles.scheduleResults}>
                 <Text style={[styles.scheduleResultsTitle, { color: tc.secondaryText }]}>
                   {tr('calendar.planningTitle')}
+                </Text>
+                <Text style={[styles.scheduleResultsSubtitle, { color: tc.secondaryText }]}>
+                  {selectedDatePlanningLabel}
                 </Text>
                 {planningTasks.map((task) => {
                   const slotLabel = getScheduleSlotLabel(selectedDate, task);

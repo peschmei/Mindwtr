@@ -1151,6 +1151,11 @@ export function useCalendarViewController() {
         day: 'numeric',
       })
     : '';
+  const selectedDatePlanningLabel = selectedDate
+    ? tr('calendar.planningForDate', {
+        date: selectedDate.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }),
+      })
+    : '';
   const selectedDayModeLabel = selectedDate
     ? `${selectedDate.toLocaleDateString(locale, { weekday: 'short', month: 'long', day: 'numeric' })}${isToday(selectedDate) ? ` · ${t('filters.datePreset.today')}` : ''}`
     : '';
@@ -1227,6 +1232,7 @@ export function useCalendarViewController() {
     selectedDateDeadlines,
     selectedDateExternalEvents,
     selectedDateLongLabel,
+    selectedDatePlanningLabel,
     selectedDateScheduled,
     selectedDateTimedEvents,
     selectedDayMinutes,

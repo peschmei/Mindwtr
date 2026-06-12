@@ -359,9 +359,20 @@ export default function FocusScreen() {
   const activeTasks = useMemo(() => (
     baseActiveTasks.filter((task) => shouldShowTaskForStart(task, { showFutureStarts }))
   ), [baseActiveTasks, showFutureStarts]);
-  const hiddenFutureStartCount = useMemo(() => (
-    baseActiveTasks.filter((task) => !shouldShowTaskForStart(task, { showFutureStarts: false })).length
+  const futureStartTasks = useMemo(() => (
+    baseActiveTasks.filter((task) => !shouldShowTaskForStart(task, { showFutureStarts: false }))
   ), [baseActiveTasks]);
+  const hiddenFutureStartCount = useMemo(() => (
+    futureStartTasks.length
+  ), [futureStartTasks]);
+  const futureStartPreview = useMemo(() => {
+    if (!showFutureStarts || futureStartTasks.length === 0) return '';
+    const visibleTitles = futureStartTasks.slice(0, 2).map((task) => task.title.trim()).filter(Boolean);
+    const remainingCount = futureStartTasks.length - visibleTitles.length;
+    return remainingCount > 0
+      ? `${visibleTitles.join(', ')} +${remainingCount}`
+      : visibleTitles.join(', ');
+  }, [futureStartTasks, showFutureStarts]);
   const tokenOptions = useMemo(() => getFocusTokenOptions(activeTasks), [activeTasks]);
   const showLocationFilter = useMemo(() => (
     locationFilter.trim().length > 0
@@ -1542,9 +1553,16 @@ export default function FocusScreen() {
             ) : null}
             {hiddenFutureStartCount > 0 ? (
               <View style={[styles.futureStartNotice, { borderColor: tc.border, backgroundColor: tc.cardBg }]}>
-                <Text style={[styles.futureStartText, { color: tc.secondaryText }]}>
-                  {formatFutureStartNotice(hiddenFutureStartCount, showFutureStarts)}
-                </Text>
+                <View style={styles.futureStartCopy}>
+                  <Text style={[styles.futureStartText, { color: tc.secondaryText }]}>
+                    {formatFutureStartNotice(hiddenFutureStartCount, showFutureStarts)}
+                  </Text>
+                  {futureStartPreview ? (
+                    <Text style={[styles.futureStartPreview, { color: tc.text }]} numberOfLines={2}>
+                      {futureStartPreview}
+                    </Text>
+                  ) : null}
+                </View>
                 <TouchableOpacity
                   accessibilityRole="button"
                   onPress={toggleFutureStarts}
@@ -2081,9 +2099,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  futureStartText: {
+  futureStartCopy: {
     flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  futureStartText: {
     fontSize: 12,
+    fontWeight: '600',
+  },
+  futureStartPreview: {
+    fontSize: 13,
     fontWeight: '600',
   },
   futureStartButton: {

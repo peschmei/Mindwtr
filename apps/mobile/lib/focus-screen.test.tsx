@@ -990,6 +990,31 @@ describe('FocusScreen', () => {
     ).toEqual([]);
   });
 
+  it('names shown future-start tasks in the helper notice', () => {
+    storeState.settings = {
+      appearance: { showFutureStarts: true },
+      features: {},
+    };
+    storeState.tasks = [
+      makeTask('future-first', {
+        title: 'Wait for vendor',
+        startTime: '2099-05-03T09:00:00.000Z',
+      }),
+      makeTask('next-now', {
+        title: 'Current next',
+      }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    expect(textContent(tree.root)).toContain('1 future-start task shown');
+    expect(textContent(tree.root)).toContain('Wait for vendor');
+  });
+
   it('applies and clears saved Focus filters from the chip row', () => {
     storeState.settings = {
       appearance: {},
