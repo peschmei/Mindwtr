@@ -52,12 +52,13 @@ interface DailyReviewGuideModalProps {
 
 export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
     const [currentStep, setCurrentStep] = useState<DailyReviewStep>(() => loadStoredDailyReviewStep());
-    const { tasks, projects, areas, settings, addProject, updateTask, deleteTask } = useTaskStore(
+    const { tasks, projects, areas, settings, addTask, addProject, updateTask, deleteTask } = useTaskStore(
         (state) => ({
             tasks: state.tasks,
             projects: state.projects,
             areas: state.areas,
             settings: state.settings,
+            addTask: state.addTask,
             addProject: state.addProject,
             updateTask: state.updateTask,
             deleteTask: state.deleteTask,
@@ -569,6 +570,7 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
                             projects={projects}
                             areas={areas}
                             settings={settings}
+                            addTask={addTask}
                             addProject={addProject}
                             updateTask={updateTask}
                             deleteTask={deleteTask}

@@ -88,6 +88,7 @@ const homeProject: Project = {
 };
 
 type RenderResult = {
+    addTask: ReturnType<typeof vi.fn>;
     addProject: ReturnType<typeof vi.fn>;
     updateTask: ReturnType<typeof vi.fn>;
     deleteTask: ReturnType<typeof vi.fn>;
@@ -120,6 +121,7 @@ const renderInboxProcessor = (options?: AppData['settings'] | RenderInboxProcess
     const renderOptions = isRenderInboxProcessorOptions(options)
         ? options
         : { settings: options };
+    const addTask = vi.fn(async () => undefined);
     const addProject = vi.fn(async () => createdProject);
     const updateTask = vi.fn(async () => undefined);
     const deleteTask = vi.fn(async () => undefined);
@@ -137,6 +139,7 @@ const renderInboxProcessor = (options?: AppData['settings'] | RenderInboxProcess
                 projects={projects}
                 areas={areas}
                 settings={renderOptions.settings}
+                addTask={addTask}
                 addProject={addProject}
                 updateTask={updateTask}
                 deleteTask={deleteTask}
@@ -150,6 +153,7 @@ const renderInboxProcessor = (options?: AppData['settings'] | RenderInboxProcess
 
     return {
         ...render(<TestHarness />),
+        addTask,
         addProject,
         updateTask,
         deleteTask,

@@ -585,6 +585,7 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                             projects={projects}
                             areas={areas}
                             settings={settings}
+                            addTask={addTask}
                             addProject={addProject}
                             updateTask={updateTask}
                             deleteTask={deleteTask}
