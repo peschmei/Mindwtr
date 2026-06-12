@@ -112,6 +112,7 @@ const coreMocks = vi.hoisted(() => ({
   cloudDeleteFile: vi.fn(),
   getInMemoryAppDataSnapshot: vi.fn(),
   useTaskStoreGetState: vi.fn(),
+  useTaskStoreSetState: vi.fn(),
 }));
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -218,6 +219,7 @@ vi.mock('@mindwtr/core', async () => {
     getInMemoryAppDataSnapshot: coreMocks.getInMemoryAppDataSnapshot,
     useTaskStore: {
       getState: coreMocks.useTaskStoreGetState,
+      setState: coreMocks.useTaskStoreSetState,
     },
   };
 });
@@ -405,6 +407,7 @@ describe('mobile sync-service runtime', () => {
     expect(coreMocks.webdavGetJson).not.toHaveBeenCalled();
     expect(coreMocks.webdavHeadFile).toHaveBeenCalledTimes(1);
     expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
+    expect(asyncStorageMocks.setItem.mock.calls.some(([key]) => key === '@mindwtr_local_sync_status_v1')).toBe(true);
   });
 
   it('keeps WebDAV read-only no-change checks out of the visible sync activity state', async () => {
@@ -422,6 +425,7 @@ describe('mobile sync-service runtime', () => {
     expect(coreMocks.webdavGetJson).toHaveBeenCalledTimes(1);
     expect(coreMocks.webdavHeadFile).not.toHaveBeenCalled();
     expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
+    expect(asyncStorageMocks.setItem.mock.calls.some(([key]) => key === '@mindwtr_local_sync_status_v1')).toBe(true);
   });
 
   it('reuses the local snapshot when fast and read checks fall through to a full WebDAV sync', async () => {
@@ -988,10 +992,11 @@ describe('mobile sync-service runtime', () => {
 
     expect(result.success).toBe(false);
     expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
-    expect(storeStateRef.current.updateSettings).toHaveBeenCalledWith(expect.objectContaining({
-      lastSyncStatus: 'error',
-      lastSyncStats: undefined,
-    }));
+    expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
+    expect(asyncStorageMocks.setItem).toHaveBeenCalledWith(
+      '@mindwtr_local_sync_status_v1',
+      expect.stringContaining('"lastSyncStatus":"error"')
+    );
   });
 
   it('reports sync activity state while a sync cycle is in flight', async () => {

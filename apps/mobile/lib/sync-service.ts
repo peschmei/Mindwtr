@@ -46,9 +46,11 @@ const WEBDAV_READ_RETRY_OPTIONS = { ...WEBDAV_RETRY_OPTIONS, shouldRetry: isRetr
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SYNC_CONFIG_CACHE_TTL_MS = 30_000;
 const FAST_SYNC_STATE_KEY = '@mindwtr_fast_sync_state_v1';
+const LOCAL_SYNC_STATUS_KEY = '@mindwtr_local_sync_status_v1';
 const syncConfigCache = new Map<string, { value: string | null; readAt: number }>();
 
 type RemoteWriteResultLike = Partial<RemoteJsonWriteResult & CloudJsonWriteResult>;
+type LocalSyncStatus = Pick<AppData['settings'], 'lastSyncAt' | 'lastSyncStatus' | 'lastSyncError' | 'lastSyncStats' | 'lastSyncHistory'>;
 
 const normalizeRemoteWriteResult = (
   source: 'cloud' | 'webdav',
@@ -144,6 +146,70 @@ const writeFastSyncState = async (state: FastSyncState): Promise<void> => {
   } catch (error) {
     logSyncWarning('Failed to cache sync fast-check state', error);
   }
+};
+
+const sanitizeLocalSyncStatus = (value: Partial<LocalSyncStatus>): Partial<LocalSyncStatus> => {
+  const next: Partial<LocalSyncStatus> = {};
+  if (typeof value.lastSyncAt === 'string') next.lastSyncAt = value.lastSyncAt;
+  if (
+    value.lastSyncStatus === 'idle'
+    || value.lastSyncStatus === 'syncing'
+    || value.lastSyncStatus === 'success'
+    || value.lastSyncStatus === 'error'
+    || value.lastSyncStatus === 'conflict'
+  ) {
+    next.lastSyncStatus = value.lastSyncStatus;
+  }
+  if (typeof value.lastSyncError === 'string') next.lastSyncError = value.lastSyncError;
+  if (value.lastSyncStats && typeof value.lastSyncStats === 'object') next.lastSyncStats = value.lastSyncStats;
+  if (Array.isArray(value.lastSyncHistory)) next.lastSyncHistory = value.lastSyncHistory;
+  return next;
+};
+
+const readLocalSyncStatus = async (): Promise<Partial<LocalSyncStatus> | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_SYNC_STATUS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LocalSyncStatus>;
+    const status = sanitizeLocalSyncStatus(parsed);
+    return Object.keys(status).length > 0 ? status : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeLocalSyncStatus = async (updates: Partial<LocalSyncStatus>): Promise<void> => {
+  try {
+    const next = sanitizeLocalSyncStatus({
+      ...(await readLocalSyncStatus() ?? {}),
+      ...updates,
+    });
+    await AsyncStorage.setItem(LOCAL_SYNC_STATUS_KEY, JSON.stringify(next));
+  } catch (error) {
+    logSyncWarning('Failed to cache local sync status', error);
+  }
+};
+
+const applyLocalSyncStatus = async (updates: Partial<LocalSyncStatus>): Promise<void> => {
+  await writeLocalSyncStatus(updates);
+  useTaskStore.setState((state) => ({
+    settings: {
+      ...(state.settings ?? {}),
+      ...updates,
+    },
+  }));
+};
+
+const mergeLocalSyncStatus = async (data: AppData): Promise<AppData> => {
+  const status = await readLocalSyncStatus();
+  if (!status) return data;
+  return {
+    ...data,
+    settings: {
+      ...(data.settings ?? {}),
+      ...status,
+    },
+  };
 };
 
 let mobileSyncActivityState: MobileSyncActivityState = 'idle';
@@ -611,7 +677,7 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         const inMemorySnapshot = getInMemoryAppDataSnapshot();
         const baseData = preSyncedLocalData
           ? mergeAppData(preSyncedLocalData, inMemorySnapshot)
-          : mergeAppData(await mobileStorage.getData(), inMemorySnapshot);
+          : mergeAppData(await mergeLocalSyncStatus(await mobileStorage.getData()), inMemorySnapshot);
         const data = await injectExternalCalendars(baseData);
         localSnapshotChangeAt = useTaskStore.getState().lastDataChangeAt;
         localDataCache = {
@@ -1034,7 +1100,12 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
           localFingerprint,
           remoteFingerprint,
           checkedAt: new Date().toISOString(),
-      });
+        });
+        await applyLocalSyncStatus({
+          lastSyncAt: new Date().toISOString(),
+          lastSyncStatus: 'success',
+          lastSyncError: undefined,
+        });
       useTaskStore.getState().setError(null);
       logSyncInfo('Sync fast check found no changes', {
         backend,
@@ -1063,6 +1134,11 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         if (!areSyncPayloadsEqual(remoteSanitized, localSanitized)) return null;
 
         await recordFastSyncState(localDataForReadCheck, { allowRemoteFingerprintRead: false });
+      await applyLocalSyncStatus({
+        lastSyncAt: new Date().toISOString(),
+        lastSyncStatus: 'success',
+        lastSyncError: undefined,
+      });
       readCheckRemoteData = undefined;
       useTaskStore.getState().setError(null);
       logSyncInfo('Sync read check found no changes', {
@@ -1361,7 +1437,7 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
         if (wroteLocal) {
           await useTaskStore.getState().fetchData({ silent: true });
         }
-        await useTaskStore.getState().updateSettings({
+        await applyLocalSyncStatus({
           lastSyncAt: now,
           lastSyncStatus: 'error',
           lastSyncError: `${safeMessage}${logHint}`,

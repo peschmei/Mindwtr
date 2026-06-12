@@ -791,14 +791,9 @@ describe('desktop sync-service runtime', () => {
         expect(headFetchMock.mock.calls.some(([input, init]) =>
             init?.method === 'HEAD' || (typeof Request !== 'undefined' && input instanceof Request && input.method === 'HEAD')
         )).toBe(true);
-        const saveDataCall = invokeMock.mock.calls.find(([command]) => command === 'save_data');
-        expect(saveDataCall?.[1]).toMatchObject({
-            data: {
-                settings: expect.objectContaining({
-                    lastSyncStatus: 'success',
-                    lastSyncError: undefined,
-                }),
-            },
+        expect(invokeMock.mock.calls.some(([command]) => command === 'save_data')).toBe(false);
+        expect(JSON.parse(localStorage.getItem('mindwtr-local-sync-status-v1') ?? '{}')).toMatchObject({
+            lastSyncStatus: 'success',
         });
         expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
     });

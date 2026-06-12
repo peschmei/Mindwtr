@@ -133,9 +133,12 @@ import {
 } from './sync-service-config';
 import {
     buildFastSyncScope,
+    clearLocalSyncStatus,
     clearFastSyncState,
     hasPendingSyncSideEffects,
+    readLocalSyncStatus,
     readFastSyncState,
+    writeLocalSyncStatus,
     writeFastSyncState,
     type FastSyncState,
 } from './sync-service-fast-sync';
@@ -313,12 +316,24 @@ const injectExternalCalendars = async (data: AppData): Promise<AppData> =>
 const persistExternalCalendars = async (data: AppData): Promise<void> =>
     persistExternalCalendarsForSync(data, externalCalendarProvider);
 
+const mergeLocalSyncStatus = (data: AppData): AppData => {
+    const localStatus = readLocalSyncStatus();
+    if (!localStatus) return data;
+    return normalizeAppData({
+        ...data,
+        settings: {
+            ...(data.settings ?? {}),
+            ...localStatus,
+        },
+    });
+};
+
 // Sync should start from persisted data so startup sync cannot overwrite settings with an unhydrated store snapshot.
 const readLocalDataForSync = async (): Promise<AppData> => {
     if (isTauriRuntimeEnv()) {
         try {
             const persisted = await tauriInvoke<AppData>('get_data');
-            return normalizeAppData(persisted);
+            return mergeLocalSyncStatus(normalizeAppData(persisted));
         } catch (error) {
             logSyncWarning('Failed to read persisted local data for sync; using in-memory snapshot', error);
         }
@@ -352,15 +367,7 @@ async function persistLocalDataForSync(data: AppData): Promise<void> {
 
 async function persistSyncSettings(updates: Partial<AppSettings>): Promise<void> {
     if (isTauriRuntimeEnv()) {
-        const persisted = normalizeAppData(await tauriInvoke<AppData>('get_data'));
-        const nextData = normalizeAppData({
-            ...persisted,
-            settings: {
-                ...(persisted.settings ?? {}),
-                ...updates,
-            },
-        });
-        await persistLocalDataForSync(nextData);
+        writeLocalSyncStatus(updates, logSyncWarning);
         useTaskStore.setState((state) => ({
             settings: {
                 ...(state.settings ?? {}),
@@ -687,6 +694,7 @@ export class SyncService {
         SyncService.consecutiveAttachmentWarningRuns = 0;
         SyncService.lastAttachmentWarningToastAt = 0;
         clearFastSyncState();
+        clearLocalSyncStatus();
         clearAttachmentSyncState();
         clearAttachmentValidationFailures();
     }

@@ -184,26 +184,8 @@ describe('SyncService testability hooks', () => {
         expect(invoke).toHaveBeenCalledWith('save_data', { data });
     });
 
-    it('persists sync status on top of persisted Tauri data', async () => {
-        const persistedData: AppData = {
-            tasks: [],
-            projects: [],
-            sections: [],
-            areas: [
-                { id: 'area-1', name: 'Work', order: 0, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
-                { id: 'area-2', name: 'Home', order: 1, createdAt: '2026-06-02T00:00:00.000Z', updatedAt: '2026-06-02T00:00:00.000Z' },
-            ],
-            settings: {
-                lastSyncAt: '2026-06-11T00:00:00.000Z',
-            },
-        };
-        const savedData: AppData[] = [];
+    it('persists Tauri sync status outside the data snapshot', async () => {
         const invoke = vi.fn(async (command: string, args?: Record<string, unknown>) => {
-            if (command === 'get_data') return structuredClone(persistedData);
-            if (command === 'save_data') {
-                savedData.push(structuredClone((args as { data: AppData }).data));
-                return undefined;
-            }
             throw new Error(`unexpected command: ${command}`);
         });
         const updateSettings = vi.fn(async () => undefined);
@@ -231,16 +213,13 @@ describe('SyncService testability hooks', () => {
         expect(result).toBe(true);
         expect(updateSettings).not.toHaveBeenCalled();
         expect(flushPendingSave).not.toHaveBeenCalled();
-        expect(invoke).toHaveBeenCalledWith('get_data', undefined);
-        expect(savedData).toHaveLength(1);
-        expect(savedData[0].areas).toEqual(persistedData.areas);
-        expect(savedData[0].settings).toMatchObject({
+        expect(invoke).not.toHaveBeenCalled();
+        expect(JSON.parse(localStorage.getItem('mindwtr-local-sync-status-v1') ?? '{}')).toMatchObject({
             lastSyncAt: '2026-06-12T00:00:00.000Z',
             lastSyncStatus: 'success',
         });
-        expect(savedData[0].settings.lastSyncError).toBeUndefined();
-        expect(markLocalWriteMock).toHaveBeenCalledWith(savedData[0]);
-        expect(markLocalSqliteWriteMock).toHaveBeenCalledTimes(2);
+        expect(markLocalWriteMock).not.toHaveBeenCalled();
+        expect(markLocalSqliteWriteMock).not.toHaveBeenCalled();
     });
 
     it('defaults cloud provider to selfhosted and persists selection', async () => {
