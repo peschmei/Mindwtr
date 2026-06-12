@@ -45,6 +45,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 env:
@@ -55,10 +56,87 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  android:
+  preflight:
     runs-on: ubuntu-latest
-    name: Android Build + Publish
-    timeout-minutes: 90
+    name: Android Release Preflight
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      version_code: ${{ steps.version_code.outputs.local_code }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Authenticate Google Play API
+        id: play_auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          credentials_json: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+
+      - name: Resolve version
+        id: version
+        run: |
+          INPUT_TAG="${{ inputs.tag || github.event.inputs.tag }}"
+          GITHUB_EVENT_INPUTS_TAG="${{ github.event.inputs.tag }}"
+          scripts/ci/resolve-release-version.sh "$INPUT_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Android versionCode is unique
+        id: version_code
+        env:
+          ACCESS_TOKEN: ${{ steps.play_auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          PACKAGE="tech.dongdongbh.mindwtr"
+          EDIT_ID=$(curl -sS -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits" \
+            -d '{}' | jq -r '.id')
+          if [ -z "$EDIT_ID" ] || [ "$EDIT_ID" = "null" ]; then
+            echo "Failed to create Google Play edit" >&2
+            exit 1
+          fi
+          TRACKS_FILE=$(mktemp)
+          TRACKS_CODE=$(curl -sS -o "$TRACKS_FILE" -w "%{http_code}" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID/tracks")
+          TRACKS_JSON=$(cat "$TRACKS_FILE")
+          if [ "$TRACKS_CODE" != "200" ]; then
+            echo "Failed to fetch Google Play tracks (HTTP $TRACKS_CODE): $TRACKS_JSON" >&2
+            exit 1
+          fi
+          if echo "$TRACKS_JSON" | jq -e '.error' >/dev/null; then
+            echo "Failed to fetch Google Play tracks: $TRACKS_JSON" >&2
+            exit 1
+          fi
+          MAX_CODE=$(echo "$TRACKS_JSON" | jq -r '[(.tracks // [])[]? | (.releases // [])[]? | (.versionCodes // [])[]? | tonumber] | max // 0')
+          if [ -z "$MAX_CODE" ] || [ "$MAX_CODE" = "null" ]; then
+            MAX_CODE=0
+          fi
+          curl -sS -X DELETE \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID" >/dev/null
+          LOCAL_CODE=$(jq -r '.expo.android.versionCode' apps/mobile/app.json)
+          if [ -z "$LOCAL_CODE" ] || [ "$LOCAL_CODE" = "null" ]; then
+            echo "Missing expo.android.versionCode in apps/mobile/app.json" >&2
+            exit 1
+          fi
+          echo "local_code=$LOCAL_CODE" >> "$GITHUB_OUTPUT"
+          if [ "$MAX_CODE" -ge "$LOCAL_CODE" ]; then
+            echo "::error::Google Play already has versionCode $MAX_CODE; local versionCode $LOCAL_CODE must be increased in apps/mobile/app.json before release."
+            exit 1
+          fi
+          echo "versionCode ok: local $LOCAL_CODE > store $MAX_CODE"
+
+  build-aab:
+    needs: preflight
+    runs-on: ubuntu-latest
+    name: Android AAB Build
+    timeout-minutes: 75
     env:
       DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY || secrets.DROPBOX_APP_KEY }}
       DONATION_PROMPT_ENABLED: "true"
@@ -91,77 +169,14 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Authenticate Google Play API
-        id: play_auth
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
-        with:
-          credentials_json: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
-          token_format: access_token
-          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
-
-      - name: Ensure Android versionCode is unique
-        env:
-          ACCESS_TOKEN: ${{ steps.play_auth.outputs.access_token }}
-        run: |
-          PACKAGE="tech.dongdongbh.mindwtr"
-          EDIT_ID=$(curl -s -X POST \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits" \
-            -d '{}' | jq -r '.id')
-          if [ -z "$EDIT_ID" ] || [ "$EDIT_ID" = "null" ]; then
-            echo "Failed to create Google Play edit" >&2
-            exit 1
-          fi
-          TRACKS_FILE=$(mktemp)
-          TRACKS_CODE=$(curl -sS -o "$TRACKS_FILE" -w "%{http_code}" \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID/tracks")
-          TRACKS_JSON=$(cat "$TRACKS_FILE")
-          if [ "$TRACKS_CODE" != "200" ]; then
-            echo "Failed to fetch Google Play tracks (HTTP $TRACKS_CODE): $TRACKS_JSON" >&2
-            exit 1
-          fi
-          if echo "$TRACKS_JSON" | jq -e '.error' >/dev/null; then
-            echo "Failed to fetch Google Play tracks: $TRACKS_JSON" >&2
-            exit 1
-          fi
-          MAX_CODE=$(echo "$TRACKS_JSON" | jq -r '[(.tracks // [])[]? | (.releases // [])[]? | (.versionCodes // [])[]? | tonumber] | max // 0')
-          if [ -z "$MAX_CODE" ] || [ "$MAX_CODE" = "null" ]; then
-            MAX_CODE=0
-          fi
-          curl -s -X DELETE \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID" >/dev/null
-          LOCAL_CODE=$(jq -r '.expo.android.versionCode' apps/mobile/app.json)
-          if [ -z "$LOCAL_CODE" ] || [ "$LOCAL_CODE" = "null" ]; then
-            echo "Missing expo.android.versionCode in apps/mobile/app.json" >&2
-            exit 1
-          fi
-          if [ "$MAX_CODE" -ge "$LOCAL_CODE" ]; then
-            NEW_CODE=$((MAX_CODE + 1))
-            jq ".expo.android.versionCode = $NEW_CODE" apps/mobile/app.json > apps/mobile/app.json.tmp
-            mv apps/mobile/app.json.tmp apps/mobile/app.json
-            echo "Bumped versionCode to $NEW_CODE (store max was $MAX_CODE)"
-          else
-            echo "versionCode ok: local $LOCAL_CODE > store $MAX_CODE"
-          fi
-
       - name: Setup EAS CLI
         run: npm install -g eas-cli
-
-      - name: Resolve version
-        id: version
-        run: |
-          INPUT_TAG="${{ inputs.tag || github.event.inputs.tag }}"
-          GITHUB_EVENT_INPUTS_TAG="${{ github.event.inputs.tag }}"
-          scripts/ci/resolve-release-version.sh "$INPUT_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build Android AAB (local EAS)
         timeout-minutes: 60
         run: |
           set -euo pipefail
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION=${{ needs.preflight.outputs.version }}
           cd apps/mobile
           OUTPUT="./build/mindwtr-${VERSION}.aab"
           if [ "${IS_INTERNAL_TEST_RELEASE}" = "true" ]; then
@@ -175,12 +190,58 @@ jobs:
           ANALYTICS_HEARTBEAT_CHANNEL: ${{ inputs.internal_test_release && 'android-internal-test' || '' }}
           FEEDBACK_ENDPOINT_URL: ${{ vars.FEEDBACK_ENDPOINT_URL || vars.VITE_FEEDBACK_ENDPOINT_URL || 'https://mindwtr-feedback.mindwtr.workers.dev' }}
 
+      - name: Upload Android AAB build artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: android-aab-build
+          path: apps/mobile/build/*.aab
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention_days }}
+
+  build-apk:
+    if: ${{ !inputs.internal_test_release }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    name: Android APK Build
+    timeout-minutes: 75
+    env:
+      DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY || secrets.DROPBOX_APP_KEY }}
+      DONATION_PROMPT_ENABLED: "true"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        run: bash scripts/ci/setup-android-sdk.sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: ".bun-version"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+
       - name: Build Android APK (local EAS)
-        if: ${{ !inputs.internal_test_release }}
         timeout-minutes: 60
         run: |
           set -euo pipefail
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION=${{ needs.preflight.outputs.version }}
           cd apps/mobile
           MINDWTR_ANDROID_ARCHS=arm64-v8a,armeabi-v7a eas build --platform android --profile production-apk --local --non-interactive --output ./build/mindwtr-${VERSION}.apk
           ls -la ./build
@@ -189,11 +250,66 @@ jobs:
           ANALYTICS_HEARTBEAT_URL: ${{ secrets.ANALYTICS_HEARTBEAT_URL }}
           FEEDBACK_ENDPOINT_URL: ${{ vars.FEEDBACK_ENDPOINT_URL || vars.VITE_FEEDBACK_ENDPOINT_URL || 'https://mindwtr-feedback.mindwtr.workers.dev' }}
 
+      - name: Collect Android release artifacts
+        run: |
+          set -euo pipefail
+          VERSION=${{ needs.preflight.outputs.version }}
+          APK_PATH="apps/mobile/build/mindwtr-${VERSION}.apk"
+          if [ ! -f "${APK_PATH}" ]; then
+            echo "Missing APK artifact: ${APK_PATH}" >&2
+            exit 1
+          fi
+          mkdir -p release-artifacts
+          cp "${APK_PATH}" "release-artifacts/mindwtr-${VERSION}.apk"
+          ls -la release-artifacts
+
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-android
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 28
+
+  publish:
+    if: ${{ always() && needs.preflight.result == 'success' && needs.build-aab.result == 'success' && ((startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && needs.build-apk.result == 'success') || inputs.internal_test_release) }}
+    needs: [preflight, build-aab, build-apk]
+    runs-on: ubuntu-latest
+    name: Android Publish
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Authenticate Google Play API
+        id: play_auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          credentials_json: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+
+      - name: Download Android AAB artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          download_dir="$(mktemp -d)"
+          mkdir -p apps/mobile/build
+          gh run download "$GITHUB_RUN_ID" -n android-aab-build -D "$download_dir"
+          find "$download_dir" -type f -name '*.aab' -print -exec cp {} apps/mobile/build/ \;
+          if ! find apps/mobile/build -maxdepth 1 -name '*.aab' -print -quit | grep -q .; then
+            echo "Downloaded android-aab-build artifact did not contain an AAB." >&2
+            exit 1
+          fi
+          ls -la apps/mobile/build
+
       - name: Prepare Google Play release notes
         if: ${{ !inputs.internal_test_release }}
         run: |
           set -euo pipefail
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION=${{ needs.preflight.outputs.version }}
           NOTES_FILE="docs/release-notes/google-play/${VERSION}.txt"
           if [ ! -f "$NOTES_FILE" ]; then
             echo "Missing release notes file: $NOTES_FILE" >&2
@@ -265,7 +381,7 @@ jobs:
         run: |
           set -euo pipefail
           PACKAGE="tech.dongdongbh.mindwtr"
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.preflight.outputs.version }}"
           AAB_PATH="apps/mobile/build/mindwtr-${VERSION}.aab"
           NOTES_DIR="apps/mobile/build/play-release-notes"
           LISTING_ASSETS_FILE="apps/mobile/build/play-listing-assets.json"
@@ -448,7 +564,7 @@ jobs:
         run: |
           set -euo pipefail
           PACKAGE="tech.dongdongbh.mindwtr"
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.preflight.outputs.version }}"
           AAB_PATH=$(find apps/mobile/build -maxdepth 1 -name '*.aab' -print -quit)
           if [ -z "$AAB_PATH" ] || [ ! -f "$AAB_PATH" ]; then
             echo "Missing AAB artifact in apps/mobile/build" >&2
@@ -536,10 +652,10 @@ jobs:
         run: |
           set -euo pipefail
           PACKAGE="tech.dongdongbh.mindwtr"
-          VERSION=${{ steps.version.outputs.version }}
-          VERSION_CODE=$(jq -r '.expo.android.versionCode' apps/mobile/app.json)
+          VERSION=${{ needs.preflight.outputs.version }}
+          VERSION_CODE=${{ needs.preflight.outputs.version_code }}
           if [ -z "$VERSION_CODE" ] || [ "$VERSION_CODE" = "null" ]; then
-            echo "Missing expo.android.versionCode in apps/mobile/app.json" >&2
+            echo "Missing preflight Android versionCode output" >&2
             exit 1
           fi
 
@@ -593,28 +709,6 @@ jobs:
             exit 1
           fi
           echo "Published versionCode $VERSION_CODE to internal track without uploading a second AAB."
-
-      - name: Collect Android release artifacts
-        if: ${{ !inputs.internal_test_release }}
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          APK_PATH="apps/mobile/build/mindwtr-${VERSION}.apk"
-          if [ ! -f "${APK_PATH}" ]; then
-            echo "Missing APK artifact: ${APK_PATH}" >&2
-            exit 1
-          fi
-          mkdir -p release-artifacts
-          cp "${APK_PATH}" "release-artifacts/mindwtr-${VERSION}.apk"
-          ls -la release-artifacts
-
-      - name: Upload Android release artifacts
-        if: ${{ !inputs.internal_test_release }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: release-android
-          path: release-artifacts/*
-          if-no-files-found: error
-          retention-days: 28
 
       - name: Collect Android internal test artifacts
         if: ${{ inputs.internal_test_release }}
