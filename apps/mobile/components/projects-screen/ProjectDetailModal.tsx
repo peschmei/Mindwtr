@@ -44,8 +44,11 @@ import { MarkdownFormatToolbar } from '../../components/markdown-format-toolbar'
 import { MarkdownReferenceAutocomplete } from '../../components/markdown-reference-autocomplete';
 import { MarkdownText } from '../../components/markdown-text';
 import { TaskList } from '../../components/task-list';
+import { TaskListSortModal } from '../task-list/TaskListSortModal';
 import { AttachmentProgressIndicator } from '../../components/AttachmentProgressIndicator';
 import { projectsScreenStyles as styles } from './projects-screen.styles';
+
+const PROJECT_TASK_SORT_OPTIONS: TaskSortBy[] = ['default', 'due', 'start', 'review', 'title', 'created', 'created-desc'];
 
 type ProjectDetailModalProps = {
     addProjectFileAttachment: () => void | Promise<void>;
@@ -83,13 +86,13 @@ type ProjectDetailModalProps = {
     onSetShowReviewPicker: React.Dispatch<React.SetStateAction<boolean>>;
     onSetShowStatusMenu: React.Dispatch<React.SetStateAction<boolean>>;
     onToggleShowCompletedTasks: () => void;
-    onProjectTaskSortByChange: (sortBy: Extract<TaskSortBy, 'default' | 'due'>) => void;
+    onProjectTaskSortByChange: (sortBy: TaskSortBy) => void;
     onDownloadAttachment: (attachment: Attachment) => void | Promise<void>;
     onOpenAttachment: (attachment: Attachment) => void | Promise<void>;
     onOpenProjectQuickAdd: (project: Project) => void;
     overlayVisible: boolean;
     presentationStyle: 'pageSheet' | 'fullScreen';
-    projectTaskSortBy: Extract<TaskSortBy, 'default' | 'due'>;
+    projectTaskSortBy: TaskSortBy;
     selectedProjectAreaName: string;
     selectedProject: Project | null;
     selectedProjectSections?: Section[];
@@ -553,6 +556,7 @@ export function ProjectDetailModal({
     const [projectTaskReorderMode, setProjectTaskReorderMode] = React.useState(false);
     const [projectTaskFilterOpenSignal, setProjectTaskFilterOpenSignal] = React.useState(0);
     const [projectTaskFilterActiveCount, setProjectTaskFilterActiveCount] = React.useState(0);
+    const [projectSortModalVisible, setProjectSortModalVisible] = React.useState(false);
     const [sectionManagerVisible, setSectionManagerVisible] = React.useState(false);
     const projectDetailScrollRef = React.useRef<ScrollView | null>(null);
     const projectDetailScrollOffsetRef = React.useRef(0);
@@ -608,8 +612,6 @@ export function ProjectDetailModal({
         Alert.alert(sequentialScopeHelpLabel, sequentialScopeHelpText);
     }, [sequentialScopeHelpLabel, sequentialScopeHelpText]);
     const sortLabel = tFallback(t, 'sort.label', 'Sort');
-    const sortDefaultLabel = tFallback(t, 'sort.default', 'Default');
-    const sortDueLabel = tFallback(t, 'sort.due', 'Due date');
     const projectSectionsLabel = tFallback(t, 'projects.sectionsLabel', 'Sections');
     const addProjectTaskLabel = tFallback(t, 'nav.addTask', 'Add task');
     const projectOrderLabel = tFallback(t, 'projects.reorderTasks', 'Order');
@@ -632,14 +634,17 @@ export function ProjectDetailModal({
         },
         []
     );
-    const toggleProjectTaskSort = React.useCallback(() => {
-        onProjectTaskSortByChange(projectTaskSortBy === 'due' ? 'default' : 'due');
-    }, [onProjectTaskSortByChange, projectTaskSortBy]);
+    const openProjectTaskSort = React.useCallback(() => {
+        setProjectSortModalVisible(true);
+    }, []);
+    const handleProjectTaskSortSelect = React.useCallback((option: TaskSortBy) => {
+        setProjectSortModalVisible(false);
+        onProjectTaskSortByChange(option);
+    }, [onProjectTaskSortByChange]);
     const toggleProjectTaskReorderMode = React.useCallback(() => {
         setProjectTaskReorderMode((value) => !value);
     }, []);
     const filterButtonLabel = tFallback(t, 'filters.label', 'Filters');
-    const completedButtonLabel = tFallback(t, 'tasks.completedShort', 'Completed');
     const doneButtonLabel = tFallback(t, 'common.done', 'Done');
     const projectTypeLabel = tFallback(t, 'projects.projectTypeLabel', 'Type');
     const projectStatusLabel = selectedProject
@@ -651,12 +656,14 @@ export function ProjectDetailModal({
                     ? t('status.someday')
                     : tFallback(t, 'status.archived', 'Archived'))
         : '';
+    const sortIsActive = projectTaskSortBy !== 'default';
     const projectTaskPinnedToolbar = selectedProject ? (
         <View style={[styles.projectTaskPinnedToolbar, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
             <TouchableOpacity
-                accessibilityLabel={filterButtonLabel}
+                accessibilityLabel={projectTaskFilterActiveCount > 0 ? `${filterButtonLabel}: ${projectTaskFilterActiveCount}` : filterButtonLabel}
                 accessibilityRole="button"
                 onPress={openProjectTaskFilters}
+                hitSlop={8}
                 style={[
                     styles.projectTaskPinnedControl,
                     {
@@ -669,7 +676,7 @@ export function ProjectDetailModal({
                 <View style={styles.projectTaskPinnedControlIcon}>
                     <Ionicons
                         name="options-outline"
-                        size={18}
+                        size={20}
                         color={projectTaskFilterActiveCount > 0 ? tc.tint : tc.secondaryText}
                     />
                     {projectTaskFilterActiveCount > 0 ? (
@@ -680,23 +687,18 @@ export function ProjectDetailModal({
                         </View>
                     ) : null}
                 </View>
-                <Text
-                    style={[styles.projectTaskPinnedControlLabel, { color: projectTaskFilterActiveCount > 0 ? tc.tint : tc.secondaryText }]}
-                    numberOfLines={1}
-                >
-                    {filterButtonLabel}
-                </Text>
             </TouchableOpacity>
             <TouchableOpacity
-                accessibilityLabel={`${sortLabel}: ${projectTaskSortBy === 'due' ? sortDueLabel : sortDefaultLabel}`}
+                accessibilityLabel={`${sortLabel}: ${t(`sort.${projectTaskSortBy}`)}`}
                 accessibilityRole="button"
-                accessibilityState={{ selected: projectTaskSortBy === 'due' }}
-                onPress={toggleProjectTaskSort}
+                accessibilityState={{ selected: sortIsActive }}
+                onPress={openProjectTaskSort}
+                hitSlop={8}
                 style={[
                     styles.projectTaskPinnedControl,
                     {
-                        backgroundColor: projectTaskSortBy === 'due' ? tc.tint : tc.filterBg,
-                        borderColor: projectTaskSortBy === 'due' ? tc.tint : tc.border,
+                        backgroundColor: sortIsActive ? `${tc.tint}20` : tc.filterBg,
+                        borderColor: sortIsActive ? tc.tint : tc.border,
                     },
                 ]}
                 testID="project-task-sort-toggle"
@@ -704,16 +706,10 @@ export function ProjectDetailModal({
                 <View style={styles.projectTaskPinnedControlIcon}>
                     <Ionicons
                         name="swap-vertical-outline"
-                        size={18}
-                        color={projectTaskSortBy === 'due' ? tc.onTint : tc.secondaryText}
+                        size={20}
+                        color={sortIsActive ? tc.tint : tc.secondaryText}
                     />
                 </View>
-                <Text
-                    style={[styles.projectTaskPinnedControlLabel, { color: projectTaskSortBy === 'due' ? tc.onTint : tc.secondaryText }]}
-                    numberOfLines={1}
-                >
-                    {sortLabel}
-                </Text>
             </TouchableOpacity>
             {selectedProject.status !== 'archived' ? (
                 <TouchableOpacity
@@ -721,6 +717,7 @@ export function ProjectDetailModal({
                     accessibilityRole="switch"
                     accessibilityState={{ checked: showCompletedTasks }}
                     onPress={onToggleShowCompletedTasks}
+                    hitSlop={8}
                     style={[
                         styles.projectTaskPinnedControl,
                         {
@@ -733,24 +730,19 @@ export function ProjectDetailModal({
                     <View style={styles.projectTaskPinnedControlIcon}>
                         <Ionicons
                             name={showCompletedTasks ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                            size={18}
+                            size={20}
                             color={showCompletedTasks ? tc.onTint : tc.secondaryText}
                         />
                     </View>
-                    <Text
-                        style={[styles.projectTaskPinnedControlLabel, { color: showCompletedTasks ? tc.onTint : tc.secondaryText }]}
-                        numberOfLines={1}
-                    >
-                        {completedButtonLabel}
-                    </Text>
                 </TouchableOpacity>
             ) : null}
-            {taskListOptions.enableProjectReorder && hasProjectTaskOrderTargets ? (
+            {taskListOptions.enableProjectReorder && hasProjectTaskOrderTargets && !sortIsActive ? (
                 <TouchableOpacity
                     accessibilityLabel={projectTaskReorderMode ? doneButtonLabel : projectOrderLabel}
                     accessibilityRole="button"
                     accessibilityState={{ selected: projectTaskReorderMode }}
                     onPress={toggleProjectTaskReorderMode}
+                    hitSlop={8}
                     style={[
                         styles.projectTaskPinnedControl,
                         {
@@ -763,38 +755,26 @@ export function ProjectDetailModal({
                     <View style={styles.projectTaskPinnedControlIcon}>
                         <Ionicons
                             name={projectTaskReorderMode ? 'checkmark' : 'reorder-three-outline'}
-                            size={18}
+                            size={20}
                             color={projectTaskReorderMode ? tc.onTint : tc.secondaryText}
                         />
                     </View>
-                    <Text
-                        style={[styles.projectTaskPinnedControlLabel, { color: projectTaskReorderMode ? tc.onTint : tc.secondaryText }]}
-                        numberOfLines={1}
-                    >
-                        {projectTaskReorderMode ? doneButtonLabel : projectOrderLabel}
-                    </Text>
                 </TouchableOpacity>
             ) : null}
+            <View style={styles.projectTaskPinnedSpacer} />
             {taskListOptions.allowAdd ? (
                 <TouchableOpacity
                     accessibilityLabel={addProjectTaskLabel}
                     accessibilityRole="button"
                     onPress={openProjectQuickAdd}
+                    hitSlop={8}
                     style={[
                         styles.projectTaskPinnedAddButton,
                         { backgroundColor: tc.tint, borderColor: tc.tint },
                     ]}
                     testID="project-add-task-button"
                 >
-                    <Ionicons name="add" size={18} color={tc.onTint} />
-                    <Text
-                        style={[styles.projectTaskPinnedAddText, { color: tc.onTint }]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.82}
-                    >
-                        {addProjectTaskLabel}
-                    </Text>
+                    <Ionicons name="add" size={24} color={tc.onTint} />
                 </TouchableOpacity>
             ) : null}
         </View>
@@ -1513,6 +1493,15 @@ export function ProjectDetailModal({
                                     />
                                 </View>
                                 </ProjectDetailScrollFrame>
+                                <TaskListSortModal
+                                    onClose={() => setProjectSortModalVisible(false)}
+                                    onSelect={handleProjectTaskSortSelect}
+                                    sortBy={projectTaskSortBy}
+                                    sortOptions={PROJECT_TASK_SORT_OPTIONS}
+                                    t={t}
+                                    themeColors={tc}
+                                    visible={projectSortModalVisible}
+                                />
                                 <ProjectSectionManagerModal
                                     addSection={addSection}
                                     canManage={canManageProjectSections}

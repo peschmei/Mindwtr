@@ -462,6 +462,9 @@ describe('ProjectDetailModal task sorting', () => {
         act(() => {
             tree.root.findByProps({ testID: 'project-task-sort-toggle' }).props.onPress();
         });
+        act(() => {
+            tree.root.findByProps({ testID: 'sort-option-due' }).props.onPress();
+        });
 
         expect(onProjectTaskSortByChange).toHaveBeenCalledWith('due');
     });
@@ -498,6 +501,9 @@ describe('ProjectDetailModal task sorting', () => {
         });
         act(() => {
             tree.root.findByProps({ testID: 'project-task-sort-toggle' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'sort-option-due' }).props.onPress();
         });
         act(() => {
             tree.root.findByProps({ testID: 'project-pinned-show-completed-toggle' }).props.onPress();

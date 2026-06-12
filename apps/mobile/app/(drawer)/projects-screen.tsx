@@ -37,7 +37,7 @@ import { logError, logWarn } from '../../lib/app-log';
 import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '@mindwtr/core';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 
-type ProjectTaskSortBy = Extract<TaskSortBy, 'default' | 'due'>;
+type ProjectTaskSortBy = TaskSortBy;
 const EMPTY_PROJECT_TASKS: Task[] = [];
 const COMPACT_PROJECT_TEXT_MAX_SCALE = 1.2;
 const PROJECT_LIST_VIEW_STATE_STORAGE_KEY = 'mindwtr:view:projects:v1';
