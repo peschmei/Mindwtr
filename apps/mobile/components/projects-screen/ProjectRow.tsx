@@ -2,9 +2,10 @@ import React, { useRef } from 'react';
 import { Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { type Project } from '@mindwtr/core';
 import * as Haptics from 'expo-haptics';
-import { Copy, Trash2, Star, AlertTriangle } from 'lucide-react-native';
+import { Copy, Trash2, AlertTriangle } from 'lucide-react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
+import { FocusStarIcon } from '@/components/FocusStarIcon';
 import { projectsScreenStyles as styles } from '@/components/projects-screen/projects-screen.styles';
 import type { ProjectTaskSummary } from './project-list-model';
 
@@ -130,12 +131,10 @@ export function ProjectRow({
                 accessibilityState={{ selected: project.isFocused, disabled: !project.isFocused && focusedCount >= 5 }}
                 hitSlop={ROW_ACTION_HIT_SLOP}
             >
-                <Star
-                    size={22}
-                    color={project.isFocused ? '#F59E0B' : tc.secondaryText}
-                    fill={project.isFocused ? '#F59E0B' : 'transparent'}
-                    strokeWidth={2}
-                    style={{ opacity: project.isFocused ? 1 : focusedCount >= 5 ? 0.3 : 0.6 }}
+                <FocusStarIcon
+                    focused={project.isFocused}
+                    inactiveColor={tc.secondaryText}
+                    disabled={!project.isFocused && focusedCount >= 5}
                 />
             </TouchableOpacity>
             <TouchableOpacity

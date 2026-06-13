@@ -43,6 +43,8 @@ const translate = vi.hoisted(() => {
     'common.notice': 'Notice',
     'common.skip': 'Skip',
     'common.undo': 'Undo',
+    'agenda.addToFocus': 'Add to focus',
+    'agenda.removeFromFocus': 'Remove from focus',
     'list.taskDeleted': 'Task deleted',
     'list.done': 'Completed',
     'status.inbox': 'Inbox',
@@ -232,6 +234,7 @@ vi.mock('lucide-react-native', () => ({
   Check: (props: any) => React.createElement('Check', props),
   Repeat: (props: any) => React.createElement('Repeat', props),
   RotateCcw: (props: any) => React.createElement('RotateCcw', props),
+  Star: (props: any) => React.createElement('Star', props),
   Trash2: (props: any) => React.createElement('Trash2', props),
 }));
 
@@ -318,6 +321,49 @@ describe('SwipeableTaskItem', () => {
     expect(swipeable.props.overshootLeft).toBe(false);
     expect(swipeable.props.overshootRight).toBe(false);
   });
+
+it('uses the shared rounded star treatment for focused tasks', () => {
+  let tree!: renderer.ReactTestRenderer;
+  renderer.act(() => {
+    tree = renderer.create(
+      <SwipeableTaskItem
+        task={{
+          id: 'task-1',
+          title: 'File taxes',
+          status: 'next',
+          isFocusedToday: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        } as any}
+        isDark={true}
+        tc={{
+          taskItemBg: '#111111',
+          border: '#222222',
+          text: '#ffffff',
+          secondaryText: '#999999',
+          tint: '#3b82f6',
+          warning: '#f59e0b',
+        } as any}
+        onPress={vi.fn()}
+        onStatusChange={vi.fn()}
+        onDelete={vi.fn()}
+        showFocusToggle
+      />
+    );
+  });
+
+  const focusButton = tree.root.find((node) => node.props.accessibilityLabel === 'Remove from focus');
+  const focusButtonStyle = Array.isArray(focusButton.props.style)
+    ? Object.assign({}, ...focusButton.props.style.filter(Boolean))
+    : focusButton.props.style;
+  expect(focusButtonStyle).not.toHaveProperty('backgroundColor');
+  expect(hasText(tree, '★')).toBe(false);
+
+  const star = tree.root.find((node) => (node.type as unknown) === 'Star');
+  expect(star.props.color).toBe('#F59E0B');
+  expect(star.props.fill).toBe('#F59E0B');
+  expect(star.props.strokeWidth).toBe(2);
+});
 
   it('confirms deletion before invoking onDelete', async () => {
     const alertSpy = vi.spyOn(Alert, 'alert');

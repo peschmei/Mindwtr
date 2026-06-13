@@ -41,17 +41,10 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
     focusButton: {
-        minWidth: 44,
-        minHeight: 44,
-        paddingHorizontal: 8,
-        paddingVertical: 8,
-        borderRadius: 10,
+        width: 44,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    focusButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
     },
     taskDescription: {
         fontSize: 12,

@@ -17,6 +17,7 @@ import {
 } from '@mindwtr/core';
 import type { Area, Language, Project, ProjectSequenceTaskCue, Task } from '@mindwtr/core';
 import type { ThemeColors } from '../../hooks/use-theme-colors';
+import { FocusStarIcon } from '../FocusStarIcon';
 import { MarkdownInlineText } from '../markdown-text';
 import { styles } from './swipeable-task-item.styles';
 
@@ -406,21 +407,14 @@ export function SwipeableTaskItemContent({
                                 onToggleFocus();
                             }}
                             hitSlop={8}
-                            style={[
-                                styles.focusButton,
-                                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)' },
-                            ]}
+                            style={styles.focusButton}
                             accessibilityRole="button"
                             accessibilityLabel={task.isFocusedToday ? t('agenda.removeFromFocus') : t('agenda.addToFocus')}
                         >
-                            <Text
-                                style={[
-                                    styles.focusButtonText,
-                                    { color: task.isFocusedToday ? tc.warning : tc.secondaryText },
-                                ]}
-                            >
-                                {task.isFocusedToday ? '★' : '☆'}
-                            </Text>
+                            <FocusStarIcon
+                                focused={task.isFocusedToday === true}
+                                inactiveColor={tc.secondaryText}
+                            />
                         </Pressable>
                     )}
                 </View>
