@@ -246,12 +246,17 @@ describe('QuickCaptureSheet save handling', () => {
       expect(getBody().props.optionsExpanded).toBe(false);
       expect(getBody().props.keyboardAvoidingEnabled).toBe(true);
 
+      const focus = vi.fn();
+      const blur = vi.fn();
+      getBody().props.inputRef.current = { blur, focus };
+
       await act(async () => {
         getBody().props.onToggleOptions();
         await Promise.resolve();
       });
 
       expect(keyboardDismiss).toHaveBeenCalledOnce();
+      expect(blur).toHaveBeenCalledOnce();
       expect(getBody().props.optionsExpanded).toBe(false);
       expect(getBody().props.keyboardAvoidingEnabled).toBe(false);
 
@@ -260,6 +265,7 @@ describe('QuickCaptureSheet save handling', () => {
         await Promise.resolve();
       });
 
+      expect(focus).not.toHaveBeenCalled();
       expect(getBody().props.optionsExpanded).toBe(true);
       expect(getBody().props.keyboardAvoidingEnabled).toBe(false);
 

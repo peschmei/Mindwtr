@@ -140,6 +140,7 @@ export function QuickCaptureSheet({
   const contextOptionsLoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contextOptionsRequestRef = useRef(0);
   const androidOptionsExpandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     projectsRef.current = projects;
@@ -166,6 +167,12 @@ export function QuickCaptureSheet({
     if (!androidOptionsExpandTimerRef.current) return;
     clearTimeout(androidOptionsExpandTimerRef.current);
     androidOptionsExpandTimerRef.current = null;
+  }, []);
+
+  const clearInitialFocusTimer = useCallback(() => {
+    if (!initialFocusTimerRef.current) return;
+    clearTimeout(initialFocusTimerRef.current);
+    initialFocusTimerRef.current = null;
   }, []);
 
   const loadContextOptions = useCallback(() => {
@@ -311,17 +318,22 @@ export function QuickCaptureSheet({
 
   useEffect(() => () => {
     clearAndroidOptionsExpandTimer();
+    clearInitialFocusTimer();
     clearContextOptionsLoad();
     contextOptionsRequestRef.current += 1;
-  }, [clearAndroidOptionsExpandTimer, clearContextOptionsLoad]);
+  }, [clearAndroidOptionsExpandTimer, clearContextOptionsLoad, clearInitialFocusTimer]);
 
   useEffect(() => {
     if (!visible) return;
     resetDraftState();
     if (autoRecord) return;
-    const handle = setTimeout(() => inputRef.current?.focus(), 120);
-    return () => clearTimeout(handle);
-  }, [autoRecord, openRequestId, resetDraftState, visible]);
+    clearInitialFocusTimer();
+    initialFocusTimerRef.current = setTimeout(() => {
+      initialFocusTimerRef.current = null;
+      inputRef.current?.focus();
+    }, 120);
+    return clearInitialFocusTimer;
+  }, [autoRecord, clearInitialFocusTimer, openRequestId, resetDraftState, visible]);
 
   useEffect(() => {
     if (prioritiesEnabled) return;
@@ -432,9 +444,10 @@ export function QuickCaptureSheet({
   }, [clearAndroidOptionsExpandTimer, clearContextOptionsLoad, selectedAreaIdForNewTasks]);
 
   const finalizeClose = useCallback(() => {
+    clearInitialFocusTimer();
     resetState();
     onClose();
-  }, [onClose, resetState]);
+  }, [clearInitialFocusTimer, onClose, resetState]);
 
   const {
     recording,
@@ -689,6 +702,7 @@ export function QuickCaptureSheet({
   const handleToggleOptions = useCallback(() => {
     clearAndroidOptionsExpandTimer();
     if (!optionsExpanded) {
+      clearInitialFocusTimer();
       inputRef.current?.blur();
       Keyboard.dismiss();
       if (Platform.OS === 'android') {
@@ -704,7 +718,7 @@ export function QuickCaptureSheet({
       setAndroidKeyboardAvoidingEnabled(true);
     }
     setOptionsExpanded((prev) => !prev);
-  }, [clearAndroidOptionsExpandTimer, optionsExpanded]);
+  }, [clearAndroidOptionsExpandTimer, clearInitialFocusTimer, optionsExpanded]);
 
   const openContextPicker = useCallback(() => {
     setShowContextPicker(true);
