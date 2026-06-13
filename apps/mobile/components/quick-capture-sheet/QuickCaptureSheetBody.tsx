@@ -9,6 +9,10 @@ import { styles } from './quick-capture-sheet.styles';
 
 const COMPACT_TEXT_MAX_SCALE = 1.2;
 
+// Quick capture favors speed: show only the most-reached date presets inline.
+// Rarer choices (+3 days, next month) and clearing live behind the Custom picker / tapping the active chip.
+const QUICK_CAPTURE_DATE_PRESETS = ['today', 'tomorrow', 'next_week'] as const;
+
 interface QuickCaptureSheetBodyProps {
   addAnother: boolean;
   areaLabel: string;
@@ -373,6 +377,8 @@ export function QuickCaptureSheetBody({
 
                 <Text
                   style={[styles.syntaxHint, { color: tc.secondaryText }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
                   maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
                   {t('quickAdd.placeholder')}
@@ -382,26 +388,28 @@ export function QuickCaptureSheetBody({
                   t={t}
                   tc={tc}
                   selectedDate={dueDate}
+                  presets={QUICK_CAPTURE_DATE_PRESETS}
                   onSelect={(date) => onQuickDueDateSelect(date)}
+                  trailing={
+                    <TouchableOpacity
+                      style={[styles.customDateButton, { borderColor: tc.border }]}
+                      onPress={onOpenDueDatePicker}
+                      onLongPress={onResetDueDate}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('taskEdit.dueDate')}: ${dueLabel}`}
+                    >
+                      <CalendarDays size={14} color={tc.secondaryText} />
+                      <Text
+                        style={[styles.customDateButtonText, { color: tc.secondaryText }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
+                      >
+                        {t('recurrence.custom')}
+                      </Text>
+                    </TouchableOpacity>
+                  }
                 />
-
-                <TouchableOpacity
-                  style={[styles.customDateButton, { borderColor: tc.border }]}
-                  onPress={onOpenDueDatePicker}
-                  onLongPress={onResetDueDate}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t('taskEdit.dueDate')}: ${dueLabel}`}
-                >
-                  <CalendarDays size={14} color={tc.secondaryText} />
-                  <Text
-                    style={[styles.customDateButtonText, { color: tc.secondaryText }]}
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
-                  >
-                    {t('recurrence.custom')}
-                  </Text>
-                </TouchableOpacity>
               </>
             )}
 

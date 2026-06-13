@@ -24,6 +24,10 @@ type QuickDateChipsProps = {
   tc: ThemeColors;
   selectedDate?: Date | null;
   onSelect: (date: Date | null, preset: QuickDatePreset) => void;
+  /** Which presets to render. Defaults to the full core set. */
+  presets?: readonly QuickDatePreset[];
+  /** Optional node rendered as the last item inside the same wrapping row (e.g. a custom-date chip). */
+  trailing?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
 };
@@ -33,6 +37,8 @@ export function QuickDateChips({
   tc,
   selectedDate,
   onSelect,
+  presets = QUICK_DATE_PRESETS,
+  trailing,
   style,
   contentContainerStyle,
 }: QuickDateChipsProps) {
@@ -43,7 +49,7 @@ export function QuickDateChips({
       testID="quick-date-chips-row"
       style={[styles.content, style, contentContainerStyle]}
     >
-      {QUICK_DATE_PRESETS.map((preset) => {
+      {presets.map((preset) => {
         const labelConfig = QUICK_DATE_LABELS[preset];
         const label = tFallback(t, labelConfig.key, labelConfig.fallback);
         const active = isQuickDatePresetSelected(preset, selectedDate, now);
@@ -54,7 +60,8 @@ export function QuickDateChips({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             accessibilityLabel={label}
-            onPress={() => onSelect(getQuickDate(preset, now), preset)}
+            // Tapping the active chip clears the date (replaces the standalone "No date" chip).
+            onPress={() => onSelect(active ? null : getQuickDate(preset, now), preset)}
             style={[
               styles.chip,
               {
@@ -76,6 +83,7 @@ export function QuickDateChips({
           </Pressable>
         );
       })}
+      {trailing}
     </View>
   );
 }

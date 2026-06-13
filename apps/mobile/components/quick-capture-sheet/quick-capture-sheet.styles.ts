@@ -138,7 +138,7 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionsRow: {
-    marginTop: 12,
+    marginTop: 10,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
@@ -163,19 +163,17 @@ export const styles = StyleSheet.create({
     flexShrink: 1,
   },
   syntaxHint: {
-    marginTop: 10,
+    marginTop: 8,
     fontSize: 11,
     lineHeight: 15,
     fontWeight: '500',
   },
   customDateButton: {
-    alignSelf: 'flex-start',
     minHeight: 34,
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 11,
     paddingVertical: 7,
-    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -186,7 +184,7 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footerRow: {
-    marginTop: 14,
+    marginTop: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
