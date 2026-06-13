@@ -9,6 +9,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "generate:android-monochrome-icon": "node scripts/generate_android_monochrome_icon.js",
     "startup:bench": "bash scripts/android_startup_benchmark.sh",
     "lint": "expo lint",
     "test": "vitest run"
