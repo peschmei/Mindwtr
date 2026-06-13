@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Calendar, Check, CheckSquare, ChevronLeft, Star, X, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Calendar, Check, CheckSquare, ChevronLeft, X, type LucideIcon } from 'lucide-react';
 import {
     getUsedTaskTokens,
     formatFocusTaskLimitText,
@@ -19,6 +19,7 @@ import {
 } from '@mindwtr/core';
 import { cn } from '../../../lib/utils';
 import { useLanguage } from '../../../contexts/language-context';
+import { FocusStarIcon } from '../../FocusStarIcon';
 import { InboxProcessor } from '../InboxProcessor';
 import { ModalPortal } from '../../ModalPortal';
 import { TaskItem } from '../../TaskItem';
@@ -421,7 +422,7 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
                         >
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                    {task.isFocusedToday && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
+                                    {task.isFocusedToday && <FocusStarIcon className="w-4 h-4 text-yellow-500" filled />}
                                     <span className={cn("font-medium truncate", task.status === 'done' && "line-through text-muted-foreground")}>
                                         {task.title}
                                     </span>
@@ -469,7 +470,7 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
                                         ? formatFocusTaskLimitText(t('agenda.maxFocusItems'), focusTaskLimit)
                                         : t('agenda.addToFocus')}
                             >
-                                <Star className={cn("w-4 h-4", task.isFocusedToday && "fill-current")} />
+                                <FocusStarIcon className="w-4 h-4" filled={task.isFocusedToday} />
                             </button>
                         </div>
                     );

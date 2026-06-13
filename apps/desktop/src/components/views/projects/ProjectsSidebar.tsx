@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { AlertTriangle, ChevronDown, ChevronRight, ChevronsLeft, CornerDownRight, Folder, Plus, Star } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, ChevronsLeft, CornerDownRight, Folder, Plus } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { FocusStarIcon } from '../../FocusStarIcon';
 import { SortableProjectRow } from './SortableRows';
 import { tFallback, type Area, type Project, type StoreActionResult, type Task } from '@mindwtr/core';
 import { reportError } from '../../../lib/report-error';
@@ -453,7 +454,7 @@ export function ProjectsSidebar({
                                                                     title={project.isFocused ? removeFromFocusLabel : focusedCount >= 5 ? maxFocusedProjectsLabel : addToFocusLabel}
                                                                     aria-label={project.isFocused ? removeFromFocusLabel : addToFocusLabel}
                                                                 >
-                                                                    <Star className="w-4 h-4" fill={project.isFocused ? 'currentColor' : 'none'} />
+                                                                    <FocusStarIcon className="w-4 h-4" filled={project.isFocused} />
                                                                 </button>
                                                                 <Folder className="w-4 h-4" style={{ color: getProjectColor(project) }} />
                                                                 <span className="flex-1 truncate font-medium" title={project.title}>

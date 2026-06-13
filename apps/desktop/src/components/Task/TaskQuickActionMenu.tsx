@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, MapPin, Star, Tag, Trash2 } from 'lucide-react';
+import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, MapPin, Tag, Trash2 } from 'lucide-react';
 import {
     hasTimeComponent,
     isDueForReview,
@@ -15,6 +15,7 @@ import {
 
 import { reportError } from '../../lib/report-error';
 import { cn } from '../../lib/utils';
+import { FocusStarIcon } from '../FocusStarIcon';
 import { Button } from '../ui/Button';
 import { AreaSelector } from '../ui/AreaSelector';
 import { normalizeDateInputValue } from './task-item-helpers';
@@ -458,11 +459,12 @@ export function TaskQuickActionMenu({
                 >
                 {!readOnly && focusAction && renderMenuAction({
                     icon: (
-                        <Star
+                        <FocusStarIcon
                             className={cn(
                                 'h-4 w-4',
-                                focusAction.isFocused && 'fill-current text-yellow-500',
+                                focusAction.isFocused && 'text-yellow-500',
                             )}
+                            filled={focusAction.isFocused}
                         />
                     ),
                     label: focusAction.label,

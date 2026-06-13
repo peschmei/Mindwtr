@@ -6,7 +6,7 @@ import type { FilterCriteria, FocusGroupBy, MultiValueFilterMatchMode, ProjectDe
 import { useLanguage } from '../../contexts/language-context';
 import { cn } from '../../lib/utils';
 import { useUiStore } from '../../store/ui-store';
-import { AlertCircle, Clock, Star, ArrowRight, Folder, CheckCircle2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertCircle, Clock, ArrowRight, Folder, CheckCircle2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
 import { checkBudget } from '../../config/performanceBudgets';
 import { projectMatchesAreaFilter, resolveAreaFilter, taskMatchesAreaFilter } from '@mindwtr/core';
@@ -20,6 +20,7 @@ import { groupTasksByArea, groupTasksByContext, groupTasksByEnergy, groupTasksBy
 import { PromptModal } from '../PromptModal';
 import { ConfirmModal } from '../ConfirmModal';
 import { dispatchNavigateEvent } from '../../lib/navigation-events';
+import { FocusStarIcon } from '../FocusStarIcon';
 
 const AGENDA_VIRTUALIZATION_THRESHOLD = 25;
 const NO_PROJECT_FILTER_ID = SAVED_FILTER_NO_PROJECT_ID;
@@ -991,7 +992,7 @@ export function AgendaView() {
             className="rounded-xl border border-border/70 border-l-4 border-l-amber-400 bg-card/70 p-6 shadow-sm dark:border-border/60 dark:border-l-amber-400/80 dark:bg-card/60"
         >
             <h3 className="font-bold text-lg flex items-center gap-2 mb-4 text-foreground">
-                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500 dark:text-amber-300 dark:fill-amber-300" />
+                <FocusStarIcon className="w-5 h-5 text-yellow-500 dark:text-amber-300" filled />
                 {t('agenda.todaysFocus')}
                 <span className="text-sm font-normal text-muted-foreground">
                     ({focusedCount}/{focusTaskLimit})

@@ -1,4 +1,4 @@
-import { AlertTriangle, Calendar as CalendarIcon, Tag, Trash2, ArrowRight, Repeat, Check, Clock, Timer, Paperclip, RotateCcw, Copy, MapPin, Hourglass, Star, Zap, MoreHorizontal } from 'lucide-react';
+import { AlertTriangle, Calendar as CalendarIcon, Tag, Trash2, ArrowRight, Repeat, Check, Clock, Timer, Paperclip, RotateCcw, Copy, MapPin, Hourglass, Zap, MoreHorizontal } from 'lucide-react';
 import type { Area, Attachment, Project, RangeSelectionOptions, Task, TaskStatus, RecurrenceRule, RecurrenceStrategy, Language } from '@mindwtr/core';
 import { DEFAULT_AREA_COLOR, formatRecurrenceLabel, formatTimeEstimateLabel, getChecklistProgress, getTaskAgeLabel, getTaskDateCoherenceIssues, getTaskStaleness, getTaskUrgency, hasTimeComponent, safeFormatDate, resolveTaskTextDirection, tFallback } from '@mindwtr/core';
 import { cn } from '../../lib/utils';
@@ -12,6 +12,7 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { memo, useEffect, useRef } from 'react';
 import { isImageAttachment } from './task-item-attachment-utils';
 import { AttachmentImage } from './AttachmentImage';
+import { FocusStarIcon } from '../FocusStarIcon';
 
 interface TaskItemDisplayActions {
     onToggleSelect?: (options?: RangeSelectionOptions) => void;
@@ -745,7 +746,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                                         : "text-muted-foreground/30 cursor-not-allowed"
                             )}
                         >
-                            <Star className={cn("w-4 h-4", focusToggle.isFocused && "fill-current")} />
+                            <FocusStarIcon className="w-4 h-4" filled={focusToggle.isFocused} />
                         </button>
                     )}
                     {onOpenQuickActions && (
