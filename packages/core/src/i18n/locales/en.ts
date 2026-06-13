@@ -29,7 +29,7 @@ export const en: Record<string, string> = {
         // Quick Add
         'quickAdd.help': 'Quick add supports /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /* focus, /area:<name> or !Area, @context, #tag, +Project. Due dates stay date-only unless you include a time.',
         'quickAdd.example': 'Example: Call mom /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'Add a task… use @context +Project #tag /due:tomorrow or /due:tomorrow 5pm',
+        'quickAdd.placeholder': 'Add a task… use @context +Project #tag',
         'quickAdd.addAnother': 'Add another',
         'quickAdd.inputLabel': 'Task title',
         'quickAdd.inputHint': 'Type a task title, then press add or the return key.',

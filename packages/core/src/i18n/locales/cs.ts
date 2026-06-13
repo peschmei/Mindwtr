@@ -24,7 +24,7 @@ export const csOverrides: Record<string, string> = {
         'nav.sectionArchive': 'Archiv',
         'quickAdd.help': 'Rychlé přidání podporuje /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /* focus, /area:<name> nebo !Area, @context, #tag, +Project. Termíny zůstávají bez času, dokud čas neuvedete.',
         'quickAdd.example': 'Příklad: Zavolat mámě /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'Přidat úkol… použijte @context +Project #tag /due:tomorrow nebo /due:tomorrow 5pm',
+        'quickAdd.placeholder': 'Přidat úkol… použijte @context +Project #tag',
         'quickAdd.addAnother': 'Přidat další',
         'quickAdd.inputLabel': 'Název úkolu',
         'quickAdd.inputHint': 'Napište název úkolu a stiskněte přidat nebo Enter.',

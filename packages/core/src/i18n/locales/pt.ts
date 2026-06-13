@@ -29,7 +29,7 @@ export const ptOverrides: Record<string, string> = {
         // Quick Add
         'quickAdd.help': 'A adição rápida suporta /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> ou !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Exemplo: Ligue para a mãe /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'Adicione uma tarefa… use @context +Project #tag /start:tomorrow /due:tomorrow',
+        'quickAdd.placeholder': 'Adicione uma tarefa… use @context +Project #tag',
         'quickAdd.inputLabel': 'Adição rápida',
         'quickAdd.inputHint': 'Digite uma tarefa e pressione Enter para salvar.',
         'quickAdd.addAnother': 'Adicionar outro',

@@ -23,7 +23,7 @@ export const koOverrides: Record<string, string> = {
         'nav.sectionOrganize': '정리하다',
         'nav.sectionArchive': '보관소',
         'quickAdd.example': '예: 엄마에게 전화하기 /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': '작업 추가… @context +Project #tag /start:tomorrow /due:tomorrow을 사용하세요.',
+        'quickAdd.placeholder': '작업 추가… @context +Project #tag',
         'quickAdd.inputLabel': '빠른 추가',
         'quickAdd.inputHint': '작업을 입력한 뒤 입력 키를 눌러 저장하세요.',
         'list.groupByArea': '영역',

@@ -23,7 +23,7 @@ export const jaOverrides: Record<string, string> = {
         'nav.sectionOrganize': '整理する',
         'nav.sectionArchive': 'アーカイブ',
         'quickAdd.example': '例: お母さんに電話する /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'タスクを追加します…@context +Project #tag /start:tomorrow /due:tomorrow を使用してください',
+        'quickAdd.placeholder': 'タスクを追加します…@context +Project #tag',
         'quickAdd.inputLabel': 'クイック追加',
         'quickAdd.inputHint': 'タスクを入力し、確定キーで保存します。',
         'list.groupByArea': 'エリア',

@@ -27,7 +27,7 @@ export const itOverrides: Record<string, string> = {
         // Quick Add
         'quickAdd.help': 'L\'aggiunta rapida supporta /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> o !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Esempio: Chiama la mamma /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'Aggiungi un\'attività… usa @context +Project #tag /start:tomorrow /due:tomorrow',
+        'quickAdd.placeholder': 'Aggiungi un\'attività… usa @context +Project #tag',
         'quickAdd.inputLabel': 'Inserimento rapido',
         'quickAdd.inputHint': 'Digita un’attività e premi Invio per salvarla.',
         'list.groupByArea': 'Ambito',

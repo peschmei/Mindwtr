@@ -24,7 +24,7 @@ export const trOverrides: Record<string, string> = {
         'nav.sectionArchive': 'Arşiv',
         'quickAdd.help': 'Hızlı ekleme /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> veya !Area, @context, #tag, +Project\'yi destekler.',
         'quickAdd.example': 'Örnek: Annemi arayın /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'Bir görev ekleyin… @context +Project #tag /start:tomorrow /due:tomorrow kullanın',
+        'quickAdd.placeholder': 'Bir görev ekleyin… @context +Project #tag',
         'quickAdd.inputLabel': 'Hızlı ekleme',
         'quickAdd.inputHint': 'Bir görev yazın ve kaydetmek için Enter tuşuna basın.',
         'list.groupByArea': 'Alan',

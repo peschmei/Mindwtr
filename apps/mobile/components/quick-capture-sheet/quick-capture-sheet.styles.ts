@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   title: {
     flex: 1,
@@ -72,7 +72,7 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionsHeaderRow: {
-    marginTop: 12,
+    marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
@@ -172,7 +172,7 @@ export const styles = StyleSheet.create({
     minHeight: 34,
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 11,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     flexDirection: 'row',
     alignItems: 'center',
@@ -184,15 +184,13 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footerRow: {
-    marginTop: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 12,
+    marginTop: 10,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
   },
   footerRowCompact: {
-    marginTop: 10,
+    marginTop: 8,
   },
   toggleRow: {
     flexDirection: 'row',

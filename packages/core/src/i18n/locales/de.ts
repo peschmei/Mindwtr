@@ -29,7 +29,7 @@ export const deOverrides: Record<string, string> = {
         //Quick Add        
         'quickAdd.help': 'Schnell hinzufügen unterstützt /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> oder !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Beispiel: Mama anrufen /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'Eine Aufgabe hinzufügen … benutzen Sie @context +Project #tag /start:tomorrow /due:tomorrow',
+        'quickAdd.placeholder': 'Eine Aufgabe hinzufügen … benutzen Sie @context +Project #tag',
         'quickAdd.inputLabel': 'Schnelle Eingabe',
         'quickAdd.inputHint': 'Geben Sie eine Aufgabe ein und drücken Sie Eingabe zum Speichern.',
         'list.groupByArea': 'Bereich',

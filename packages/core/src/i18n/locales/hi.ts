@@ -23,7 +23,7 @@ export const hiOverrides: Record<string, string> = {
         'nav.sectionOrganize': 'आयोजन',
         'nav.sectionArchive': 'पुरालेख',
         'quickAdd.example': 'उदाहरण: माँ को कॉल करें /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'एक कार्य जोड़ें... @context +Project #tag /start:tomorrow /due:tomorrow का उपयोग करें',
+        'quickAdd.placeholder': 'एक कार्य जोड़ें... @context +Project #tag',
         'quickAdd.inputLabel': 'त्वरित जोड़',
         'quickAdd.inputHint': 'कार्य लिखें और सहेजने के लिए प्रवेश कुंजी दबाएं।',
         'list.groupByArea': 'क्षेत्र',

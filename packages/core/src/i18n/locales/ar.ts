@@ -23,7 +23,7 @@ export const arOverrides: Record<string, string> = {
         'nav.sectionOrganize': 'تنظم',
         'nav.sectionArchive': 'أرشيف',
         'quickAdd.example': 'مثال: اتصل بأمي /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'أضف مهمة... استخدم @context +Project #tag /start:tomorrow /due:tomorrow',
+        'quickAdd.placeholder': 'أضف مهمة... استخدم @context +Project #tag',
         'quickAdd.inputLabel': 'إضافة سريعة',
         'quickAdd.inputHint': 'اكتب مهمة ثم اضغط إدخال للحفظ.',
         'quickAdd.addAnother': 'أضف آخر',

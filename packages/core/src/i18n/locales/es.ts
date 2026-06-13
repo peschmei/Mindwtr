@@ -23,7 +23,7 @@ export const esOverrides: Record<string, string> = {
         'nav.sectionArchive': 'Archivo',
         'quickAdd.help': 'Al capturar de forma rápida puedes usar los comandos /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> o !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Ejemplo: Llamar a mamá /start:tomorrow /due:tomorrow 5pm @movil #familia',
-        'quickAdd.placeholder': 'Añadir a Tarea… use @context +Project #tag /start:tomorrow /due:tomorrow',
+        'quickAdd.placeholder': 'Añadir a Tarea… use @context +Project #tag',
         'quickAdd.inputLabel': 'Entrada rápida',
         'quickAdd.inputHint': 'Escribe una tarea y pulsa Intro para guardarla.',
         'list.groupByArea': 'Área',

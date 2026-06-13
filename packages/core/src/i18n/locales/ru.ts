@@ -23,7 +23,7 @@ export const ruOverrides: Record<string, string> = {
         'nav.sectionOrganize': 'Организовать',
         'nav.sectionArchive': 'Архив',
         'quickAdd.example': 'Пример: Позвонить маме /start:tomorrow /due:tomorrow 5pm @phone #family',
-        'quickAdd.placeholder': 'Добавьте задачу… используйте @context +Project #tag /start:tomorrow /due:tomorrow',
+        'quickAdd.placeholder': 'Добавьте задачу… используйте @context +Project #tag',
         'quickAdd.inputLabel': 'Быстрое добавление',
         'quickAdd.inputHint': 'Введите задачу и нажмите клавишу ввода, чтобы сохранить.',
         'list.groupByArea': 'Область',

@@ -108,6 +108,9 @@ export function QuickCaptureSheetBody({
 }: QuickCaptureSheetBodyProps) {
   const optionsToggleLabel = optionsExpanded ? t('taskEdit.hideOptions') : tFallback(t, 'common.more', 'More');
   const defaultProjectLabel = tFallback(t, 'taskEdit.projectLabel', 'Project');
+  // Drop the trailing ellipsis here so the Custom chip is narrow enough to sit on the preset row;
+  // the shared recurrence.custom string (used elsewhere) keeps its "…".
+  const customDateLabel = t('recurrence.custom').replace(/[\s.…]+$/u, '');
   const keyboardAvoidingBehavior = Platform.OS === 'ios' ? 'padding' : keyboardAvoidingEnabled ? 'height' : undefined;
 
   return (
@@ -405,7 +408,7 @@ export function QuickCaptureSheetBody({
                         ellipsizeMode="tail"
                         maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                       >
-                        {t('recurrence.custom')}
+                        {customDateLabel}
                       </Text>
                     </TouchableOpacity>
                   }
