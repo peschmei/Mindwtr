@@ -55,11 +55,15 @@ On desktop:
 
 On wide desktop layouts, **Plan next actions** lists unscheduled next actions for the selected day, including due-but-unscheduled actions. Use it to place a next action into the calendar without opening search. Due dates remain deadlines; scheduling adds a `startTime`.
 
+The planning panel can be collapsed when you want the calendar grid to take the full width. Expand it again when you want to scan available work for the selected date.
+
 On mobile:
 
 1. Open **Calendar -> Schedule Tasks** from the day view.
 2. Select an existing task.
 3. Mindwtr finds the earliest free slot for that day, avoiding visible external events and scheduled tasks.
+
+Use the mobile scheduling panel the same way: it is for choosing unscheduled work while you are already looking at the day, then assigning a concrete start time.
 
 Mindwtr uses `timeEstimate` as the default duration when available. If there is a conflict, choose another time or shorten the duration.
 

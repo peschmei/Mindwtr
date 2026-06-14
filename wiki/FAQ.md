@@ -43,7 +43,9 @@ If you have a feature request, please open an issue and describe the workflow yo
 
 ### Where should I report bugs or request features?
 
-Please use GitHub Issues instead of email so reports stay trackable and searchable:
+Use **Send feedback** from **Settings → About** when it is available in your build. It can send a bug report, feature request, or other note without needing a GitHub account, and the reply email field is optional.
+
+For public tracking, longer discussions, or reports with files/logs, please use GitHub Issues instead of email so reports stay trackable and searchable:
 https://github.com/dongdongbh/Mindwtr/issues
 
 If Mindwtr is useful to you, support options are listed here:
@@ -468,7 +470,7 @@ Note: This deletes local data.
 
 ### How can I contribute?
 
-- Report bugs and suggest features on [GitHub Issues](https://github.com/dongdongbh/Mindwtr/issues)
+- Report bugs and suggest features with **Send feedback** in **Settings → About** or on [GitHub Issues](https://github.com/dongdongbh/Mindwtr/issues)
 - Submit pull requests
 - Help with translations
 - Spread the word!

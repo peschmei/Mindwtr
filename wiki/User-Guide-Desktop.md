@@ -105,6 +105,8 @@ Incubate ideas you might want to pursue later.
 
 Time-based view of tasks with due dates or start times.
 
+On wide layouts, the Calendar includes a **Plan next actions** panel for the selected day. It surfaces unscheduled Next Actions and due-but-unscheduled tasks so you can place them into open time without leaving Calendar. Collapse the panel when you want more room for the day/week grid.
+
 ### 📋 Board View
 
 Kanban-style drag-and-drop board with columns:
@@ -180,6 +182,7 @@ Use checklists as templates:
 Mindwtr can overlay external calendars in the Calendar view. On macOS it can read Apple Calendar through EventKit; on all desktop platforms it can read direct ICS subscription URLs.
 Add an **ICS URL** in **Settings → Calendar** when you need an ICS subscription.
 External events are read-only, but you can create a separate Mindwtr task from an event in Calendar; Mindwtr copies the event title, date/time, location, description, and calendar name where available.
+Use **Plan next actions** in Calendar to turn the selected day into a planning surface: review unscheduled work, choose a task, and schedule it into a free slot while keeping due dates as deadlines.
 On macOS, **Push tasks to calendar** can also write scheduled/due Mindwtr tasks into a selected writable Apple Calendar target. See [[Calendar Integration]] for setup details.
 
 ### 🔍 Global Search
@@ -507,6 +510,7 @@ See [[Data and Sync]] for detailed setup.
 ### About
 - Version info
 - Check for updates
+- **Send feedback** for bug reports, feature requests, or other notes when the build has feedback enabled. You can include a reply email if you want follow-up.
 - Links to website and GitHub
 
 ---

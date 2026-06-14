@@ -413,6 +413,8 @@ Time-based view with scheduling capabilities.
 3. Mindwtr finds the earliest free slot (avoids conflicts with external events)
 4. Task gets a start time based on its time estimate
 
+The scheduling panel is the mobile planning surface: use it when you are looking at a day and want to turn unscheduled Next Actions or due-but-unscheduled work into concrete time blocks. Collapse it when you want to focus on the calendar grid.
+
 ### Drag to Reschedule
 
 - Long-press a scheduled task block
@@ -635,6 +637,7 @@ See [[Data and Sync]] for sync setup.
 
 - Version number
 - Check for updates
+- **Send feedback** for bug reports, feature requests, or other notes when the build has feedback enabled. You can include a reply email if you want follow-up.
 - Website and GitHub links
 
 ---

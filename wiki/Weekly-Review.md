@@ -56,6 +56,7 @@ Review each inbox item:
 - Process items using the clarify workflow
 - Use the **Process Inbox** action from the review step, then return to the review when the inbox is clear
 - If your inbox is empty but your head is not, use **Mind Sweep** from the review to capture loose thoughts before moving on
+- Mobile weekly review also shows a Mind Sweep nudge in the review flow, so you can start a guided capture pass before leaving the Get Clear step
 - Empty the inbox completely
 
 ### Step 2: Review Calendar
