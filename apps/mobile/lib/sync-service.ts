@@ -254,6 +254,10 @@ const readConfigValue = async (key: string, useCache = true): Promise<string | n
   return value;
 };
 
+export const clearMobileSyncConfigCache = (): void => {
+  syncConfigCache.clear();
+};
+
 const getCachedConfigValue = async (key: string): Promise<string | null> => {
   return readConfigValue(key, true);
 };
@@ -1488,7 +1492,7 @@ export function abortMobileSync(): boolean {
 export const __mobileSyncTestUtils = {
   reset() {
     mobileSyncOrchestrator.reset();
-    syncConfigCache.clear();
+    clearMobileSyncConfigCache();
     mobileSyncActivityListeners.clear();
     mobileSyncActivityState = 'idle';
     webdavSyncRateLimitController.reset();
