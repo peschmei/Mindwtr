@@ -40,7 +40,7 @@ export type WriteLockRunner = {
     getPendingLockCount: () => number;
 };
 
-const DEFAULT_DATA: AppData = { tasks: [], projects: [], sections: [], areas: [], people: [], settings: {} };
+const createDefaultData = (): AppData => ({ tasks: [], projects: [], sections: [], areas: [], people: [], settings: {} });
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
     typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -282,7 +282,7 @@ export function readData(filePath: string): AppData | null {
 
 export function loadAppData(filePath: string): AppData {
     const raw = readData(filePath);
-    if (!raw) return { ...DEFAULT_DATA };
+    if (!raw) return createDefaultData();
     const nowIso = new Date().toISOString();
     const normalizedAreas = raw.areas.map((area) => {
         if (!isObjectRecord(area)) return area;

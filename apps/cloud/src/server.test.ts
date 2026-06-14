@@ -1277,6 +1277,62 @@ describe('cloud server api', () => {
         expect(archiveDeleted.status).toBe(404);
     });
 
+    test('finalizes task REST writes before storing data', async () => {
+        const createResponse = await fetch(`${baseUrl}/v1/tasks`, {
+            method: 'POST',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: 'Dangling create',
+                props: {
+                    projectId: 'missing-project',
+                    sectionId: 'missing-section',
+                    areaId: 'missing-area',
+                },
+            }),
+        });
+        expect(createResponse.status).toBe(400);
+        expect((await createResponse.json()).error).toContain('references missing or deleted project');
+
+        const validCreateResponse = await fetch(`${baseUrl}/v1/tasks`, {
+            method: 'POST',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ title: 'Valid task' }),
+        });
+        expect(validCreateResponse.status).toBe(201);
+        const validCreatedJson = await validCreateResponse.json();
+        const validTask = validCreatedJson.task as Task;
+
+        const patchResponse = await fetch(`${baseUrl}/v1/tasks/${encodeURIComponent(validTask.id)}`, {
+            method: 'PATCH',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                projectId: 'missing-project-after-patch',
+                sectionId: 'missing-section-after-patch',
+                areaId: 'missing-area-after-patch',
+            }),
+        });
+        expect(patchResponse.status).toBe(400);
+        expect((await patchResponse.json()).error).toContain('references missing or deleted project');
+
+        const dataResponse = await fetch(`${baseUrl}/v1/data`, { headers: authHeaders });
+        expect(dataResponse.status).toBe(200);
+        const stored = await dataResponse.json() as AppData;
+        expect(stored.tasks).toHaveLength(1);
+        const storedTask = stored.tasks.find((task) => task.id === validTask.id);
+        expect(storedTask?.projectId).toBeUndefined();
+        expect(storedTask?.sectionId).toBeUndefined();
+        expect(storedTask?.areaId).toBeUndefined();
+    });
+
     test('rejects invalid task ids in task and task-action routes', async () => {
         const invalidGet = await fetch(`${baseUrl}/v1/tasks/not-a-uuid`, {
             headers: authHeaders,

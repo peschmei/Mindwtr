@@ -1107,9 +1107,12 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
                             }
 
                             data.tasks.push(task);
+                            const finalized = finalizeCloudDataForWrite(data, nowIso);
+                            if ('error' in finalized) return finalized.error;
+                            const finalizedTask = finalized.tasks.find((item) => item.id === task.id) || task;
                             throwIfRequestAborted(requestAbortController.signal);
-                            writeCloudData(filePath, data);
-                            return jsonResponse({ task }, { status: 201 });
+                            writeCloudData(filePath, finalized);
+                            return jsonResponse({ task: finalizedTask }, { status: 201 });
                         });
                     }
 
@@ -1139,9 +1142,12 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
                             );
                             data.tasks[idx] = updatedTask;
                             if (nextRecurringTask) data.tasks.push(nextRecurringTask);
+                            const finalized = finalizeCloudDataForWrite(data, nowIso);
+                            if ('error' in finalized) return finalized.error;
+                            const finalizedTask = finalized.tasks.find((item) => item.id === updatedTask.id) || updatedTask;
                             throwIfRequestAborted(requestAbortController.signal);
-                            writeCloudData(filePath, data);
-                            return jsonResponse({ task: updatedTask });
+                            writeCloudData(filePath, finalized);
+                            return jsonResponse({ task: finalizedTask });
                         });
                     }
 
@@ -1197,9 +1203,12 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
 
                                 data.tasks[idx] = updatedTask;
                                 if (nextRecurringTask) data.tasks.push(nextRecurringTask);
+                                const finalized = finalizeCloudDataForWrite(data, nowIso);
+                                if ('error' in finalized) return finalized.error;
+                                const finalizedTask = finalized.tasks.find((item) => item.id === updatedTask.id) || updatedTask;
                                 throwIfRequestAborted(requestAbortController.signal);
-                                writeCloudData(filePath, data);
-                                return jsonResponse({ task: updatedTask });
+                                writeCloudData(filePath, finalized);
+                                return jsonResponse({ task: finalizedTask });
                             });
                         }
 
@@ -1219,8 +1228,10 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
                                     rev: normalizeRevision(existing.rev) + 1,
                                     revBy: CLOUD_API_REV_BY,
                                 };
+                                const finalized = finalizeCloudDataForWrite(data, nowIso);
+                                if ('error' in finalized) return finalized.error;
                                 throwIfRequestAborted(requestAbortController.signal);
-                                writeCloudData(filePath, data);
+                                writeCloudData(filePath, finalized);
                                 return jsonResponse({ ok: true });
                             });
                         }
