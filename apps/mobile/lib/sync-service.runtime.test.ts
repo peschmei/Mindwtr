@@ -337,6 +337,7 @@ describe('mobile sync-service runtime', () => {
     expect(result).toEqual({ success: true, skipped: 'offline' });
     expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
     expect(coreMocks.webdavGetJson).not.toHaveBeenCalled();
+    expect(storeStateRef.current.fetchData).not.toHaveBeenCalled();
     expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
     expect(logMocks.logSyncError).not.toHaveBeenCalled();
   });
@@ -774,6 +775,7 @@ describe('mobile sync-service runtime', () => {
     expect(result).toEqual({ success: true, skipped: 'offline' });
     expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
     expect(coreMocks.webdavGetJson).toHaveBeenCalledTimes(1);
+    expect(storeStateRef.current.fetchData).not.toHaveBeenCalled();
     expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
     expect(logMocks.logSyncError).not.toHaveBeenCalled();
   });
@@ -1052,6 +1054,7 @@ describe('mobile sync-service runtime', () => {
 
     expect(result.success).toBe(false);
     expect(coreMocks.performSyncCycle).not.toHaveBeenCalled();
+    expect(storeStateRef.current.fetchData).not.toHaveBeenCalled();
     expect(storeStateRef.current.updateSettings).not.toHaveBeenCalled();
     expect(asyncStorageMocks.setItem).toHaveBeenCalledWith(
       '@mindwtr_local_sync_status_v1',
