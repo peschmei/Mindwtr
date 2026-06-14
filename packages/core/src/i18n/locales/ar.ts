@@ -1,6 +1,7 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const arOverrides: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'markdown.copyCode': 'نسخ الكود',
         'nav.main': 'رئيسي',
         'nav.inbox': 'البريد الوارد',
         'nav.board': 'عرض اللوحة',

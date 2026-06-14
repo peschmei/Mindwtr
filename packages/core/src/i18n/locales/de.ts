@@ -2,6 +2,7 @@
 export const deOverrides: Record<string, string> = {
         //App
         'app.name': 'Mindwtr',
+        'markdown.copyCode': 'Code kopieren',
         
         //Navigation
         'nav.main': 'Start',

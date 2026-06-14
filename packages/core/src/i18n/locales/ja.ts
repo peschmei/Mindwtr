@@ -1,6 +1,7 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const jaOverrides: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'markdown.copyCode': 'コードをコピー',
         'nav.main': '主要',
         'nav.inbox': '受信箱',
         'nav.board': 'ボードビュー',

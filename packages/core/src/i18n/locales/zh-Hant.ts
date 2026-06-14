@@ -1,6 +1,7 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const zhHant: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'markdown.copyCode': '複製程式碼',
         'nav.main': '主頁',
         'nav.inbox': '收集箱',
         'nav.board': '看板',

@@ -1,8 +1,9 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { normalizeMarkdownInternalLinks } from '@mindwtr/core';
+import { normalizeMarkdownInternalLinks, tFallback } from '@mindwtr/core';
 import { Copy } from 'lucide-react';
 
+import { useLanguage } from '../contexts/language-context';
 import { cn } from '../lib/utils';
 import { InternalMarkdownLink, useInternalMarkdownLinkContext } from './InternalMarkdownLink';
 
@@ -72,6 +73,8 @@ function remarkPreserveBlankLines() {
 }
 
 function CodeBlock({ children, className, ...props }: any) {
+    const { t } = useLanguage();
+    const copyCodeLabel = tFallback(t, 'markdown.copyCode', 'Copy code');
     const code = extractTextContent(children).replace(/\n$/, '');
     const handleCopy = () => {
         if (!code || typeof navigator === 'undefined') return;
@@ -84,8 +87,8 @@ function CodeBlock({ children, className, ...props }: any) {
                 type="button"
                 onClick={handleCopy}
                 className="absolute right-1.5 top-1.5 rounded border border-border/70 bg-background/90 p-1 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-muted hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary/30 group-hover:opacity-100"
-                aria-label="Copy code"
-                title="Copy code"
+                aria-label={copyCodeLabel}
+                title={copyCodeLabel}
             >
                 <Copy className="h-3.5 w-3.5" />
             </button>

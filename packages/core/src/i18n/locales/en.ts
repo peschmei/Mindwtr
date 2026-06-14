@@ -2,6 +2,7 @@
 export const en: Record<string, string> = {
         // App
         'app.name': 'Mindwtr',
+        'markdown.copyCode': 'Copy code',
 
         // Navigation
         'nav.main': 'Main',

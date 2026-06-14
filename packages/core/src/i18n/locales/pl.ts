@@ -1,6 +1,7 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const plOverrides: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'markdown.copyCode': 'Kopiuj kod',
         'nav.main': 'Główne',
         'nav.inbox': 'Skrzynka odbiorcza',
         'nav.board': 'Widok tablicy',

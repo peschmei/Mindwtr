@@ -1,6 +1,7 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const trOverrides: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'markdown.copyCode': 'Kodu kopyala',
         'nav.main': 'Ana',
         'nav.inbox': 'Gelen kutusu',
         'nav.board': 'Pano Görünümü',

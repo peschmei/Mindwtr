@@ -1,6 +1,7 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const koOverrides: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'markdown.copyCode': '코드 복사',
         'nav.main': '기본',
         'nav.inbox': '받은편지함',
         'nav.board': '보드 보기',

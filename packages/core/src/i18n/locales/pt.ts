@@ -2,6 +2,7 @@
 export const ptOverrides: Record<string, string> = {
         // App
         'app.name': 'Mindwtr',
+        'markdown.copyCode': 'Copiar código',
 
         // Navigation
         'nav.main': 'Principal',
