@@ -27,6 +27,7 @@ interface QuickCaptureSheetBodyProps {
   insetsBottom: number;
   inputRef: RefObject<TextInput | null>;
   keyboardAvoidingEnabled?: boolean;
+  androidKeyboardInset?: number;
   onOpenAreaPicker: () => void;
   onOpenContextPicker: () => void;
   onOpenDueDatePicker: () => void;
@@ -74,6 +75,7 @@ export function QuickCaptureSheetBody({
   insetsBottom,
   inputRef,
   keyboardAvoidingEnabled = true,
+  androidKeyboardInset = 0,
   onOpenAreaPicker,
   onOpenContextPicker,
   onOpenDueDatePicker,
@@ -111,7 +113,15 @@ export function QuickCaptureSheetBody({
   // Drop the trailing ellipsis here so the Custom chip is narrow enough to sit on the preset row;
   // the shared recurrence.custom string (used elsewhere) keeps its "…".
   const customDateLabel = t('recurrence.custom').replace(/[\s.…]+$/u, '');
-  const keyboardAvoidingBehavior = Platform.OS === 'ios' ? 'padding' : keyboardAvoidingEnabled ? 'height' : undefined;
+  // iOS resizes the modal via padding behavior; Android keeps the keyboard out
+  // of the way with a measured bottom inset (see android-keyboard-frame) because
+  // the transparent Android modal window does not resize for the keyboard. The
+  // lift is gated on keyboardAvoidingEnabled so the tall expanded sheet stays
+  // anchored to the bottom (its header cannot be pushed off the top of screen).
+  const keyboardAvoidingBehavior = Platform.OS === 'ios' ? 'padding' : undefined;
+  const androidKeyboardLift = Platform.OS === 'android' && keyboardAvoidingEnabled && androidKeyboardInset > 0
+    ? { paddingBottom: androidKeyboardInset }
+    : null;
 
   return (
     <Modal
@@ -135,7 +145,7 @@ export function QuickCaptureSheetBody({
         <KeyboardAvoidingView
           behavior={keyboardAvoidingBehavior}
           keyboardVerticalOffset={0}
-          style={styles.keyboardAvoiding}
+          style={[styles.keyboardAvoiding, androidKeyboardLift]}
         >
           <View
             style={[

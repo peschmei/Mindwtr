@@ -22,6 +22,13 @@ const tc: any = {
   tint: '#3b82f6',
 };
 
+const flattenStyle = (style: unknown): Record<string, any> => {
+  if (Array.isArray(style)) {
+    return style.reduce<Record<string, any>>((acc, item) => Object.assign(acc, flattenStyle(item)), {});
+  }
+  return style && typeof style === 'object' ? (style as Record<string, any>) : {};
+};
+
 describe('Quick capture modal composition', () => {
   it('does not mount picker modals while every picker is closed', () => {
     let tree!: ReturnType<typeof create>;
@@ -164,7 +171,6 @@ describe('Quick capture modal composition', () => {
             handleSave={vi.fn()}
             insetsBottom={0}
             inputRef={{ current: null }}
-            keyboardAvoidingEnabled={false}
             onOpenAreaPicker={vi.fn()}
             onOpenContextPicker={vi.fn()}
             onOpenDueDatePicker={vi.fn()}
@@ -212,6 +218,128 @@ describe('Quick capture modal composition', () => {
     expect(tree.root.findByType(KeyboardAvoidingView).props.behavior).toBeUndefined();
     expect(modal.props.statusBarTranslucent).toBe(true);
     expect(modal.props.accessibilityViewIsModal).toBe(true);
+  });
+
+  it('lifts the Android sheet by the measured keyboard inset instead of resizing', () => {
+    let tree!: ReturnType<typeof create>;
+    const originalPlatformOs = Platform.OS;
+
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+
+    try {
+      act(() => {
+        tree = create(
+          <QuickCaptureSheetBody
+            addAnother={false}
+            areaLabel="No Area"
+            contextLabel="Contexts"
+            dueDate={null}
+            dueLabel="Due Date"
+            dueTimeLabel="Change time"
+            handleClose={vi.fn()}
+            handleSave={vi.fn()}
+            insetsBottom={0}
+            inputRef={{ current: null }}
+            androidKeyboardInset={280}
+            onOpenAreaPicker={vi.fn()}
+            onOpenContextPicker={vi.fn()}
+            onOpenDueDatePicker={vi.fn()}
+            onOpenDueTimePicker={vi.fn()}
+            onOpenPriorityPicker={vi.fn()}
+            onOpenProjectPicker={vi.fn()}
+            onQuickDueDateSelect={vi.fn()}
+            onResetArea={vi.fn()}
+            onResetContexts={vi.fn()}
+            onResetDueDate={vi.fn()}
+            onResetDueTime={vi.fn()}
+            onResetPriority={vi.fn()}
+            onResetProject={vi.fn()}
+            onToggleOptions={vi.fn()}
+            onToggleAddAnother={vi.fn()}
+            onToggleRecording={vi.fn()}
+            onValueChange={vi.fn()}
+            optionsExpanded={false}
+            prioritiesEnabled
+            priorityLabel="Priority"
+            projectLabel="Project"
+            recording={false}
+            recordingBusy={false}
+            recordingReady={false}
+            sheetMaxHeight={500}
+            showDueTime={false}
+            t={(key) => key}
+            tc={tc}
+            value=""
+            visible
+          />
+        );
+      });
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatformOs });
+    }
+
+    const kav = tree.root.findByType(KeyboardAvoidingView);
+    expect(kav.props.behavior).toBeUndefined();
+    expect(flattenStyle(kav.props.style).paddingBottom).toBe(280);
+  });
+
+  it('lifts the picker overlay above the keyboard by the measured inset', () => {
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <QuickCaptureSheetPickers
+          areas={[]}
+          contextInputRef={{ current: null }}
+          contextOptionsLoading={false}
+          contextQuery=""
+          contextTags={[]}
+          dueDate={null}
+          filteredContexts={['@home']}
+          filteredProjects={[]}
+          hasAddableContextTokens={false}
+          hasExactProjectMatch={false}
+          onAddContextFromQuery={vi.fn()}
+          onClearContexts={vi.fn()}
+          onCloseAreaPicker={vi.fn()}
+          onCloseContextPicker={vi.fn()}
+          onClosePriorityPicker={vi.fn()}
+          onCloseProjectPicker={vi.fn()}
+          onContextQueryChange={vi.fn()}
+          onDueDateChange={vi.fn()}
+          onDueTimeChange={vi.fn()}
+          onProjectQueryChange={vi.fn()}
+          onRemoveContext={vi.fn()}
+          onSelectArea={vi.fn()}
+          onSelectContext={vi.fn()}
+          onSelectPriority={vi.fn()}
+          onSelectProject={vi.fn()}
+          onStartTimeChange={vi.fn()}
+          onSubmitContextQuery={vi.fn()}
+          onSubmitProjectQuery={vi.fn()}
+          overlayKeyboardInset={280}
+          pendingStartDate={null}
+          prioritiesEnabled
+          priorityOptions={['low', 'medium', 'high', 'urgent']}
+          projectQuery=""
+          selectedAreaId={null}
+          selectedPriority={null}
+          showAreaPicker={false}
+          showContextPicker
+          showDatePicker={false}
+          showDueTimePicker={false}
+          showPriorityPicker={false}
+          showProjectPicker={false}
+          startPickerMode={null}
+          startTime={null}
+          t={(key) => key}
+          tc={tc}
+        />
+      );
+    });
+
+    const overlay = tree.root.find((node) => node.props.accessibilityViewIsModal === true);
+    expect(flattenStyle(overlay.props.style).paddingBottom).toBe(280);
   });
 
   it('keeps collapsed capture focused on context and hides organizing fields behind More', () => {

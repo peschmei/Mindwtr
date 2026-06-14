@@ -25,6 +25,7 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useToast } from '@/contexts/toast-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getAndroidKeyboardFrame } from '../lib/android-keyboard-frame';
 import { logError, logWarn } from '../lib/app-log';
 import { openTaskScreen } from '@/lib/task-meta-navigation';
 import {
@@ -137,6 +138,7 @@ export function QuickCaptureSheet({
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [androidKeyboardAvoidingEnabled, setAndroidKeyboardAvoidingEnabled] = useState(true);
+  const [androidKeyboardInset, setAndroidKeyboardInset] = useState(0);
   const [addAnother, setAddAnother] = useState(false);
   const projectsRef = useRef(projects);
   const contextOptionsLoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -348,6 +350,32 @@ export function QuickCaptureSheet({
     setPriority(null);
     setShowPriorityPicker(false);
   }, [prioritiesEnabled]);
+
+  // The transparent Android modal is its own window that does not resize for the
+  // soft keyboard, so we measure the keyboard inset ourselves and lift the sheet
+  // and overlay with bottom padding. This replaces KeyboardAvoidingView's
+  // 'height' behavior, which thrashed (and re-summoned the IME) on custom
+  // keyboard heights, producing the repeated flicker on dismiss.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    if (!visible) {
+      setAndroidKeyboardInset(0);
+      return;
+    }
+    if (typeof Keyboard?.addListener !== 'function') return;
+    const applyFrame = (event: { endCoordinates?: { screenY?: number; height?: number } }) => {
+      setAndroidKeyboardInset(getAndroidKeyboardFrame(event).inset);
+    };
+    const reset = () => setAndroidKeyboardInset(0);
+    const showSub = Keyboard.addListener('keyboardDidShow', applyFrame);
+    const changeSub = Keyboard.addListener('keyboardDidChangeFrame', applyFrame);
+    const hideSub = Keyboard.addListener('keyboardDidHide', reset);
+    return () => {
+      showSub.remove();
+      changeSub.remove();
+      hideSub.remove();
+    };
+  }, [visible]);
 
   const buildTaskProps = useCallback(async (fallbackTitle: string, extraProps?: Partial<Task>) => {
     const trimmed = value.trim();
@@ -823,6 +851,7 @@ export function QuickCaptureSheet({
         insetsBottom={insets.bottom}
         inputRef={inputRef}
         keyboardAvoidingEnabled={androidKeyboardAvoidingEnabled}
+        androidKeyboardInset={androidKeyboardInset}
         onOpenAreaPicker={() => setShowAreaPicker(true)}
         onOpenContextPicker={openContextPicker}
         onOpenDueDatePicker={openDueDatePicker}
@@ -858,7 +887,7 @@ export function QuickCaptureSheet({
         value={value}
         visible={visible}
       >
-        <QuickCaptureSheetPickers {...pickerProps} pickerLayer="overlay" />
+        <QuickCaptureSheetPickers {...pickerProps} pickerLayer="overlay" overlayKeyboardInset={androidKeyboardInset} />
       </QuickCaptureSheetBody>
       <QuickCaptureSheetPickers {...pickerProps} pickerLayer="date" />
     </>

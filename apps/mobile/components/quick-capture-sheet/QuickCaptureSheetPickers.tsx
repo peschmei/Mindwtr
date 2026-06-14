@@ -32,6 +32,7 @@ interface QuickCaptureSheetPickersProps {
   onSubmitProjectQuery: () => void;
   pendingStartDate: Date | null;
   pickerLayer?: 'all' | 'date' | 'overlay';
+  overlayKeyboardInset?: number;
   prioritiesEnabled: boolean;
   priorityOptions: TaskPriority[];
   projectQuery: string;
@@ -84,6 +85,7 @@ export function QuickCaptureSheetPickers({
   onSubmitProjectQuery,
   pendingStartDate,
   pickerLayer = 'all',
+  overlayKeyboardInset = 0,
   prioritiesEnabled,
   priorityOptions,
   projectQuery,
@@ -102,6 +104,11 @@ export function QuickCaptureSheetPickers({
 }: QuickCaptureSheetPickersProps) {
   const showDateLayer = pickerLayer !== 'overlay';
   const showOverlayLayer = pickerLayer !== 'date';
+  // Center the picker card in the space above the keyboard so its input/list are
+  // not hidden behind the keyboard inside the non-resizing Android modal.
+  const overlayStyle = overlayKeyboardInset > 0
+    ? [styles.overlay, { paddingBottom: overlayKeyboardInset }]
+    : styles.overlay;
 
   return (
     <>
@@ -137,7 +144,7 @@ export function QuickCaptureSheetPickers({
       )}
 
       {showOverlayLayer && showContextPicker && (
-        <View style={styles.overlay} accessibilityViewIsModal>
+        <View style={overlayStyle} accessibilityViewIsModal>
           <Pressable
             style={styles.overlayBackdrop}
             onPress={onCloseContextPicker}
@@ -239,7 +246,7 @@ export function QuickCaptureSheetPickers({
       )}
 
       {showOverlayLayer && showAreaPicker && (
-        <View style={styles.overlay} accessibilityViewIsModal>
+        <View style={overlayStyle} accessibilityViewIsModal>
           <Pressable
             style={styles.overlayBackdrop}
             onPress={onCloseAreaPicker}
@@ -288,7 +295,7 @@ export function QuickCaptureSheetPickers({
       )}
 
       {showOverlayLayer && showProjectPicker && (
-        <View style={styles.overlay} accessibilityViewIsModal>
+        <View style={overlayStyle} accessibilityViewIsModal>
           <Pressable
             style={styles.overlayBackdrop}
             onPress={onCloseProjectPicker}
@@ -351,7 +358,7 @@ export function QuickCaptureSheetPickers({
       )}
 
       {showOverlayLayer && prioritiesEnabled && showPriorityPicker && (
-        <View style={styles.overlay} accessibilityViewIsModal>
+        <View style={overlayStyle} accessibilityViewIsModal>
           <Pressable
             style={styles.overlayBackdrop}
             onPress={onClosePriorityPicker}

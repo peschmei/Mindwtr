@@ -257,6 +257,10 @@ describe('QuickCaptureSheet save handling', () => {
       const blur = vi.fn();
       getBody().props.inputRef.current = { blur, focus };
 
+      // Ignore the baseline keyboard-inset listeners registered on mount; this
+      // test only cares about the keyboardDidHide gate the More toggle adds.
+      hideListeners.length = 0;
+
       await act(async () => {
         getBody().props.onToggleOptions();
         await Promise.resolve();
@@ -328,6 +332,10 @@ describe('QuickCaptureSheet save handling', () => {
       };
 
       getBody().props.inputRef.current = { blur: vi.fn(), focus: vi.fn() };
+
+      // Drop the baseline keyboard-inset listeners registered on mount so we can
+      // assert the More toggle adds none of its own when the keyboard is hidden.
+      addListener.mockClear();
 
       await act(async () => {
         getBody().props.onToggleOptions();
