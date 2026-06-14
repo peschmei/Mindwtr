@@ -2814,7 +2814,7 @@ describe('TaskStore', () => {
             expect(state._tasksById.get(secondTask.id)).toBe(deletedSecondTask);
         });
 
-        it('preserves deleted project task section ids so a project can be restored intact', async () => {
+        it('detaches live project task section ids when deleting a project', async () => {
             const { addProject, addSection, addTask, deleteProject, restoreProject } = useTaskStore.getState();
             const project = await addProject('Delete Project', '#333333');
             expect(project).not.toBeNull();
@@ -2829,9 +2829,14 @@ describe('TaskStore', () => {
             await deleteProject(project.id);
             const deletedTask = useTaskStore.getState()._allTasks.find((item) => item.id === task.id)!;
             const deletedSection = useTaskStore.getState()._allSections.find((item) => item.id === section.id)!;
-            expect(deletedTask.deletedAt).toBeTruthy();
-            expect(deletedTask.sectionId).toBe(section.id);
+            expect(deletedTask.deletedAt).toBeUndefined();
+            expect(deletedTask.projectId).toBeUndefined();
+            expect(deletedTask.sectionId).toBeUndefined();
             expect(deletedSection.deletedAt).toBeTruthy();
+            expect(useTaskStore.getState().tasks.find((item) => item.id === task.id)).toMatchObject({
+                projectId: undefined,
+                sectionId: undefined,
+            });
             expect(useTaskStore.getState().sections.find((item) => item.id === section.id)).toBeUndefined();
 
             const restoreResult = await restoreProject(project.id);
@@ -2840,7 +2845,8 @@ describe('TaskStore', () => {
             const restoredTask = useTaskStore.getState()._allTasks.find((item) => item.id === task.id)!;
             const restoredSection = useTaskStore.getState()._allSections.find((item) => item.id === section.id)!;
             expect(restoredTask.deletedAt).toBeUndefined();
-            expect(restoredTask.sectionId).toBe(section.id);
+            expect(restoredTask.projectId).toBeUndefined();
+            expect(restoredTask.sectionId).toBeUndefined();
             expect(restoredSection.deletedAt).toBeUndefined();
         });
 

@@ -26,7 +26,11 @@ describe('RichMarkdown', () => {
     });
 
     it('adds an accessible copy button to fenced code blocks', () => {
-        render(<RichMarkdown markdown={'```ts\nconst value = 1;\n```'} />);
+        render(
+            <LanguageProvider>
+                <RichMarkdown markdown={'```ts\nconst value = 1;\n```'} />
+            </LanguageProvider>
+        );
 
         expect(screen.getByRole('button', { name: 'Copy code' })).toBeInTheDocument();
         expect(screen.getByText('const value = 1;')).toBeInTheDocument();
