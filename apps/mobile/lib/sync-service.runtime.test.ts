@@ -1091,6 +1091,18 @@ describe('mobile sync-service runtime', () => {
     expect(states.at(-1)).toBe('idle');
   });
 
+  it('cleans attachment temp files and refreshes the store after a successful WebDAV merge', async () => {
+    coreMocks.webdavGetJson.mockResolvedValue(remoteChangedData);
+
+    const result = await syncServiceModule.performMobileSync();
+
+    expect(result).toEqual({ success: true, stats: emptyStats });
+    expect(coreMocks.performSyncCycle).toHaveBeenCalledTimes(1);
+    expect(attachmentSyncMocks.cleanupAttachmentTempFiles).toHaveBeenCalledTimes(1);
+    expect(storeStateRef.current.fetchData).toHaveBeenCalledWith({ silent: true });
+    expect(logMocks.logSyncError).not.toHaveBeenCalled();
+  });
+
   it('stops cloud attachment pre-sync when the app lifecycle aborts the sync', async () => {
     const dataWithAttachment: AppData = {
       tasks: [
