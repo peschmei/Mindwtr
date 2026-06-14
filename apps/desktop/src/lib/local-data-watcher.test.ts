@@ -227,6 +227,12 @@ describe('local-data-watcher', () => {
         watchers[1]?.callback({ paths: ['/tmp/mindwtr/mindwtr.db-wal'] });
         await flushScheduledTimers();
 
+        expect(refreshStorageData).not.toHaveBeenCalled();
+
+        nowMs = 15100;
+        watchers[1]?.callback({ paths: ['/tmp/mindwtr/mindwtr.db-wal'] });
+        await flushScheduledTimers();
+
         expect(refreshStorageData).toHaveBeenCalledTimes(1);
     });
 

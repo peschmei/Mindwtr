@@ -504,19 +504,19 @@ export class SqliteAdapter {
             await this.client.run('DROP TRIGGER IF EXISTS projects_au');
 
             await this.client.run(`
-                CREATE TRIGGER tasks_ai AFTER INSERT ON tasks BEGIN
+                CREATE TRIGGER IF NOT EXISTS tasks_ai AFTER INSERT ON tasks BEGIN
                   INSERT INTO tasks_fts (rowid, title, description, tags, contexts, checklist, location)
                   VALUES (new.rowid, new.title, coalesce(new.description, ''), coalesce(new.tags, ''), coalesce(new.contexts, ''), coalesce((SELECT group_concat(json_extract(value, '$.title'), ' ') FROM json_each(new.checklist)), ''), coalesce(new.location, ''));
                 END
             `);
             await this.client.run(`
-                CREATE TRIGGER tasks_ad AFTER DELETE ON tasks BEGIN
+                CREATE TRIGGER IF NOT EXISTS tasks_ad AFTER DELETE ON tasks BEGIN
                   INSERT INTO tasks_fts (tasks_fts, rowid, title, description, tags, contexts, checklist, location)
                   VALUES ('delete', old.rowid, old.title, coalesce(old.description, ''), coalesce(old.tags, ''), coalesce(old.contexts, ''), coalesce((SELECT group_concat(json_extract(value, '$.title'), ' ') FROM json_each(old.checklist)), ''), coalesce(old.location, ''));
                 END
             `);
             await this.client.run(`
-                CREATE TRIGGER tasks_au AFTER UPDATE ON tasks BEGIN
+                CREATE TRIGGER IF NOT EXISTS tasks_au AFTER UPDATE ON tasks BEGIN
                   INSERT INTO tasks_fts (tasks_fts, rowid, title, description, tags, contexts, checklist, location)
                   VALUES ('delete', old.rowid, old.title, coalesce(old.description, ''), coalesce(old.tags, ''), coalesce(old.contexts, ''), coalesce((SELECT group_concat(json_extract(value, '$.title'), ' ') FROM json_each(old.checklist)), ''), coalesce(old.location, ''));
                   INSERT INTO tasks_fts (rowid, title, description, tags, contexts, checklist, location)
@@ -524,13 +524,13 @@ export class SqliteAdapter {
                 END
             `);
             await this.client.run(`
-                CREATE TRIGGER projects_ad AFTER DELETE ON projects BEGIN
+                CREATE TRIGGER IF NOT EXISTS projects_ad AFTER DELETE ON projects BEGIN
                   INSERT INTO projects_fts (projects_fts, rowid, title, supportNotes, tagIds, areaTitle)
                   VALUES ('delete', old.rowid, old.title, coalesce(old.supportNotes, ''), coalesce(old.tagIds, ''), coalesce(old.areaTitle, ''));
                 END
             `);
             await this.client.run(`
-                CREATE TRIGGER projects_au AFTER UPDATE ON projects BEGIN
+                CREATE TRIGGER IF NOT EXISTS projects_au AFTER UPDATE ON projects BEGIN
                   INSERT INTO projects_fts (projects_fts, rowid, title, supportNotes, tagIds, areaTitle)
                   VALUES ('delete', old.rowid, old.title, coalesce(old.supportNotes, ''), coalesce(old.tagIds, ''), coalesce(old.areaTitle, ''));
                   INSERT INTO projects_fts (rowid, title, supportNotes, tagIds, areaTitle)

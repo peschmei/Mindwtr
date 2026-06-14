@@ -753,6 +753,9 @@ describe('SyncService orchestration', () => {
             __syncServiceTestUtils.setDependenciesForTests({
                 flushPendingSave: vi.fn(async () => undefined),
                 getStoreState: () => storeState as any,
+                applySyncedDataToStore: vi.fn(() => {
+                    callOrder.push('applySyncedDataToStore');
+                }),
                 performSyncCycle: vi.fn(async () => ({
                     data: {
                         tasks: [],
@@ -774,7 +777,8 @@ describe('SyncService orchestration', () => {
             const result = await SyncService.performSync();
 
             expect(result.success).toBe(true);
-            expect(callOrder).toEqual(['fetchData']);
+            expect(callOrder).toEqual(['applySyncedDataToStore']);
+            expect(storeState.fetchData).not.toHaveBeenCalled();
             expect(storeState.updateSettings).not.toHaveBeenCalled();
         } finally {
             prepareSpy.mockRestore();

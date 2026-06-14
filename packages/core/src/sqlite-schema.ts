@@ -107,7 +107,9 @@ CREATE TABLE IF NOT EXISTS sections (
   revBy TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
-  deletedAt TEXT
+  deletedAt TEXT,
+  deletedAtBeforeProjectArchive TEXT,
+  projectArchivedAt TEXT
 );
 
 CREATE TABLE IF NOT EXISTS settings (

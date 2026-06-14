@@ -13,6 +13,7 @@ interface CreateSyncOrchestratorOptions<Arg, Result> {
 export interface SyncOrchestrator<Arg, Result> {
     run: (arg: Arg) => Promise<Result>;
     requestFollowUp: (nextArg?: Arg) => void;
+    clearFollowUp: () => void;
     reset: () => void;
     getState: () => { inFlight: boolean; queued: boolean };
 }
@@ -105,6 +106,11 @@ export const createSyncOrchestrator = <Arg, Result>(
         setQueued(true);
     };
 
+    const clearFollowUp = () => {
+        queuedArg = undefined;
+        setQueued(false);
+    };
+
     const run = (arg: Arg): Promise<Result> => {
         if (inFlight) {
             requestFollowUp(arg);
@@ -160,6 +166,7 @@ export const createSyncOrchestrator = <Arg, Result>(
     return {
         run,
         requestFollowUp,
+        clearFollowUp,
         reset: () => {
             inFlight = null;
             queuedArg = undefined;

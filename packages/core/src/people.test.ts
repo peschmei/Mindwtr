@@ -53,6 +53,63 @@ describe('people helpers', () => {
         });
     });
 
+    it('tombstones duplicate active people by name instead of dropping synced ids', () => {
+        const result = normalizePeopleForLoad(
+            [
+                person({
+                    id: 'person-alex-original',
+                    name: ' Alex ',
+                    rev: 2,
+                    revBy: 'device-old',
+                    updatedAt: '2026-04-02T00:00:00.000Z',
+                }),
+                person({
+                    id: 'person-alex-duplicate',
+                    name: 'alex',
+                    note: 'Remote note',
+                    referenceLink: ' https://example.com/alex ',
+                    rev: 4,
+                    revBy: 'device-remote',
+                    createdAt: '2026-04-02T00:00:00.000Z',
+                    updatedAt: '2026-04-04T00:00:00.000Z',
+                }),
+            ],
+            [],
+            '2026-04-05T00:00:00.000Z',
+            'device-local',
+        );
+
+        expect(result.didChange).toBe(true);
+        expect(result.people).toHaveLength(2);
+        expect(result.people.filter((item) => !item.deletedAt).map((item) => item.id)).toEqual(['person-alex-original']);
+        expect(result.people.find((item) => item.id === 'person-alex-original')).toMatchObject({
+            id: 'person-alex-original',
+            name: 'Alex',
+            note: 'Remote note',
+            referenceLink: 'https://example.com/alex',
+            rev: 4,
+            revBy: 'device-old',
+            updatedAt: '2026-04-04T00:00:00.000Z',
+        });
+        expect(result.people.find((item) => item.id === 'person-alex-duplicate')).toMatchObject({
+            id: 'person-alex-duplicate',
+            name: 'alex',
+            deletedAt: '2026-04-05T00:00:00.000Z',
+            updatedAt: '2026-04-05T00:00:00.000Z',
+            rev: 5,
+            revBy: 'device-local',
+        });
+
+        const stableReload = normalizePeopleForLoad(
+            result.people,
+            [],
+            '2026-04-05T00:00:00.000Z',
+            'device-local',
+        );
+        expect(stableReload.didChange).toBe(false);
+        expect(stableReload.people).toEqual(result.people);
+    });
+
     it('prefers managed people in options and suggestions while keeping ad hoc task names', () => {
         const people = [
             person({ id: 'person-jordan', name: 'Jordan', updatedAt: '2026-04-01T00:00:00.000Z' }),

@@ -19,6 +19,7 @@ import {
     normalizeCloudUrl,
     sanitizeAppDataForRemote,
     buildHttpRemoteFileFingerprint,
+    computeStableValueFingerprint,
     computeSyncPayloadFingerprint,
     areSyncPayloadsEqual,
     assertNoPendingAttachmentUploads,
@@ -169,6 +170,7 @@ type SyncServiceDependencies = {
     invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
     getTauriFetch: () => Promise<typeof fetch | undefined>;
     getStoreState: typeof useTaskStore.getState;
+    applySyncedDataToStore: (data: AppData) => void;
     flushPendingSave: typeof flushPendingSave;
     performSyncCycle: typeof performSyncCycle;
     getInMemoryAppDataSnapshot: typeof getInMemoryAppDataSnapshot;
@@ -201,11 +203,30 @@ const defaultGetTauriFetch = async (): Promise<typeof fetch | undefined> => {
     }
 };
 
+const applySyncedDataToStore = (data: AppData): void => {
+    const normalized = normalizeAppData(data);
+    const allTasks = Array.isArray(normalized.tasks) ? normalized.tasks : [];
+    const allProjects = Array.isArray(normalized.projects) ? normalized.projects : [];
+    const allSections = Array.isArray(normalized.sections) ? normalized.sections : [];
+    const allAreas = Array.isArray(normalized.areas) ? normalized.areas : [];
+    const allPeople = Array.isArray(normalized.people) ? normalized.people : [];
+
+    useTaskStore.setState((state) => ({
+        _allTasks: allTasks,
+        _allProjects: allProjects,
+        _allSections: allSections,
+        _allAreas: allAreas,
+        _allPeople: allPeople,
+        settings: normalized.settings ?? state.settings,
+    }));
+};
+
 const defaultSyncServiceDependencies: SyncServiceDependencies = {
     isTauriRuntime,
     invoke: defaultInvoke,
     getTauriFetch: defaultGetTauriFetch,
     getStoreState: useTaskStore.getState,
+    applySyncedDataToStore,
     flushPendingSave,
     performSyncCycle,
     getInMemoryAppDataSnapshot,
@@ -254,6 +275,30 @@ const isSyncPayloadTraceEnabled = (): boolean => (
     getStoreState().settings?.diagnostics?.loggingEnabled === true
 );
 
+const SYNC_TRACE_SURFACES = ['tasks', 'projects', 'sections', 'areas', 'people', 'settings'] as const;
+type SyncTraceSurface = typeof SYNC_TRACE_SURFACES[number];
+
+const capitalizeTraceName = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
+
+const getSyncTraceSurfaceValue = (data: AppData, surface: SyncTraceSurface): unknown => {
+    if (surface === 'settings') return data.settings ?? {};
+    const value = data[surface];
+    return Array.isArray(value) ? value : [];
+};
+
+const buildSyncPayloadSurfaceTraceExtra = (
+    data: AppData,
+    prefix = '',
+): Record<string, string> => {
+    const sanitized = sanitizeAppDataForRemote(data);
+    return Object.fromEntries(
+        SYNC_TRACE_SURFACES.map((surface) => {
+            const name = `${prefix}${prefix ? capitalizeTraceName(surface) : surface}Sig`;
+            return [name, computeStableValueFingerprint(getSyncTraceSurfaceValue(sanitized, surface))];
+        }),
+    );
+};
+
 const buildSyncPayloadTraceExtra = (
     data: AppData | null | undefined,
     extra: Record<string, string> = {},
@@ -278,6 +323,7 @@ const buildSyncPayloadTraceExtra = (
         areaIdsTruncated: String(areaIds.length > 24),
         pendingRemoteWrite: String(Boolean(data.settings?.pendingRemoteWriteAt)),
         fingerprint: computeSyncPayloadFingerprint(data),
+        ...buildSyncPayloadSurfaceTraceExtra(data),
     };
 };
 
@@ -288,6 +334,97 @@ const logSyncPayloadTrace = (
 ): void => {
     if (!isSyncPayloadTraceEnabled()) return;
     logSyncInfo(message, buildSyncPayloadTraceExtra(data, extra));
+};
+
+const MAX_TRACE_DIFF_ITEMS = 12;
+const MAX_TRACE_DIFF_FIELDS = 16;
+
+const isPlainTraceRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const sanitizeTraceFieldPath = (path: string): string => (
+    /(password|token|secret|authorization|api[-_.]?key)/i.test(path) ? '[sensitive]' : path
+);
+
+const collectChangedTracePaths = (
+    left: unknown,
+    right: unknown,
+    prefix = '',
+    depth = 0,
+): string[] => {
+    if (toStableJson(left) === toStableJson(right)) return [];
+    if (depth >= 3 || !isPlainTraceRecord(left) || !isPlainTraceRecord(right)) {
+        return [sanitizeTraceFieldPath(prefix || '<root>')];
+    }
+    const names = Array.from(new Set([...Object.keys(left), ...Object.keys(right)])).sort();
+    return names.flatMap((name) => {
+        const nextPath = prefix ? `${prefix}.${name}` : name;
+        return collectChangedTracePaths(left[name], right[name], nextPath, depth + 1);
+    });
+};
+
+const getTraceRecordId = (item: Record<string, unknown>, index: number): string => {
+    const id = typeof item.id === 'string' && item.id.trim().length > 0 ? item.id : `index-${index}`;
+    return id.length > 80 ? `${id.slice(0, 80)}...` : id;
+};
+
+const buildCollectionDiffTraceSample = (left: unknown, right: unknown): string => {
+    const leftItems = Array.isArray(left) ? left.filter(isPlainTraceRecord) : [];
+    const rightItems = Array.isArray(right) ? right.filter(isPlainTraceRecord) : [];
+    const leftById = new Map(leftItems.map((item, index) => [getTraceRecordId(item, index), item] as const));
+    const rightById = new Map(rightItems.map((item, index) => [getTraceRecordId(item, index), item] as const));
+    const ids = Array.from(new Set([...leftById.keys(), ...rightById.keys()])).sort();
+    const parts: string[] = [];
+
+    for (const id of ids) {
+        const leftItem = leftById.get(id);
+        const rightItem = rightById.get(id);
+        if (!leftItem) {
+            parts.push(`${id}:onlySynced:${computeStableValueFingerprint(rightItem)}`);
+        } else if (!rightItem) {
+            parts.push(`${id}:onlyCurrent:${computeStableValueFingerprint(leftItem)}`);
+        } else if (toStableJson(leftItem) !== toStableJson(rightItem)) {
+            const fields = collectChangedTracePaths(leftItem, rightItem)
+                .slice(0, MAX_TRACE_DIFF_FIELDS)
+                .join('|');
+            parts.push(`${id}:fields=${fields};current=${computeStableValueFingerprint(leftItem)};synced=${computeStableValueFingerprint(rightItem)}`);
+        }
+        if (parts.length >= MAX_TRACE_DIFF_ITEMS) break;
+    }
+
+    return parts.join(';');
+};
+
+const buildSyncPayloadDiffTraceExtra = (currentData: AppData, syncedData: AppData): Record<string, string> => {
+    const current = sanitizeAppDataForRemote(currentData);
+    const synced = sanitizeAppDataForRemote(syncedData);
+    const changedSurfaces = SYNC_TRACE_SURFACES.filter((surface) => (
+        toStableJson(getSyncTraceSurfaceValue(current, surface)) !== toStableJson(getSyncTraceSurfaceValue(synced, surface))
+    ));
+    const extra: Record<string, string> = {
+        surfaceDiffs: changedSurfaces.join(',') || 'none',
+        ...Object.fromEntries(SYNC_TRACE_SURFACES.map((surface) => [
+            `${surface}Changed`,
+            String(changedSurfaces.includes(surface)),
+        ])),
+        ...buildSyncPayloadSurfaceTraceExtra(current, 'current'),
+        ...buildSyncPayloadSurfaceTraceExtra(synced, 'synced'),
+    };
+
+    for (const surface of SYNC_TRACE_SURFACES) {
+        if (!changedSurfaces.includes(surface)) continue;
+        const currentSurface = getSyncTraceSurfaceValue(current, surface);
+        const syncedSurface = getSyncTraceSurfaceValue(synced, surface);
+        if (surface === 'settings') {
+            extra.settingsPaths = collectChangedTracePaths(currentSurface, syncedSurface)
+                .slice(0, MAX_TRACE_DIFF_FIELDS)
+                .join(',');
+            continue;
+        }
+        extra[`${surface}Sample`] = buildCollectionDiffTraceSample(currentSurface, syncedSurface);
+    }
+
+    return extra;
 };
 
 const logPendingAttachmentUploads = (
@@ -496,6 +633,8 @@ const normalizeRemoteWriteResult = (
 type SyncRunDependencies = {
     updateSyncStep: (next: string) => void;
     requestFollowUp: () => void;
+    acceptCoveredLocalSnapshot: (data: AppData) => boolean;
+    applySyncedDataToStore: (data: AppData) => void;
     persistLocalData: (data: AppData) => Promise<void>;
     getDropboxAccessToken: (appKey: string, options?: { forceRefresh?: boolean }) => Promise<string>;
     runDropboxWithRetry: <T>(
@@ -532,15 +671,24 @@ class SyncRun {
         }
     }
 
-    ensureLocalSnapshotFresh(): void {
-        if (getStoreState().lastDataChangeAt > this.context.localSnapshotChangeAt) {
-            this.deps.requestFollowUp();
-            throw new LocalSyncAbort();
-        }
+    ensureLocalSnapshotFresh(expectedSyncedData?: AppData): void {
+        const currentChangeAt = getStoreState().lastDataChangeAt;
+        if (currentChangeAt <= this.context.localSnapshotChangeAt) return;
+        if (expectedSyncedData && this.deps.acceptCoveredLocalSnapshot(expectedSyncedData)) return;
+
+        this.deps.requestFollowUp();
+        throw new LocalSyncAbort();
     }
 
     async persistLocalDataWithTracking(data: AppData): Promise<void> {
         await this.deps.persistLocalData(data);
+        this.deps.applySyncedDataToStore(data);
+        const currentChangeAt = getStoreState().lastDataChangeAt;
+        this.context.localSnapshotChangeAt = currentChangeAt;
+        this.context.localDataCache = {
+            changeAt: currentChangeAt,
+            data: normalizeAppData(data),
+        };
         this.context.wroteLocal = true;
     }
 
@@ -642,6 +790,49 @@ export class SyncService {
             return;
         }
         SyncService.syncOrchestrator.requestFollowUp();
+    }
+
+    private static areSyncRunOptionsEquivalent(left?: SyncRunOptions | null, right?: SyncRunOptions | null): boolean {
+        return (left?.backendOverride ?? undefined) === (right?.backendOverride ?? undefined);
+    }
+
+    private static acceptCoveredLocalSnapshot(context: SyncExecutionContext, expectedData: AppData): boolean {
+        const currentChangeAt = getStoreState().lastDataChangeAt;
+        if (currentChangeAt <= context.localSnapshotChangeAt) return true;
+
+        const currentData = normalizeAppData(syncServiceDependencies.getInMemoryAppDataSnapshot());
+        const syncedData = normalizeAppData(expectedData);
+        const currentFingerprint = computeSyncPayloadFingerprint(currentData);
+        const syncedFingerprint = computeSyncPayloadFingerprint(syncedData);
+        const rawPayloadsEqual = areSyncPayloadsEqual(currentData, syncedData);
+        if (currentFingerprint !== syncedFingerprint) {
+            logSyncInfo('Sync trace covered local snapshot differs', {
+                currentChangeAt: String(currentChangeAt),
+                localSnapshotChangeAt: String(context.localSnapshotChangeAt),
+                currentFingerprint,
+                syncedFingerprint,
+                rawPayloadsEqual: String(rawPayloadsEqual),
+                ...buildSyncPayloadDiffTraceExtra(currentData, syncedData),
+            });
+            return false;
+        }
+
+        context.localSnapshotChangeAt = currentChangeAt;
+        logSyncInfo('Sync trace covered local snapshot accepted', {
+            currentChangeAt: String(currentChangeAt),
+            currentFingerprint,
+            rawPayloadsEqual: String(rawPayloadsEqual),
+        });
+        return true;
+    }
+
+    private static clearCoveredQueuedSyncRun(context: SyncExecutionContext, options: SyncRunOptions): void {
+        if (!SyncService.syncOrchestrator.getState().queued) return;
+        if (!SyncService.areSyncRunOptionsEquivalent(SyncService.queuedSyncOptions, options)) return;
+        if (getStoreState().lastDataChangeAt > context.localSnapshotChangeAt) return;
+
+        SyncService.queuedSyncOptions = null;
+        SyncService.syncOrchestrator.clearFollowUp();
     }
 
     static getSyncStatus() {
@@ -1970,6 +2161,8 @@ export class SyncService {
         const run = new SyncRun(options, context, {
             updateSyncStep: (next) => SyncService.updateSyncStatus({ step: next }),
             requestFollowUp: () => SyncService.requestQueuedSyncRun(options, false),
+            acceptCoveredLocalSnapshot: (data) => SyncService.acceptCoveredLocalSnapshot(context, data),
+            applySyncedDataToStore: (data) => syncServiceDependencies.applySyncedDataToStore(data),
             persistLocalData,
             getDropboxAccessToken: (appKey, tokenOptions) => SyncService.getDropboxAccessToken(appKey, tokenOptions),
             runDropboxWithRetry: (resolveToken, operation) => SyncService.runDropboxWithRetry(resolveToken, operation),
@@ -2023,7 +2216,7 @@ export class SyncService {
                         backend: context.backend,
                         step: context.step,
                     });
-                    run.ensureLocalSnapshotFresh();
+                    run.ensureLocalSnapshotFresh(data);
                     await run.persistLocalDataWithTracking(data);
                 },
                 clearPendingRemoteWriteAfterLocalAbort: async (pendingAt) => {
@@ -2045,7 +2238,7 @@ export class SyncService {
                     logSyncPayloadTrace('Sync trace write remote payload', data, {
                         backend: context.backend,
                     });
-                    run.ensureLocalSnapshotFresh();
+                    run.ensureLocalSnapshotFresh(data);
                     await SyncService.writeRemoteDataByBackend(run, data);
                 },
                 onStep: (next) => {
@@ -2079,7 +2272,7 @@ export class SyncService {
             };
             await persistExternalCalendars(mergedData);
             SyncService.logSyncMergeSummary(stats);
-            run.ensureLocalSnapshotFresh();
+            run.ensureLocalSnapshotFresh(mergedData);
 
             const preAttachmentMergedData = mergedData;
             mergedData = await SyncService.runPostMergeAttachmentPhase(run, mergedData);
@@ -2099,7 +2292,7 @@ export class SyncService {
                 if (orphanedAttachments.length > 0 || deletedAttachments.length > 0 || pendingRemoteDeletes.length > 0) {
                     run.setStep('attachments_cleanup');
                     await yieldToRenderer();
-                    run.ensureLocalSnapshotFresh();
+                    run.ensureLocalSnapshotFresh(mergedData);
                     run.ensureNetworkStillAvailable();
                     mergedData = await cleanupOrphanedAttachments(mergedData, context.backend, getAttachmentCleanupDeps());
                     if (orphanedAttachments.length > 0) {
@@ -2116,13 +2309,15 @@ export class SyncService {
             // 7. Refresh UI Store
             run.setStep('refresh');
             await yieldToRenderer();
-            run.ensureLocalSnapshotFresh();
-            await getStoreState().fetchData({ silent: true });
+            run.ensureLocalSnapshotFresh(mergedData);
+            syncServiceDependencies.applySyncedDataToStore(mergedData);
+            SyncService.acceptCoveredLocalSnapshot(context, mergedData);
             SyncService.lastSuccessfulSyncLocalChangeAt = getStoreState().lastDataChangeAt;
 
             SyncService.setPendingExternalSyncChange(null);
 
             getStoreState().setError(null);
+            SyncService.clearCoveredQueuedSyncRun(context, options);
             return { success: true, stats };
         };
 

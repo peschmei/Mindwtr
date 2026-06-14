@@ -83,11 +83,10 @@ use platform::{
     cloudkit_account_status, cloudkit_consume_pending_remote_change, cloudkit_delete_records,
     cloudkit_ensure_subscription, cloudkit_ensure_zone, cloudkit_fetch_all_records,
     cloudkit_fetch_attachment_asset, cloudkit_fetch_changes, cloudkit_register_for_notifications,
-    cloudkit_save_attachment_asset, cloudkit_save_records,
-    create_macos_calendar_event, delete_macos_calendar_event, ensure_macos_mindwtr_calendar,
-    get_macos_calendar_events, get_macos_calendar_permission_status, get_macos_writable_calendars,
-    open_path, request_macos_calendar_permission, set_macos_activation_policy,
-    update_macos_calendar_event,
+    cloudkit_save_attachment_asset, cloudkit_save_records, create_macos_calendar_event,
+    delete_macos_calendar_event, ensure_macos_mindwtr_calendar, get_macos_calendar_events,
+    get_macos_calendar_permission_status, get_macos_writable_calendars, open_path,
+    request_macos_calendar_permission, set_macos_activation_policy, update_macos_calendar_event,
 };
 use storage::{
     create_data_snapshot, delete_calendar_sync_entry, get_all_calendar_sync_entries,
@@ -193,7 +192,11 @@ async fn send_flatpak_notification(title: String, body: Option<String>) -> Resul
 
     let mut notification = ashpd::desktop::notification::Notification::new(trimmed_title)
         .priority(ashpd::desktop::notification::Priority::Normal);
-    if let Some(body) = body.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    if let Some(body) = body
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         notification = notification.body(body);
     }
 
@@ -240,6 +243,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   contexts TEXT,
   checklist TEXT,
   description TEXT,
+  textDirection TEXT,
   attachments TEXT,
   location TEXT,
   projectId TEXT,
@@ -252,6 +256,10 @@ CREATE TABLE IF NOT EXISTS tasks (
   suppressMindwtrReminders INTEGER,
   reviewAt TEXT,
   completedAt TEXT,
+  statusBeforeProjectArchive TEXT,
+  completedAtBeforeProjectArchive TEXT,
+  isFocusedTodayBeforeProjectArchive INTEGER,
+  projectArchivedAt TEXT,
   rev INTEGER,
   revBy TEXT,
   createdAt TEXT NOT NULL,
@@ -301,6 +309,8 @@ CREATE TABLE IF NOT EXISTS areas (
   icon TEXT,
   orderNum INTEGER NOT NULL,
   deletedAt TEXT,
+  deletedAtBeforeProjectArchive TEXT,
+  projectArchivedAt TEXT,
   rev INTEGER,
   revBy TEXT,
   createdAt TEXT,
@@ -318,7 +328,9 @@ CREATE TABLE IF NOT EXISTS sections (
   revBy TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL,
-  deletedAt TEXT
+  deletedAt TEXT,
+  deletedAtBeforeProjectArchive TEXT,
+  projectArchivedAt TEXT
 );
 
 CREATE TABLE IF NOT EXISTS people (
@@ -568,9 +580,8 @@ unsafe extern "C" {
         range_end: *const c_char,
     ) -> *mut c_char;
     fn mindwtr_macos_writable_calendars_json() -> *mut c_char;
-    fn mindwtr_macos_ensure_mindwtr_calendar_json(
-        stored_calendar_id: *const c_char,
-    ) -> *mut c_char;
+    fn mindwtr_macos_ensure_mindwtr_calendar_json(stored_calendar_id: *const c_char)
+        -> *mut c_char;
     fn mindwtr_macos_create_calendar_event_json(event_json: *const c_char) -> *mut c_char;
     fn mindwtr_macos_update_calendar_event_json(
         event_id: *const c_char,

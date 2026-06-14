@@ -94,8 +94,22 @@ pub(crate) fn open_sqlite(app: &tauri::AppHandle) -> Result<Connection, String> 
         .map_err(|e| e.to_string())?;
     ensure_column(&conn, "tasks", "energyLevel", "TEXT")?;
     ensure_column(&conn, "tasks", "assignedTo", "TEXT")?;
+    ensure_column(&conn, "tasks", "textDirection", "TEXT")?;
     ensure_column(&conn, "tasks", "showFutureRecurrence", "INTEGER")?;
     ensure_column(&conn, "tasks", "suppressMindwtrReminders", "INTEGER")?;
+    ensure_column(&conn, "tasks", "statusBeforeProjectArchive", "TEXT")?;
+    ensure_column(&conn, "tasks", "completedAtBeforeProjectArchive", "TEXT")?;
+    ensure_column(
+        &conn,
+        "tasks",
+        "isFocusedTodayBeforeProjectArchive",
+        "INTEGER",
+    )?;
+    ensure_column(&conn, "tasks", "projectArchivedAt", "TEXT")?;
+    ensure_column(&conn, "sections", "deletedAtBeforeProjectArchive", "TEXT")?;
+    ensure_column(&conn, "sections", "projectArchivedAt", "TEXT")?;
+    ensure_column(&conn, "areas", "deletedAtBeforeProjectArchive", "TEXT")?;
+    ensure_column(&conn, "areas", "projectArchivedAt", "TEXT")?;
     ensure_tasks_purged_at_column(&conn)?;
     ensure_tasks_order_column(&conn)?;
     ensure_column(&conn, "tasks", "boardOrder", "INTEGER")?;
@@ -477,7 +491,7 @@ fn ensure_fts_triggers(conn: &Connection) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     conn.execute(
-        "CREATE TRIGGER tasks_ai AFTER INSERT ON tasks BEGIN
+        "CREATE TRIGGER IF NOT EXISTS tasks_ai AFTER INSERT ON tasks BEGIN
           INSERT INTO tasks_fts (rowid, title, description, tags, contexts, checklist, location)
           VALUES (new.rowid, new.title, coalesce(new.description, ''), coalesce(new.tags, ''), coalesce(new.contexts, ''), coalesce((SELECT group_concat(json_extract(value, '$.title'), ' ') FROM json_each(new.checklist)), ''), coalesce(new.location, ''));
         END",
@@ -485,7 +499,7 @@ fn ensure_fts_triggers(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     conn.execute(
-        "CREATE TRIGGER tasks_ad AFTER DELETE ON tasks BEGIN
+        "CREATE TRIGGER IF NOT EXISTS tasks_ad AFTER DELETE ON tasks BEGIN
           INSERT INTO tasks_fts (tasks_fts, rowid, title, description, tags, contexts, checklist, location)
           VALUES ('delete', old.rowid, old.title, coalesce(old.description, ''), coalesce(old.tags, ''), coalesce(old.contexts, ''), coalesce((SELECT group_concat(json_extract(value, '$.title'), ' ') FROM json_each(old.checklist)), ''), coalesce(old.location, ''));
         END",
@@ -493,7 +507,7 @@ fn ensure_fts_triggers(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     conn.execute(
-        "CREATE TRIGGER tasks_au AFTER UPDATE ON tasks BEGIN
+        "CREATE TRIGGER IF NOT EXISTS tasks_au AFTER UPDATE ON tasks BEGIN
           INSERT INTO tasks_fts (tasks_fts, rowid, title, description, tags, contexts, checklist, location)
           VALUES ('delete', old.rowid, old.title, coalesce(old.description, ''), coalesce(old.tags, ''), coalesce(old.contexts, ''), coalesce((SELECT group_concat(json_extract(value, '$.title'), ' ') FROM json_each(old.checklist)), ''), coalesce(old.location, ''));
           INSERT INTO tasks_fts (rowid, title, description, tags, contexts, checklist, location)
@@ -503,7 +517,7 @@ fn ensure_fts_triggers(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     conn.execute(
-        "CREATE TRIGGER projects_ad AFTER DELETE ON projects BEGIN
+        "CREATE TRIGGER IF NOT EXISTS projects_ad AFTER DELETE ON projects BEGIN
           INSERT INTO projects_fts (projects_fts, rowid, title, supportNotes, tagIds, areaTitle)
           VALUES ('delete', old.rowid, old.title, coalesce(old.supportNotes, ''), coalesce(old.tagIds, ''), coalesce(old.areaTitle, ''));
         END",
@@ -511,7 +525,7 @@ fn ensure_fts_triggers(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     conn.execute(
-        "CREATE TRIGGER projects_au AFTER UPDATE ON projects BEGIN
+        "CREATE TRIGGER IF NOT EXISTS projects_au AFTER UPDATE ON projects BEGIN
           INSERT INTO projects_fts (projects_fts, rowid, title, supportNotes, tagIds, areaTitle)
           VALUES ('delete', old.rowid, old.title, coalesce(old.supportNotes, ''), coalesce(old.tagIds, ''), coalesce(old.areaTitle, ''));
           INSERT INTO projects_fts (rowid, title, supportNotes, tagIds, areaTitle)
@@ -621,7 +635,7 @@ fn upsert_task_row(conn: &Connection, task: &Value) -> Result<(), String> {
     let checklist_json = json_str(task.get("checklist"));
     let attachments_json = json_str(task.get("attachments"));
     conn.execute(
-        "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, reviewAt, completedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34)",
+        "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, textDirection, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, reviewAt, completedAt, statusBeforeProjectArchive, completedAtBeforeProjectArchive, isFocusedTodayBeforeProjectArchive, projectArchivedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
         params![
             task.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
             task.get("title").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -639,6 +653,7 @@ fn upsert_task_row(conn: &Connection, task: &Value) -> Result<(), String> {
             contexts_json,
             checklist_json,
             task.get("description").and_then(|v| v.as_str()),
+            task.get("textDirection").and_then(|v| v.as_str()),
             attachments_json,
             task.get("location").and_then(|v| v.as_str()),
             task.get("projectId").and_then(|v| v.as_str()),
@@ -653,6 +668,17 @@ fn upsert_task_row(conn: &Connection, task: &Value) -> Result<(), String> {
             task.get("suppressMindwtrReminders").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
             task.get("reviewAt").and_then(|v| v.as_str()),
             task.get("completedAt").and_then(|v| v.as_str()),
+            task
+                .get("statusBeforeProjectArchive")
+                .and_then(|v| v.as_str()),
+            task
+                .get("completedAtBeforeProjectArchive")
+                .and_then(|v| v.as_str()),
+            task
+                .get("isFocusedTodayBeforeProjectArchive")
+                .and_then(|v| v.as_bool())
+                .map(|v| v as i32),
+            task.get("projectArchivedAt").and_then(|v| v.as_str()),
             task.get("rev").and_then(|v| v.as_i64()),
             task.get("revBy").and_then(|v| v.as_str()),
             task.get("createdAt").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -749,9 +775,7 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
         map.insert("recurrence".to_string(), recurrence_val);
     }
     if let Ok(val) = row.get::<_, i64>("showFutureRecurrence") {
-        if val != 0 {
-            map.insert("showFutureRecurrence".to_string(), Value::Bool(true));
-        }
+        map.insert("showFutureRecurrence".to_string(), Value::Bool(val != 0));
     }
     if let Ok(val) = row.get::<_, Option<i64>>("pushCount") {
         if let Some(v) = val {
@@ -770,6 +794,11 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
     if let Ok(val) = row.get::<_, Option<String>>("description") {
         if let Some(v) = val {
             map.insert("description".to_string(), Value::String(v));
+        }
+    }
+    if let Ok(val) = row.get::<_, Option<String>>("textDirection") {
+        if let Some(v) = val {
+            map.insert("textDirection".to_string(), Value::String(v));
         }
     }
     let attachments_raw: Option<String> = row.get("attachments")?;
@@ -799,6 +828,7 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
     }
     if let Ok(val) = row.get::<_, Option<i64>>("orderNum") {
         if let Some(v) = val {
+            map.insert("order".to_string(), Value::Number(v.into()));
             map.insert("orderNum".to_string(), Value::Number(v.into()));
         }
     }
@@ -808,9 +838,7 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
         }
     }
     if let Ok(val) = row.get::<_, i64>("isFocusedToday") {
-        if val != 0 {
-            map.insert("isFocusedToday".to_string(), Value::Bool(true));
-        }
+        map.insert("isFocusedToday".to_string(), Value::Bool(val != 0));
     }
     if let Ok(val) = row.get::<_, Option<String>>("timeEstimate") {
         if let Some(v) = val {
@@ -818,9 +846,10 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
         }
     }
     if let Ok(val) = row.get::<_, i64>("suppressMindwtrReminders") {
-        if val != 0 {
-            map.insert("suppressMindwtrReminders".to_string(), Value::Bool(true));
-        }
+        map.insert(
+            "suppressMindwtrReminders".to_string(),
+            Value::Bool(val != 0),
+        );
     }
     if let Ok(val) = row.get::<_, Option<String>>("reviewAt") {
         if let Some(v) = val {
@@ -830,6 +859,32 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
     if let Ok(val) = row.get::<_, Option<String>>("completedAt") {
         if let Some(v) = val {
             map.insert("completedAt".to_string(), Value::String(v));
+        }
+    }
+    if let Ok(val) = row.get::<_, Option<String>>("statusBeforeProjectArchive") {
+        if let Some(v) = val {
+            map.insert("statusBeforeProjectArchive".to_string(), Value::String(v));
+        }
+    }
+    if let Ok(val) = row.get::<_, Option<String>>("completedAtBeforeProjectArchive") {
+        if let Some(v) = val {
+            map.insert(
+                "completedAtBeforeProjectArchive".to_string(),
+                Value::String(v),
+            );
+        }
+    }
+    if let Ok(val) = row.get::<_, Option<i64>>("isFocusedTodayBeforeProjectArchive") {
+        if let Some(v) = val {
+            map.insert(
+                "isFocusedTodayBeforeProjectArchive".to_string(),
+                Value::Bool(v != 0),
+            );
+        }
+    }
+    if let Ok(val) = row.get::<_, Option<String>>("projectArchivedAt") {
+        if let Some(v) = val {
+            map.insert("projectArchivedAt".to_string(), Value::String(v));
         }
     }
     if let Ok(val) = row.get::<_, Option<i64>>("rev") {
@@ -886,9 +941,7 @@ fn row_to_project_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Erro
     let tag_ids_raw: Option<String> = row.get("tagIds")?;
     map.insert("tagIds".to_string(), parse_json_array(tag_ids_raw));
     if let Ok(val) = row.get::<_, i64>("isSequential") {
-        if val != 0 {
-            map.insert("isSequential".to_string(), Value::Bool(true));
-        }
+        map.insert("isSequential".to_string(), Value::Bool(val != 0));
     }
     if let Ok(val) = row.get::<_, Option<String>>("sequentialScope") {
         if let Some(v) = val {
@@ -896,9 +949,7 @@ fn row_to_project_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Erro
         }
     }
     if let Ok(val) = row.get::<_, i64>("isFocused") {
-        if val != 0 {
-            map.insert("isFocused".to_string(), Value::Bool(true));
-        }
+        map.insert("isFocused".to_string(), Value::Bool(val != 0));
     }
     if let Ok(val) = row.get::<_, Option<String>>("supportNotes") {
         if let Some(v) = val {
@@ -978,9 +1029,7 @@ fn row_to_section_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Erro
         }
     }
     if let Ok(val) = row.get::<_, i64>("isCollapsed") {
-        if val != 0 {
-            map.insert("isCollapsed".to_string(), Value::Bool(true));
-        }
+        map.insert("isCollapsed".to_string(), Value::Bool(val != 0));
     }
     if let Ok(val) = row.get::<_, Option<i64>>("rev") {
         if let Some(v) = val {
@@ -1003,6 +1052,19 @@ fn row_to_section_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Erro
     if let Ok(val) = row.get::<_, Option<String>>("deletedAt") {
         if let Some(v) = val {
             map.insert("deletedAt".to_string(), Value::String(v));
+        }
+    }
+    if let Ok(val) = row.get::<_, Option<String>>("deletedAtBeforeProjectArchive") {
+        if let Some(v) = val {
+            map.insert(
+                "deletedAtBeforeProjectArchive".to_string(),
+                Value::String(v),
+            );
+        }
+    }
+    if let Ok(val) = row.get::<_, Option<String>>("projectArchivedAt") {
+        if let Some(v) = val {
+            map.insert("projectArchivedAt".to_string(), Value::String(v));
         }
     }
     Ok(Value::Object(map))
@@ -1078,7 +1140,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
         let checklist_json = json_str(task.get("checklist"));
         let attachments_json = json_str(task.get("attachments"));
         tx.execute(
-            "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, reviewAt, completedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34)",
+            "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, textDirection, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, reviewAt, completedAt, statusBeforeProjectArchive, completedAtBeforeProjectArchive, isFocusedTodayBeforeProjectArchive, projectArchivedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
             params![
                 task.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
                 task.get("title").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -1096,6 +1158,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 contexts_json,
                 checklist_json,
                 task.get("description").and_then(|v| v.as_str()),
+                task.get("textDirection").and_then(|v| v.as_str()),
                 attachments_json,
                 task.get("location").and_then(|v| v.as_str()),
                 task.get("projectId").and_then(|v| v.as_str()),
@@ -1110,6 +1173,17 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 task.get("suppressMindwtrReminders").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
                 task.get("reviewAt").and_then(|v| v.as_str()),
                 task.get("completedAt").and_then(|v| v.as_str()),
+                task
+                    .get("statusBeforeProjectArchive")
+                    .and_then(|v| v.as_str()),
+                task
+                    .get("completedAtBeforeProjectArchive")
+                    .and_then(|v| v.as_str()),
+                task
+                    .get("isFocusedTodayBeforeProjectArchive")
+                    .and_then(|v| v.as_bool())
+                    .map(|v| v as i32),
+                task.get("projectArchivedAt").and_then(|v| v.as_str()),
                 task.get("rev").and_then(|v| v.as_i64()),
                 task.get("revBy").and_then(|v| v.as_str()),
                 task.get("createdAt").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -1164,7 +1238,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
         .unwrap_or_default();
     for area in areas {
         tx.execute(
-            "INSERT OR REPLACE INTO areas (id, name, color, icon, orderNum, deletedAt, rev, revBy, createdAt, updatedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT OR REPLACE INTO areas (id, name, color, icon, orderNum, deletedAt, deletedAtBeforeProjectArchive, projectArchivedAt, rev, revBy, createdAt, updatedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 area.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
                 area.get("name").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -1172,6 +1246,9 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 area.get("icon").and_then(|v| v.as_str()),
                 area.get("order").and_then(|v| v.as_i64()).unwrap_or(0),
                 area.get("deletedAt").and_then(|v| v.as_str()),
+                area.get("deletedAtBeforeProjectArchive")
+                    .and_then(|v| v.as_str()),
+                area.get("projectArchivedAt").and_then(|v| v.as_str()),
                 area.get("rev").and_then(|v| v.as_i64()),
                 area.get("revBy").and_then(|v| v.as_str()),
                 area.get("createdAt").and_then(|v| v.as_str()),
@@ -1188,7 +1265,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
         .unwrap_or_default();
     for section in sections {
         tx.execute(
-            "INSERT OR REPLACE INTO sections (id, projectId, title, description, orderNum, isCollapsed, rev, revBy, createdAt, updatedAt, deletedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT OR REPLACE INTO sections (id, projectId, title, description, orderNum, isCollapsed, rev, revBy, createdAt, updatedAt, deletedAt, deletedAtBeforeProjectArchive, projectArchivedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             params![
                 section.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
                 section.get("projectId").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -1201,6 +1278,10 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 section.get("createdAt").and_then(|v| v.as_str()).unwrap_or_default(),
                 section.get("updatedAt").and_then(|v| v.as_str()).unwrap_or_default(),
                 section.get("deletedAt").and_then(|v| v.as_str()),
+                section
+                    .get("deletedAtBeforeProjectArchive")
+                    .and_then(|v| v.as_str()),
+                section.get("projectArchivedAt").and_then(|v| v.as_str()),
             ],
         )
         .map_err(|e| e.to_string())?;
@@ -1302,6 +1383,19 @@ pub(crate) fn read_sqlite_data(conn: &Connection) -> Result<Value, String> {
             if let Ok(val) = row.get::<_, Option<String>>("deletedAt") {
                 if let Some(v) = val {
                     map.insert("deletedAt".to_string(), Value::String(v));
+                }
+            }
+            if let Ok(val) = row.get::<_, Option<String>>("deletedAtBeforeProjectArchive") {
+                if let Some(v) = val {
+                    map.insert(
+                        "deletedAtBeforeProjectArchive".to_string(),
+                        Value::String(v),
+                    );
+                }
+            }
+            if let Ok(val) = row.get::<_, Option<String>>("projectArchivedAt") {
+                if let Some(v) = val {
+                    map.insert("projectArchivedAt".to_string(), Value::String(v));
                 }
             }
             if let Ok(val) = row.get::<_, Option<i64>>("rev") {
@@ -2121,6 +2215,225 @@ mod tests {
         assert!(index_names
             .iter()
             .any(|name| name == "idx_tasks_assignedTo"));
+    }
+
+    #[test]
+    fn sqlite_task_upsert_preserves_sync_metadata_fields() {
+        let conn = Connection::open_in_memory().expect("should open in-memory db");
+        conn.execute_batch(SQLITE_SCHEMA)
+            .expect("should create schema");
+        let task = serde_json::json!({
+            "id": "task-upsert-1",
+            "title": "Archived upsert task",
+            "status": "archived",
+            "description": "body",
+            "textDirection": "rtl",
+            "order": 7,
+            "isFocusedToday": false,
+            "suppressMindwtrReminders": false,
+            "statusBeforeProjectArchive": "next",
+            "completedAtBeforeProjectArchive": "2026-05-20T00:00:00.000Z",
+            "isFocusedTodayBeforeProjectArchive": true,
+            "projectArchivedAt": "2026-05-21T00:00:00.000Z",
+            "createdAt": "2026-05-01T00:00:00.000Z",
+            "updatedAt": "2026-05-22T00:00:00.000Z"
+        });
+
+        upsert_task_row(&conn, &task).expect("should upsert task");
+        let round_tripped = read_sqlite_data(&conn).expect("should read sqlite data");
+        let task = round_tripped
+            .get("tasks")
+            .and_then(|value| value.as_array())
+            .and_then(|tasks| tasks.first())
+            .expect("should read task");
+
+        assert_eq!(
+            task.get("textDirection"),
+            Some(&Value::String("rtl".into()))
+        );
+        assert_eq!(task.get("order"), Some(&Value::Number(7.into())));
+        assert_eq!(task.get("orderNum"), Some(&Value::Number(7.into())));
+        assert_eq!(task.get("isFocusedToday"), Some(&Value::Bool(false)));
+        assert_eq!(
+            task.get("suppressMindwtrReminders"),
+            Some(&Value::Bool(false))
+        );
+        assert_eq!(
+            task.get("statusBeforeProjectArchive"),
+            Some(&Value::String("next".into()))
+        );
+        assert_eq!(
+            task.get("completedAtBeforeProjectArchive"),
+            Some(&Value::String("2026-05-20T00:00:00.000Z".into()))
+        );
+        assert_eq!(
+            task.get("isFocusedTodayBeforeProjectArchive"),
+            Some(&Value::Bool(true))
+        );
+        assert_eq!(
+            task.get("projectArchivedAt"),
+            Some(&Value::String("2026-05-21T00:00:00.000Z".into()))
+        );
+    }
+
+    #[test]
+    fn sqlite_round_trip_preserves_sync_metadata_fields() {
+        let mut conn = Connection::open_in_memory().expect("should open in-memory db");
+        conn.execute_batch(SQLITE_SCHEMA)
+            .expect("should create schema");
+        ensure_column(&conn, "tasks", "textDirection", "TEXT").expect("should add textDirection");
+        ensure_column(&conn, "tasks", "statusBeforeProjectArchive", "TEXT")
+            .expect("should add archived status");
+        ensure_column(&conn, "tasks", "completedAtBeforeProjectArchive", "TEXT")
+            .expect("should add archived completedAt");
+        ensure_column(
+            &conn,
+            "tasks",
+            "isFocusedTodayBeforeProjectArchive",
+            "INTEGER",
+        )
+        .expect("should add archived focus flag");
+        ensure_column(&conn, "tasks", "projectArchivedAt", "TEXT")
+            .expect("should add project archived time");
+        ensure_column(&conn, "sections", "deletedAtBeforeProjectArchive", "TEXT")
+            .expect("should add section archived delete time");
+        ensure_column(&conn, "sections", "projectArchivedAt", "TEXT")
+            .expect("should add section project archived time");
+        ensure_column(&conn, "areas", "deletedAtBeforeProjectArchive", "TEXT")
+            .expect("should add area archived delete time");
+        ensure_column(&conn, "areas", "projectArchivedAt", "TEXT")
+            .expect("should add area project archived time");
+
+        let source = serde_json::json!({
+            "tasks": [{
+                "id": "task-1",
+                "title": "Archived task",
+                "status": "archived",
+                "tags": [],
+                "contexts": [],
+                "description": "body",
+                "textDirection": "rtl",
+                "order": 11,
+                "showFutureRecurrence": false,
+                "isFocusedToday": false,
+                "suppressMindwtrReminders": false,
+                "statusBeforeProjectArchive": "waiting",
+                "completedAtBeforeProjectArchive": "2026-05-20T00:00:00.000Z",
+                "isFocusedTodayBeforeProjectArchive": false,
+                "projectArchivedAt": "2026-05-21T00:00:00.000Z",
+                "createdAt": "2026-05-01T00:00:00.000Z",
+                "updatedAt": "2026-05-22T00:00:00.000Z"
+            }],
+            "projects": [{
+                "id": "project-1",
+                "title": "Project",
+                "status": "active",
+                "color": "#6B7280",
+                "order": 1,
+                "tagIds": [],
+                "isSequential": false,
+                "isFocused": false,
+                "createdAt": "2026-05-01T00:00:00.000Z",
+                "updatedAt": "2026-05-22T00:00:00.000Z"
+            }],
+            "sections": [{
+                "id": "section-1",
+                "projectId": "project-1",
+                "title": "Archived section",
+                "order": 1,
+                "isCollapsed": false,
+                "createdAt": "2026-05-01T00:00:00.000Z",
+                "updatedAt": "2026-05-22T00:00:00.000Z",
+                "deletedAt": "2026-05-23T00:00:00.000Z",
+                "deletedAtBeforeProjectArchive": "2026-05-20T00:00:00.000Z",
+                "projectArchivedAt": "2026-05-21T00:00:00.000Z"
+            }],
+            "areas": [{
+                "id": "area-1",
+                "name": "Archived area",
+                "order": 1,
+                "createdAt": "2026-05-01T00:00:00.000Z",
+                "updatedAt": "2026-05-22T00:00:00.000Z",
+                "deletedAt": "2026-05-23T00:00:00.000Z",
+                "deletedAtBeforeProjectArchive": "2026-05-20T00:00:00.000Z",
+                "projectArchivedAt": "2026-05-21T00:00:00.000Z"
+            }],
+            "people": [],
+            "settings": {}
+        });
+
+        migrate_json_to_sqlite(&mut conn, &source).expect("should migrate to sqlite");
+        let round_tripped = read_sqlite_data(&conn).expect("should read sqlite data");
+        let task = round_tripped
+            .get("tasks")
+            .and_then(|value| value.as_array())
+            .and_then(|tasks| tasks.first())
+            .expect("should read task");
+        assert_eq!(
+            task.get("textDirection"),
+            Some(&Value::String("rtl".into()))
+        );
+        assert_eq!(task.get("order"), Some(&Value::Number(11.into())));
+        assert_eq!(task.get("orderNum"), Some(&Value::Number(11.into())));
+        assert_eq!(task.get("showFutureRecurrence"), Some(&Value::Bool(false)));
+        assert_eq!(task.get("isFocusedToday"), Some(&Value::Bool(false)));
+        assert_eq!(
+            task.get("suppressMindwtrReminders"),
+            Some(&Value::Bool(false))
+        );
+        assert_eq!(
+            task.get("statusBeforeProjectArchive"),
+            Some(&Value::String("waiting".into()))
+        );
+        assert_eq!(
+            task.get("completedAtBeforeProjectArchive"),
+            Some(&Value::String("2026-05-20T00:00:00.000Z".into()))
+        );
+        assert_eq!(
+            task.get("isFocusedTodayBeforeProjectArchive"),
+            Some(&Value::Bool(false))
+        );
+        assert_eq!(
+            task.get("projectArchivedAt"),
+            Some(&Value::String("2026-05-21T00:00:00.000Z".into()))
+        );
+
+        let project = round_tripped
+            .get("projects")
+            .and_then(|value| value.as_array())
+            .and_then(|projects| projects.first())
+            .expect("should read project");
+        assert_eq!(project.get("isSequential"), Some(&Value::Bool(false)));
+        assert_eq!(project.get("isFocused"), Some(&Value::Bool(false)));
+
+        let section = round_tripped
+            .get("sections")
+            .and_then(|value| value.as_array())
+            .and_then(|sections| sections.first())
+            .expect("should read section");
+        assert_eq!(section.get("isCollapsed"), Some(&Value::Bool(false)));
+        assert_eq!(
+            section.get("deletedAtBeforeProjectArchive"),
+            Some(&Value::String("2026-05-20T00:00:00.000Z".into()))
+        );
+        assert_eq!(
+            section.get("projectArchivedAt"),
+            Some(&Value::String("2026-05-21T00:00:00.000Z".into()))
+        );
+
+        let area = round_tripped
+            .get("areas")
+            .and_then(|value| value.as_array())
+            .and_then(|areas| areas.first())
+            .expect("should read area");
+        assert_eq!(
+            area.get("deletedAtBeforeProjectArchive"),
+            Some(&Value::String("2026-05-20T00:00:00.000Z".into()))
+        );
+        assert_eq!(
+            area.get("projectArchivedAt"),
+            Some(&Value::String("2026-05-21T00:00:00.000Z".into()))
+        );
     }
 
     #[test]

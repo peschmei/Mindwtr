@@ -1,4 +1,5 @@
 import type { Person, Task } from './types';
+import { nextRevision } from './sync-revision';
 import { generateUUID } from './uuid';
 
 const getTaskTimestamp = (task: Pick<Task, 'createdAt' | 'updatedAt'>): number => {
@@ -90,6 +91,13 @@ export function normalizePeopleForLoad(
             peopleByName.set(key, merged);
             const index = normalizedPeople.findIndex((item) => item.id === existing.id);
             if (index >= 0) normalizedPeople[index] = merged;
+            normalizedPeople.push({
+                ...normalized,
+                deletedAt: nowIso,
+                updatedAt: nowIso,
+                rev: nextRevision(normalized.rev),
+                ...(deviceId ? { revBy: deviceId } : {}),
+            });
             continue;
         }
         peopleByName.set(key, normalized);

@@ -197,6 +197,56 @@ describe('createDesktopAutoSyncController', () => {
         expect(performSync).toHaveBeenCalledTimes(2);
     });
 
+    it('delays a queued auto follow-up when the in-flight sync enters failure cooldown', async () => {
+        const scheduler = createManualScheduler();
+        const logInfo = vi.fn();
+        let finishSync: (result: { success: boolean; error?: string }) => void = () => undefined;
+        const performSync = vi.fn(() => new Promise<{ success: boolean; error?: string }>((resolve) => {
+            finishSync = resolve;
+        }));
+        const controller = createDesktopAutoSyncController({
+            canSync: async () => true,
+            performSync,
+            flushPendingSave: async () => undefined,
+            reportError: vi.fn(),
+            isRuntimeActive: () => true,
+            now: scheduler.now,
+            setTimer: scheduler.setTimer,
+            clearTimer: scheduler.clearTimer,
+            minIntervalMs: 0,
+            autoFailureCooldownMs: 60_000,
+            periodicSyncIntervalMs: null,
+            logInfo,
+        });
+
+        controller.handleDataChange();
+        await scheduler.advanceBy(2_000);
+        await waitForAssertion(() => {
+            expect(performSync).toHaveBeenCalledTimes(1);
+        });
+
+        controller.handleBlur();
+        finishSync({ success: false, error: 'WebDAV error: 503 Service Unavailable' });
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(performSync).toHaveBeenCalledTimes(1);
+        await waitForAssertion(() => {
+            expect(logInfo).toHaveBeenCalledWith(
+                'Auto sync skipped during failure cooldown',
+                expect.objectContaining({ source: 'blur' })
+            );
+        });
+
+        await scheduler.advanceBy(59_999);
+        expect(performSync).toHaveBeenCalledTimes(1);
+
+        await scheduler.advanceBy(1);
+        await waitForAssertion(() => {
+            expect(performSync).toHaveBeenCalledTimes(2);
+        });
+    });
+
     it('pauses focus and blur syncs while edits are active without blocking save-driven sync', async () => {
         const scheduler = createManualScheduler(50_000);
         let pauseWindowSync = true;

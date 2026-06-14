@@ -27,6 +27,12 @@ type DesktopAutoSyncControllerOptions = {
     periodicSyncIntervalMs?: number | null;
 };
 
+type AutoSyncRequest = {
+    minIntervalMs?: number;
+    source: string;
+    bypassFailureCooldown: boolean;
+};
+
 export type DesktopAutoSyncController = {
     requestSync: (minIntervalMs?: number) => Promise<void>;
     handleFocus: () => void;
@@ -144,12 +150,13 @@ export const createDesktopAutoSyncController = (
         && (options.hasPendingLocalChanges?.() ?? true)
     );
 
-    const autoSyncOrchestrator = createSyncOrchestrator<number | undefined, void>({
-        runCycle: async (overrideMinIntervalMs) => {
+    const autoSyncOrchestrator = createSyncOrchestrator<AutoSyncRequest, void>({
+        runCycle: async (request) => {
             if (!options.isRuntimeActive()) return;
+            if (!request.bypassFailureCooldown && !shouldRunAutoSyncNow(request.source)) return;
 
-            const effectiveMinIntervalMs = typeof overrideMinIntervalMs === 'number'
-                ? overrideMinIntervalMs
+            const effectiveMinIntervalMs = typeof request.minIntervalMs === 'number'
+                ? request.minIntervalMs
                 : minIntervalMs;
             const nowMs = now();
             if (nowMs - lastAutoSyncAt < effectiveMinIntervalMs) {
@@ -195,13 +202,21 @@ export const createDesktopAutoSyncController = (
 
     const requestSync = async (overrideMinIntervalMs?: number): Promise<void> => {
         if (!options.isRuntimeActive()) return;
-        await autoSyncOrchestrator.run(overrideMinIntervalMs);
+        await autoSyncOrchestrator.run({
+            minIntervalMs: overrideMinIntervalMs,
+            source: 'manual',
+            bypassFailureCooldown: true,
+        });
     };
 
     const requestAutoSync = async (overrideMinIntervalMs: number | undefined, source: string): Promise<void> => {
         if (!options.isRuntimeActive()) return;
         if (!shouldRunAutoSyncNow(source)) return;
-        await requestSync(overrideMinIntervalMs);
+        await autoSyncOrchestrator.run({
+            minIntervalMs: overrideMinIntervalMs,
+            source,
+            bypassFailureCooldown: false,
+        });
     };
 
     schedulePeriodicSync();
