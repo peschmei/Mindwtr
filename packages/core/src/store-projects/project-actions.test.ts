@@ -106,4 +106,74 @@ describe('project actions', () => {
         expect(savedTask?.rev).toBe(2);
         expect(saved.tasks.find((task) => task.id === deletedTaskResult.id)?.deletedAt).toBe('2026-06-14T12:05:00.000Z');
     });
+
+    it('clears remote attachment metadata when duplicating a project', async () => {
+        const { addProject, addTask, duplicateProject } = useTaskStore.getState();
+        const project = await addProject('Launch', '#3b82f6', {
+            attachments: [{
+                id: 'project-attachment',
+                kind: 'file',
+                title: 'Project brief',
+                uri: 'file:///project-brief.pdf',
+                createdAt: BASE_NOW,
+                updatedAt: BASE_NOW,
+                cloudKey: 'attachments/project-brief.pdf',
+                fileHash: 'project-hash',
+                localStatus: 'available',
+            }],
+        });
+        expect(project).not.toBeNull();
+        if (!project) return;
+
+        const taskResult = await addTask('Project task', {
+            projectId: project.id,
+            status: 'next',
+            attachments: [{
+                id: 'task-attachment',
+                kind: 'file',
+                title: 'Task brief',
+                uri: 'file:///task-brief.pdf',
+                createdAt: BASE_NOW,
+                updatedAt: BASE_NOW,
+                cloudKey: 'attachments/task-brief.pdf',
+                fileHash: 'task-hash',
+                localStatus: 'available',
+            }],
+        });
+        expect(taskResult.success).toBe(true);
+        if (!taskResult.success) return;
+
+        const duplicatedProject = await duplicateProject(project.id);
+        expect(duplicatedProject).not.toBeNull();
+        if (!duplicatedProject) return;
+
+        const state = useTaskStore.getState();
+        const copiedProjectAttachment = state._allProjects
+            .find((item) => item.id === duplicatedProject.id)
+            ?.attachments?.[0];
+        expect(copiedProjectAttachment).toMatchObject({
+            title: 'Project brief',
+            uri: 'file:///project-brief.pdf',
+            createdAt: BASE_NOW,
+            updatedAt: BASE_NOW,
+        });
+        expect(copiedProjectAttachment?.id).not.toBe('project-attachment');
+        expect(copiedProjectAttachment?.cloudKey).toBeUndefined();
+        expect(copiedProjectAttachment?.fileHash).toBeUndefined();
+        expect(copiedProjectAttachment?.localStatus).toBeUndefined();
+
+        const copiedTaskAttachment = state._allTasks
+            .find((task) => task.projectId === duplicatedProject.id)
+            ?.attachments?.[0];
+        expect(copiedTaskAttachment).toMatchObject({
+            title: 'Task brief',
+            uri: 'file:///task-brief.pdf',
+            createdAt: BASE_NOW,
+            updatedAt: BASE_NOW,
+        });
+        expect(copiedTaskAttachment?.id).not.toBe('task-attachment');
+        expect(copiedTaskAttachment?.cloudKey).toBeUndefined();
+        expect(copiedTaskAttachment?.fileHash).toBeUndefined();
+        expect(copiedTaskAttachment?.localStatus).toBeUndefined();
+    });
 });

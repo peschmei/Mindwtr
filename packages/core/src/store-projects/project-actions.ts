@@ -16,6 +16,17 @@ import { generateUUID as uuidv4 } from '../uuid';
 import type { Project, ProjectCoreActions, ProjectActionContext, Task, TaskStatus } from './shared';
 import { actionFail, actionOk } from './shared';
 
+const duplicateProjectAttachmentCopy = (attachment: NonNullable<Project['attachments']>[number], now: string) => ({
+    ...attachment,
+    id: uuidv4(),
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: undefined,
+    cloudKey: undefined,
+    fileHash: undefined,
+    localStatus: undefined,
+});
+
 export const createProjectCoreActions = ({
     set,
     get,
@@ -408,13 +419,7 @@ export const createProjectCoreActions = ({
 
             const projectAttachments = (sourceProject.attachments || [])
                 .filter((attachment) => !attachment.deletedAt)
-                .map((attachment) => ({
-                    ...attachment,
-                    id: uuidv4(),
-                    createdAt: now,
-                    updatedAt: now,
-                    deletedAt: undefined,
-                }));
+                .map((attachment) => duplicateProjectAttachmentCopy(attachment, now));
 
             const newProject: Project = {
                 ...sourceProject,
@@ -461,13 +466,7 @@ export const createProjectCoreActions = ({
                 }));
                 const attachments = (task.attachments || [])
                     .filter((attachment) => !attachment.deletedAt)
-                    .map((attachment) => ({
-                        ...attachment,
-                        id: uuidv4(),
-                        createdAt: now,
-                        updatedAt: now,
-                        deletedAt: undefined,
-                    }));
+                    .map((attachment) => duplicateProjectAttachmentCopy(attachment, now));
                 const nextSectionId = task.sectionId ? sectionIdMap.get(task.sectionId) : undefined;
                 const newTask: Task = {
                     ...task,
