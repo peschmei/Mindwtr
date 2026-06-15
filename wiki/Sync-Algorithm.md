@@ -28,7 +28,7 @@ Revisit ADR 0008 only if snapshot files regularly exceed 5 MB, sync round-trips 
 3. If both exist, merge uses revision-aware LWW:
    - When revision metadata exists, compare `rev` first (higher wins). `rev` is a per-entity edit counter, not a vector clock, so several offline edits on one device can beat one newer edit on another device.
    - If revisions tie, compare `updatedAt` (newer wins).
-   - If timestamps tie, compare `revBy` lexicographically when both sides have different device IDs, then apply the deterministic tie-break by normalized content signature.
+   - If timestamps tie, compare `revBy` lexicographically when both sides have different device IDs, then apply the deterministic tie-break by normalized content signature. The `revBy` step is not about device priority; it makes same-revision, same-timestamp conflicts converge to the same winner on every peer before the content signature fallback runs.
    - Legacy entities without revision metadata treat `updatedAt` values within the 5-minute clock-skew threshold as an ambiguous tie and use the deterministic signature winner. Outside that window, newer `updatedAt` wins.
 4. Soft-deletes use operation time:
    - Operation time = `max(updatedAt, deletedAt)` for tombstones.
