@@ -85,6 +85,7 @@ export function GtdSettingsScreen({
         : defaultTimeEstimatePresets) as TimeEstimate[];
     const defaultCaptureMethod = settings.gtd?.defaultCaptureMethod ?? 'text';
     const saveAudioAttachments = settings.gtd?.saveAudioAttachments !== false;
+    const quickAddAutoClean = settings.quickAddAutoClean === true;
     const inboxProcessing = settings.gtd?.inboxProcessing ?? {};
     const inboxTwoMinuteEnabled = inboxProcessing.twoMinuteEnabled !== false;
     const inboxProjectFirst = inboxProcessing.projectFirst === true;
@@ -350,6 +351,8 @@ export function GtdSettingsScreen({
         'Applies only when creating new projects.'
     );
     const captureSettingsTitle = tFallback(t, 'settings.captureSettings', tr('settings.gtdMobile.captureDefaults'));
+    const quickAddAutoCleanLabel = tFallback(t, 'settings.quickAddAutoClean', 'Clean up quick add text');
+    const quickAddAutoCleanDesc = tFallback(t, 'settings.quickAddAutoCleanDesc', 'Remove recognized dates, tags, and contexts from the title after applying them. Off keeps your text exactly as typed.');
     const reviewSettingsTitle = tFallback(t, 'settings.reviewSettings', tr('settings.gtdMobile.reviewSteps'));
     const inboxSettingsTitle = tFallback(t, 'settings.inboxProcessing', tr('settings.inboxProcessing'));
     const projectFlowModeOptions: Array<{ id: DefaultProjectFlowMode; label: string }> = [
@@ -731,6 +734,19 @@ export function GtdSettingsScreen({
                                 />
                             </View>
                         ) : null}
+                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
+                            <View style={styles.settingInfo}>
+                                <Text style={[styles.settingLabel, { color: tc.text }]}>{quickAddAutoCleanLabel}</Text>
+                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{quickAddAutoCleanDesc}</Text>
+                            </View>
+                            <Switch
+                                value={quickAddAutoClean}
+                                onValueChange={(value) => {
+                                    updateSettings({ quickAddAutoClean: value }).catch(logSettingsError);
+                                }}
+                                trackColor={{ false: '#767577', true: '#3B82F6' }}
+                            />
+                        </View>
                     </View>
                 </ScrollView>
             </SafeAreaView>
