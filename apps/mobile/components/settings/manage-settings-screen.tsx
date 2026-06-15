@@ -184,10 +184,15 @@ export function ManageSettingsScreen() {
     const unassignedAreaColorLabel = t('settings.unassignedAreaColor');
     const unassignedAreaDescription = t('settings.unassignedAreaColorDesc');
     const unassignedAreaColor = settings.appearance?.unassignedAreaColor || DEFAULT_AREA_COLOR;
-    const confirmDelete = (label: string, onConfirm: () => void) => {
+    const confirmDelete = (label: string, onConfirm: () => void, messageKey = 'settings.deleteNamed') => {
+        const fallback = messageKey === 'areas.deleteConfirm'
+            ? 'Delete this area? Projects and tasks in this area will be kept and moved to unassigned.'
+            : messageKey === 'people.deleteConfirm'
+                ? 'Delete this person? Tasks assigned to them will be kept and moved to unassigned.'
+                : 'Delete \"{{name}}\"?';
         Alert.alert(
             t('common.delete'),
-            formatI18nTemplate(t('settings.deleteNamed'), { name: label }),
+            formatI18nTemplate(resolveText(messageKey, fallback), { name: label }),
             [
                 { text: t('common.cancel'), style: 'cancel' },
                 { text: t('common.delete'), style: 'destructive', onPress: onConfirm },
@@ -406,7 +411,7 @@ export function ManageSettingsScreen() {
                     accessibilityLabel={t('common.delete')}
                     accessibilityRole="button"
                     hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                    onPress={() => confirmDelete(person.name, () => void deletePerson(person.id))}
+                    onPress={() => confirmDelete(person.name, () => void deletePerson(person.id), 'people.deleteConfirm')}
                     style={{ padding: 8 }}
                 >
                     <Ionicons name="trash-outline" size={18} color="#ef4444" />
@@ -447,7 +452,7 @@ export function ManageSettingsScreen() {
                 <Ionicons name="pencil-outline" size={18} color={tc.secondaryText} />
             </TouchableOpacity>
             <TouchableOpacity
-                onPress={() => confirmDelete(area.name, () => void deleteArea(area.id))}
+                onPress={() => confirmDelete(area.name, () => void deleteArea(area.id), 'areas.deleteConfirm')}
                 style={{ padding: 8 }}
             >
                 <Ionicons name="trash-outline" size={18} color="#ef4444" />

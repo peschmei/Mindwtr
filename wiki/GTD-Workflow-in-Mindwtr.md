@@ -136,7 +136,7 @@ Add contexts to filter by where you can do tasks:
 
 ### People
 
-Use People for delegated or person-centered work. A task's assignee powers Waiting For lists, suggestions, and `assigned:` search; the People manager lets you keep reusable names, notes, and reference links without turning every person into a context tag.
+Use People for delegated or person-centered work. A task's assignee powers Waiting For lists, suggestions, and `assigned:` search; the People manager lets you keep reusable names, notes, and reference links without turning every person into a context tag. Deleting a person keeps their tasks and clears the assignee instead of deleting the work.
 
 ### Projects
 
@@ -149,6 +149,8 @@ Create projects for multi-step outcomes:
 5. Toggle Sequential/Parallel mode:
    - **Sequential:** Only first task shows in Focus view
    - **Parallel:** All tasks show in Focus view
+
+Deleting a project or area keeps its tasks. Mindwtr detaches that work to unassigned instead of cascading deletion.
 
 #### Project Sections
 

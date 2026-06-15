@@ -1119,7 +1119,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
     }
 
     if (page === "manage") {
-      return <SettingsManagePage t={t} translate={translate} />;
+      return <SettingsManagePage t={t} translate={translate} requestConfirmation={requestConfirmation} />;
     }
 
     if (page === "ai") {

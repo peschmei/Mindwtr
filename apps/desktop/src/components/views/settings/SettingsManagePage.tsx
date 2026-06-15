@@ -3,10 +3,11 @@ import { DndContext, type DragEndEvent, closestCenter, useSensor, useSensors, Po
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, ChevronDown, ChevronRight, Pencil, Check, X, ExternalLink } from 'lucide-react';
-import { DEFAULT_AREA_COLOR, getPersonNameKey, translateWithFallback, useTaskStore, type Area, type Person } from '@mindwtr/core';
+import { DEFAULT_AREA_COLOR, formatI18nTemplate, getPersonNameKey, translateWithFallback, useTaskStore, type Area, type Person } from '@mindwtr/core';
 import { AreaColorPicker } from '../projects/AreaColorPicker';
 import { reportError } from '../../../lib/report-error';
 import { isTauriRuntime } from '../../../lib/runtime';
+import type { ConfirmationRequestOptions } from '../../../hooks/useConfirmDialog';
 
 type Labels = {
     manage: string;
@@ -15,6 +16,7 @@ type Labels = {
 type SettingsManagePageProps = {
     t: Labels;
     translate: (key: string) => string;
+    requestConfirmation: (options: ConfirmationRequestOptions) => Promise<boolean>;
 };
 
 const SAFE_PERSON_REFERENCE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'obsidian:']);
@@ -349,7 +351,7 @@ function ManageSection({
 // Main page
 // ---------------------------------------------------------------------------
 
-export function SettingsManagePage({ t: _t, translate }: SettingsManagePageProps) {
+export function SettingsManagePage({ t: _t, translate, requestConfirmation }: SettingsManagePageProps) {
     const areas = useTaskStore((s) => s.areas);
     const people = useTaskStore((s) => s.people);
     const tasks = useTaskStore((s) => s.tasks);
@@ -434,6 +436,15 @@ export function SettingsManagePage({ t: _t, translate }: SettingsManagePageProps
     const resolveText = (key: string, fallback: string) => {
         return translateWithFallback(translate, key, fallback);
     };
+    const confirmDelete = useCallback(async (messageKey: string, fallback: string, onConfirm: () => void) => {
+        const confirmed = await requestConfirmation({
+            title: resolveText('common.delete', 'Delete'),
+            description: formatI18nTemplate(resolveText(messageKey, fallback), {}),
+            confirmLabel: resolveText('common.delete', 'Delete'),
+            cancelLabel: resolveText('common.cancel', 'Cancel'),
+        });
+        if (confirmed) onConfirm();
+    }, [requestConfirmation, resolveText]);
 
     return (
         <div className="space-y-6">
@@ -464,7 +475,7 @@ export function SettingsManagePage({ t: _t, translate }: SettingsManagePageProps
                                     <SortableAreaRow
                                         key={area.id}
                                         area={area}
-                                        onDelete={(id) => void deleteArea(id)}
+                                        onDelete={(id) => void confirmDelete('areas.deleteConfirm', 'Delete this area? Projects and tasks in this area will be kept and moved to unassigned.', () => void deleteArea(id))}
                                         onUpdateName={(id, name) => void updateArea(id, { name })}
                                         onUpdateColor={(id, color) => void updateArea(id, { color })}
                                         translate={translate}
@@ -526,7 +537,7 @@ export function SettingsManagePage({ t: _t, translate }: SettingsManagePageProps
                         taskCount={assignedTaskCountByPerson.get(getPersonNameKey(person.name)) ?? 0}
                         onRename={(id, name) => void renamePerson(id, name, { updateTasks: true })}
                         onUpdate={(id, updates) => void updatePerson(id, updates)}
-                        onDelete={(id) => void deletePerson(id)}
+                        onDelete={(id) => void confirmDelete('people.deleteConfirm', 'Delete this person? Tasks assigned to them will be kept and moved to unassigned.', () => void deletePerson(id))}
                         resolveText={resolveText}
                         translate={translate}
                     />
