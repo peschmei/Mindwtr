@@ -818,7 +818,9 @@ describe('InboxProcessor', () => {
     });
 
     it('parses quick-add date commands from the guided refine title before saving', async () => {
-        const { getByRole, getByText, getByDisplayValue, updateTask } = renderInboxProcessor();
+        const { getByRole, getByText, getByDisplayValue, updateTask } = renderInboxProcessor({
+            quickAddAutoClean: true,
+        });
 
         fireEvent.click(getByRole('button', { name: /process\.btn/i }));
         fireEvent.change(getByDisplayValue('Plan launch'), {

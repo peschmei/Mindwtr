@@ -281,6 +281,7 @@ describe('ReviewView', () => {
             projects: [project],
             _allProjects: [project],
             settings: {
+                quickAddAutoClean: true,
                 gtd: {
                     weeklyReview: {
                         includeContextStep: false,

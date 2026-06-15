@@ -449,6 +449,7 @@ describe('ListView', () => {
 
       useTaskStore.setState({
         addTask,
+        settings: { quickAddAutoClean: true },
       });
 
       const { container, getByRole } = renderListView('inbox', 'Inbox');

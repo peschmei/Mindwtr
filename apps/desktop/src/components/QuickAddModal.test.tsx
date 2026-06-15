@@ -205,6 +205,10 @@ describe('QuickAddModal', () => {
                 ...state,
                 addProject,
                 addTask,
+                settings: {
+                    ...state.settings,
+                    quickAddAutoClean: true,
+                },
                 _allAreas: [{
                     id: 'area-work',
                     name: 'Work',
