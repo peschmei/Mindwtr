@@ -656,6 +656,22 @@ export function splitCompletedTasks<T extends Pick<Task, 'status'>>(tasks: T[]):
     return { activeTasks, completedTasks };
 }
 
+function getCompletionListTime(task: Pick<Task, 'completedAt' | 'updatedAt' | 'createdAt'>): number {
+    const completedAt = safeParseDate(task.completedAt)?.getTime();
+    if (Number.isFinite(completedAt)) return completedAt as number;
+    const updatedAt = safeParseDate(task.updatedAt)?.getTime();
+    if (Number.isFinite(updatedAt)) return updatedAt as number;
+    return safeParseDate(task.createdAt)?.getTime() ?? 0;
+}
+
+export function sortDoneTasksForListView<T extends Pick<Task, 'completedAt' | 'updatedAt' | 'createdAt' | 'title'>>(tasks: T[]): T[] {
+    return [...tasks].sort((a, b) => {
+        const completionDiff = getCompletionListTime(b) - getCompletionListTime(a);
+        if (completionDiff !== 0) return completionDiff;
+        return a.title.localeCompare(b.title);
+    });
+}
+
 export function groupCompletedTasksLast<T extends Pick<Task, 'status'>>(tasks: T[]): T[] {
     const { activeTasks, completedTasks } = splitCompletedTasks(tasks);
     return [...activeTasks, ...completedTasks];

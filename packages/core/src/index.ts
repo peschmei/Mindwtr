@@ -339,6 +339,7 @@ export {
     isTaskFutureStart,
     rescheduleTask,
     shouldShowTaskForStart,
+    sortDoneTasksForListView,
     sortFocusNextActions,
     sortTasks,
     sortTasksBy,

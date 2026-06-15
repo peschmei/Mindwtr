@@ -18,12 +18,51 @@ import {
     groupCompletedTasksLast,
     isTaskFutureStart,
     shouldShowTaskForStart,
+    sortDoneTasksForListView,
     sortTasksByBoardOrder,
     splitCompletedTasks,
 } from './task-utils';
 import { Project, Task } from './types';
 
 describe('task-utils', () => {
+    describe('sortDoneTasksForListView', () => {
+        const createDoneTask = (id: string, title: string, completedAt?: string): Task => ({
+            id,
+            title,
+            status: 'done',
+            tags: [],
+            contexts: [],
+            completedAt,
+            createdAt: '2026-02-01T00:00:00.000Z',
+            updatedAt: completedAt ?? '2026-02-01T00:00:00.000Z',
+        });
+
+        it('sorts done tasks by most recent completion first', () => {
+            const sorted = sortDoneTasksForListView([
+                createDoneTask('old', 'Old', '2026-02-20T10:00:00.000Z'),
+                createDoneTask('newest', 'Newest', '2026-02-22T10:00:00.000Z'),
+                createDoneTask('middle', 'Middle', '2026-02-21T10:00:00.000Z'),
+            ]);
+
+            expect(sorted.map((task) => task.id)).toEqual(['newest', 'middle', 'old']);
+        });
+
+        it('falls back to updatedAt when completedAt is missing', () => {
+            const sorted = sortDoneTasksForListView([
+                {
+                    ...createDoneTask('alpha', 'Alpha'),
+                    updatedAt: '2026-02-20T10:00:00.000Z',
+                },
+                {
+                    ...createDoneTask('beta', 'Beta'),
+                    updatedAt: '2026-02-22T10:00:00.000Z',
+                },
+            ]);
+
+            expect(sorted.map((task) => task.id)).toEqual(['beta', 'alpha']);
+        });
+    });
+
     describe('buildTasksByProjectId', () => {
         it('profiles large project task lookup without repeated full-store scans', () => {
             const projectCount = 250;

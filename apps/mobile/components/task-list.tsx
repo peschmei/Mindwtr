@@ -12,6 +12,7 @@ import {
   TimeEstimate,
   sortTasksBy,
   splitCompletedTasks,
+  sortDoneTasksForListView,
   parseQuickAdd,
   getQuickAddProjectInitialProps,
   getUsedTaskTokens,
@@ -638,7 +639,11 @@ function TaskListComponent({
     if (!shouldGroupCompletedTasks) {
       return { activeTasks: orderedTasks, completedTasks: [] as Task[] };
     }
-    return splitCompletedTasks(orderedTasks);
+    const { activeTasks, completedTasks } = splitCompletedTasks(orderedTasks);
+    return {
+      activeTasks,
+      completedTasks: sortDoneTasksForListView(completedTasks),
+    };
   }, [orderedTasks, shouldGroupCompletedTasks]);
 
   const projectSections = useMemo(() => {
