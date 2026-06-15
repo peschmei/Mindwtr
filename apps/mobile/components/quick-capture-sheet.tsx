@@ -36,10 +36,9 @@ import {
 import { QuickCaptureSheetBody } from './quick-capture-sheet/QuickCaptureSheetBody';
 import { QuickCaptureSheetPickers } from './quick-capture-sheet/QuickCaptureSheetPickers';
 import { useQuickCaptureAudio } from './use-quick-capture-audio';
+import { useAndroidQuickCaptureExpand } from './quick-capture-sheet/useAndroidQuickCaptureExpand';
 
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
-// Safety net only: if keyboardDidHide never fires after Keyboard.dismiss()
-// (e.g. no soft keyboard was actually up), expand anyway so More can't get stuck.
 const ANDROID_OPTIONS_EXPAND_FALLBACK_MS = 500;
 
 const logCaptureWarn = (message: string, error?: unknown) => {
@@ -143,8 +142,6 @@ export function QuickCaptureSheet({
   const projectsRef = useRef(projects);
   const contextOptionsLoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contextOptionsRequestRef = useRef(0);
-  const androidOptionsExpandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const androidKeyboardHideSubRef = useRef<{ remove: () => void } | null>(null);
   const initialFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -168,22 +165,23 @@ export function QuickCaptureSheet({
     contextOptionsLoadTimerRef.current = null;
   }, []);
 
-  const clearAndroidOptionsExpand = useCallback(() => {
-    if (androidOptionsExpandTimerRef.current) {
-      clearTimeout(androidOptionsExpandTimerRef.current);
-      androidOptionsExpandTimerRef.current = null;
-    }
-    if (androidKeyboardHideSubRef.current) {
-      androidKeyboardHideSubRef.current.remove();
-      androidKeyboardHideSubRef.current = null;
-    }
-  }, []);
-
   const clearInitialFocusTimer = useCallback(() => {
     if (!initialFocusTimerRef.current) return;
     clearTimeout(initialFocusTimerRef.current);
     initialFocusTimerRef.current = null;
   }, []);
+
+  const {
+    clearAndroidOptionsExpand,
+    collapseAndroidOptions,
+    requestAndroidOptionsExpand,
+  } = useAndroidQuickCaptureExpand({
+    clearInitialFocusTimer,
+    fallbackMs: ANDROID_OPTIONS_EXPAND_FALLBACK_MS,
+    inputRef,
+    setKeyboardAvoidingEnabled: setAndroidKeyboardAvoidingEnabled,
+    setOptionsExpanded,
+  });
 
   const loadContextOptions = useCallback(() => {
     clearContextOptionsLoad();
@@ -740,36 +738,17 @@ export function QuickCaptureSheet({
     if (!optionsExpanded) {
       clearInitialFocusTimer();
       if (Platform.OS === 'android') {
-        // The modal is a separate Android window that does not resize for the
-        // keyboard, so the KeyboardAvoidingView 'height' lift is the only thing
-        // holding the sheet above the keyboard. Dropping that lift before the
-        // keyboard has actually gone slams the sheet down behind it and it
-        // vanishes until the keyboard finishes closing (the reported flicker).
-        // So keep the sheet lifted and collapsed, and only grow + drop the lift
-        // once the keyboard is truly hidden, regardless of how long that takes.
-        const keyboardWasVisible = Keyboard.isVisible();
-        inputRef.current?.blur();
-        Keyboard.dismiss();
-        const expandOptions = () => {
-          clearAndroidOptionsExpand();
-          setAndroidKeyboardAvoidingEnabled(false);
-          setOptionsExpanded(true);
-        };
-        if (keyboardWasVisible) {
-          androidKeyboardHideSubRef.current = Keyboard.addListener('keyboardDidHide', expandOptions);
-          androidOptionsExpandTimerRef.current = setTimeout(expandOptions, ANDROID_OPTIONS_EXPAND_FALLBACK_MS);
-        } else {
-          expandOptions();
-        }
+        requestAndroidOptionsExpand();
         return;
       }
       inputRef.current?.blur();
       Keyboard.dismiss();
     } else if (Platform.OS === 'android') {
-      setAndroidKeyboardAvoidingEnabled(true);
+      collapseAndroidOptions();
+      return;
     }
     setOptionsExpanded((prev) => !prev);
-  }, [clearAndroidOptionsExpand, clearInitialFocusTimer, optionsExpanded]);
+  }, [clearAndroidOptionsExpand, clearInitialFocusTimer, collapseAndroidOptions, optionsExpanded, requestAndroidOptionsExpand]);
 
   const openContextPicker = useCallback(() => {
     setShowContextPicker(true);
