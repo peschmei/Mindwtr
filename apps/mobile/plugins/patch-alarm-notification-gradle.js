@@ -174,14 +174,20 @@ const applyAlarmTimingPatchToSource = (original) => {
   }
   if (
     next.includes(firedNotificationIdMarker)
-    && !next.includes('getNotificationManager().cancel(firedNotificationId);')
+    && !next.includes('int snoozedAlarmRowId = getAlarmDB().insert(alarm);')
   ) {
+    // Snooze persists the rescheduled reminder as its own alarm row instead of
+    // mutating the original. The JS reschedule cycle only tracks alarms it
+    // scheduled (keyed by their original row id); the past-due task would
+    // otherwise be reaped on the next cycle, cancelling the snoozed alarm
+    // before it fires. An independent row is invisible to that reconciliation.
     next = next.replace(
       `        getAlarmDB().update(alarm);
 
         Log.e(TAG, "snooze data - " + alarm.toString());
 `,
-      `        getAlarmDB().update(alarm);
+      `        int snoozedAlarmRowId = getAlarmDB().insert(alarm);
+        alarm.setId(snoozedAlarmRowId);
 
         getNotificationManager().cancel(firedNotificationId);
 
@@ -663,7 +669,6 @@ API_AVAILABLE(ios(10.0)) {
 const applyAlarmIosCompleteActionPatch = (filePath) => patchFile(filePath, applyAlarmIosCompleteActionPatchToSource);
 
 const logPatchedCandidate = (label, candidate) => {
-  // eslint-disable-next-line no-console
   console.log(`[${label}] patched ${candidate}`);
 };
 

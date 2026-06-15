@@ -104,7 +104,11 @@ describe('patch-alarm-notification-gradle', () => {
     expect(output).toContain('int firedNotificationId = alarm.getAlarmId();');
     expect(output).toContain('getNotificationManager().cancel(firedNotificationId);');
     expect(output.indexOf('int firedNotificationId = alarm.getAlarmId();')).toBeLessThan(output.indexOf('alarm.setAlarmId((int) time);'));
-    expect(output.indexOf('getNotificationManager().cancel(firedNotificationId);')).toBeGreaterThan(output.indexOf('getAlarmDB().update(alarm);'));
+    // Snooze schedules an independent alarm row so the JS reschedule cycle cannot reap it.
+    expect(output).toContain('int snoozedAlarmRowId = getAlarmDB().insert(alarm);');
+    expect(output).toContain('alarm.setId(snoozedAlarmRowId);');
+    expect(output).not.toContain('getAlarmDB().update(alarm);');
+    expect(output.indexOf('getNotificationManager().cancel(firedNotificationId);')).toBeGreaterThan(output.indexOf('int snoozedAlarmRowId = getAlarmDB().insert(alarm);'));
   });
 
   it('patches AlarmUtil reminder behavior away from alarm semantics', () => {
