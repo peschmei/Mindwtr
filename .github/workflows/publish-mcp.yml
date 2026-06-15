@@ -130,14 +130,41 @@ jobs:
           cd apps/mcp-server
           npm publish --access public --provenance --tag "$NPM_DIST_TAG"
 
+      - name: Wait for public npm package
+        run: |
+          set -euo pipefail
+          PACKAGE="${{ steps.package.outputs.package_name }}@${{ steps.package.outputs.package_version }}"
+          for attempt in $(seq 1 30); do
+            if npm view "$PACKAGE" version --json >/dev/null 2>&1; then
+              echo "$PACKAGE is visible on npm."
+              exit 0
+            fi
+            echo "$PACKAGE is not visible on npm yet (attempt $attempt/30); waiting..."
+            sleep 10
+          done
+          echo "Timed out waiting for $PACKAGE to become visible on npm." >&2
+          npm view "$PACKAGE" version --json
+
       - name: Verify public npm package
         run: |
           set -euo pipefail
+          PACKAGE="${{ steps.package.outputs.package_name }}@${{ steps.package.outputs.package_version }}"
           rm -rf /tmp/mindwtr-mcp-public-clean
           mkdir -p /tmp/mindwtr-mcp-public-clean
           cd /tmp/mindwtr-mcp-public-clean
           npm init -y
-          npm install "${{ steps.package.outputs.package_name }}@${{ steps.package.outputs.package_version }}"
+          for attempt in $(seq 1 12); do
+            if npm install "$PACKAGE"; then
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              echo "Timed out installing $PACKAGE from npm." >&2
+              exit 1
+            fi
+            echo "$PACKAGE is not installable from npm yet (attempt $attempt/12); waiting..."
+            rm -rf node_modules package-lock.json
+            sleep 10
+          done
           node "$GITHUB_WORKSPACE/scripts/ci/smoke-mcp-stdio.mjs" "$PWD/node_modules/.bin/mindwtr-mcp" "$PWD/data/mindwtr.db"
 
       - name: Install mcp-publisher
