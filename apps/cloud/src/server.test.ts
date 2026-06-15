@@ -1000,6 +1000,95 @@ describe('cloud server api', () => {
         expect(stored.tasks.map((task) => task.id)).toEqual(['server-only']);
     });
 
+    test('auth failure throttling never bypasses token checks for PUT /v1/data', async () => {
+        let firstStatus = 0;
+        let lastStatus = 0;
+        for (let attempt = 0; attempt < 31; attempt += 1) {
+            const response = await fetch(`${baseUrl}/v1/data`, {
+                method: 'PUT',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ tasks: [], projects: [], sections: [], areas: [], settings: {} }),
+            });
+            if (attempt === 0) firstStatus = response.status;
+            lastStatus = response.status;
+        }
+
+        expect(firstStatus).toBe(401);
+        expect(lastStatus).toBe(429);
+        expect(readdirSync(dataDir)).toEqual([]);
+    });
+
+    test('converges concurrent task creation and full data merge writes', async () => {
+        const iso = '2026-01-01T00:00:00.000Z';
+        const createRequest = fetch(`${baseUrl}/v1/tasks`, {
+            method: 'POST',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ title: 'Task from POST' }),
+        });
+        const putRequest = fetch(`${baseUrl}/v1/data`, {
+            method: 'PUT',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                tasks: [makeTestTask({
+                    id: 'task-from-put',
+                    title: 'Task from PUT',
+                    createdAt: iso,
+                    updatedAt: iso,
+                })],
+                projects: [],
+                sections: [],
+                areas: [],
+                settings: {},
+            } satisfies AppData),
+        });
+
+        const [createResponse, putResponse] = await Promise.all([createRequest, putRequest]);
+        expect(createResponse.status).toBe(201);
+        expect(putResponse.status).toBe(200);
+        const createdJson = await createResponse.json();
+        const createdId = String(createdJson.task?.id || '');
+        expect(createdId).toBeTruthy();
+
+        const dataResponse = await fetch(`${baseUrl}/v1/data`, { headers: authHeaders });
+        expect(dataResponse.status).toBe(200);
+        const data = await dataResponse.json() as AppData;
+        const tasksById = new Map(data.tasks.map((task) => [task.id, task]));
+        expect(tasksById.get('task-from-put')?.title).toBe('Task from PUT');
+        expect(tasksById.get(createdId)?.title).toBe('Task from POST');
+    });
+
+    test('rejects writes when stored namespace data is corrupt before atomic write', async () => {
+        const key = __cloudTestUtils.tokenToKey(integrationToken);
+        const filePath = join(dataDir, `${key}.json`);
+        const corruptPayload = '{"tasks":[';
+        writeFileSync(filePath, corruptPayload);
+
+        const response = await fetch(`${baseUrl}/v1/data`, {
+            method: 'PUT',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                tasks: [makeTestTask({ id: 'replacement-task', title: 'Replacement Task' })],
+                projects: [],
+                sections: [],
+                areas: [],
+                settings: {},
+            } satisfies AppData),
+        });
+
+        expect(response.status).toBe(500);
+        expect((await response.json()).error).toBe('Stored data failed validation');
+        expect(readFileSync(filePath, 'utf8')).toBe(corruptPayload);
+    });
+
     test('preserves people across /v1/data server-side merges', async () => {
         const seedData: AppData = {
             tasks: [],
