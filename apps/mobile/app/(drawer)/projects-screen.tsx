@@ -777,6 +777,7 @@ export default function ProjectsScreen() {
             onSubmitEditing={handleAddProject}
             returnKeyType="done"
             maxFontSizeMultiplier={COMPACT_PROJECT_TEXT_MAX_SCALE}
+            accessibilityLabel={t('projects.addPlaceholder')}
           />
           <TouchableOpacity
             accessibilityRole="button"
@@ -796,6 +797,9 @@ export default function ProjectsScreen() {
           <TouchableOpacity
             style={styles.filterHeader}
             onPress={() => setShowTagFilter((prev) => !prev)}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('projects.tagFilter')}: ${showTagFilter ? t('filters.hide') : t('filters.show')}`}
+            accessibilityState={{ expanded: showTagFilter }}
           >
             <Text
               style={[styles.tagFilterLabel, { color: tc.text }]}
@@ -824,6 +828,9 @@ export default function ProjectsScreen() {
                     : { borderColor: tc.border, backgroundColor: tc.cardBg },
                 ]}
                 onPress={() => setSelectedTagFilter(ALL_TAGS)}
+                accessibilityRole="button"
+                accessibilityLabel={t('projects.allTags')}
+                accessibilityState={{ selected: selectedTagFilter === ALL_TAGS }}
               >
                 <Text
                   style={[
@@ -844,6 +851,9 @@ export default function ProjectsScreen() {
                       : { borderColor: tc.border, backgroundColor: tc.cardBg },
                   ]}
                   onPress={() => setSelectedTagFilter(tag)}
+                  accessibilityRole="button"
+                  accessibilityLabel={tag}
+                  accessibilityState={{ selected: selectedTagFilter === tag }}
                 >
                   <Text
                     style={[
@@ -864,6 +874,9 @@ export default function ProjectsScreen() {
                       : { borderColor: tc.border, backgroundColor: tc.cardBg },
                   ]}
                   onPress={() => setSelectedTagFilter(NO_TAGS)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('projects.noTags')}
+                  accessibilityState={{ selected: selectedTagFilter === NO_TAGS }}
                 >
                   <Text
                     style={[

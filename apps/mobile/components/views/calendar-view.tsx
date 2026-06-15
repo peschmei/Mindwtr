@@ -678,6 +678,9 @@ export function CalendarView() {
           <Pressable
             key={option.value}
             onPress={() => setViewMode(option.value)}
+            accessibilityRole="button"
+            accessibilityLabel={option.label}
+            accessibilityState={{ selected: active }}
             style={[styles.modeToggleButton, active && { backgroundColor: tc.tint }]}
           >
             <Text style={[styles.modeToggleText, { color: active ? tc.onTint : tc.secondaryText }]}>
@@ -895,18 +898,33 @@ export function CalendarView() {
       <View style={[styles.container, { backgroundColor: tc.bg }]}>
         <View style={[styles.dayModeHeader, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
           <View style={styles.headerTopRow}>
-            <Pressable onPress={() => shiftSelectedDate(-1)} style={styles.navButton}>
+            <Pressable
+              onPress={() => shiftSelectedDate(-1)}
+              accessibilityRole="button"
+              accessibilityLabel="Previous day"
+              style={styles.navButton}
+            >
               <Text style={[styles.navButtonText, { color: tc.text }]}>‹</Text>
             </Pressable>
             <View style={styles.dayModeTitleWrap}>
               <Text style={[styles.dayModeTitle, { color: tc.text }]} numberOfLines={1}>
                 {selectedDayModeLabel}
               </Text>
-              <Pressable onPress={handleToday} style={[styles.todayButton, { borderColor: tc.border }]}>
+              <Pressable
+                onPress={handleToday}
+                accessibilityRole="button"
+                accessibilityLabel={tr('filters.datePreset.today')}
+                style={[styles.todayButton, { borderColor: tc.border }]}
+              >
                 <Text style={[styles.todayButtonText, { color: tc.tint }]}>{tr('filters.datePreset.today')}</Text>
               </Pressable>
             </View>
-            <Pressable onPress={() => shiftSelectedDate(1)} style={styles.navButton}>
+            <Pressable
+              onPress={() => shiftSelectedDate(1)}
+              accessibilityRole="button"
+              accessibilityLabel="Next day"
+              style={styles.navButton}
+            >
               <Text style={[styles.navButtonText, { color: tc.text }]}>›</Text>
             </Pressable>
           </View>
@@ -1503,7 +1521,12 @@ export function CalendarView() {
           <View style={styles.headerTopRow}>
             <View style={styles.monthTitleWrap}>
               <Text style={[styles.title, { color: tc.text }]}>{tr('calendar.scheduleResults')}</Text>
-              <Pressable onPress={handleScheduleToday} style={[styles.todayButton, { borderColor: tc.border }]}>
+              <Pressable
+                onPress={handleScheduleToday}
+                accessibilityRole="button"
+                accessibilityLabel={tr('filters.datePreset.today')}
+                style={[styles.todayButton, { borderColor: tc.border }]}
+              >
                 <Text style={[styles.todayButtonText, { color: tc.tint }]}>{tr('filters.datePreset.today')}</Text>
               </Pressable>
             </View>
@@ -1569,6 +1592,8 @@ export function CalendarView() {
                       <Pressable
                         key={item.id}
                         onPress={() => openExternalEvent(item.event)}
+                        accessibilityRole="button"
+                        accessibilityLabel={sourceName ? `${item.title}. ${timeLabel}. ${sourceName}` : `${item.title}. ${timeLabel}`}
                         style={eventStyle}
                       >
                         {eventContent}
@@ -1588,6 +1613,9 @@ export function CalendarView() {
                     <Pressable
                       key={item.id}
                       disabled={projected}
+                      accessibilityRole="button"
+                      accessibilityLabel={projected ? `${item.title}. ${timeLabel}. ${projectedDisplayLabel}` : `${item.title}. ${timeLabel}`}
+                      accessibilityState={{ disabled: projected }}
                       style={[
                         styles.scheduleItem,
                         {
@@ -1640,7 +1668,12 @@ export function CalendarView() {
     <View style={[styles.container, { backgroundColor: tc.bg }]}>
       <View style={[styles.header, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
         <View style={styles.headerTopRow}>
-          <Pressable onPress={handlePrevMonth} style={styles.navButton}>
+          <Pressable
+            onPress={handlePrevMonth}
+            accessibilityRole="button"
+            accessibilityLabel={tr('calendar.prevMonth')}
+            style={styles.navButton}
+          >
             <Text style={[styles.navButtonText, { color: tc.text }]}>‹</Text>
           </Pressable>
           <View style={styles.monthTitleWrap}>
@@ -1651,7 +1684,12 @@ export function CalendarView() {
               <Text style={[styles.todayButtonText, { color: tc.tint }]}>{tr('filters.datePreset.today')}</Text>
             </Pressable>
           </View>
-          <Pressable onPress={handleNextMonth} style={styles.navButton}>
+          <Pressable
+            onPress={handleNextMonth}
+            accessibilityRole="button"
+            accessibilityLabel={tr('calendar.nextMonth')}
+            style={styles.navButton}
+          >
             <Text style={[styles.navButtonText, { color: tc.text }]}>›</Text>
           </Pressable>
         </View>
@@ -1684,6 +1722,11 @@ export function CalendarView() {
               const isSelected = selectedDate && isSameDay(date, selectedDate);
               const todayCellBg = toRgba(tc.tint, isDark ? 0.12 : 0.08);
               const selectedCellBg = toRgba(tc.tint, isDark ? 0.2 : 0.16);
+              const dayAccessibilityParts = [
+                date.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' }),
+                taskCount > 0 ? `${taskCount} ${t('common.tasks')}` : '',
+                eventCount > 0 ? `${eventCount} ${tr('calendar.events')}` : '',
+              ].filter(Boolean);
 
               return (
                 <Pressable
@@ -1695,6 +1738,9 @@ export function CalendarView() {
                     isSelected && { backgroundColor: selectedCellBg },
                   ]}
                   onPress={() => handleMonthDayPress(date)}
+                  accessibilityRole="button"
+                  accessibilityLabel={dayAccessibilityParts.join('. ')}
+                  accessibilityState={{ selected: Boolean(isSelected) }}
                 >
                   <View
                     style={[
@@ -1795,7 +1841,12 @@ export function CalendarView() {
               <Text style={[styles.selectedDateTitle, { color: tc.text }]}>
                 {selectedDateLongLabel}
               </Text>
-              <Pressable onPress={() => openQuickAddForDate(selectedDate)} style={styles.addTaskButton}>
+              <Pressable
+                onPress={() => openQuickAddForDate(selectedDate)}
+                accessibilityRole="button"
+                accessibilityLabel={t('calendar.addTask')}
+                style={styles.addTaskButton}
+              >
                 <Text style={[styles.addTaskButtonText, { color: tc.tint }]}>{t('calendar.addTask')}</Text>
               </Pressable>
             </View>
