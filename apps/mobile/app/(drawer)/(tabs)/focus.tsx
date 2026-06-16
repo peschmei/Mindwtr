@@ -1118,6 +1118,33 @@ export default function FocusScreen() {
     schedule,
     t,
   ]);
+  const focusListVersion = useMemo(() => (
+    sections.map((section) => {
+      const itemVersion = section.data.map((item) => {
+        if (item.type === 'task') {
+          return [
+            'task',
+            item.task.id,
+            item.task.status,
+            item.task.isFocusedToday === true ? 'focused' : 'unfocused',
+            item.task.updatedAt ?? '',
+            item.task.rev ?? '',
+          ].join(':');
+        }
+        if (item.type === 'project') {
+          return [
+            'project',
+            item.project.id,
+            item.project.status,
+            item.project.reviewAt ?? '',
+            item.project.updatedAt ?? '',
+          ].join(':');
+        }
+        return ['group', item.id, item.count].join(':');
+      }).join(',');
+      return [section.type, section.expanded ? 'expanded' : 'collapsed', section.totalCount, itemVersion].join('|');
+    }).join('||')
+  ), [sections]);
   const firstVisibleSectionType = useMemo(
     () => sections.find((section) => section.totalCount > 0)?.type ?? null,
     [sections]
@@ -1425,6 +1452,7 @@ export default function FocusScreen() {
     <View style={[styles.container, { backgroundColor: tc.bg }]}>
       <SectionList
         sections={sections}
+        extraData={focusListVersion}
         keyExtractor={(item) => item.type === 'task' ? item.task.id : item.type === 'project' ? `project:${item.project.id}` : item.id}
         stickySectionHeadersEnabled={false}
         initialNumToRender={FOCUS_LIST_INITIAL_RENDER_COUNT}

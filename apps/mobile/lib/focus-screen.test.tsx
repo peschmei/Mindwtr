@@ -286,6 +286,49 @@ describe('FocusScreen', () => {
     ).not.toThrow();
   });
 
+  it('invalidates the Focus list and removes a row after marking it done', async () => {
+    storeState.tasks = [
+      makeTask('focus-task', { title: 'Focused task', isFocusedToday: true }),
+      makeTask('stale-next', { title: 'Stale next action' }),
+      makeTask('plain-next', { title: 'Plain next' }),
+    ];
+    storeState.updateTask.mockImplementation(async (taskId: string, updates: Partial<Task>) => {
+      storeState.tasks = storeState.tasks.map((task) => (
+        task.id === taskId
+          ? {
+            ...task,
+            ...updates,
+            ...(updates.status === 'done' ? { isFocusedToday: false } : {}),
+          }
+          : task
+      ));
+      return { success: true };
+    });
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const initialListVersion = tree.root.findByType(SectionList).props.extraData;
+    const row = tree.root.findAllByType(SwipeableTaskItem).find((node) => node.props.task.id === 'stale-next');
+    expect(row).toBeTruthy();
+
+    await act(async () => {
+      await row?.props.onStatusChange('done');
+    });
+    act(() => {
+      tree.update(<FocusScreen />);
+    });
+
+    expect(storeState.updateTask).toHaveBeenCalledWith('stale-next', { status: 'done' });
+    expect(tree.root.findByType(SectionList).props.extraData).not.toEqual(initialListVersion);
+    expect(
+      tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
+    ).toEqual(['focus-task', 'plain-next']);
+  });
+
   it('uses a transparent refresh control for manual pull sync', () => {
     let tree!: ReturnType<typeof create>;
 
