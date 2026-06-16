@@ -61,6 +61,25 @@ const storeState = {
     addTask: vi.fn(),
 };
 
+vi.mock('react-native', async () => {
+    const actual = await vi.importActual<any>('react-native');
+    return {
+        ...actual,
+        FlatList: ({ data = [], renderItem, keyExtractor, ...props }: any) =>
+            React.createElement(
+                'FlatList',
+                props,
+                data.map((item: any, index: number) =>
+                    React.createElement(
+                        React.Fragment,
+                        { key: keyExtractor?.(item, index) ?? item.id ?? index },
+                        renderItem?.({ item, index }),
+                    ),
+                ),
+            ),
+    };
+});
+
 vi.mock('@mindwtr/core', () => ({
     useTaskStore: () => storeState,
     shallow: vi.fn((a, b) => a === b),
@@ -244,6 +263,23 @@ describe('ReviewModal', () => {
         });
 
         expect(hasText('Inbox')).toBe(true);
+    });
+
+    it('does not let task chips navigate away mid-review', async () => {
+        let tree!: ReturnType<typeof create>;
+
+        await act(async () => {
+            tree = create(<ReviewModal visible onClose={vi.fn()} />);
+        });
+
+        const rows = tree.root.findAll((node) => node.type === 'SwipeableTaskItem');
+        expect(rows.length).toBeGreaterThan(0);
+        for (const row of rows) {
+            expect(typeof row.props.onPress).toBe('function');
+            expect(row.props.onContextPress).toBeUndefined();
+            expect(row.props.onTagPress).toBeUndefined();
+            expect(row.props.onProjectPress).toBeUndefined();
+        }
     });
 
     it('opens mind sweep from the weekly review nudge', async () => {

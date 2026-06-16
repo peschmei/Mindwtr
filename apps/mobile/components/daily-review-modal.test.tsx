@@ -205,6 +205,23 @@ describe('DailyReviewScreen', () => {
     expect(taskRows[0].props.hideStatusBadge).toBe(true);
   });
 
+  it('does not let task chips navigate away mid-review', async () => {
+    let tree!: ReturnType<typeof create>;
+
+    await act(async () => {
+      tree = create(<DailyReviewScreen onClose={vi.fn()} />);
+    });
+
+    const rows = tree.root.findAllByType(SwipeableTaskItem);
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((row) => {
+      expect(typeof row.props.onPress).toBe('function');
+      expect(row.props.onContextPress).toBeUndefined();
+      expect(row.props.onTagPress).toBeUndefined();
+      expect(row.props.onProjectPress).toBeUndefined();
+    });
+  });
+
   it('skips the focus step when daily review focus is disabled', async () => {
     storeState.tasks = [
       {

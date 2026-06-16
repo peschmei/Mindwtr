@@ -209,9 +209,6 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                     onPress={() => handleTaskPress(task)}
                     onStatusChange={(status) => handleStatusChange(task.id, status)}
                     onDelete={() => handleDelete(task.id)}
-                    onProjectPress={handleNavigateToProject}
-                    onContextPress={handleNavigateToToken}
-                    onTagPress={handleNavigateToToken}
                 />
             )}
             keyExtractor={(task) => task.id}
@@ -636,9 +633,6 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                                                             onPress={() => handleTaskPress(task)}
                                                             onStatusChange={(status) => handleStatusChange(task.id, status)}
                                                             onDelete={() => handleDelete(task.id)}
-                                                            onProjectPress={handleNavigateToProject}
-                                                            onContextPress={handleNavigateToToken}
-                                                            onTagPress={handleNavigateToToken}
                                                         />
                                                     ))}
                                                 </View>

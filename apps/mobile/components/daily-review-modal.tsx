@@ -368,9 +368,6 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                         onDelete={() => { void deleteTask(task.id); }}
                         showFocusToggle={options?.showFocusToggle}
                         hideStatusBadge={options?.hideStatusBadge}
-                        onProjectPress={handleNavigateToProject}
-                        onContextPress={handleNavigateToToken}
-                        onTagPress={handleNavigateToToken}
                     />
                 );
                 if (!options?.showFollowUpToday) return taskRow;
