@@ -44,6 +44,7 @@ import { MarkdownFormatToolbar } from '../../components/markdown-format-toolbar'
 import { MarkdownReferenceAutocomplete } from '../../components/markdown-reference-autocomplete';
 import { MarkdownText } from '../../components/markdown-text';
 import { TaskList } from '../../components/task-list';
+import { TaskListBulkBar, type TaskListBulkBarProps } from '../task-list/TaskListBulkBar';
 import { TaskListSortModal } from '../task-list/TaskListSortModal';
 import { AttachmentProgressIndicator } from '../../components/AttachmentProgressIndicator';
 import { projectsScreenStyles as styles } from './projects-screen.styles';
@@ -539,6 +540,7 @@ export function ProjectDetailModal({
     const [projectTaskFilterOpenSignal, setProjectTaskFilterOpenSignal] = React.useState(0);
     const [projectTaskFilterActiveCount, setProjectTaskFilterActiveCount] = React.useState(0);
     const [projectSortModalVisible, setProjectSortModalVisible] = React.useState(false);
+    const [projectTaskBulkBarProps, setProjectTaskBulkBarProps] = React.useState<TaskListBulkBarProps | null>(null);
     const [sectionManagerVisible, setSectionManagerVisible] = React.useState(false);
     const projectDetailScrollRef = React.useRef<ScrollView | null>(null);
     const projectDetailScrollOffsetRef = React.useRef(0);
@@ -616,6 +618,9 @@ export function ProjectDetailModal({
         },
         []
     );
+    const handleProjectBulkBarPropsChange = React.useCallback((props: TaskListBulkBarProps | null) => {
+        setProjectTaskBulkBarProps(props);
+    }, []);
     const openProjectTaskSort = React.useCallback(() => {
         setProjectSortModalVisible(true);
     }, []);
@@ -759,6 +764,11 @@ export function ProjectDetailModal({
                     <Ionicons name="add" size={24} color={tc.onTint} />
                 </TouchableOpacity>
             ) : null}
+        </View>
+    ) : null;
+    const projectTaskSelectionBulkBar = projectTaskBulkBarProps ? (
+        <View testID="project-task-selection-bulk-bar">
+            <TaskListBulkBar {...projectTaskBulkBarProps} />
         </View>
     ) : null;
     const setSelectedProjectSequentialScope = (sequentialScope: Project['sequentialScope']) => {
@@ -918,6 +928,7 @@ export function ProjectDetailModal({
                                     />
                                 </View>
                                 {projectTaskPinnedToolbar}
+                                {projectTaskSelectionBulkBar}
                                 <ProjectDetailScrollFrame
                                     backgroundColor={tc.bg}
                                     keyboardBottomInset={projectDetailKeyboardBottomInset}
@@ -1455,11 +1466,14 @@ export function ProjectDetailModal({
                                         taskSource={selectedProjectTasks}
                                         allowAdd={false}
                                         staticList
+                                        bulkBarPlacement="external"
                                         staticListVirtualization={{
                                             scrollOffsetY: projectDetailScrollWindow.offsetY,
                                             viewportHeight: projectDetailScrollWindow.viewportHeight,
                                         }}
                                         enableBulkActions
+                                        enableProjectBulkOrganize={taskListOptions.allowAdd}
+                                        onBulkBarPropsChange={handleProjectBulkBarPropsChange}
                                         externalFilterOpenSignal={projectTaskFilterOpenSignal}
                                         showSort={false}
                                         enableProjectReorder={taskListOptions.enableProjectReorder}

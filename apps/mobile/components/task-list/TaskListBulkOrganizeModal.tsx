@@ -158,7 +158,7 @@ export function TaskListBulkOrganizeModal({
               <ClipboardCheck size={18} color={themeColors.tint} />
               <View style={styles.bulkOrganizeTitleBlock}>
                 <Text style={[styles.bulkOrganizeTitle, { color: themeColors.text }]}>
-                  {tFallback(t, 'bulk.organizeInbox', 'Bulk organize Inbox')}
+                  {tFallback(t, 'bulk.organize', 'Bulk organize')}
                 </Text>
                 <Text style={[styles.bulkOrganizeSubtitle, { color: themeColors.secondaryText }]}>
                   {selectedCount} {tFallback(t, 'bulk.selected', 'selected')} - {tFallback(t, 'bulk.organizeHintShort', 'Titles and descriptions stay unchanged.')}

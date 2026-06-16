@@ -15,7 +15,7 @@ type ThemeColors = {
   tint: string;
 };
 
-type TaskListBulkBarProps = {
+export type TaskListBulkBarProps = {
   bulkActionLabel: string;
   bulkActionLoading: boolean;
   handleBatchDelete: () => void;
@@ -101,7 +101,7 @@ export function TaskListBulkBar({
             disabled={!hasSelection || bulkActionLoading}
             style={[styles.bulkActionButton, { backgroundColor: themeColors.tint, opacity: hasSelection && !bulkActionLoading ? 1 : 0.5 }]}
             accessibilityRole="button"
-            accessibilityLabel={tFallback(t, 'bulk.organizeInbox', 'Bulk organize Inbox')}
+            accessibilityLabel={tFallback(t, 'bulk.organize', 'Bulk organize')}
           >
             <ClipboardCheck size={14} color={themeColors.onTint} />
             <Text style={[styles.bulkActionText, { color: themeColors.onTint }]}>

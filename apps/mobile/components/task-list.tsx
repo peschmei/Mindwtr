@@ -48,6 +48,7 @@ import { buildCopilotConfig, isAIKeyRequired, loadAIKey } from '../lib/ai-config
 import { logError } from '../lib/app-log';
 import {
   TaskListBulkBar,
+  type TaskListBulkBarProps,
 } from './task-list/TaskListBulkBar';
 import {
   TaskListBulkOrganizeModal,
@@ -118,6 +119,9 @@ export interface TaskListProps {
   staticListVirtualization?: StaticListVirtualizationWindow;
   enableBulkActions?: boolean;
   enableInboxBulkOrganize?: boolean;
+  enableProjectBulkOrganize?: boolean;
+  bulkBarPlacement?: 'inline' | 'external';
+  onBulkBarPropsChange?: (props: TaskListBulkBarProps | null) => void;
   showSort?: boolean;
   showQuickAddHelp?: boolean;
   emptyText?: string;
@@ -160,6 +164,9 @@ function TaskListComponent({
   staticListVirtualization,
   enableBulkActions = true,
   enableInboxBulkOrganize = false,
+  enableProjectBulkOrganize = false,
+  bulkBarPlacement = 'inline',
+  onBulkBarPropsChange,
   showSort = true,
   showQuickAddHelp = true,
   emptyText,
@@ -375,6 +382,8 @@ function TaskListComponent({
   const timeEstimatesEnabled = settings?.features?.timeEstimates !== false;
   const showTimeEstimateFilters = showTimeEstimateFiltersProp && timeEstimatesEnabled && statusFilter !== 'inbox';
   const canBulkOrganizeInbox = enableInboxBulkOrganize && statusFilter === 'inbox';
+  const canBulkOrganizeProject = enableProjectBulkOrganize && Boolean(projectId);
+  const canBulkOrganizeSelection = canBulkOrganizeInbox || canBulkOrganizeProject;
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
   const { areaById, resolvedAreaFilter, selectedAreaIdForNewTasks } = useMobileAreaFilter();
 
@@ -997,6 +1006,54 @@ function TaskListComponent({
     return getUsedTaskTokens(tasks, (task) => task.tags, { prefix: '#' });
   }, [quickAddCopilotEnabled, tasks]);
 
+  const bulkBarProps = useMemo<TaskListBulkBarProps | null>(() => {
+    if (!enableBulkActions || !selectionMode || projectReorderMode) return null;
+    return {
+      bulkActionLabel,
+      bulkActionLoading,
+      handleBatchDelete,
+      handleBatchMove,
+      hasSelection,
+      onExitSelectionMode: exitSelectionMode,
+      onOpenOrganize: canBulkOrganizeSelection ? () => setBulkOrganizeVisible(true) : undefined,
+      onOpenTagModal: () => setTagModalVisible(true),
+      onToggleRangeSelectMode: toggleRangeSelectMode,
+      rangeSelectMode,
+      selectedCount: selectedIdsArray.length,
+      t,
+      themeColors: themeColorsMemo,
+    };
+  }, [
+    bulkActionLabel,
+    bulkActionLoading,
+    canBulkOrganizeSelection,
+    enableBulkActions,
+    exitSelectionMode,
+    handleBatchDelete,
+    handleBatchMove,
+    hasSelection,
+    projectReorderMode,
+    rangeSelectMode,
+    selectedIdsArray.length,
+    selectionMode,
+    setTagModalVisible,
+    t,
+    themeColorsMemo,
+    toggleRangeSelectMode,
+  ]);
+
+  useEffect(() => {
+    onBulkBarPropsChange?.(bulkBarProps);
+  }, [bulkBarProps, onBulkBarPropsChange]);
+
+  useEffect(() => () => {
+    onBulkBarPropsChange?.(null);
+  }, [onBulkBarPropsChange]);
+
+  const shouldRenderInlineBulkBar = Boolean(
+    bulkBarProps && (bulkBarPlacement !== 'external' || !onBulkBarPropsChange),
+  );
+
   type TriggerType = 'project' | 'context';
   type TriggerState = { type: TriggerType; start: number; end: number; query: string };
   type Option =
@@ -1598,23 +1655,9 @@ function TaskListComponent({
         visible={filtersVisible}
       />
 
-      {enableBulkActions && selectionMode && !projectReorderMode && (
-        <TaskListBulkBar
-          bulkActionLabel={bulkActionLabel}
-          bulkActionLoading={bulkActionLoading}
-          handleBatchDelete={handleBatchDelete}
-          handleBatchMove={handleBatchMove}
-          hasSelection={hasSelection}
-          onExitSelectionMode={exitSelectionMode}
-          onOpenOrganize={canBulkOrganizeInbox ? () => setBulkOrganizeVisible(true) : undefined}
-          onToggleRangeSelectMode={toggleRangeSelectMode}
-          onOpenTagModal={() => setTagModalVisible(true)}
-          rangeSelectMode={rangeSelectMode}
-          selectedCount={selectedIdsArray.length}
-          t={t}
-          themeColors={themeColorsMemo}
-        />
-      )}
+      {shouldRenderInlineBulkBar && bulkBarProps ? (
+        <TaskListBulkBar {...bulkBarProps} />
+      ) : null}
 
       {canUseProjectReorder && hasProjectReorderItems && projectReorderMode && (
         <View style={[styles.projectReorderModeBar, { backgroundColor: themeColorsMemo.cardBg, borderBottomColor: themeColorsMemo.border }]}>

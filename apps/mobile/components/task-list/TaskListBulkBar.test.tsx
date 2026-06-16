@@ -97,4 +97,11 @@ describe('TaskListBulkBar', () => {
 
     expect(html).toContain('aria-label="Done"');
   });
+
+  it('labels bulk organize generically because it is shared outside Inbox', () => {
+    const html = renderBulkBar({ onOpenOrganize: vi.fn() });
+
+    expect(html).toContain('aria-label="Bulk organize"');
+    expect(html).not.toContain('Bulk organize Inbox');
+  });
 });

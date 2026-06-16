@@ -36,6 +36,8 @@ vi.mock('@expo/vector-icons', () => ({
 
 vi.mock('lucide-react-native', () => ({
     CheckCircle2: () => null,
+    ClipboardCheck: () => null,
+    X: () => null,
 }));
 
 vi.mock('react-native-safe-area-context', () => ({
@@ -516,6 +518,48 @@ describe('ProjectDetailModal task sorting', () => {
         expect(onProjectTaskSortByChange).toHaveBeenCalledWith('due');
         expect(onToggleShowCompletedTasks).toHaveBeenCalledTimes(1);
         expect(tree.root.findByProps({ testID: 'project-task-reorder-toggle' }).props.accessibilityState).toEqual({ selected: true });
+    });
+
+    it('pins project bulk selection actions above the scrolling task list', () => {
+        const onOpenOrganize = vi.fn();
+        const props = createProjectDetailModalProps();
+        let tree!: ReturnType<typeof create>;
+
+        act(() => {
+            tree = create(<ProjectDetailModal {...props} />);
+        });
+
+        const taskListProps = taskListPropsSpy.mock.calls.at(-1)?.[0];
+        expect(taskListProps.bulkBarPlacement).toBe('external');
+        expect(taskListProps.enableProjectBulkOrganize).toBe(true);
+        expect(typeof taskListProps.onBulkBarPropsChange).toBe('function');
+
+        act(() => {
+            taskListProps.onBulkBarPropsChange({
+                bulkActionLabel: '',
+                bulkActionLoading: false,
+                handleBatchDelete: vi.fn(),
+                handleBatchMove: vi.fn(),
+                hasSelection: true,
+                onExitSelectionMode: vi.fn(),
+                onOpenOrganize,
+                onOpenTagModal: vi.fn(),
+                onToggleRangeSelectMode: vi.fn(),
+                rangeSelectMode: false,
+                selectedCount: 3,
+                t: props.t,
+                themeColors,
+            });
+        });
+
+        const pinnedBulkBar = tree.root.findByProps({ testID: 'project-task-selection-bulk-bar' });
+        expect(pinnedBulkBar.findByProps({ testID: 'task-list-range-select-toggle' })).toBeTruthy();
+
+        act(() => {
+            pinnedBulkBar.findByProps({ accessibilityLabel: 'Bulk organize' }).props.onPress();
+        });
+
+        expect(onOpenOrganize).toHaveBeenCalledTimes(1);
     });
 
     it('reflects the active in-sheet filter count on the pinned filter button badge', () => {

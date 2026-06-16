@@ -10,7 +10,30 @@ const setHighlightTaskMock = vi.hoisted(() => vi.fn());
 const quickAddPropsSpy = vi.hoisted(() => vi.fn());
 const quickAddFocusMock = vi.hoisted(() => vi.fn());
 const taskEditModalPropsSpy = vi.hoisted(() => vi.fn());
+const bulkOrganizeModalPropsSpy = vi.hoisted(() => vi.fn());
 const parseQuickAddMock = vi.hoisted(() => vi.fn());
+const taskListSelectionState = vi.hoisted(() => ({
+  current: {
+    bulkActionLabel: 'Move',
+    bulkActionLoading: false,
+    exitSelectionMode: vi.fn(),
+    handleBatchAddTag: vi.fn(),
+    handleBatchDelete: vi.fn(),
+    handleBatchOrganize: vi.fn(),
+    handleBatchMove: vi.fn(),
+    hasSelection: false,
+    multiSelectedIds: new Set<string>(),
+    rangeSelectMode: false,
+    selectedIdsArray: [] as string[],
+    selectionMode: false,
+    setTagInput: vi.fn(),
+    setTagModalVisible: vi.fn(),
+    tagInput: '',
+    tagModalVisible: false,
+    toggleMultiSelect: vi.fn(),
+    toggleRangeSelectMode: vi.fn(),
+  },
+}));
 
 const projectFixture = vi.hoisted(() => ({
   id: 'project-1',
@@ -222,7 +245,22 @@ vi.mock('../lib/app-log', () => ({
 }));
 
 vi.mock('./use-task-list-selection', () => ({
-  useTaskListSelection: () => ({
+  useTaskListSelection: () => taskListSelectionState.current,
+}));
+
+vi.mock('./task-list/TaskListBulkBar', () => ({
+  TaskListBulkBar: (props: any) => React.createElement('TaskListBulkBar', props),
+}));
+
+vi.mock('./task-list/TaskListBulkOrganizeModal', () => ({
+  TaskListBulkOrganizeModal: (props: any) => {
+    bulkOrganizeModalPropsSpy(props);
+    return React.createElement('TaskListBulkOrganizeModal', props);
+  },
+}));
+
+const resetTaskListSelectionState = () => {
+  taskListSelectionState.current = {
     bulkActionLabel: 'Move',
     bulkActionLoading: false,
     exitSelectionMode: vi.fn(),
@@ -241,16 +279,8 @@ vi.mock('./use-task-list-selection', () => ({
     tagModalVisible: false,
     toggleMultiSelect: vi.fn(),
     toggleRangeSelectMode: vi.fn(),
-  }),
-}));
-
-vi.mock('./task-list/TaskListBulkBar', () => ({
-  TaskListBulkBar: () => null,
-}));
-
-vi.mock('./task-list/TaskListBulkOrganizeModal', () => ({
-  TaskListBulkOrganizeModal: () => null,
-}));
+  };
+};
 
 vi.mock('./task-list/TaskListFiltersSheet', () => ({
   TaskListFiltersSheet: () => null,
@@ -290,6 +320,7 @@ const latestQuickAddProps = () => quickAddPropsSpy.mock.calls.at(-1)?.[0];
 describe('TaskList project quick add', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetTaskListSelectionState();
     storeState.tasks = [];
     storeState._allTasks = [];
     storeState.highlightTaskId = null;
@@ -315,6 +346,50 @@ describe('TaskList project quick add', () => {
       title={project.title}
     />,
   );
+
+  it('publishes project selection actions to an external bulk bar with organize available', async () => {
+    taskListSelectionState.current = {
+      ...taskListSelectionState.current,
+      hasSelection: true,
+      selectedIdsArray: ['task-1', 'task-2'],
+      selectionMode: true,
+    };
+    const onBulkBarPropsChange = vi.fn();
+    let tree!: ReturnType<typeof create>;
+
+    await act(async () => {
+      tree = create(
+        <TaskList
+          allowAdd={false}
+          bulkBarPlacement="external"
+          enableProjectBulkOrganize
+          onBulkBarPropsChange={onBulkBarPropsChange}
+          projectId={project.id}
+          showHeader={false}
+          statusFilter="all"
+          taskSource={[]}
+          title={project.title}
+        />,
+      );
+    });
+
+    const bulkBarProps = onBulkBarPropsChange.mock.calls.at(-1)?.[0];
+    expect(bulkBarProps).toEqual(expect.objectContaining({
+      hasSelection: true,
+      selectedCount: 2,
+    }));
+    expect(typeof bulkBarProps.onOpenOrganize).toBe('function');
+    expect(tree.root.findAll((node) => String(node.type) === 'TaskListBulkBar')).toHaveLength(0);
+
+    act(() => {
+      bulkBarProps.onOpenOrganize();
+    });
+
+    expect(bulkOrganizeModalPropsSpy.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({
+      selectedCount: 2,
+      visible: true,
+    }));
+  });
 
   it('plain add clears the composer and refocuses it for the next capture', async () => {
     let tree!: ReturnType<typeof create>;
