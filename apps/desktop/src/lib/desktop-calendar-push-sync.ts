@@ -7,6 +7,7 @@
  * table through Tauri commands.
  */
 import {
+    buildCalendarPushEventFields,
     expandCalendarRecurringTasks,
     getProjectedRecurringTaskId,
     getTaskCalendarOccurrenceDate,
@@ -260,12 +261,17 @@ function buildEventDetails(task: Task, target: CalendarPushTarget): SystemCalend
     const projectedOccurrenceDateLabel = isProjectedRecurringTask(task)
         ? formatProjectedRecurrenceEventDate(task)
         : '';
-    const notes = [
-        isProjectedRecurringTask(task)
-            ? formatProjectedRecurrenceNote(task)
-            : '',
-        task.description ?? '',
-    ].filter(Boolean).join('\n\n');
+    const { projects, sections } = dependencies.getStoreState();
+    const projectName = task.projectId
+        ? projects.find((project) => project.id === task.projectId)?.title
+        : undefined;
+    const sectionName = task.sectionId
+        ? sections.find((section) => section.id === task.sectionId)?.title
+        : undefined;
+    const leadingNote = isProjectedRecurringTask(task) ? formatProjectedRecurrenceNote(task) : undefined;
+    // SystemCalendarEventDetails has no native URL field, so the primary link
+    // rides in the notes (buildCalendarPushEventFields already adds Link: lines).
+    const { notes } = buildCalendarPushEventFields(task, { projectName, sectionName, leadingNote });
     const title = formatCalendarEventTitle(task.title, target.shouldPrefixTitles, projectedOccurrenceDateLabel);
 
     if (hasTimeComponent(dateValue)) {
@@ -405,7 +411,20 @@ async function runLimitedSettled<T>(
     return results;
 }
 
-export const runFullDesktopCalendarPushSync = async (): Promise<void> => {
+// Serialize all calendar writes so a full sync (fired on mount) and the
+// debounced partial sync (or two rapid manual refreshes) cannot race on the
+// check-then-create path and create duplicate events (#743).
+let calendarSyncQueue: Promise<void> = Promise.resolve();
+function enqueueCalendarSync(run: () => Promise<void>): Promise<void> {
+    const next = calendarSyncQueue.catch(() => undefined).then(run);
+    calendarSyncQueue = next.catch(() => undefined);
+    return next;
+}
+
+export const runFullDesktopCalendarPushSync = (): Promise<void> =>
+    enqueueCalendarSync(runFullDesktopCalendarPushSyncUnsafe);
+
+const runFullDesktopCalendarPushSyncUnsafe = async (): Promise<void> => {
     if (!isTauriRuntime()) return;
     const enabled = await dependencies.getPushEnabled();
     if (!enabled) return;
@@ -451,7 +470,10 @@ export const scheduleDesktopCalendarPushSyncDebounced = (taskIds: string[]): voi
     }, SYNC_DEBOUNCE_MS);
 };
 
-const runPartialDesktopCalendarPushSync = async (taskIds: string[]): Promise<void> => {
+const runPartialDesktopCalendarPushSync = (taskIds: string[]): Promise<void> =>
+    enqueueCalendarSync(() => runPartialDesktopCalendarPushSyncUnsafe(taskIds));
+
+const runPartialDesktopCalendarPushSyncUnsafe = async (taskIds: string[]): Promise<void> => {
     if (!isTauriRuntime()) return;
     const enabled = await dependencies.getPushEnabled();
     if (!enabled) return;
@@ -561,6 +583,7 @@ export const stopDesktopCalendarPushSync = (): void => {
 export const __desktopCalendarPushSyncTestUtils = {
     resetForTests() {
         stopDesktopCalendarPushSync();
+        calendarSyncQueue = Promise.resolve();
         dependencies = { ...defaultDependencies };
     },
     setDependenciesForTests(overrides: Partial<DesktopCalendarPushDependencies>) {

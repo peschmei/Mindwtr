@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useTaskStore, type CalendarSyncEntry, type Task } from '@mindwtr/core';
+import { useTaskStore, type CalendarSyncEntry, type Project, type Section, type Task } from '@mindwtr/core';
 
 import {
     __desktopCalendarPushSyncTestUtils,
@@ -25,6 +25,12 @@ const setStoreTasks = (tasks: Task[]) => {
         _allTasks: tasks,
         _tasksById: new Map(tasks.map((task) => [task.id, task])),
     }));
+};
+
+const setStoreProjectsAndSections = (projects: Project[], sections: Section[]) => {
+    // Write the canonical `_all*` collections; the store derives the visible
+    // `projects`/`sections` arrays and id maps from them.
+    useTaskStore.setState({ _allProjects: projects, _allSections: sections });
 };
 
 const writeOk = (eventId: string | null): SystemCalendarEventWriteResult => ({
@@ -59,6 +65,7 @@ describe('desktop calendar push sync', () => {
     beforeEach(() => {
         (window as any).__TAURI_INTERNALS__ = {};
         __desktopCalendarPushSyncTestUtils.resetForTests();
+        setStoreProjectsAndSections([], []);
         setStoreTasks([]);
 
         createEvent = vi.fn(async () => writeOk('event-new'));
@@ -110,6 +117,37 @@ describe('desktop calendar push sync', () => {
             calendarId: 'cal-mindwtr',
             platform: 'macos',
         }));
+    });
+
+    it('enriches event notes with project, section, status, effort, and links via the core builder', async () => {
+        setStoreProjectsAndSections(
+            [{ id: 'proj-1', title: 'Launch' } as Project],
+            [{ id: 'sec-1', title: 'Phase 2' } as Section],
+        );
+        setStoreTasks([makeTask({
+            dueDate: '2026-01-10',
+            projectId: 'proj-1',
+            sectionId: 'sec-1',
+            timeEstimate: '1hr',
+            description: 'Discuss roadmap',
+            attachments: [{
+                id: 'att-1',
+                kind: 'link',
+                title: 'Doc',
+                uri: 'https://example.com/doc',
+                createdAt: '2026-01-01T08:00:00.000Z',
+                updatedAt: '2026-01-01T08:00:00.000Z',
+            }],
+        })]);
+
+        await runFullDesktopCalendarPushSync();
+
+        const notes = createEvent.mock.calls[0]?.[0]?.notes ?? '';
+        expect(notes).toContain('Project: Launch › Phase 2');
+        expect(notes).toContain('Status: Next');
+        expect(notes).toContain('Effort: 1 h');
+        expect(notes).toContain('Discuss roadmap');
+        expect(notes).toContain('Link: https://example.com/doc');
     });
 
     it('prefixes titles when pushing to a shared selected calendar', async () => {
