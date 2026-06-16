@@ -1,6 +1,6 @@
 import { AlertTriangle, Calendar as CalendarIcon, Tag, Trash2, ArrowRight, Repeat, Check, Clock, Timer, Paperclip, RotateCcw, Copy, MapPin, Hourglass, Zap, MoreHorizontal } from 'lucide-react';
 import type { Area, Attachment, Project, RangeSelectionOptions, Task, TaskStatus, RecurrenceRule, RecurrenceStrategy, Language } from '@mindwtr/core';
-import { DEFAULT_AREA_COLOR, formatRecurrenceLabel, formatTimeEstimateLabel, getChecklistProgress, getTaskAgeLabel, getTaskDateCoherenceIssues, getTaskStaleness, getTaskUrgency, hasTimeComponent, safeFormatDate, resolveTaskTextDirection, tFallback } from '@mindwtr/core';
+import { DEFAULT_AREA_COLOR, formatRecurrenceLabel, formatTimeEstimateLabel, getChecklistProgress, getProjectedRecurringTaskCalendarDate, getTaskAgeLabel, getTaskDateCoherenceIssues, getTaskStaleness, getTaskUrgency, hasTimeComponent, safeFormatDate, resolveTaskTextDirection, tFallback } from '@mindwtr/core';
 import { cn } from '../../lib/utils';
 import { getAttachmentDisplayTitle } from '../../lib/attachment-utils';
 import { getContextColor } from '../../lib/context-color';
@@ -124,6 +124,12 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     const isReference = task.status === 'reference';
     const checklistProgress = isReference ? null : getChecklistProgress(task);
     const recurrenceLabel = formatRecurrenceLabel({ recurrence: task.recurrence, t });
+    const projectedRecurrenceDateLabel = task.showFutureRecurrence && recurrenceLabel
+        ? safeFormatDate(getProjectedRecurringTaskCalendarDate(task), 'PP')
+        : '';
+    const recurrencePreviewLabel = recurrenceLabel && projectedRecurrenceDateLabel
+        ? `${recurrenceLabel} · ${tFallback(t, 'recurrence.nextCalendarPreview', 'Next calendar preview')}: ${projectedRecurrenceDateLabel}`
+        : recurrenceLabel;
     const ageLabel = getTaskAgeLabel(task.createdAt, language);
     const showCompactMeta = compactMetaEnabled && !isViewOpen;
     const showAgeBadge = showTaskAge && task.status !== 'done' && Boolean(ageLabel);
@@ -145,7 +151,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
         || task.dueDate
         || dateIssueLabel
         || task.location
-        || recurrenceLabel
+        || recurrencePreviewLabel
         || (prioritiesEnabled && task.priority)
         || (!isReference && task.energyLevel)
         || task.assignedTo
@@ -383,11 +389,11 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                     label={task.location}
                 />
             )}
-            {recurrenceLabel && (
+            {recurrencePreviewLabel && (
                 <MetadataBadge
                     variant="info"
                     icon={Repeat}
-                    label={recurrenceLabel}
+                    label={recurrencePreviewLabel}
                 />
             )}
             {prioritiesEnabled && task.priority && (

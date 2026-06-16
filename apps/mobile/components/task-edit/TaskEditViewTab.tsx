@@ -1,7 +1,13 @@
 import React from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { CheckSquare, Square } from 'lucide-react-native';
-import { formatRecurrenceLabel, getAttachmentDisplayTitle, hasTimeComponent, tFallback } from '@mindwtr/core';
+import {
+  formatRecurrenceLabel,
+  getAttachmentDisplayTitle,
+  getProjectedRecurringTaskCalendarDate,
+  hasTimeComponent,
+  tFallback,
+} from '@mindwtr/core';
 import type {
   Attachment,
   Area,
@@ -144,6 +150,27 @@ function TaskEditViewTabComponent({
     ? (formatTimeEstimateLabel(mergedTask.timeEstimate as TimeEstimate) || String(mergedTask.timeEstimate))
     : undefined;
   const recurrenceLabel = formatRecurrenceLabel({ recurrence: mergedTask.recurrence, t, formatDate }) || undefined;
+  const projectedRecurrenceDateLabel = (() => {
+    if (!recurrenceLabel || !mergedTask.recurrence || mergedTask.showFutureRecurrence !== true) return '';
+    const nowIso = new Date().toISOString();
+    const previewTask = {
+      ...mergedTask,
+      id: mergedTask.id ?? 'draft-recurrence-preview',
+      title: String(mergedTask.title ?? ''),
+      status: mergedTask.status ?? 'next',
+      tags: mergedTask.tags ?? [],
+      contexts: mergedTask.contexts ?? [],
+      createdAt: mergedTask.createdAt ?? nowIso,
+      updatedAt: mergedTask.updatedAt ?? nowIso,
+      recurrence: mergedTask.recurrence,
+      showFutureRecurrence: true,
+    } as Task;
+    const projectedDate = getProjectedRecurringTaskCalendarDate(previewTask, nowIso);
+    return projectedDate ? formatDate(projectedDate) : '';
+  })();
+  const recurrencePreviewLabel = recurrenceLabel && projectedRecurrenceDateLabel
+    ? `${recurrenceLabel} · ${tFallback(t, 'recurrence.nextCalendarPreview', 'Next calendar preview')}: ${projectedRecurrenceDateLabel}`
+    : recurrenceLabel;
   const hasReminderHandoffSchedule = hasTimeComponent(mergedTask.startTime) || hasTimeComponent(mergedTask.dueDate);
 
   return (
@@ -197,7 +224,7 @@ function TaskEditViewTabComponent({
         </View>
       ) : null}
       {mergedTask.location ? renderViewRow(t('taskEdit.locationLabel'), mergedTask.location) : null}
-      {!isReference && recurrenceLabel ? renderViewRow(t('taskEdit.recurrenceLabel'), recurrenceLabel) : null}
+      {!isReference && recurrencePreviewLabel ? renderViewRow(t('taskEdit.recurrenceLabel'), recurrencePreviewLabel) : null}
       {description ? (
         <View style={styles.viewSection}>
           <Text style={[styles.viewLabel, { color: tc.secondaryText }]}>{t('taskEdit.descriptionLabel')}</Text>
