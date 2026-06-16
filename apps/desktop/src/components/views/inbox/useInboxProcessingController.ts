@@ -303,6 +303,28 @@ export function useInboxProcessingController({
         return true;
     }, [processingDescription, processingTask, processingTitle, settings?.quickAddAutoClean, showToast, t, updateTask]);
 
+    const goToStep = useCallback((nextStep: ProcessingStep) => {
+        setStepHistory((prev) => [...prev, processingStep]);
+        setProcessingStep(nextStep);
+    }, [processingStep]);
+
+    const goBack = useCallback(() => {
+        setStepHistory((prev) => {
+            if (prev.length === 0) return prev;
+            const next = [...prev];
+            const last = next.pop();
+            if (last) setProcessingStep(last);
+            return next;
+        });
+    }, []);
+
+    const buildReferenceUpdates = useCallback((): Partial<Task> => {
+        const updates: Partial<Task> = { status: 'reference' };
+        if (showContextsField) updates.contexts = selectedContexts;
+        if (showTagsField) updates.tags = selectedTags;
+        return updates;
+    }, [selectedContexts, selectedTags, showContextsField, showTagsField]);
+
     const handleNotActionable = useCallback((action: 'trash' | 'someday' | 'reference') => {
         if (!processingTask) return;
         if (action === 'trash') {
@@ -310,13 +332,40 @@ export function useInboxProcessingController({
             processNext();
             return;
         }
-        const applied = action === 'someday'
-            ? applyProcessingEdits({ status: 'someday' })
-            : applyProcessingEdits({ status: 'reference' });
+        if (action === 'reference') {
+            if (processingMode === 'guided' && (showContextsField || showTagsField)) {
+                goToStep('reference');
+                return;
+            }
+            const applied = applyProcessingEdits(buildReferenceUpdates());
+            if (applied) {
+                processNext();
+            }
+            return;
+        }
+        const applied = applyProcessingEdits({ status: 'someday' });
         if (applied) {
             processNext();
         }
-    }, [applyProcessingEdits, deleteTask, processNext, processingTask]);
+    }, [
+        applyProcessingEdits,
+        buildReferenceUpdates,
+        deleteTask,
+        goToStep,
+        processNext,
+        processingMode,
+        processingTask,
+        showContextsField,
+        showTagsField,
+    ]);
+
+    const handleConfirmReference = useCallback(() => {
+        if (!processingTask) return;
+        const applied = applyProcessingEdits(buildReferenceUpdates());
+        if (applied) {
+            processNext();
+        }
+    }, [applyProcessingEdits, buildReferenceUpdates, processNext, processingTask]);
 
     const handleLater = useCallback(() => {
         if (!processingTask) return;
@@ -357,21 +406,6 @@ export function useInboxProcessingController({
         showToast,
         t,
     ]);
-
-    const goToStep = useCallback((nextStep: ProcessingStep) => {
-        setStepHistory((prev) => [...prev, processingStep]);
-        setProcessingStep(nextStep);
-    }, [processingStep]);
-
-    const goBack = useCallback(() => {
-        setStepHistory((prev) => {
-            if (prev.length === 0) return prev;
-            const next = [...prev];
-            const last = next.pop();
-            if (last) setProcessingStep(last);
-            return next;
-        });
-    }, []);
 
     const getInitialGuidedStep = useCallback<() => ProcessingStep>(() => (
         twoMinuteEnabled && twoMinuteFirst ? 'twomin' : 'actionable'
@@ -827,6 +861,7 @@ export function useInboxProcessingController({
         handleDelegateBack,
         handleSendDelegateRequest,
         handleConfirmWaiting,
+        handleConfirmReference,
         selectedContexts,
         selectedTags,
         selectedEnergyLevel,

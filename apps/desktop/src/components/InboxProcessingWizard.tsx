@@ -12,7 +12,7 @@ import { TokenAutocompleteInput } from './Task/TokenAutocompleteInput';
 import { ProjectSelector } from './ui/ProjectSelector';
 import { QuickDateChips } from './QuickDateChips';
 
-export type ProcessingStep = 'refine' | 'actionable' | 'projectcheck' | 'twomin' | 'decide' | 'context' | 'project' | 'delegate';
+export type ProcessingStep = 'refine' | 'actionable' | 'projectcheck' | 'twomin' | 'decide' | 'context' | 'reference' | 'project' | 'delegate';
 
 export type InboxProcessingWizardProps = {
     t: (key: string) => string;
@@ -48,6 +48,7 @@ export type InboxProcessingWizardProps = {
     handleDelegateBack: () => void;
     handleSendDelegateRequest: () => void;
     handleConfirmWaiting: () => void;
+    handleConfirmReference: () => void;
     selectedContexts: string[];
     selectedTags: string[];
     selectedEnergyLevel?: Task['energyLevel'];
@@ -155,6 +156,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
     handleDelegateBack,
     handleSendDelegateRequest,
     handleConfirmWaiting,
+    handleConfirmReference,
     selectedContexts,
     selectedTags,
     selectedEnergyLevel,
@@ -220,6 +222,8 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
         : null;
     const laterLabel = tFallback(t, 'process.later', 'Later');
     const laterHint = tFallback(t, 'process.laterHint', 'Set a start date and move this to Next.');
+    const isReferenceOrganizationStep = processingStep === 'reference';
+    const selectedOrganizationCount = selectedContexts.length + selectedTags.length;
     const compareLabels = (left: string, right: string) =>
         left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
     const sortedProjects = [...projects].sort((a, b) => compareLabels(a.title, b.title));
@@ -233,6 +237,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
         twomin: t('process.twoMin'),
         decide: t('process.nextStep'),
         context: t('process.context'),
+        reference: t('process.reference'),
         project: t('process.project'),
         delegate: t('process.delegateTitle'),
     };
@@ -606,7 +611,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                 </div>
             )}
 
-            {processingStep === 'context' && (
+            {(processingStep === 'context' || processingStep === 'reference') && (
                 <div className="space-y-4">
                     <p className="text-center text-sm text-muted-foreground">
                         {t('process.contextDesc')} {t('process.selectMultipleHint')}
@@ -737,7 +742,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                         </div>
                     ) : null}
 
-                    {showPriorityField && (
+                    {!isReferenceOrganizationStep && showPriorityField && (
                         <div className="space-y-2">
                             <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
                                 {t('taskEdit.priorityLabel')}
@@ -764,7 +769,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                         </div>
                     )}
 
-                    {(showEnergyLevelField || showAssignedToField || showTimeEstimateField) && (
+                    {!isReferenceOrganizationStep && (showEnergyLevelField || showAssignedToField || showTimeEstimateField) && (
                         <div className="grid gap-3 md:grid-cols-2">
                             {showEnergyLevelField && (
                                 <div className="space-y-2">
@@ -824,11 +829,11 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                     )}
 
                     <button
-                        onClick={handleConfirmContexts}
+                        onClick={isReferenceOrganizationStep ? handleConfirmReference : handleConfirmContexts}
                         className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90"
                     >
-                        {selectedContexts.length > 0
-                            ? `${t('process.next')} → (${selectedContexts.length})`
+                        {selectedOrganizationCount > 0
+                            ? `${t('process.next')} → (${selectedOrganizationCount})`
                             : `${t('process.next')} → (${t('process.noContext')})`}
                     </button>
                 </div>

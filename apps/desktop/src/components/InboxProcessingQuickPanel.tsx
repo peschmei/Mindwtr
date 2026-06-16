@@ -205,6 +205,7 @@ export function InboxProcessingQuickPanel({
     const showDecisionFields = showActionFields && twoMinuteChoice === 'no';
     const showDelegationFields = showDecisionFields && executionChoice === 'delegate';
     const showNextActionFields = showDecisionFields && executionChoice === 'defer';
+    const showReferenceOrganizationFields = actionabilityChoice === 'reference';
     const laterLabel = tFallback(t, 'process.later', 'Later');
     const laterHint = tFallback(t, 'process.laterHint', 'Set a start date and move this to Next.');
     const compareLabels = (left: string, right: string) =>
@@ -212,6 +213,78 @@ export function InboxProcessingQuickPanel({
     const sortedProjects = [...projects].sort((a, b) => compareLabels(a.title, b.title));
     const projectFilterAreaId = selectedAreaId || undefined;
     const filteredProjects = filterProjectsBySelectedArea(sortedProjects, projectFilterAreaId);
+    const organizationTokenFields = showContextsField || showTagsField ? (
+        <div className="grid gap-3 md:grid-cols-2">
+            {showContextsField ? (
+                <div className="space-y-2">
+                    <label htmlFor="quick-processing-contexts" className="text-[11px] text-muted-foreground font-medium">{t('taskEdit.contextsLabel')}</label>
+                    <TokenAutocompleteInput
+                        id="quick-processing-contexts"
+                        aria-label={t('taskEdit.contextsLabel')}
+                        value={contextsDraft}
+                        onChange={onContextsInputChange}
+                        suggestions={[...suggestedContexts, ...allContexts]}
+                        prefix="@"
+                        placeholder={t('taskEdit.contextsPlaceholder')}
+                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    />
+                    {suggestedContexts.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                            {suggestedContexts.map((ctx) => (
+                                <button
+                                    key={ctx}
+                                    type="button"
+                                    onClick={() => toggleContext(ctx)}
+                                    className={cn(
+                                        'px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
+                                        selectedContexts.includes(ctx)
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'bg-muted/40 border-border hover:bg-muted/70'
+                                    )}
+                                >
+                                    {ctx}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+            ) : null}
+            {showTagsField ? (
+                <div className="space-y-2">
+                    <label htmlFor="quick-processing-tags" className="text-[11px] text-muted-foreground font-medium">{t('taskEdit.tagsLabel')}</label>
+                    <TokenAutocompleteInput
+                        id="quick-processing-tags"
+                        aria-label={t('taskEdit.tagsLabel')}
+                        value={tagsDraft}
+                        onChange={onTagsInputChange}
+                        suggestions={[...suggestedTags, ...allTags]}
+                        prefix="#"
+                        placeholder={t('taskEdit.tagsPlaceholder')}
+                        className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    />
+                    {suggestedTags.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                            {suggestedTags.map((tag) => (
+                                <button
+                                    key={tag}
+                                    type="button"
+                                    onClick={() => toggleTag(tag)}
+                                    className={cn(
+                                        'px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
+                                        selectedTags.includes(tag)
+                                            ? 'bg-emerald-500 text-white border-emerald-600'
+                                            : 'bg-muted/40 border-border hover:bg-muted/70'
+                                    )}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+            ) : null}
+        </div>
+    ) : null;
 
     useEffect(() => {
         const handleDocumentKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -420,6 +493,12 @@ export function InboxProcessingQuickPanel({
                             visibleFieldKeys={['start']}
                             variant="quick"
                         />
+                    </div>
+                ) : null}
+
+                {showReferenceOrganizationFields && organizationTokenFields ? (
+                    <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
+                        {organizationTokenFields}
                     </div>
                 ) : null}
 
@@ -661,78 +740,7 @@ export function InboxProcessingQuickPanel({
                             </div>
                         )}
 
-                        {showContextsField || showTagsField ? (
-                            <div className="grid gap-3 md:grid-cols-2">
-                                {showContextsField ? (
-                                    <div className="space-y-2">
-                                        <label htmlFor="quick-processing-contexts" className="text-[11px] text-muted-foreground font-medium">{t('taskEdit.contextsLabel')}</label>
-                                        <TokenAutocompleteInput
-                                            id="quick-processing-contexts"
-                                            aria-label={t('taskEdit.contextsLabel')}
-                                            value={contextsDraft}
-                                            onChange={onContextsInputChange}
-                                            suggestions={[...suggestedContexts, ...allContexts]}
-                                            prefix="@"
-                                            placeholder={t('taskEdit.contextsPlaceholder')}
-                                            className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
-                                        />
-                                        {suggestedContexts.length > 0 ? (
-                                            <div className="flex flex-wrap gap-2">
-                                                {suggestedContexts.map((ctx) => (
-                                                    <button
-                                                        key={ctx}
-                                                        type="button"
-                                                        onClick={() => toggleContext(ctx)}
-                                                        className={cn(
-                                                            'px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
-                                                            selectedContexts.includes(ctx)
-                                                                ? 'bg-primary text-primary-foreground border-primary'
-                                                                : 'bg-muted/40 border-border hover:bg-muted/70'
-                                                        )}
-                                                    >
-                                                        {ctx}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                ) : null}
-                                {showTagsField ? (
-                                    <div className="space-y-2">
-                                        <label htmlFor="quick-processing-tags" className="text-[11px] text-muted-foreground font-medium">{t('taskEdit.tagsLabel')}</label>
-                                        <TokenAutocompleteInput
-                                            id="quick-processing-tags"
-                                            aria-label={t('taskEdit.tagsLabel')}
-                                            value={tagsDraft}
-                                            onChange={onTagsInputChange}
-                                            suggestions={[...suggestedTags, ...allTags]}
-                                            prefix="#"
-                                            placeholder={t('taskEdit.tagsPlaceholder')}
-                                            className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
-                                        />
-                                        {suggestedTags.length > 0 ? (
-                                            <div className="flex flex-wrap gap-2">
-                                                {suggestedTags.map((tag) => (
-                                                    <button
-                                                        key={tag}
-                                                        type="button"
-                                                        onClick={() => toggleTag(tag)}
-                                                        className={cn(
-                                                            'px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
-                                                            selectedTags.includes(tag)
-                                                                ? 'bg-emerald-500 text-white border-emerald-600'
-                                                                : 'bg-muted/40 border-border hover:bg-muted/70'
-                                                        )}
-                                                    >
-                                                        {tag}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                ) : null}
-                            </div>
-                        ) : null}
+                        {organizationTokenFields}
 
                         {showPriorityField ? (
                             <div className="space-y-2">

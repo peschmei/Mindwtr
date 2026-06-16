@@ -392,6 +392,60 @@ describe('InboxProcessor', () => {
         expect(getByText('process.reference')).toBeTruthy();
     });
 
+    it('shows context and tag fields for quick Reference processing', async () => {
+        const { getByRole, getByText, getByLabelText, updateTask } = renderInboxProcessor();
+
+        fireEvent.click(getByRole('button', { name: /process\.btn/i }));
+        fireEvent.click(getByRole('button', { name: 'process.modeQuick' }));
+        fireEvent.click(getByText('process.reference'));
+        fireEvent.change(getByLabelText('taskEdit.contextsLabel'), {
+            target: { value: '@docs, @desk' },
+        });
+        fireEvent.change(getByLabelText('taskEdit.tagsLabel'), {
+            target: { value: '#reference, #launch' },
+        });
+
+        fireEvent.click(getByRole('button', { name: 'process.next' }));
+
+        await waitFor(() => {
+            expect(updateTask).toHaveBeenCalledWith(
+                'task-1',
+                expect.objectContaining({
+                    status: 'reference',
+                    contexts: ['@docs', '@desk'],
+                    tags: ['#reference', '#launch'],
+                }),
+            );
+        });
+    });
+
+    it('shows context and tag fields before confirming guided Reference processing', async () => {
+        const user = userEvent.setup();
+        const { getAllByRole, getByPlaceholderText, getByRole, getByText, updateTask } = renderInboxProcessor();
+
+        fireEvent.click(getByRole('button', { name: /process\.btn/i }));
+        fireEvent.click(getByText('process.refineNext'));
+        fireEvent.click(getByText('process.reference'));
+
+        await user.type(getByPlaceholderText('@home'), '@docs, @desk');
+        fireEvent.click(getAllByRole('button', { name: '+' })[0]);
+        await user.type(getByPlaceholderText('#deep-work'), '#reference, #launch');
+        fireEvent.click(getAllByRole('button', { name: '+' })[1]);
+
+        fireEvent.click(getByRole('button', { name: /process\.next/ }));
+
+        await waitFor(() => {
+            expect(updateTask).toHaveBeenCalledWith(
+                'task-1',
+                expect.objectContaining({
+                    status: 'reference',
+                    contexts: ['@docs', '@desk'],
+                    tags: ['#reference', '#launch'],
+                }),
+            );
+        });
+    });
+
     it('shows scheduling options when enabled in settings and visible in the task editor layout', () => {
         const { getByRole, getByText } = renderInboxProcessor({
             gtd: {
