@@ -89,6 +89,7 @@ export const normalizeTaskForContentComparison = (task: Task): Record<string, un
         showFutureRecurrence: hasRecurrence && task.showFutureRecurrence ? true : undefined,
         suppressMindwtrReminders: task.suppressMindwtrReminders ? true : undefined,
         pushCount: task.pushCount === 0 ? undefined : task.pushCount,
+        repeatReminderMinutes: task.repeatReminderMinutes ? task.repeatReminderMinutes : undefined,
     };
     if (task.status === 'inbox') delete comparable.status;
     return comparable;

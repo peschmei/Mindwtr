@@ -44,6 +44,14 @@ const section = (updates: Partial<Section> = {}): Section => ({
 });
 
 describe('sync signatures', () => {
+    it('omits repeatReminderMinutes from the task signature when off, includes it when set', () => {
+        const undef = toComparableSignature(normalizeTaskForContentComparison(task()));
+        const zero = toComparableSignature(normalizeTaskForContentComparison(task({ repeatReminderMinutes: 0 })));
+        const set15 = toComparableSignature(normalizeTaskForContentComparison(task({ repeatReminderMinutes: 15 })));
+        expect(zero).toBe(undef);
+        expect(set15).not.toBe(undef);
+    });
+
     it('normalizes area default color and ordering for content comparison', () => {
         const local = normalizeAreaForContentComparison(area({
             color: '#6B7280',
