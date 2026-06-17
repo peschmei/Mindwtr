@@ -414,11 +414,13 @@ export function useListSelection({
             toggleDoneSelected,
             deleteSelected,
             focusAddInput: () => {
-                if (showViewFilterInput) {
-                    viewFilterInputRef.current?.focus();
+                if (addInputRef.current) {
+                    addInputRef.current.focus();
                     return;
                 }
-                addInputRef.current?.focus();
+                if (showViewFilterInput) {
+                    viewFilterInputRef.current?.focus();
+                }
             },
         });
 

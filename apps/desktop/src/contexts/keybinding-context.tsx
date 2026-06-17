@@ -233,6 +233,20 @@ export function KeybindingProvider({
         scopeRef.current = scope;
     }, []);
 
+    const focusFallbackAddTaskTarget = useCallback((): boolean => {
+        const root = document.querySelector<HTMLElement>('[data-main-content]') ?? document.body;
+        const target = Array.from(root.querySelectorAll<HTMLElement>('[data-add-task-trigger]'))
+            .find((element) => {
+                if ('disabled' in element && Boolean((element as HTMLButtonElement).disabled)) return false;
+                const style = window.getComputedStyle(element);
+                return style.display !== 'none' && style.visibility !== 'hidden';
+            });
+        if (!target) return false;
+        target.focus();
+        target.click();
+        return true;
+    }, []);
+
     const focusFallbackFilterInput = useCallback(() => {
         const root = document.querySelector<HTMLElement>('[data-main-content]') ?? document.body;
         const input = Array.from(root.querySelectorAll<HTMLElement>('[data-view-filter-input]'))
@@ -247,6 +261,11 @@ export function KeybindingProvider({
             });
         input?.focus();
     }, []);
+
+    const focusFallbackAddInput = useCallback(() => {
+        if (focusFallbackAddTaskTarget()) return;
+        focusFallbackFilterInput();
+    }, [focusFallbackAddTaskTarget, focusFallbackFilterInput]);
 
     const getFallbackTaskElements = useCallback((): HTMLElement[] => {
         const root = document.querySelector<HTMLElement>('[data-main-content]') ?? document.body;
@@ -439,7 +458,7 @@ export function KeybindingProvider({
         openQuickActions: fallbackOpenQuickActionsSelected,
         toggleDoneSelected: fallbackToggleDoneSelected,
         deleteSelected: fallbackDeleteSelected,
-        focusAddInput: focusFallbackFilterInput,
+        focusAddInput: focusFallbackAddInput,
     }), [
         fallbackDeleteSelected,
         fallbackEditSelected,
@@ -449,7 +468,7 @@ export function KeybindingProvider({
         fallbackSelectNext,
         fallbackSelectPrev,
         fallbackToggleDoneSelected,
-        focusFallbackFilterInput,
+        focusFallbackAddInput,
     ]);
 
     const getActiveScope = useCallback((): TaskListScope => {

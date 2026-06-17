@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Project, Section, Task } from '@mindwtr/core';
 
 import { useUiStore } from '../../../store/ui-store';
+import { LanguageProvider } from '../../../contexts/language-context';
+import { KeybindingProvider } from '../../../contexts/keybinding-context';
 import { ProjectWorkspace } from './ProjectWorkspace';
 
 vi.mock('../../TaskItem', () => ({
@@ -182,6 +184,17 @@ const renderWorkspace = (overrides: Partial<ProjectWorkspaceProps> = {}) => rend
     />
 );
 
+const renderWorkspaceWithKeybindings = (overrides: Partial<ProjectWorkspaceProps> = {}) => render(
+    <LanguageProvider>
+        <KeybindingProvider currentView="projects" onNavigate={vi.fn()}>
+            <ProjectWorkspace
+                {...defaultProps}
+                {...overrides}
+            />
+        </KeybindingProvider>
+    </LanguageProvider>
+);
+
 describe('ProjectWorkspace Select mode', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -204,6 +217,25 @@ describe('ProjectWorkspace Select mode', () => {
             },
         });
         expect(useUiStore.getState().editingTaskId).toBeNull();
+        window.removeEventListener('mindwtr:quick-add', quickAddListener);
+    });
+
+    it('opens selected project quick add from the add-task shortcut', () => {
+        const quickAddListener = vi.fn();
+        window.addEventListener('mindwtr:quick-add', quickAddListener);
+
+        renderWorkspaceWithKeybindings();
+
+        fireEvent.keyDown(window, { key: 'o' });
+
+        expect(quickAddListener).toHaveBeenCalledTimes(1);
+        const event = quickAddListener.mock.calls[0]?.[0] as CustomEvent;
+        expect(event.detail).toEqual({
+            initialProps: {
+                projectId: project.id,
+                status: 'next',
+            },
+        });
         window.removeEventListener('mindwtr:quick-add', quickAddListener);
     });
 

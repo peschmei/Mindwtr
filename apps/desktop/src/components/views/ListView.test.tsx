@@ -40,7 +40,7 @@ const renderStaticListView = (statusFilter: 'inbox' | 'done', title: string) =>
     </LanguageProvider>
   );
 
-const renderListView = (statusFilter: 'inbox' | 'next' | 'done' | 'archived' | 'reference' = 'next', title = 'Next') =>
+const renderListView = (statusFilter: 'inbox' | 'next' | 'waiting' | 'someday' | 'done' | 'archived' | 'reference' = 'next', title = 'Next') =>
   render(
     <LanguageProvider>
       <KeybindingProvider currentView={statusFilter} onNavigate={() => {}}>
@@ -99,6 +99,20 @@ describe('ListView', () => {
   it('renders local search input in done view', () => {
     const html = renderStaticListView('done', 'Done');
     expect(html).toContain('data-view-filter-input');
+  });
+
+  it.each([
+    ['waiting', 'Waiting'],
+    ['someday', 'Someday'],
+  ] as const)('focuses quick-add input with o in the %s view', async (statusFilter, title) => {
+    const { getByPlaceholderText } = renderListView(statusFilter, title);
+    const quickAddInput = getByPlaceholderText(/add task/i);
+
+    fireEvent.keyDown(window, { key: 'o' });
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(quickAddInput);
+    });
   });
 
   it('keeps future-start inbox tasks visible while hiding future-start next actions', async () => {

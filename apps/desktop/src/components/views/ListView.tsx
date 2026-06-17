@@ -784,6 +784,10 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const isInbox = statusFilter === 'inbox';
     const isNextView = statusFilter === 'next';
     const isWaitingView = statusFilter === 'waiting';
+    const showQuickAdd = statusFilter === 'inbox'
+        || statusFilter === 'next'
+        || statusFilter === 'waiting'
+        || statusFilter === 'someday';
     const priorityOptions: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
     const timeEstimateOptions: TimeEstimate[] = ['5min', '10min', '15min', '30min', '1hr', '2hr', '3hr', '4hr', '4hr+'];
     const formatEstimate = formatTimeEstimateLabel;
@@ -988,7 +992,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                     selectedTimeEstimates={selectedTimeEstimates}
                     onToggleEstimate={toggleTimeFilter}
                     formatEstimate={formatEstimate}
-                    showQuickAdd={['inbox', 'next'].includes(statusFilter)}
+                    showQuickAdd={showQuickAdd}
                     quickAddValue={newTaskTitle}
                     addInputRef={addInputRef}
                     projects={projects}

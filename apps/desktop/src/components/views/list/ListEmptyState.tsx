@@ -28,7 +28,12 @@ export function ListEmptyState({ hasFilters, emptyState, onAddTask, primaryActio
                         <div className="mt-1 w-full max-w-xs">{primaryAction}</div>
                     )}
                     {emptyState.action && (
-                        <Button size="xs" variant={primaryAction ? 'ghost' : 'primary'} onClick={onAddTask}>
+                        <Button
+                            size="xs"
+                            variant={primaryAction ? 'ghost' : 'primary'}
+                            data-add-task-trigger
+                            onClick={onAddTask}
+                        >
                             {emptyState.action}
                         </Button>
                     )}
