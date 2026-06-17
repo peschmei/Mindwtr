@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, SectionList, TextInput, View } from 'react-native';
+import { Alert, SectionList, Text, TextInput, View } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppSettings, Project, Task } from '@mindwtr/core';
@@ -530,6 +530,21 @@ describe('FocusScreen', () => {
 
     expect(flattenStyle(todayHeader.props.style).marginTop).toBe(8);
     expect(flattenStyle(nextHeader.props.style).marginTop).toBe(18);
+  });
+
+  it('lets Focus section titles shrink before the divider line truncates them', () => {
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const todayText = tree.root.findAllByType(Text).find((node) => textContent(node) === "Today's Focus");
+    expect(todayText).toBeDefined();
+    expect(flattenStyle(todayText!.props.style)).toMatchObject({
+      flexShrink: 1,
+      minWidth: 0,
+    });
   });
 
   it('keeps the Focus filter affordance compact without visible circle chrome', () => {

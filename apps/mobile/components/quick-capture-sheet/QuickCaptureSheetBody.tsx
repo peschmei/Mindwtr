@@ -392,7 +392,7 @@ export function QuickCaptureSheetBody({
 
                 <Text
                   style={[styles.syntaxHint, { color: tc.secondaryText }]}
-                  numberOfLines={1}
+                  numberOfLines={2}
                   ellipsizeMode="tail"
                   maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
@@ -434,7 +434,7 @@ export function QuickCaptureSheetBody({
                       <CalendarDays size={14} color={tc.secondaryText} />
                       <Text
                         style={[styles.customDateButtonText, { color: tc.secondaryText }]}
-                        numberOfLines={1}
+                        numberOfLines={2}
                         ellipsizeMode="tail"
                         maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                       >

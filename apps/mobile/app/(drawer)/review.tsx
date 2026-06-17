@@ -431,7 +431,7 @@ export default function ReviewScreen() {
                 <View style={styles.reviewAreaHeaderMain}>
                   <View style={[styles.reviewAreaDot, { backgroundColor: areaGroup.color }]} />
                   <View style={styles.reviewAreaTextBlock}>
-                    <Text style={[styles.reviewAreaTitle, { color: tc.text }]} numberOfLines={1}>
+                    <Text style={[styles.reviewAreaTitle, { color: tc.text }]} numberOfLines={2}>
                       {areaGroup.title}
                     </Text>
                     <View style={styles.reviewAreaSummaryRow}>
@@ -480,7 +480,7 @@ export default function ReviewScreen() {
                         >
                           <View style={styles.reviewProjectHeaderTop}>
                             <View style={styles.reviewProjectTitleRow}>
-                              <Text style={[styles.reviewProjectTitle, { color: tc.text }]} numberOfLines={1}>
+                              <Text style={[styles.reviewProjectTitle, { color: tc.text }]} numberOfLines={2}>
                                 {projectGroup.title}
                               </Text>
                               {projectGroup.projectId ? (
@@ -491,7 +491,7 @@ export default function ReviewScreen() {
                                   <Text style={[
                                     styles.reviewStatusText,
                                     { color: projectGroup.hasNextAction ? HAS_NEXT_ACTION_COLOR : NEEDS_ACTION_COLOR },
-                                  ]} numberOfLines={1}>
+                                  ]} numberOfLines={2}>
                                     {projectGroup.hasNextAction ? t('review.hasNextAction') : t('review.needsAction')}
                                   </Text>
                                 </View>
@@ -508,7 +508,7 @@ export default function ReviewScreen() {
                             </Text>
                           </View>
                           <View style={styles.reviewProjectMetaRow}>
-                            <Text style={[styles.reviewProjectMetaText, { color: tc.secondaryText }]} numberOfLines={1}>
+                            <Text style={[styles.reviewProjectMetaText, { color: tc.secondaryText }]} numberOfLines={2}>
                               {projectGroup.isSingleActions
                                 ? `${projectGroup.tasks.length} ${t('common.tasks')}`
                                 : `${projectGroup.tasks.length} ${activeTasksLabel}`}
@@ -826,13 +826,14 @@ const styles = StyleSheet.create({
   },
   reviewProjectHeaderTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
   },
   reviewProjectTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
     gap: 8,
     flex: 1,
     minWidth: 0,
@@ -863,20 +864,25 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 3,
+    maxWidth: '100%',
+    flexShrink: 1,
   },
   reviewStatusText: {
     fontSize: 11,
     fontWeight: '700',
-    maxWidth: 120,
+    textAlign: 'center',
   },
   reviewSingleActionsBadge: {
     borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 3,
+    maxWidth: '100%',
+    flexShrink: 1,
   },
   reviewSingleActionsText: {
     fontSize: 11,
     fontWeight: '700',
+    textAlign: 'center',
   },
   reviewGroupedTasks: {
     marginTop: 8,

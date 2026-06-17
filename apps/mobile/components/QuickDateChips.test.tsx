@@ -57,6 +57,29 @@ describe('QuickDateChips', () => {
     expect(labels).toContain('Next month');
   });
 
+  it('gives each quick date pill a minimum responsive width before wrapping', () => {
+    let tree!: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <QuickDateChips
+          t={t}
+          tc={tc as any}
+          selectedDate={null}
+          onSelect={vi.fn()}
+          presets={['today', 'tomorrow', 'next_week']}
+        />
+      );
+    });
+
+    const firstChip = tree.root.findAllByProps({ accessibilityRole: 'button' })[0];
+    expect(flattenStyle(firstChip.props.style)).toMatchObject({
+      flexBasis: 92,
+      flexGrow: 1,
+      flexShrink: 1,
+    });
+  });
+
   it('renders only the presets it is given', () => {
     let tree!: renderer.ReactTestRenderer;
 

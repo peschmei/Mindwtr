@@ -1295,7 +1295,10 @@ export default function FocusScreen() {
     ];
     const textColor = isAdvanced ? tc.tint : selected ? tc.onTint : tc.text;
     const chipText = (
-      <Text style={[styles.filterChipText, { color: textColor }]}>
+      <Text
+        style={[styles.filterChipText, { color: textColor }]}
+        numberOfLines={2}
+      >
         {label}
       </Text>
     );
@@ -2096,6 +2099,10 @@ const styles = StyleSheet.create({
   filterChip: {
     borderWidth: 1,
     borderRadius: 22,
+    flexBasis: 104,
+    flexGrow: 1,
+    flexShrink: 1,
+    maxWidth: '100%',
     paddingHorizontal: 10,
     paddingVertical: 10,
     minHeight: 44,
@@ -2116,6 +2123,9 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
+    flexShrink: 1,
+    minWidth: 0,
+    textAlign: 'center',
   },
   clearFiltersButton: {
     justifyContent: 'center',
@@ -2179,6 +2189,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
+    flexShrink: 1,
+    minWidth: 0,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -2193,6 +2205,7 @@ const styles = StyleSheet.create({
   },
   sectionLine: {
     flex: 1,
+    minWidth: 24,
     height: 1,
     borderRadius: 1,
   },
@@ -2388,6 +2401,8 @@ const styles = StyleSheet.create({
   matchModeButton: {
     minWidth: 52,
     minHeight: 30,
+    flexGrow: 1,
+    flexShrink: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 15,

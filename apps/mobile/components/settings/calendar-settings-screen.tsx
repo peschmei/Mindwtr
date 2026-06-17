@@ -790,10 +790,10 @@ export function CalendarSettingsScreen() {
                                                 style={[styles.settingRow, idx > 0 && { borderTopWidth: 1, borderTopColor: tc.border }]}
                                             >
                                                 <View style={styles.settingInfo}>
-                                                    <Text style={[styles.settingLabel, { color: tc.text }]} numberOfLines={1}>
+                                                    <Text style={[styles.settingLabel, { color: tc.text }]} numberOfLines={2}>
                                                         {calendar.name}
                                                     </Text>
-                                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]} numberOfLines={1}>
+                                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]} numberOfLines={2}>
                                                         {t('settings.deviceCalendar')}
                                                     </Text>
                                                 </View>
@@ -845,7 +845,7 @@ export function CalendarSettingsScreen() {
                             onChangeText={setNewCalendarUrl}
                         />
 
-                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
                             <TouchableOpacity
                                 style={[
                                     styles.backendOption,
@@ -891,10 +891,10 @@ export function CalendarSettingsScreen() {
                                     style={[styles.settingRow, idx > 0 && { borderTopWidth: 1, borderTopColor: tc.border }]}
                                 >
                                     <View style={styles.settingInfo}>
-                                        <Text style={[styles.settingLabel, { color: tc.text }]} numberOfLines={1}>
+                                        <Text style={[styles.settingLabel, { color: tc.text }]} numberOfLines={2}>
                                             {calendar.name}
                                         </Text>
-                                        <Text style={[styles.settingDescription, { color: tc.secondaryText }]} numberOfLines={1}>
+                                        <Text style={[styles.settingDescription, { color: tc.secondaryText }]} numberOfLines={2}>
                                             {maskCalendarUrl(calendar.url)}
                                         </Text>
                                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
