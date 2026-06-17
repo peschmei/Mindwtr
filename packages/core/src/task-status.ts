@@ -1,5 +1,6 @@
 import type { Task, TaskStatus } from './types';
 import { normalizeRecurrenceForLoad } from './recurrence';
+import { normalizeRepeatReminderMinutes } from './schedule-utils';
 import { safeParseDate } from './date';
 
 export const TASK_STATUS_VALUES: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'reference', 'done', 'archived'];
@@ -100,6 +101,7 @@ export function normalizeTaskForLoad(task: Task, nowIso: string = new Date().toI
         order: normalizedOrder,
         orderNum: normalizedOrder,
         recurrence: normalizeRecurrenceForLoad(task.recurrence),
+        repeatReminderMinutes: normalizeRepeatReminderMinutes(task.repeatReminderMinutes),
         rev,
         ...(revBy ? { revBy } : {}),
         ...(textDirection ? { textDirection } : {}),

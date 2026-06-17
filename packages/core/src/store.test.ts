@@ -136,6 +136,18 @@ describe('TaskStore', () => {
         expect(task.purgedAt).toBeUndefined();
     });
 
+    it('coerces repeatReminderMinutes to an allowed preset or undefined when adding a task', async () => {
+        const { addTask } = useTaskStore.getState();
+        await addTask('Repeat preset', { repeatReminderMinutes: 15 });
+        await addTask('Repeat junk', { repeatReminderMinutes: 7 });
+
+        const tasks = useTaskStore.getState().tasks;
+        const preset = tasks.find((t) => t.title === 'Repeat preset');
+        const junk = tasks.find((t) => t.title === 'Repeat junk');
+        expect(preset?.repeatReminderMinutes).toBe(15);
+        expect(junk?.repeatReminderMinutes).toBeUndefined();
+    });
+
     it('should update a task', () => {
         const { addTask, updateTask } = useTaskStore.getState();
         addTask('Task to Update');

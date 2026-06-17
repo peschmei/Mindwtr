@@ -15,6 +15,23 @@ import type { AppData, Area, Project, Section, Task } from './types';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
+describe('normalizeTaskForSyncMerge repeatReminderMinutes', () => {
+    const taskWith = (repeatReminderMinutes: number): Task => ({
+        id: 't', title: 't', status: 'next', tags: [], contexts: [],
+        createdAt: NOW, updatedAt: NOW, repeatReminderMinutes,
+    });
+
+    it('coerces an out-of-range repeatReminderMinutes to undefined', () => {
+        const task = normalizeTaskForSyncMerge(taskWith(7), NOW);
+        expect(task.repeatReminderMinutes).toBeUndefined();
+    });
+
+    it('preserves a valid repeatReminderMinutes', () => {
+        const task = normalizeTaskForSyncMerge(taskWith(15), NOW);
+        expect(task.repeatReminderMinutes).toBe(15);
+    });
+});
+
 const normalizeForMerge = (data: AppData, nowIso = NOW): AppData => {
     const normalized = normalizeAppData(data);
     return {

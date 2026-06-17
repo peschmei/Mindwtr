@@ -22,6 +22,7 @@ import {
 import { logWarn } from './logger';
 import { generateUUID as uuidv4 } from './uuid';
 import { normalizeRecurrenceForLoad } from './recurrence';
+import { normalizeRepeatReminderMinutes } from './schedule-utils';
 import { normalizeFocusTaskLimit } from './focus-utils';
 import { getTaskFocusEligibility, isTaskFutureStart } from './task-utils';
 import { resolveTaskContainerHierarchy } from './task-container-rules';
@@ -632,6 +633,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 contexts: initialProps?.contexts ?? [],
                 pushCount: initialProps?.pushCount ?? 0,
                 recurrence: normalizeRecurrenceForLoad(initialProps?.recurrence),
+                repeatReminderMinutes: normalizeRepeatReminderMinutes(initialProps?.repeatReminderMinutes),
                 rev: 1,
                 revBy: deviceId,
                 createdAt: now,
