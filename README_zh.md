@@ -45,9 +45,10 @@
          height="50" />
   </a>
   <a href="https://apt.izzysoft.de/packages/tech.dongdongbh.mindwtr" target="_blank">
-    <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidButtonGreyBorder.svg"
+    <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png"
          align="center"
          alt="在 IzzyOnDroid 获取"
+         style="height: 74px"
          height="74" />
   </a>
   <a href="https://f-droid.org/en/packages/tech.dongdongbh.mindwtr/" target="_blank">
