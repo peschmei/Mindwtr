@@ -255,6 +255,8 @@ export const TaskItem = memo(function TaskItem({
         setEditAssignedTo,
         editReviewAt,
         setEditReviewAt,
+        editRepeatReminderMinutes,
+        setEditRepeatReminderMinutes,
         showDescriptionPreview,
         setShowDescriptionPreview,
         resetEditState: resetLocalEditState,
@@ -601,6 +603,7 @@ export const TaskItem = memo(function TaskItem({
         editStartTime,
         editDueDate,
         editReviewAt,
+        editRepeatReminderMinutes,
         editStatus,
         editPriority,
         editEnergyLevel,
@@ -633,6 +636,7 @@ export const TaskItem = memo(function TaskItem({
         editStartTime,
         editDueDate,
         editReviewAt,
+        editRepeatReminderMinutes,
         editStatus,
         editPriority,
         editEnergyLevel,
@@ -668,6 +672,7 @@ export const TaskItem = memo(function TaskItem({
         setEditStartTime,
         setEditDueDate,
         setEditReviewAt,
+        setEditRepeatReminderMinutes,
         setEditStatus,
         setEditPriority,
         setEditEnergyLevel,
@@ -695,6 +700,7 @@ export const TaskItem = memo(function TaskItem({
         setEditStartTime,
         setEditDueDate,
         setEditReviewAt,
+        setEditRepeatReminderMinutes,
         setEditStatus,
         setEditPriority,
         setEditEnergyLevel,
@@ -796,6 +802,7 @@ export const TaskItem = memo(function TaskItem({
         editRecurrenceStrategy,
         editShowFutureRecurrence,
         editReviewAt,
+        editRepeatReminderMinutes,
         editSectionId,
         editStartTime,
         editStatus,
@@ -971,6 +978,7 @@ export const TaskItem = memo(function TaskItem({
         if (editDueDate !== toDateTimeLocalValue(task.dueDate)) return true;
         if (editStartTime !== toDateTimeLocalValue(task.startTime)) return true;
         if (editReviewAt !== toDateTimeLocalValue(task.reviewAt)) return true;
+        if ((editRepeatReminderMinutes ?? undefined) !== (task.repeatReminderMinutes ?? undefined)) return true;
         return false;
     }, [
         editTitle,
@@ -993,6 +1001,7 @@ export const TaskItem = memo(function TaskItem({
         editDueDate,
         editStartTime,
         editReviewAt,
+        editRepeatReminderMinutes,
         task,
     ]);
     const taskEditorPresentationSetting = settings?.gtd?.taskEditor?.presentation;

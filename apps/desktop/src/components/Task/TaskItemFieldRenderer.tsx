@@ -21,6 +21,7 @@ import {
     normalizeDateFormatSetting,
     parseCalendarInputDate,
     parseRRuleString,
+    REPEAT_REMINDER_INTERVAL_OPTIONS,
     resolveAutoTextDirection,
     safeFormatDate,
     safeParseDate,
@@ -533,6 +534,7 @@ export type TaskItemFieldRendererData = {
     editStartTime: string;
     editDueDate: string;
     editReviewAt: string;
+    editRepeatReminderMinutes: number | undefined;
     editStatus: TaskStatus;
     editPriority: TaskPriority | '';
     editEnergyLevel: NonNullable<TaskEnergyLevel> | '';
@@ -569,6 +571,7 @@ export type TaskItemFieldRendererHandlers = {
     setEditStartTime: (value: string) => void;
     setEditDueDate: (value: string) => void;
     setEditReviewAt: (value: string) => void;
+    setEditRepeatReminderMinutes: (value: number | undefined) => void;
     setEditStatus: (value: TaskStatus) => void;
     setEditPriority: (value: TaskPriority | '') => void;
     setEditEnergyLevel: (value: NonNullable<TaskEnergyLevel> | '') => void;
@@ -608,6 +611,7 @@ export function TaskItemFieldRenderer({
         editStartTime,
         editDueDate,
         editReviewAt,
+        editRepeatReminderMinutes,
         editStatus,
         editPriority,
         editEnergyLevel,
@@ -671,6 +675,7 @@ export function TaskItemFieldRenderer({
         setEditStartTime,
         setEditDueDate,
         setEditReviewAt,
+        setEditRepeatReminderMinutes,
         setEditStatus,
         setEditPriority,
         setEditEnergyLevel,
@@ -1162,26 +1167,57 @@ export function TaskItemFieldRenderer({
                     const datePart = dateValue || safeFormatDate(new Date(), 'yyyy-MM-dd');
                     setEditDueDate(`${datePart}T${value}`);
                 };
-                return renderDateField({
-                    label: t('taskEdit.dueDateLabel'),
-                    dateAriaLabel: t('task.aria.dueDate'),
-                    dateValue,
-                    selectedDate: parsed,
-                    onDateChange: handleDateChange,
-                    timeInput: (
-                        <input
-                            type="time"
-                            lang={nativeDateInputLocale}
-                            aria-label={t('task.aria.dueTime')}
-                            value={timeValue}
-                            onChange={(event) => handleTimeChange(event.target.value)}
-                            className={timeInputClassName}
-                        />
-                    ),
-                    onClear: () => setEditDueDate(''),
-                    hasValue: Boolean(editDueDate),
-                    warning: dateIssueLabel,
-                });
+                return (
+                    <>
+                        {renderDateField({
+                            label: t('taskEdit.dueDateLabel'),
+                            dateAriaLabel: t('task.aria.dueDate'),
+                            dateValue,
+                            selectedDate: parsed,
+                            onDateChange: handleDateChange,
+                            timeInput: (
+                                <input
+                                    type="time"
+                                    lang={nativeDateInputLocale}
+                                    aria-label={t('task.aria.dueTime')}
+                                    value={timeValue}
+                                    onChange={(event) => handleTimeChange(event.target.value)}
+                                    className={timeInputClassName}
+                                />
+                            ),
+                            onClear: () => setEditDueDate(''),
+                            hasValue: Boolean(editDueDate),
+                            warning: dateIssueLabel,
+                        })}
+                        {hasTime && !task.suppressMindwtrReminders && (
+                            <div className="mt-1 flex items-center gap-2">
+                                <label
+                                    htmlFor={`repeat-reminder-${taskId}`}
+                                    className="text-xs text-muted-foreground shrink-0"
+                                >
+                                    {tFallback(t, 'taskEdit.repeatReminderLabel', 'Repeat reminder')}
+                                </label>
+                                <select
+                                    id={`repeat-reminder-${taskId}`}
+                                    aria-label={tFallback(t, 'taskEdit.repeatReminderLabel', 'Repeat reminder')}
+                                    className="text-xs bg-muted/50 border border-border rounded px-2 py-1 text-foreground"
+                                    value={editRepeatReminderMinutes ?? 0}
+                                    onChange={(event) => {
+                                        const next = Number(event.target.value);
+                                        setEditRepeatReminderMinutes(next > 0 ? next : undefined);
+                                    }}
+                                >
+                                    <option value={0}>{tFallback(t, 'taskEdit.repeatReminderOff', 'Off')}</option>
+                                    {REPEAT_REMINDER_INTERVAL_OPTIONS.map((minutes) => (
+                                        <option key={minutes} value={minutes}>
+                                            {tFallback(t, 'taskEdit.repeatReminderEveryMinutes', 'Every {count} min').replace('{count}', String(minutes))}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </>
+                );
             }
         case 'reviewAt':
             {

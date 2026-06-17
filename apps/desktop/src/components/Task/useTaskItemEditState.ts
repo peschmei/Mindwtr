@@ -53,6 +53,8 @@ type TaskItemEditState = {
     setEditAssignedTo: (value: string) => void;
     editReviewAt: string;
     setEditReviewAt: (value: string) => void;
+    editRepeatReminderMinutes: number | undefined;
+    setEditRepeatReminderMinutes: (value: number | undefined) => void;
     showDescriptionPreview: boolean;
     setShowDescriptionPreview: Dispatch<SetStateAction<boolean>>;
     resetEditState: () => void;
@@ -91,6 +93,7 @@ export function useTaskItemEditState({
     const [editEnergyLevel, setEditEnergyLevel] = useState<NonNullable<Task['energyLevel']> | ''>(task.energyLevel || '');
     const [editAssignedTo, setEditAssignedTo] = useState(task.assignedTo || '');
     const [editReviewAt, setEditReviewAt] = useState(toDateTimeLocalValue(task.reviewAt));
+    const [editRepeatReminderMinutes, setEditRepeatReminderMinutes] = useState<number | undefined>(task.repeatReminderMinutes);
 
     const resetEditState = useCallback(() => {
         setEditTitle(task.title);
@@ -113,6 +116,7 @@ export function useTaskItemEditState({
         setEditEnergyLevel(task.energyLevel || '');
         setEditAssignedTo(task.assignedTo || '');
         setEditReviewAt(toDateTimeLocalValue(task.reviewAt));
+        setEditRepeatReminderMinutes(task.repeatReminderMinutes);
         resetAttachmentState(task.attachments);
         setShowDescriptionPreview(hasPreviewableDescription(task));
     }, [resetAttachmentState, task]);
@@ -158,6 +162,8 @@ export function useTaskItemEditState({
         setEditAssignedTo,
         editReviewAt,
         setEditReviewAt,
+        editRepeatReminderMinutes,
+        setEditRepeatReminderMinutes,
         showDescriptionPreview,
         setShowDescriptionPreview,
         resetEditState,

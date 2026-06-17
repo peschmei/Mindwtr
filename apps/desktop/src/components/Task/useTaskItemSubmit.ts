@@ -30,6 +30,7 @@ type UseTaskItemSubmitParams = {
     editRecurrenceStrategy: Task['recurrence'] extends infer R ? R extends { strategy?: infer Strategy } ? Strategy : never : never;
     editShowFutureRecurrence: boolean;
     editReviewAt: string;
+    editRepeatReminderMinutes: number | undefined;
     editSectionId: string;
     editStartTime: string;
     editStatus: Task['status'];
@@ -64,6 +65,7 @@ export function useTaskItemSubmit({
     editRecurrenceStrategy,
     editShowFutureRecurrence,
     editReviewAt,
+    editRepeatReminderMinutes,
     editSectionId,
     editStartTime,
     editStatus,
@@ -139,6 +141,7 @@ export function useTaskItemSubmit({
             energyLevel: editEnergyLevel || undefined,
             assignedTo: editAssignedTo.trim() || undefined,
             reviewAt: editReviewAt || undefined,
+            repeatReminderMinutes: editRepeatReminderMinutes || undefined,
             attachments: (editAttachments?.length ?? 0) > 0 ? editAttachments : undefined,
         });
         if (!result.success) {
@@ -166,6 +169,7 @@ export function useTaskItemSubmit({
         editRecurrenceStrategy,
         editShowFutureRecurrence,
         editReviewAt,
+        editRepeatReminderMinutes,
         editSectionId,
         editStartTime,
         editStatus,
