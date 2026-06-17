@@ -115,6 +115,7 @@ export const CLOUD_TASK_CREATION_ALLOWED_PROP_KEYS = new Set<keyof Task>([
     'isFocusedToday',
     'timeEstimate',
     'reviewAt',
+    'repeatReminderMinutes',
 ]);
 export const CLOUD_TASK_PATCH_ALLOWED_PROP_KEYS = new Set<keyof Task>([
     'title',

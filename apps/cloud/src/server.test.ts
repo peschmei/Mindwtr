@@ -399,6 +399,16 @@ describe('cloud server utils', () => {
         expect(invalid.error).toContain('arbitrary');
     });
 
+    test('accepts repeatReminderMinutes on task creation and patch', () => {
+        expect(__cloudTestUtils.validateTaskCreationProps({
+            status: 'next',
+            repeatReminderMinutes: 15,
+        }).ok).toBe(true);
+        expect(__cloudTestUtils.validateTaskPatchProps({
+            repeatReminderMinutes: 0,
+        }).ok).toBe(true);
+    });
+
     test('validates settings.attachments.pendingRemoteDeletes structure', () => {
         const iso = '2024-01-01T00:00:00.000Z';
         const base = {
