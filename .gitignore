@@ -103,4 +103,5 @@ scripts/ci/__pycache__/
 Mindwtr.wiki/
 
 # Local workspace configuration
+.worktrees/
 pnpm-workspace.yaml
