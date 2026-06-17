@@ -1,8 +1,9 @@
-import { getDailyDigestSummary, getNextScheduledAt, stripMarkdown, type Language, Task, parseTimeOfDay, getTranslationsSync, loadTranslations, loadStoredLanguageSync, safeParseDate, hasTimeComponent, getSystemDefaultLanguage } from '@mindwtr/core';
+import { getDailyDigestSummary, getDueReminderRepeatTimes, getNextScheduledAt, stripMarkdown, type Language, Task, parseTimeOfDay, getTranslationsSync, loadTranslations, loadStoredLanguageSync, safeParseDate, hasTimeComponent, getSystemDefaultLanguage } from '@mindwtr/core';
 import { useTaskStore } from '@mindwtr/core';
 import { isFlatpakRuntime, isTauriRuntime } from './runtime';
 
 const notifiedAtByTask = new Map<string, string>();
+const repeatNotifiedByTask = new Map<string, string>();
 const notifiedAtByProject = new Map<string, string>();
 const digestSentOnByKind = new Map<'morning' | 'evening', string>();
 let weeklyReviewSentOnDate: string | null = null;
@@ -22,7 +23,39 @@ type TauriNotificationApi = {
 let tauriNotificationApi: TauriNotificationApi | null = null;
 
 const CHECK_INTERVAL_MS = 15_000;
+const REPEAT_CATCH_UP_MS = CHECK_INTERVAL_MS;
 type TaskReminderKind = 'start' | 'due' | 'review' | 'task';
+
+/**
+ * Picks the due-time repeat occurrence to fire on this poll tick, or null.
+ *
+ * Repeat occurrences are in the past (the due time already fired the single reminder), so they are
+ * resolved here rather than via the future-only `getNextScheduledAt`. Only an occurrence reached
+ * within the last poll window fires; one missed while the app was not polling is skipped, which is
+ * how desktop repeats inherit the "only fires while the app is open" limitation. Dedup key embeds
+ * the due ISO, so editing the due time invalidates prior-occurrence keys automatically.
+ */
+export function resolveDueRepeatToFire(
+    task: Task,
+    now: Date,
+    alreadyNotifiedKey: string | undefined,
+    options: { includeDueDate: boolean },
+): { key: string; index: number } | null {
+    const times = getDueReminderRepeatTimes(task, { includeDueDate: options.includeDueDate });
+    if (times.length === 0) return null;
+    const nowMs = now.getTime();
+    let chosenIndex = -1;
+    for (let i = 0; i < times.length; i += 1) {
+        const t = times[i].getTime();
+        if (t <= nowMs && nowMs - t <= REPEAT_CATCH_UP_MS) {
+            chosenIndex = i + 1; // occurrence index is 1-based (times[0] = due + N)
+        }
+    }
+    if (chosenIndex === -1) return null;
+    const key = `${task.dueDate}#${chosenIndex}`;
+    if (alreadyNotifiedKey === key) return null;
+    return { key, index: chosenIndex };
+}
 
 function getCurrentLanguage(): Language {
     if (typeof localStorage === 'undefined') return 'en';
@@ -178,6 +211,13 @@ function checkDueAndNotify() {
     const includeDueDate = settings.dueDateNotificationsEnabled !== false;
     const includeReviewAt = settings.reviewAtNotificationsEnabled !== false;
     tasks.forEach((task: Task) => {
+        const repeat = resolveDueRepeatToFire(task, now, repeatNotifiedByTask.get(task.id), { includeDueDate });
+        if (repeat) {
+            const dueAt = safeParseDate(task.dueDate);
+            void sendNotification(task.title, dueAt ? buildDesktopTaskNotificationBody(task, dueAt, tr) : task.title);
+            repeatNotifiedByTask.set(task.id, repeat.key);
+        }
+
         const next = getNextScheduledAt(task, now, { includeStartTime, includeDueDate, includeReviewAt });
         if (!next) return;
         const diffMs = next.getTime() - now.getTime();
@@ -318,6 +358,7 @@ export function stopDesktopNotifications() {
     storeSubscription = null;
 
     notifiedAtByTask.clear();
+    repeatNotifiedByTask.clear();
     notifiedAtByProject.clear();
     digestSentOnByKind.clear();
     weeklyReviewSentOnDate = null;
