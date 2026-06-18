@@ -302,9 +302,12 @@ export const repairMergedSyncReferences = (data: AppData, nowIso: string): AppDa
             nextProjectId = undefined;
             nextSectionId = undefined;
             changed = true;
+        } else if (nextProjectId && !liveProjectIds.has(nextProjectId)) {
+            nextProjectId = undefined;
+            changed = true;
         }
 
-        if (nextAreaId && deletedAreaIds.has(nextAreaId)) {
+        if (nextAreaId && (deletedAreaIds.has(nextAreaId) || !liveAreasById.has(nextAreaId))) {
             nextAreaId = undefined;
             changed = true;
         }
@@ -484,9 +487,28 @@ export const validateMergedSyncData = (data: AppData): string[] => {
         }
     }
 
-    const deletedAreaIds = new Set(
+    const allAreaIds = new Set(
         Array.isArray(data.areas)
-            ? data.areas.filter((area) => isObjectRecord(area) && isNonEmptyString(area.deletedAt)).map((area) => String(area.id))
+            ? data.areas.filter((area) => isObjectRecord(area) && isNonEmptyString(area.id)).map((area) => String(area.id))
+            : []
+    );
+    const liveAreaIds = new Set(
+        Array.isArray(data.areas)
+            ? data.areas
+                .filter((area) => isObjectRecord(area) && isNonEmptyString(area.id) && !isNonEmptyString(area.deletedAt))
+                .map((area) => String(area.id))
+            : []
+    );
+    const allProjectIds = new Set(
+        Array.isArray(data.projects)
+            ? data.projects.filter((project) => isObjectRecord(project) && isNonEmptyString(project.id)).map((project) => String(project.id))
+            : []
+    );
+    const liveProjectIds = new Set(
+        Array.isArray(data.projects)
+            ? data.projects
+                .filter((project) => isObjectRecord(project) && isNonEmptyString(project.id) && !isNonEmptyString(project.deletedAt))
+                .map((project) => String(project.id))
             : []
     );
     const deletedProjectIds = new Set(
@@ -508,11 +530,23 @@ export const validateMergedSyncData = (data: AppData): string[] => {
                 .map((section) => String(section.id))
             : []
     );
+    const allSectionIds = new Set(
+        Array.isArray(data.sections)
+            ? data.sections
+                .filter((section) => isObjectRecord(section) && isNonEmptyString(section.id))
+                .map((section) => String(section.id))
+            : []
+    );
 
     if (Array.isArray(data.projects)) {
         data.projects.forEach((project, index) => {
-            if (!isObjectRecord(project) || isNonEmptyString(project.deletedAt)) return;
-            if (isNonEmptyString(project.areaId) && deletedAreaIds.has(project.areaId)) {
+            if (!isObjectRecord(project)) return;
+            if (isNonEmptyString(project.areaId) && !allAreaIds.has(project.areaId)) {
+                errors.push(`projects[${index}].areaId must reference an existing area`);
+                return;
+            }
+            if (isNonEmptyString(project.deletedAt)) return;
+            if (isNonEmptyString(project.areaId) && !liveAreaIds.has(project.areaId)) {
                 errors.push(`projects[${index}].areaId must not reference a deleted area`);
             }
         });
@@ -520,7 +554,12 @@ export const validateMergedSyncData = (data: AppData): string[] => {
 
     if (Array.isArray(data.sections)) {
         data.sections.forEach((section, index) => {
-            if (!isObjectRecord(section) || isNonEmptyString(section.deletedAt)) return;
+            if (!isObjectRecord(section)) return;
+            if (isNonEmptyString(section.projectId) && !allProjectIds.has(section.projectId)) {
+                errors.push(`sections[${index}].projectId must reference an existing project`);
+                return;
+            }
+            if (isNonEmptyString(section.deletedAt)) return;
             if (deletedProjectIds.has(String(section.projectId))) {
                 errors.push(`sections[${index}].projectId must not reference a deleted project`);
             }
@@ -529,11 +568,24 @@ export const validateMergedSyncData = (data: AppData): string[] => {
 
     if (Array.isArray(data.tasks)) {
         data.tasks.forEach((task, index) => {
-            if (!isObjectRecord(task) || isNonEmptyString(task.deletedAt)) return;
-            if (isNonEmptyString(task.projectId) && deletedProjectIds.has(task.projectId)) {
+            if (!isObjectRecord(task)) return;
+            const taskProjectExists = !isNonEmptyString(task.projectId) || allProjectIds.has(task.projectId);
+            const taskAreaExists = !isNonEmptyString(task.areaId) || allAreaIds.has(task.areaId);
+            if (isNonEmptyString(task.projectId) && !taskProjectExists) {
+                errors.push(`tasks[${index}].projectId must reference an existing project`);
+            }
+            if (isNonEmptyString(task.areaId) && !taskAreaExists) {
+                errors.push(`tasks[${index}].areaId must reference an existing area`);
+            }
+            if (isNonEmptyString(task.sectionId) && !allSectionIds.has(task.sectionId)) {
+                errors.push(`tasks[${index}].sectionId must reference an existing section`);
+                return;
+            }
+            if (isNonEmptyString(task.deletedAt)) return;
+            if (isNonEmptyString(task.projectId) && taskProjectExists && !liveProjectIds.has(task.projectId)) {
                 errors.push(`tasks[${index}].projectId must not reference a deleted project`);
             }
-            if (isNonEmptyString(task.areaId) && deletedAreaIds.has(task.areaId)) {
+            if (isNonEmptyString(task.areaId) && taskAreaExists && !liveAreaIds.has(task.areaId)) {
                 errors.push(`tasks[${index}].areaId must not reference a deleted area`);
             }
             if (isNonEmptyString(task.sectionId)) {

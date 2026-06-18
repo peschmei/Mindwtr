@@ -57,6 +57,71 @@ const fromNullableBool = (value: unknown): boolean | null | undefined => {
     return Boolean(value);
 };
 
+type SqliteReferenceIssue = {
+    kind: string;
+    id: string;
+    missingId: string;
+};
+
+const optionalId = (value: unknown): string | undefined => (
+    typeof value === 'string' && value.trim().length > 0 ? value : undefined
+);
+
+const collectSqliteReferenceIssues = (data: AppData): SqliteReferenceIssue[] => {
+    const areaIds = new Set(data.areas.map((area) => area.id));
+    const projectIds = new Set(data.projects.map((project) => project.id));
+    const sectionIds = new Set(data.sections.map((section) => section.id));
+    const issues: SqliteReferenceIssue[] = [];
+    const addIssue = (kind: string, id: string, missingId: string) => {
+        issues.push({ kind, id, missingId });
+    };
+
+    data.projects.forEach((project) => {
+        const areaId = optionalId(project.areaId);
+        if (areaId && !areaIds.has(areaId)) {
+            addIssue('project.areaId', project.id, areaId);
+        }
+    });
+    data.sections.forEach((section) => {
+        const projectId = optionalId(section.projectId);
+        if (projectId && !projectIds.has(projectId)) {
+            addIssue('section.projectId', section.id, projectId);
+        }
+    });
+    data.tasks.forEach((task) => {
+        const projectId = optionalId(task.projectId);
+        if (projectId && !projectIds.has(projectId)) {
+            addIssue('task.projectId', task.id, projectId);
+        }
+        const sectionId = optionalId(task.sectionId);
+        if (sectionId && !sectionIds.has(sectionId)) {
+            addIssue('task.sectionId', task.id, sectionId);
+        }
+        const areaId = optionalId(task.areaId);
+        if (areaId && !areaIds.has(areaId)) {
+            addIssue('task.areaId', task.id, areaId);
+        }
+    });
+
+    return issues;
+};
+
+const buildSqliteSaveFailureContext = (data: AppData, step: string): Record<string, unknown> => {
+    const referenceIssues = collectSqliteReferenceIssues(data);
+    return {
+        step,
+        tasks: data.tasks.length,
+        projects: data.projects.length,
+        sections: data.sections.length,
+        areas: data.areas.length,
+        people: Array.isArray(data.people) ? data.people.length : 0,
+        taskAttachments: data.tasks.reduce((count, task) => count + (task.attachments?.length ?? 0), 0),
+        projectAttachments: data.projects.reduce((count, project) => count + (project.attachments?.length ?? 0), 0),
+        referenceIssues: referenceIssues.length,
+        referenceIssueSamples: referenceIssues.slice(0, 8),
+    };
+};
+
 export const TASK_SQLITE_COLUMNS = [
     'id',
     'title',
@@ -1168,6 +1233,7 @@ export class SqliteAdapter {
     async saveData(data: AppData): Promise<void> {
         await this.ensureSchema();
         await this.client.run('BEGIN IMMEDIATE');
+        let saveStep = 'begin';
         try {
             const nowIso = new Date().toISOString();
             const chunkArray = <T>(items: T[], size: number): T[][] => {
@@ -1228,6 +1294,7 @@ export class SqliteAdapter {
                 }
             };
 
+            saveStep = 'areas';
             await upsertBatch(
                 'areas',
                 [
@@ -1270,6 +1337,7 @@ export class SqliteAdapter {
                  WHERE areas.rev IS NULL OR areas.rev <= excluded.rev`,
             );
 
+            saveStep = 'projects';
             await upsertBatch(
                 'projects',
                 [
@@ -1339,6 +1407,7 @@ export class SqliteAdapter {
             );
 
             const people = Array.isArray(data.people) ? data.people : [];
+            saveStep = 'people';
             await upsertBatch(
                 'people',
                 [
@@ -1378,6 +1447,7 @@ export class SqliteAdapter {
                  WHERE people.rev IS NULL OR people.rev <= excluded.rev`,
             );
 
+            saveStep = 'sections';
             await upsertBatch(
                 'sections',
                 [
@@ -1425,6 +1495,7 @@ export class SqliteAdapter {
                  WHERE sections.rev IS NULL OR sections.rev <= excluded.rev`,
             );
 
+            saveStep = 'tasks';
             await upsertBatch(
                 'tasks',
                 [...TASK_UPSERT_COLUMNS],
@@ -1432,14 +1503,20 @@ export class SqliteAdapter {
                 TASK_UPSERT_UPDATE_CLAUSE,
             );
 
+            saveStep = 'sync-task-ids';
             await syncIds('tasks', data.tasks.map((task) => task.id));
+            saveStep = 'sync-section-ids';
             await syncIds('sections', data.sections.map((section) => section.id));
+            saveStep = 'sync-project-ids';
             await syncIds('projects', data.projects.map((project) => project.id));
+            saveStep = 'sync-area-ids';
             await syncIds('areas', data.areas.map((area) => area.id));
+            saveStep = 'sync-people-ids';
             await syncIds('people', people.map((person) => person.id));
 
             const rawSavedFilters = data.settings?.savedFilters;
             const savedFilters = normalizeSavedFilters(rawSavedFilters);
+            saveStep = 'saved-filters';
             await upsertBatch(
                 'saved_filters',
                 [
@@ -1479,6 +1556,7 @@ export class SqliteAdapter {
                  updatedAt=excluded.updatedAt,
                  deletedAt=excluded.deletedAt`,
             );
+            saveStep = 'sync-saved-filter-ids';
             await syncIds('saved_filters', savedFilters.map((filter) => filter.id));
 
             const settingsForSave = { ...(data.settings ?? {}) };
@@ -1488,14 +1566,29 @@ export class SqliteAdapter {
                 delete settingsForSave.savedFilters;
             }
 
+            saveStep = 'settings';
             await this.client.run(
                 'INSERT INTO settings (id, data) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET data=excluded.data',
                 [toJson(settingsForSave)]
             );
 
+            saveStep = 'commit';
             await this.client.run('COMMIT');
         } catch (error) {
-            await this.client.run('ROLLBACK');
+            await this.client.run('ROLLBACK').catch((rollbackError) => {
+                logWarn('SQLite saveData rollback failed', {
+                    scope: 'sqlite',
+                    category: 'storage',
+                    error: rollbackError,
+                    context: { step: saveStep },
+                });
+            });
+            logWarn('SQLite saveData failed', {
+                scope: 'sqlite',
+                category: 'storage',
+                error,
+                context: buildSqliteSaveFailureContext(data, saveStep),
+            });
             throw error;
         }
     }

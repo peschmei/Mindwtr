@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createRequire } from 'node:module';
 
 import { SqliteAdapter, type SqliteClient } from './sqlite-adapter';
+import { consoleLogger, setLogger, type LogPayload } from './logger';
 import type { AppData } from './types';
 
 const require = createRequire(import.meta.url);
@@ -722,6 +723,54 @@ describeSqlite('SqliteAdapter', () => {
             sectionId: null,
         });
         expect(remainingSections).toHaveLength(0);
+    });
+
+    it('logs reference diagnostics when full snapshot persistence hits a foreign key failure', async () => {
+        const now = '2026-06-18T23:21:00.000Z';
+        const logs: LogPayload[] = [];
+        setLogger((payload) => {
+            logs.push(payload);
+        });
+        try {
+            await expect(adapter.saveData({
+                tasks: [],
+                projects: [],
+                sections: [
+                    {
+                        id: 'orphan-section',
+                        projectId: 'missing-project',
+                        title: 'Orphan section',
+                        order: 0,
+                        createdAt: now,
+                        updatedAt: now,
+                    },
+                ],
+                areas: [],
+                settings: {},
+            })).rejects.toThrow(/FOREIGN KEY/i);
+        } finally {
+            setLogger(consoleLogger);
+        }
+
+        expect(logs).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                level: 'warn',
+                message: 'SQLite saveData failed',
+                scope: 'sqlite',
+                category: 'storage',
+                context: expect.objectContaining({
+                    step: 'sections',
+                    referenceIssues: 1,
+                    referenceIssueSamples: [
+                        {
+                            kind: 'section.projectId',
+                            id: 'orphan-section',
+                            missingId: 'missing-project',
+                        },
+                    ],
+                }),
+            }),
+        ]));
     });
 
     it('returns lightweight search results for FTS queries', async () => {

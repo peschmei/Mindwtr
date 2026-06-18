@@ -383,6 +383,82 @@ describe('sync normalization', () => {
         expect(repaired.areas[0].deletedAt).toBe('2026-01-01T00:00:00.000Z');
     });
 
+    it('repairs missing task container references once before sync persistence', () => {
+        const data: AppData = {
+            tasks: [{
+                ...createMockTask('task-missing-container', '2025-12-31T23:00:00.000Z'),
+                projectId: 'missing-project',
+                sectionId: 'missing-section',
+                areaId: 'missing-area',
+                order: 4,
+                orderNum: 4,
+                rev: 9,
+                revBy: 'device-a',
+            }],
+            projects: [{
+                ...createMockProject('project-missing-area', '2025-12-31T23:00:00.000Z'),
+                areaId: 'missing-area',
+                areaTitle: 'Missing area',
+                rev: 3,
+                revBy: 'device-a',
+            }],
+            sections: [],
+            areas: [],
+            settings: {},
+        };
+
+        const repaired = repairMergedSyncReferences(data, NOW);
+        const repairedAgain = repairMergedSyncReferences(repaired, '2026-01-02T00:00:00.000Z');
+
+        expect(repairedAgain).toEqual(repaired);
+        expect(repaired.projects[0]).toMatchObject({
+            areaId: undefined,
+            areaTitle: undefined,
+            updatedAt: NOW,
+            rev: 4,
+            revBy: SYNC_REPAIR_REV_BY,
+        });
+        expect(repaired.tasks[0]).toMatchObject({
+            projectId: undefined,
+            sectionId: undefined,
+            areaId: undefined,
+            order: undefined,
+            orderNum: undefined,
+            updatedAt: NOW,
+            rev: 10,
+            revBy: SYNC_REPAIR_REV_BY,
+        });
+        expect(validateMergedSyncData(repaired)).toEqual([]);
+    });
+
+    it('reports missing parent references during sync validation', () => {
+        const invalidData: AppData = {
+            tasks: [{
+                ...createMockTask('task-missing-parents', '2025-12-31T23:00:00.000Z'),
+                projectId: 'missing-project',
+                sectionId: 'missing-section',
+                areaId: 'missing-area',
+            }],
+            projects: [{
+                ...createMockProject('project-missing-area', '2025-12-31T23:00:00.000Z'),
+                areaId: 'missing-area',
+            }],
+            sections: [{
+                ...createMockSection('section-missing-project', 'missing-project', '2025-12-31T23:00:00.000Z'),
+            }],
+            areas: [],
+            settings: {},
+        };
+
+        expect(validateMergedSyncData(invalidData)).toEqual(expect.arrayContaining([
+            'projects[0].areaId must reference an existing area',
+            'sections[0].projectId must reference an existing project',
+            'tasks[0].projectId must reference an existing project',
+            'tasks[0].areaId must reference an existing area',
+            'tasks[0].sectionId must reference an existing section',
+        ]));
+    });
+
     it('clamps adversarial future timestamps during merge comparison', () => {
         const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date(NOW).getTime());
         try {
