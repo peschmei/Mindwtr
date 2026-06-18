@@ -172,6 +172,10 @@ Notes:
 - On Android, context automation URLs and intents return Mindwtr to the background after handling. Use the notification tap when you want to open the matching Contexts view.
 - Mindwtr does not detect locations or device states itself; the automation app owns the trigger.
 
+### Apple Shortcuts
+
+On iPhone and iPad, Mindwtr exposes native Apple Shortcuts actions for Inbox capture and opening GTD views such as Focus, Waiting, Someday, Projects, Review, and Calendar. See [[Apple Shortcuts]] for setup, examples, and v1 limitations.
+
 ### URL Scheme Quick Capture (iOS Shortcuts / Android Automations)
 
 Mindwtr registers the URL scheme `mindwtr://`, so you can capture tasks from iOS Shortcuts, Tasker, or other automation tools.
@@ -180,9 +184,9 @@ Supported URLs:
 
 | URL | Action |
 | --- | --- |
-| `mindwtr://capture?title=Buy%20groceries` | Create Inbox task with title |
-| `mindwtr://capture?title=Buy%20groceries&note=From%20store` | Create Inbox task + note |
-| `mindwtr://capture?title=Buy%20groceries&project=Shopping&tags=errands,home` | Create Inbox task + project (auto-create if missing) + tags |
+| `mindwtr://capture?title=Buy%20groceries` | Open capture with a title |
+| `mindwtr://capture?title=Buy%20groceries&note=From%20store` | Open capture with title and note |
+| `mindwtr://capture?title=Buy%20groceries&project=Shopping&tags=errands,home` | Open capture with project and tags |
 
 Notes:
 - `title` is required (alias: `text`).
@@ -194,7 +198,7 @@ iOS Shortcuts example:
 1. Open **Shortcuts** and create a shortcut.
 2. Add **Ask for Input** (prompt: task title).
 3. Add **Open URLs** with: `mindwtr://capture?title=[Provided Input]`.
-4. Run the shortcut; Mindwtr opens and adds the task to Inbox.
+4. Run the shortcut; Mindwtr opens the capture screen so you can review and save the task.
 
 ### Quick-Add Syntax
 
@@ -645,5 +649,6 @@ See [[Data and Sync]] for sync setup.
 ## See Also
 
 - [[Mobile Installation]]
+- [[Apple Shortcuts]]
 - [[Data and Sync]]
 - [[GTD Workflow in Mindwtr]]
