@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { NotFoundError } from './errors.js';
-import { parseArgs, parseBooleanFlag, registerMindwtrTools, resolveServerModeFlags } from './index.js';
+import { parseArgs, parseBooleanFlag, registerMindwtrTools, resolveServerConfig, resolveServerModeFlags } from './index.js';
 import type { Area, Person, Project, Section, Task } from './queries.js';
 import type { MindwtrService } from './service.js';
 
@@ -143,6 +143,24 @@ describe('mcp server index', () => {
       readonly: true,
       keepAlive: false,
     });
+  });
+
+  test('resolves self-hosted Cloud backend as read-only', () => {
+    expect(resolveServerConfig(
+      parseArgs(['--cloud-url', 'https://mindwtr.example.com', '--cloud-token', 'secret', '--cloud-allow-insecure-http=false']),
+      {}
+    )).toEqual({
+      backend: 'cloud',
+      cloudUrl: 'https://mindwtr.example.com',
+      cloudToken: 'secret',
+      allowInsecureHttp: false,
+      keepAlive: true,
+      readonly: true,
+    });
+    expect(() => resolveServerConfig(
+      parseArgs(['--cloud-url', 'https://mindwtr.example.com', '--write']),
+      { MINDWTR_MCP_CLOUD_TOKEN: 'secret' }
+    )).toThrow('Cloud MCP mode is read-only');
   });
 
   test('registers all mindwtr tools', () => {

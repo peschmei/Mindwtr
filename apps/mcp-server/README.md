@@ -1,8 +1,8 @@
 # Mindwtr MCP Server
 
-Local MCP server for Mindwtr. Connect MCP clients (Claude Desktop, etc.) to your local Mindwtr SQLite database.
+MCP server for Mindwtr. Connect MCP clients (Claude Desktop, etc.) to either your local Mindwtr SQLite database or a self-hosted Mindwtr Cloud endpoint in read-only mode.
 
-This is a **local stdio** server (no HTTP). MCP clients launch it as a subprocess and talk over JSON‑RPC on stdin/stdout.
+This is a **stdio** server (no hosted HTTP endpoint). MCP clients launch it as a subprocess and talk over JSON-RPC on stdin/stdout.
 
 ---
 
@@ -21,7 +21,7 @@ On desktop, the app shows the exact local data path in **Settings -> Sync -> Loc
 - Node.js 18+ (for the MCP client that spawns the server)
 - npm package installs use better-sqlite3, a native SQLite addon. If no prebuilt binary is available for your platform, npm needs a working C/C++ build toolchain and Python for node-gyp.
 - Bun (recommended for development in this repo)
-- A local Mindwtr database (`mindwtr.db`)
+- A local Mindwtr database (`mindwtr.db`) for local mode, or a self-hosted Mindwtr Cloud URL and bearer token for read-only Cloud mode
 
 Default database locations:
 - Linux: `~/.local/share/mindwtr/mindwtr.db`
@@ -34,10 +34,15 @@ Additional macOS path for sandboxed builds:
 If `mindwtr.db` is missing but `data.json` exists in the same desktop data folder, the MCP server will bootstrap a fresh SQLite database from that local data snapshot on first start.
 Desktop Settings → Sync → Local Data shows the exact storage location used by the app.
 
-You can override with:
+You can override local mode with:
 - `--db /path/to/mindwtr.db`
 - `MINDWTR_DB_PATH=/path/to/mindwtr.db`
 - `MINDWTR_DB=/path/to/mindwtr.db`
+
+For self-hosted Cloud mode, use:
+- `--cloud-url https://mindwtr.example.com` or `MINDWTR_MCP_CLOUD_URL`
+- `--cloud-token <token>` or `MINDWTR_MCP_CLOUD_TOKEN`
+- optional `--cloud-allow-insecure-http=true` for trusted private HTTP deployments
 
 ---
 
@@ -69,7 +74,31 @@ Or let an MCP client launch it through npx:
 }
 ```
 
-The npm package is read-only by default. Add `--write` only when you explicitly want add/update/complete/delete tools enabled.
+The npm package is read-only by default. Add `--write` only when you explicitly want add/update/complete/delete tools enabled against a local database.
+
+### Read-only self-hosted Cloud mode
+
+Use Cloud mode when you run your own Mindwtr Cloud server and want MCP read tools without pointing the helper at a local SQLite database:
+
+```bash
+npx -y mindwtr-mcp \
+  --cloud-url "https://mindwtr.example.com" \
+  --cloud-token "$MINDWTR_TOKEN"
+```
+
+Or pass the same values through environment variables:
+
+```bash
+MINDWTR_MCP_CLOUD_URL="https://mindwtr.example.com" \
+MINDWTR_MCP_CLOUD_TOKEN="$MINDWTR_TOKEN" \
+npx -y mindwtr-mcp
+```
+
+Cloud mode uses the self-hosted Cloud API and is always read-only. It reads the current `/v1/data` snapshot, exposes task/project/section/area/person read tools through MCP, and returns `read_only` for write tools. Do not pass `--write` with `--cloud-url`.
+
+This does not make Mindwtr Cloud itself a hosted MCP server. It is still the same stdio helper, backed by a Cloud URL that you operate.
+
+For private HTTP test deployments, local/private HTTP URLs are allowed by the shared Cloud client rules. Use `--cloud-allow-insecure-http=true` only for a self-hosted endpoint you intentionally trust.
 
 ### Run directly from the repo
 

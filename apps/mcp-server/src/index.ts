@@ -7,6 +7,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import * as z from 'zod';
 
+import { createCloudService } from './cloud-service.js';
 import { getMindwtrToolErrorCode, ReadOnlyError, ValidationError } from './errors.js';
 import {
   MAX_TASK_QUICK_ADD_LENGTH,
@@ -132,6 +133,68 @@ export const resolveServerModeFlags = (flags: Record<string, string | boolean>) 
   return {
     allowWrite,
     readonly: explicitReadonly ?? !allowWrite,
+    keepAlive,
+  };
+};
+
+type ServerEnv = Record<string, string | undefined>;
+
+type LocalServerConfig = {
+  backend: 'local';
+  dbPath?: string;
+  readonly: boolean;
+  keepAlive: boolean;
+};
+
+type CloudServerConfig = {
+  backend: 'cloud';
+  cloudUrl: string;
+  cloudToken: string;
+  allowInsecureHttp: boolean;
+  readonly: true;
+  keepAlive: boolean;
+};
+
+export type ServerConfig = LocalServerConfig | CloudServerConfig;
+
+const readStringFlag = (flags: Record<string, string | boolean>, ...names: string[]): string | undefined => {
+  for (const name of names) {
+    const value = flags[name];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+};
+
+export const resolveServerConfig = (
+  flags: Record<string, string | boolean>,
+  env: ServerEnv = process.env,
+): ServerConfig => {
+  const { allowWrite, readonly, keepAlive } = resolveServerModeFlags(flags);
+  const cloudUrl = readStringFlag(flags, 'cloud-url', 'cloudUrl') ?? env.MINDWTR_MCP_CLOUD_URL;
+  const cloudToken = readStringFlag(flags, 'cloud-token', 'cloudToken') ?? env.MINDWTR_MCP_CLOUD_TOKEN;
+
+  if (cloudUrl || cloudToken) {
+    if (!cloudUrl) throw new ValidationError('Cloud URL is required for Cloud MCP mode');
+    if (!cloudToken) throw new ValidationError('Cloud token is required for Cloud MCP mode');
+    if (allowWrite) throw new ValidationError('Cloud MCP mode is read-only; remove --write.');
+    return {
+      backend: 'cloud',
+      cloudUrl,
+      cloudToken,
+      allowInsecureHttp: parseBooleanFlag(
+        flags['cloud-allow-insecure-http']
+        ?? flags.cloudAllowInsecureHttp
+        ?? env.MINDWTR_MCP_CLOUD_ALLOW_INSECURE_HTTP
+      ) ?? false,
+      readonly: true,
+      keepAlive,
+    };
+  }
+
+  return {
+    backend: 'local',
+    dbPath: readStringFlag(flags, 'db'),
+    readonly,
     keepAlive,
   };
 };
@@ -346,12 +409,17 @@ const deletePersonSchema = z.object({
   id: z.string(),
 });
 
-export const registerMindwtrTools = (server: McpServer, service: MindwtrService, readonly: boolean) => {
+export const registerMindwtrTools = (
+  server: McpServer,
+  service: MindwtrService,
+  readonly: boolean,
+  options: { readonlyMessage?: string } = {},
+) => {
   const withReadonlyMcpErrorHandling = <TInput>(
     scope: string,
     handler: (input: TInput) => Promise<McpToolResponse>,
   ) => withMcpErrorHandling(scope, async (input: TInput) => {
-    if (readonly) throw new ReadOnlyError();
+    if (readonly) throw new ReadOnlyError(options.readonlyMessage);
     return await handler(input);
   });
 
@@ -710,10 +778,15 @@ const attachLifecycleHandlers = (service: MindwtrService) => {
 export async function startMcpServer(argv: string[] = process.argv.slice(2)) {
   const flags = parseArgs(argv);
 
-  const dbPath = typeof flags.db === 'string' ? flags.db : undefined;
-  const { readonly, keepAlive } = resolveServerModeFlags(flags);
+  const config = resolveServerConfig(flags);
 
-  const service = createService({ dbPath, readonly });
+  const service = config.backend === 'cloud'
+    ? createCloudService({
+      url: config.cloudUrl,
+      token: config.cloudToken,
+      allowInsecureHttp: config.allowInsecureHttp,
+    })
+    : createService({ dbPath: config.dbPath, readonly: config.readonly });
   attachLifecycleHandlers(service);
 
   const server = new McpServer({
@@ -721,11 +794,15 @@ export async function startMcpServer(argv: string[] = process.argv.slice(2)) {
     version: resolvePackageVersion(),
   });
 
-  registerMindwtrTools(server, service, readonly);
+  registerMindwtrTools(server, service, config.readonly, {
+    readonlyMessage: config.backend === 'cloud'
+      ? 'Cloud MCP mode is read-only. Use the local database backend with --write for edits.'
+      : undefined,
+  });
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  if (keepAlive) {
+  if (config.keepAlive) {
     process.stdin.resume();
     process.stdin.on('end', () => process.exit(0));
     setInterval(() => {}, 1 << 30);
