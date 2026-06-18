@@ -494,7 +494,7 @@ export const zhHant: Record<string, string> = {
         'projects.search': '搜索項目',
         'sections.search': '搜索分區',
         'areas.search': '搜索領域',
-        'areas.manage': '管理領域',
+        'areas.manage': '領域',
         'areas.new': '新建領域',
         'areas.namePlaceholder': '領域名稱',
         'projects.sortAreas': '排序領域',

@@ -10,6 +10,7 @@ import {
 } from './TaskEditOverlayModals';
 import { TaskEditProjectPicker } from './TaskEditProjectPicker';
 import { TaskEditSectionPicker } from './TaskEditSectionPicker';
+import { getAreaIdForClearedProject } from './task-edit-modal.utils';
 
 type TaskEditOverlayStackProps = {
     [key: string]: any;
@@ -146,7 +147,7 @@ export function TaskEditOverlayStack(props: TaskEditOverlayStackProps) {
                         setEditedTask((prev: any) => ({
                             ...prev,
                             projectId,
-                            areaId: projectId ? undefined : prev.areaId,
+                            areaId: projectId ? undefined : getAreaIdForClearedProject(prev, props.task, projects),
                             sectionId: projectId && prev.projectId === projectId ? prev.sectionId : undefined,
                         }));
                     }}

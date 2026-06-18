@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import renderer, { act } from 'react-test-renderer';
 
@@ -11,7 +11,17 @@ vi.mock('@mindwtr/core', async () => {
   const actual = await vi.importActual<typeof import('@mindwtr/core')>('@mindwtr/core');
   const storeState = {
     tasks: [],
-    projects: [],
+    projects: [{
+      id: 'project-1',
+      title: 'Project',
+      status: 'active',
+      color: '#3b82f6',
+      order: 0,
+      tagIds: [],
+      areaId: 'area-1',
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    }],
     sections: [],
     areas: [],
     settings: { features: {}, ai: {}, gtd: { taskEditor: { order: [], hidden: [] } } },
@@ -415,6 +425,126 @@ describe('TaskEditModal', () => {
       sectionId: undefined,
       areaId: 'area-1',
     }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the project area when clearing a task project', () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    let tree: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'next',
+            projectId: 'project-1',
+            sectionId: 'section-1',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={onClose}
+          onSave={onSave}
+        />
+      );
+    });
+
+    const formTab = tree!.root.findAll((node) =>
+      typeof node.props.setEditedTask === 'function'
+      && typeof node.props.renderField === 'function'
+    )[0];
+    let projectField!: renderer.ReactTestRenderer;
+    act(() => {
+      projectField = renderer.create(formTab.props.renderField('project'));
+    });
+
+    const clearProjectButton = projectField!.root.findAll((node) => (
+      typeof node.props.onPress === 'function'
+      && node.findAllByType(Text).some((textNode) => textNode.props.children === 'common.clear')
+    ))[0];
+    act(() => {
+      clearProjectButton.props.onPress();
+    });
+
+    const header = tree!.root.find((node) =>
+      typeof node.props.onDone === 'function'
+      && typeof node.props.onDelete === 'function'
+    );
+    act(() => {
+      header.props.onDone();
+    });
+
+    expect(onSave).toHaveBeenCalledWith('t1', expect.objectContaining({
+      projectId: undefined,
+      sectionId: undefined,
+      areaId: 'area-1',
+    }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not overwrite an explicit task area when clearing a task project', () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    let tree: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'next',
+            projectId: 'project-1',
+            sectionId: 'section-1',
+            areaId: 'area-2',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={onClose}
+          onSave={onSave}
+        />
+      );
+    });
+
+    const formTab = tree!.root.findAll((node) =>
+      typeof node.props.setEditedTask === 'function'
+      && typeof node.props.renderField === 'function'
+    )[0];
+    let projectField!: renderer.ReactTestRenderer;
+    act(() => {
+      projectField = renderer.create(formTab.props.renderField('project'));
+    });
+
+    const clearProjectButton = projectField!.root.findAll((node) => (
+      typeof node.props.onPress === 'function'
+      && node.findAllByType(Text).some((textNode) => textNode.props.children === 'common.clear')
+    ))[0];
+    act(() => {
+      clearProjectButton.props.onPress();
+    });
+
+    const header = tree!.root.find((node) =>
+      typeof node.props.onDone === 'function'
+      && typeof node.props.onDelete === 'function'
+    );
+    act(() => {
+      header.props.onDone();
+    });
+
+    expect(onSave).toHaveBeenCalledWith('t1', expect.objectContaining({
+      projectId: undefined,
+      sectionId: undefined,
+    }));
+    const updates = onSave.mock.calls[0]?.[1] ?? {};
+    expect(Object.prototype.hasOwnProperty.call(updates, 'areaId')).toBe(false);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

@@ -10,7 +10,7 @@ import {
 } from '@mindwtr/core';
 
 import type { TaskEditFieldRendererProps } from './TaskEditFieldRenderer.types';
-import { getEditedTaskValue } from './task-edit-modal.utils';
+import { getAreaIdForClearedProject, getEditedTaskValue } from './task-edit-modal.utils';
 
 type OrganizationFieldId =
     | 'status'
@@ -169,7 +169,12 @@ export function TaskEditOrganizationField({
                         {!!projectId && (
                             <TouchableOpacity
                                 style={[styles.clearDateBtn, { borderColor: tc.border, backgroundColor: tc.filterBg }]}
-                                onPress={() => setEditedTask((prev) => ({ ...prev, projectId: undefined, sectionId: undefined }))}
+                                onPress={() => setEditedTask((prev) => ({
+                                    ...prev,
+                                    projectId: undefined,
+                                    sectionId: undefined,
+                                    areaId: getAreaIdForClearedProject(prev, task, projects),
+                                }))}
                             >
                                 <Text style={[styles.clearDateText, { color: tc.secondaryText }]}>{t('common.clear')}</Text>
                             </TouchableOpacity>

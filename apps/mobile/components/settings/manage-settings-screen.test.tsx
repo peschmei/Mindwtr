@@ -85,7 +85,7 @@ vi.mock('./settings.hooks', () => ({
     t: (key: string) =>
       ({
         'settings.manage': 'Manage',
-        'areas.manage': 'Manage areas',
+        'areas.manage': 'Areas',
         'common.add': 'Add',
         'contexts.title': 'Contexts',
         'common.tasks': 'tasks',

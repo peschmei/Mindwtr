@@ -550,7 +550,7 @@ export const en: Record<string, string> = {
         'projects.search': 'Search projects',
         'sections.search': 'Search sections',
         'areas.search': 'Search areas',
-        'areas.manage': 'Manage Areas',
+        'areas.manage': 'Areas',
         'areas.new': 'New Area',
         'areas.namePlaceholder': 'Area name',
         'projects.sortAreas': 'Sort areas',

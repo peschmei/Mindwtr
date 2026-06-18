@@ -537,7 +537,7 @@ export const frOverrides: Record<string, string> = {
         'projects.search': 'Rechercher un projet',
         'sections.search': 'Rechercher une section',
         'areas.search': 'Rechercher un domaine',
-        'areas.manage': 'Gérer les domaines',
+        'areas.manage': 'Domaines',
         'areas.new': 'Nouveau domaine',
         'areas.namePlaceholder': 'Nom du domaine',
         'projects.sortAreas': 'Trier les domaines',

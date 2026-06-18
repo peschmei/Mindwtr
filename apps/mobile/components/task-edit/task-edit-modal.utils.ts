@@ -1,5 +1,5 @@
 import { Dimensions } from 'react-native';
-import { type Task, type TaskEditorFieldId, type TaskEditorSectionId, type TaskEditorSettings, type TaskStatus } from '@mindwtr/core';
+import { type Project, type Task, type TaskEditorFieldId, type TaskEditorSectionId, type TaskEditorSettings, type TaskStatus } from '@mindwtr/core';
 import { logError, logWarn } from '../../lib/app-log';
 
 export const STATUS_OPTIONS: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'done', 'reference'];
@@ -47,6 +47,20 @@ export const getEditedTaskValue = <K extends keyof Task>(
         ? editedTask[key]
         : task?.[key]
 );
+
+export const getAreaIdForClearedProject = (
+    editedTask: Partial<Task>,
+    task: Task | null | undefined,
+    projects: Pick<Project, 'id' | 'areaId'>[],
+): string | undefined => {
+    const explicitAreaId = getEditedTaskValue(editedTask, task, 'areaId');
+    if (typeof explicitAreaId === 'string' && explicitAreaId.trim()) return explicitAreaId;
+
+    const projectId = getEditedTaskValue(editedTask, task, 'projectId');
+    if (!projectId) return undefined;
+    const projectAreaId = projects.find((project) => project.id === projectId)?.areaId;
+    return typeof projectAreaId === 'string' && projectAreaId.trim() ? projectAreaId : undefined;
+};
 
 export const QUICK_TOKEN_LIMIT = 6;
 

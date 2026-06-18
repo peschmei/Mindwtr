@@ -995,6 +995,7 @@ function TaskEditModalInner({
                         showProjectPicker={showProjectPicker}
                         showSectionPicker={showSectionPicker}
                         styles={styles}
+                        task={task}
                         t={t}
                         tc={tc}
                         retryAudioTranscription={retryAudioTranscription}

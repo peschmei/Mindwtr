@@ -450,7 +450,7 @@ export const arOverrides: Record<string, string> = {
         'areas.create': 'يخلق',
         'areas.deleteConfirm': 'هل تريد حذف هذه المنطقة؟ ستبقى المشاريع والمهام في هذه المنطقة وسيتم نقلها إلى غير معيّن.',
         'areas.search': 'البحث في المناطق',
-        'areas.manage': 'إدارة المناطق',
+        'areas.manage': 'المناطق',
         'areas.new': 'منطقة جديدة',
         'areas.namePlaceholder': 'اسم المنطقة',
         'projects.search': 'البحث في المشاريع',
