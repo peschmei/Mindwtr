@@ -11,35 +11,33 @@ const sourcePath = path.join(
 const source = fs.readFileSync(sourcePath, 'utf8');
 
 const supportedModesMatches = source.match(/static\s+var\s+supportedModes\s*:\s*IntentModes/g) || [];
-if (supportedModesMatches.length !== 1) {
-  console.error(
-    `Expected exactly one AppIntent supportedModes declaration, found ${supportedModesMatches.length}.`
-  );
+if (supportedModesMatches.length === 0) {
+  console.error('Expected at least one AppIntent supportedModes declaration.');
   process.exit(1);
 }
 
-const guardedSupportedModes =
-  /#if compiler\(>=6\.0\)\s*\n\s*@available\(iOS 26\.0, \*\)\s*\n\s*static\s+var\s+supportedModes\s*:\s*IntentModes\s*\{/.test(
-    source
-  );
+const guardedSupportedModesMatches = source.match(
+  /#if compiler\(>=6\.0\)\s*\n\s*@available\(iOS 26\.0, \*\)\s*\n\s*static\s+var\s+supportedModes\s*:\s*IntentModes\s*\{/g
+) || [];
 
-if (!guardedSupportedModes) {
+if (guardedSupportedModesMatches.length !== supportedModesMatches.length) {
   console.error(
-    'MindwtrSiriCaptureIntent.supportedModes must be guarded with @available(iOS 26.0, *) under #if compiler(>=6.0).'
+    `Every AppIntent supportedModes declaration must be guarded; found ${guardedSupportedModesMatches.length} guarded of ${supportedModesMatches.length}.`
   );
   console.error('IntentModes is iOS 26-only and the release archive targets older iOS versions.');
   process.exit(1);
 }
 
-const appShortcutPhrases = source.match(/phrases:\s*\[[\s\S]*?\]/);
-if (!appShortcutPhrases) {
-  console.error('Expected MindwtrSiriCaptureIntent AppShortcut phrases.');
+const appShortcutPhrases = source.match(/phrases:\s*\[[\s\S]*?\]/g) || [];
+if (appShortcutPhrases.length === 0) {
+  console.error('Expected Mindwtr AppShortcut phrases.');
   process.exit(1);
 }
 
-if (/\\\(\\\.\$(task|note)\)/.test(appShortcutPhrases[0])) {
+const stringParameterInterpolation = /\\\(\\\.\$(task|note|tags|project)\)/;
+if (appShortcutPhrases.some((phraseBlock) => stringParameterInterpolation.test(phraseBlock))) {
   console.error(
-    'MindwtrSiriCaptureIntent AppShortcut phrases must not interpolate String parameters.'
+    'Mindwtr AppShortcut phrases must not interpolate String parameters.'
   );
   console.error(
     'The iOS 26 AppIntents metadata processor only accepts AppEntity/AppEnum values in shortcut phrases.'
