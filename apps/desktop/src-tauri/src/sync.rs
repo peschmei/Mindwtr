@@ -1,4 +1,5 @@
 use crate::*;
+use std::error::Error as StdError;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +20,75 @@ fn blocking_http_client() -> Result<reqwest::blocking::Client, String> {
         .map_err(|error| format!("Failed to create HTTP client: {error}"))
 }
 
+fn format_error_with_source_chain(
+    label: &str,
+    error: &(dyn StdError + 'static),
+    categories: &[&str],
+) -> String {
+    let root_message = error.to_string();
+    let category_suffix = if categories.is_empty() {
+        String::new()
+    } else {
+        format!(" [{}]", categories.join(","))
+    };
+    let mut message = format!("{label}{category_suffix}: {root_message}");
+    let mut causes: Vec<String> = Vec::new();
+    let mut source = error.source();
+
+    while let Some(cause) = source {
+        let detail = cause.to_string();
+        if !detail.is_empty()
+            && detail != root_message
+            && !causes.iter().any(|existing| existing == &detail)
+        {
+            causes.push(detail);
+        }
+        source = cause.source();
+    }
+
+    if !causes.is_empty() {
+        message.push_str(" (caused by: ");
+        message.push_str(&causes.join(" -> "));
+        message.push(')');
+    }
+
+    message
+}
+
+fn reqwest_error_categories(error: &reqwest::Error) -> Vec<&'static str> {
+    let mut categories = Vec::new();
+    if error.is_timeout() {
+        categories.push("timeout");
+    }
+    if error.is_connect() {
+        categories.push("connect");
+    }
+    if error.is_request() {
+        categories.push("request");
+    }
+    if error.is_builder() {
+        categories.push("builder");
+    }
+    if error.is_redirect() {
+        categories.push("redirect");
+    }
+    if error.is_status() {
+        categories.push("status");
+    }
+    if error.is_body() {
+        categories.push("body");
+    }
+    if error.is_decode() {
+        categories.push("decode");
+    }
+    categories
+}
+
+fn format_reqwest_send_error(label: &str, error: &reqwest::Error) -> String {
+    let categories = reqwest_error_categories(error);
+    format_error_with_source_chain(label, error, &categories)
+}
+
 fn header_value_to_string(headers: &reqwest::header::HeaderMap, name: &str) -> Option<String> {
     headers
         .get(name)
@@ -26,7 +96,9 @@ fn header_value_to_string(headers: &reqwest::header::HeaderMap, name: &str) -> O
         .map(|value| value.to_string())
 }
 
-fn remote_json_write_result_from_headers(headers: &reqwest::header::HeaderMap) -> RemoteJsonWriteResult {
+fn remote_json_write_result_from_headers(
+    headers: &reqwest::header::HeaderMap,
+) -> RemoteJsonWriteResult {
     RemoteJsonWriteResult {
         fingerprint: None,
         etag: header_value_to_string(headers, "etag"),
@@ -58,7 +130,10 @@ fn apply_cloud_write_response_body(result: &mut RemoteJsonWriteResult, body: &st
     if let Some(value) = parsed.get("contentLength").and_then(Value::as_str) {
         result.content_length = Some(value.to_string());
     }
-    if let Some(value) = parsed.get("serverMergedRemoteData").and_then(Value::as_bool) {
+    if let Some(value) = parsed
+        .get("serverMergedRemoteData")
+        .and_then(Value::as_bool)
+    {
         result.server_merged_remote_data = Some(value);
     }
 }
@@ -795,7 +870,7 @@ fn ensure_webdav_parent_collections_blocking(
             .request(mkcol_method.clone(), target)
             .basic_auth(username, Some(password))
             .send()
-            .map_err(|e| format!("WebDAV request failed: {e}"))?;
+            .map_err(|e| format_reqwest_send_error("WebDAV request failed", &e))?;
         Ok(response.status())
     })
 }
@@ -826,7 +901,7 @@ fn webdav_get_json_blocking(app: &tauri::AppHandle) -> Result<Value, String> {
         .get(url)
         .basic_auth(username, Some(password))
         .send()
-        .map_err(|e| format!("WebDAV request failed: {e}"))?;
+        .map_err(|e| format_reqwest_send_error("WebDAV request failed", &e))?;
 
     if response.status() == reqwest::StatusCode::NOT_FOUND {
         return Ok(Value::Null);
@@ -884,7 +959,7 @@ fn webdav_put_json_blocking(
             .header("Content-Type", "application/json")
             .body(payload.clone())
             .send()
-            .map_err(|e| format!("WebDAV request failed: {e}"))
+            .map_err(|e| format_reqwest_send_error("WebDAV request failed", &e))
     };
     let mut response = send_put()?;
 
@@ -956,7 +1031,7 @@ fn cloud_get_json_blocking(app: &tauri::AppHandle) -> Result<Value, String> {
     let client = blocking_http_client()?;
     let response = cloud_request_builder(&client, reqwest::Method::GET, &url, &token)
         .send()
-        .map_err(|e| format!("Cloud request failed: {e}"))?;
+        .map_err(|e| format_reqwest_send_error("Cloud request failed", &e))?;
 
     if response.status() == reqwest::StatusCode::NOT_FOUND {
         return Ok(Value::Null);
@@ -1004,7 +1079,7 @@ fn cloud_put_json_blocking(
         .header("Content-Type", "application/json")
         .body(payload)
         .send()
-        .map_err(|e| format!("Cloud request failed: {e}"))?;
+        .map_err(|e| format_reqwest_send_error("Cloud request failed", &e))?;
 
     if !response.status().is_success() {
         return Err(format!(
@@ -1132,6 +1207,48 @@ mod tests {
         assert!(!is_webdav_mkcol_conflict_error(
             "WebDAV MKCOL failed (500 Internal Server Error)"
         ));
+    }
+
+    #[derive(Debug)]
+    struct TestError {
+        message: &'static str,
+        source: Option<Box<TestError>>,
+    }
+
+    impl std::fmt::Display for TestError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str(self.message)
+        }
+    }
+
+    impl std::error::Error for TestError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            self.source
+                .as_deref()
+                .map(|source| source as &(dyn std::error::Error + 'static))
+        }
+    }
+
+    #[test]
+    fn format_error_with_source_chain_includes_nested_causes() {
+        let error = TestError {
+            message: "error sending request for url (https://mindwtr.private.tld/v1/data)",
+            source: Some(Box::new(TestError {
+                message: "client error (Connect)",
+                source: Some(Box::new(TestError {
+                    message: "invalid peer certificate: UnknownIssuer",
+                    source: None,
+                })),
+            })),
+        };
+
+        let formatted =
+            format_error_with_source_chain("Cloud request failed", &error, &["connect"]);
+
+        assert_eq!(
+            formatted,
+            "Cloud request failed [connect]: error sending request for url (https://mindwtr.private.tld/v1/data) (caused by: client error (Connect) -> invalid peer certificate: UnknownIssuer)"
+        );
     }
 
     #[test]
