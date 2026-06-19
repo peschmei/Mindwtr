@@ -256,7 +256,25 @@ function parseSearchPaginationValue(searchParams: URLSearchParams, name: string,
     return name.toLowerCase().includes('limit') ? Math.min(LIST_MAX_LIMIT, value) : value;
 }
 
-function finalizeCloudDataForWrite(data: AppData, nowIso: string): AppData | { error: Response } {
+type FinalizeCloudDataForWriteOptions = {
+    rejectInvalidBeforeRepair?: boolean;
+};
+
+const FINALIZE_REJECT_INVALID_REST_WRITE: FinalizeCloudDataForWriteOptions = {
+    rejectInvalidBeforeRepair: true,
+};
+
+function finalizeCloudDataForWrite(
+    data: AppData,
+    nowIso: string,
+    options: FinalizeCloudDataForWriteOptions = {},
+): AppData | { error: Response } {
+    if (options.rejectInvalidBeforeRepair) {
+        const initialValidation = validateAppData(data);
+        if (!initialValidation.ok) {
+            return { error: errorResponse(initialValidation.error, 400) };
+        }
+    }
     const repaired = repairMergedSyncReferences(data, nowIso);
     const validated = validateAppData(repaired);
     if (!validated.ok) {
@@ -1114,7 +1132,7 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
                             }
 
                             data.tasks.push(task);
-                            const finalized = finalizeCloudDataForWrite(data, nowIso);
+                            const finalized = finalizeCloudDataForWrite(data, nowIso, FINALIZE_REJECT_INVALID_REST_WRITE);
                             if ('error' in finalized) return finalized.error;
                             const finalizedTask = finalized.tasks.find((item) => item.id === task.id) || task;
                             throwIfRequestAborted(requestAbortController.signal);
@@ -1149,7 +1167,7 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
                             );
                             data.tasks[idx] = updatedTask;
                             if (nextRecurringTask) data.tasks.push(nextRecurringTask);
-                            const finalized = finalizeCloudDataForWrite(data, nowIso);
+                            const finalized = finalizeCloudDataForWrite(data, nowIso, FINALIZE_REJECT_INVALID_REST_WRITE);
                             if ('error' in finalized) return finalized.error;
                             const finalizedTask = finalized.tasks.find((item) => item.id === updatedTask.id) || updatedTask;
                             throwIfRequestAborted(requestAbortController.signal);
@@ -1211,7 +1229,7 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
 
                                 data.tasks[idx] = updatedTask;
                                 if (nextRecurringTask) data.tasks.push(nextRecurringTask);
-                                const finalized = finalizeCloudDataForWrite(data, nowIso);
+                                const finalized = finalizeCloudDataForWrite(data, nowIso, FINALIZE_REJECT_INVALID_REST_WRITE);
                                 if ('error' in finalized) return finalized.error;
                                 const finalizedTask = finalized.tasks.find((item) => item.id === updatedTask.id) || updatedTask;
                                 throwIfRequestAborted(requestAbortController.signal);
@@ -1236,7 +1254,7 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
                                     rev: normalizeRevision(existing.rev) + 1,
                                     revBy: CLOUD_API_REV_BY,
                                 };
-                                const finalized = finalizeCloudDataForWrite(data, nowIso);
+                                const finalized = finalizeCloudDataForWrite(data, nowIso, FINALIZE_REJECT_INVALID_REST_WRITE);
                                 if ('error' in finalized) return finalized.error;
                                 throwIfRequestAborted(requestAbortController.signal);
                                 writeCloudData(filePath, finalized);
