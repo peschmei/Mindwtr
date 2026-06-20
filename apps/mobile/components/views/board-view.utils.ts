@@ -1,5 +1,56 @@
+import type { FilterCriteria } from '@mindwtr/core';
+
 export const STATUS_DRAG_STEP_PX = 72;
 export const STATUS_DRAG_TRIGGER_PX = 28;
+
+export type BoardDuePreset = 'today' | 'this_week' | 'this_month' | 'overdue' | 'no_date';
+
+export const BOARD_DUE_DATE_PRESETS: BoardDuePreset[] = ['today', 'this_week', 'this_month', 'overdue', 'no_date'];
+
+const withTokenList = (
+    criteria: FilterCriteria,
+    key: 'contexts' | 'tags',
+    values: string[],
+): FilterCriteria => {
+    const next = { ...criteria };
+    if (values.length > 0) {
+        next[key] = values;
+    } else {
+        delete next[key];
+    }
+    return next;
+};
+
+/** Toggle a context (`@`) or tag (`#`) token in a board filter criteria, routed by prefix. */
+export const toggleCriteriaToken = (criteria: FilterCriteria, token: string): FilterCriteria => {
+    const key: 'contexts' | 'tags' = token.trim().startsWith('#') ? 'tags' : 'contexts';
+    const current = criteria[key] ?? [];
+    const next = current.includes(token)
+        ? current.filter((item) => item !== token)
+        : [...current, token];
+    return withTokenList(criteria, key, next);
+};
+
+/** Toggle a due-date preset; selecting the active preset again clears it. */
+export const toggleCriteriaDuePreset = (criteria: FilterCriteria, preset: BoardDuePreset): FilterCriteria => {
+    const isActive = criteria.dueDateRange
+        && 'preset' in criteria.dueDateRange
+        && criteria.dueDateRange.preset === preset;
+    const next = { ...criteria };
+    if (isActive) {
+        delete next.dueDateRange;
+    } else {
+        next.dueDateRange = { preset };
+    }
+    return next;
+};
+
+/** Number of active board filter chips (contexts + tags + due-date range). */
+export const countActiveBoardFilters = (criteria: FilterCriteria): number => (
+    (criteria.contexts?.length ?? 0)
+    + (criteria.tags?.length ?? 0)
+    + (criteria.dueDateRange ? 1 : 0)
+);
 
 type ResolveBoardDropColumnIndexArgs = {
     translationX: number;

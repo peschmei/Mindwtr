@@ -1,15 +1,15 @@
-import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
-import { isTaskInActiveProject, sortTasksByBoardOrder, useTaskStore } from '@mindwtr/core';
-import type { Task, TaskStatus } from '@mindwtr/core';
+import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from 'react-native';
+import { isTaskInActiveProject, sortTasksByBoardOrder, useTaskStore, taskMatchesFilterCriteria, taskMatchesAreaFilter, hasActiveFilterCriteria, getUsedTaskTokens } from '@mindwtr/core';
+import type { Task, TaskStatus, FilterCriteria } from '@mindwtr/core';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/theme-context';
 import { useLanguage } from '../../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
-import { taskMatchesAreaFilter } from '@mindwtr/core';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture, Swipeable } from 'react-native-gesture-handler';
+import { Filter } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,7 +18,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { TaskEditModal } from '../task-edit-modal';
-import { resolveBoardColumnReorder, resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY } from './board-view.utils';
+import { BOARD_DUE_DATE_PRESETS, countActiveBoardFilters, resolveBoardColumnReorder, resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY, toggleCriteriaDuePreset, toggleCriteriaToken, type BoardDuePreset } from './board-view.utils';
 
 const COLUMNS: { id: TaskStatus; label: string; labelKey: string; color: string }[] = [
   { id: 'inbox', label: 'Inbox', labelKey: 'status.inbox', color: '#6B7280' },
@@ -350,6 +350,8 @@ export function BoardView() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [dragSourceColumnIndex, setDragSourceColumnIndex] = useState<number | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [criteria, setCriteria] = useState<FilterCriteria>({});
   const insets = useSafeAreaInsets();
   const boardScrollRef = useRef<ScrollView | null>(null);
   const draggingTaskIdRef = useRef<string | null>(null);
@@ -383,21 +385,45 @@ export function BoardView() {
     }, {} as Record<string, { title: string; color?: string }>);
   }, [projects, areaById]);
 
-  // Filter active tasks and group by status
-  const tasksByStatus = useMemo(() => {
+  // Tasks visible after the global area filter, before the board-level filter bar.
+  const areaActiveTasks = useMemo(() => {
     const projectMap = new Map(projects.map((project) => [project.id, project]));
-    const activeTasks = tasks.filter((task) => (
+    return tasks.filter((task) => (
       !task.deletedAt
       && task.status !== 'reference'
       && isTaskInActiveProject(task, projectMap)
       && taskMatchesAreaFilter(task, resolvedAreaFilter, projectMap, areaById)
     ));
+  }, [tasks, projects, resolvedAreaFilter, areaById]);
+
+  const allTokens = useMemo(
+    () => getUsedTaskTokens(areaActiveTasks, (task) => [...(task.contexts || []), ...(task.tags || [])]),
+    [areaActiveTasks],
+  );
+
+  const filtersActive = hasActiveFilterCriteria(criteria);
+  const activeFilterCount = countActiveBoardFilters(criteria);
+
+  // Apply the board filter bar (contexts / tags / dates) and group by status.
+  const tasksByStatus = useMemo(() => {
+    const now = new Date();
+    const visibleTasks = filtersActive
+      ? areaActiveTasks.filter((task) => taskMatchesFilterCriteria(task, criteria, { projects, now }))
+      : areaActiveTasks;
     const grouped: Record<string, Task[]> = {};
     COLUMNS.forEach(col => {
-      grouped[col.id] = sortTasksByBoardOrder(activeTasks.filter(t => t.status === col.id));
+      grouped[col.id] = sortTasksByBoardOrder(visibleTasks.filter(t => t.status === col.id));
     });
     return grouped;
-  }, [tasks, projects, resolvedAreaFilter, areaById]);
+  }, [areaActiveTasks, criteria, filtersActive, projects]);
+
+  const handleToggleToken = useCallback((token: string) => {
+    setCriteria((prev) => toggleCriteriaToken(prev, token));
+  }, []);
+  const handleToggleDuePreset = useCallback((preset: BoardDuePreset) => {
+    setCriteria((prev) => toggleCriteriaDuePreset(prev, preset));
+  }, []);
+  const clearFilters = useCallback(() => setCriteria({}), []);
 
   const getTaskTopInContent = useCallback((taskId: string): number | null => {
     const taskLayout = taskLayoutsRef.current[taskId];
@@ -621,6 +647,94 @@ export function BoardView() {
 
   return (
     <View style={[styles.container, { backgroundColor: tc.bg }]}>
+      <View style={[styles.filterBar, { borderBottomColor: tc.border }]}>
+        <View style={styles.filterBarHeader}>
+          <Pressable
+            onPress={() => setFiltersOpen((open) => !open)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: filtersOpen }}
+            style={[
+              styles.filterToggle,
+              {
+                backgroundColor: filtersActive ? tc.tint : tc.filterBg,
+                borderColor: filtersActive ? tc.tint : tc.border,
+              },
+            ]}
+          >
+            <Filter size={14} color={filtersActive ? tc.onTint : tc.secondaryText} />
+            <Text style={[styles.filterToggleText, { color: filtersActive ? tc.onTint : tc.text }]}>
+              {t('filters.label')}{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Text>
+          </Pressable>
+          {filtersActive && (
+            <Pressable onPress={clearFilters} accessibilityRole="button" hitSlop={8}>
+              <Text style={[styles.filterClearText, { color: tc.tint }]}>{t('filters.clear')}</Text>
+            </Pressable>
+          )}
+        </View>
+        {filtersOpen && (
+          <View style={styles.filterPanel}>
+            {allTokens.length > 0 && (
+              <View style={styles.filterSection}>
+                <Text style={[styles.filterSectionTitle, { color: tc.secondaryText }]}>{t('filters.contexts')}</Text>
+                <View style={styles.filterChipRow}>
+                  {allTokens.map((token) => {
+                    const selected = token.trim().startsWith('#')
+                      ? (criteria.tags ?? []).includes(token)
+                      : (criteria.contexts ?? []).includes(token);
+                    return (
+                      <Pressable
+                        key={`token:${token}`}
+                        onPress={() => handleToggleToken(token)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        style={[
+                          styles.filterChip,
+                          {
+                            backgroundColor: selected ? tc.tint : tc.filterBg,
+                            borderColor: selected ? tc.tint : tc.border,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.filterChipText, { color: selected ? tc.onTint : tc.text }]}>{token}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+            <View style={styles.filterSection}>
+              <Text style={[styles.filterSectionTitle, { color: tc.secondaryText }]}>{t('search.due.label')}</Text>
+              <View style={styles.filterChipRow}>
+                {BOARD_DUE_DATE_PRESETS.map((preset) => {
+                  const selected = !!criteria.dueDateRange
+                    && 'preset' in criteria.dueDateRange
+                    && criteria.dueDateRange.preset === preset;
+                  return (
+                    <Pressable
+                      key={`due:${preset}`}
+                      onPress={() => handleToggleDuePreset(preset)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      style={[
+                        styles.filterChip,
+                        {
+                          backgroundColor: selected ? tc.tint : tc.filterBg,
+                          borderColor: selected ? tc.tint : tc.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.filterChipText, { color: selected ? tc.onTint : tc.text }]}>
+                        {t(`filters.datePreset.${preset}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
       <ScrollView
         ref={boardScrollRef}
         showsVerticalScrollIndicator={false}
@@ -692,6 +806,62 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  filterBar: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  filterBarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  filterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  filterToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterClearText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  filterPanel: {
+    gap: 12,
+  },
+  filterSection: {
+    gap: 6,
+  },
+  filterSectionTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  filterChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   boardScroll: {
     flex: 1,

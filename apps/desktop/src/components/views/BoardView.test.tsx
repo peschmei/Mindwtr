@@ -74,7 +74,7 @@ describe('BoardView', () => {
             settings: {},
         });
         useUiStore.setState({
-            boardFilters: { selectedProjectIds: [] },
+            boardFilters: { criteria: {} },
         });
     });
 
@@ -202,6 +202,112 @@ describe('BoardView', () => {
         const column = getByRole('list', { name: /next actions tasks list/i });
         const titles = getRenderedTaskTitles(column, ['Task Q', 'Task W', 'Task E', 'Task R']);
         expect(titles).toEqual(['Task E', 'Task Q', 'Task W', 'Task R']);
+    });
+
+    it('filters board tasks to the selected context', () => {
+        setBoardStoreState({
+            tasks: [
+                {
+                    id: 'work-task',
+                    title: 'Work task',
+                    status: 'next',
+                    contexts: ['@work'],
+                    tags: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+                {
+                    id: 'home-task',
+                    title: 'Home task',
+                    status: 'next',
+                    contexts: ['@home'],
+                    tags: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+            ],
+            projects: [],
+            areas: [],
+            settings: {},
+        });
+        useUiStore.setState({ boardFilters: { criteria: { contexts: ['@work'] } } });
+
+        const { getByText, queryByText } = renderWithProviders();
+
+        expect(getByText('Work task')).toBeInTheDocument();
+        expect(queryByText('Home task')).not.toBeInTheDocument();
+    });
+
+    it('filters board tasks by the selected due-date preset', () => {
+        setBoardStoreState({
+            tasks: [
+                {
+                    id: 'overdue-task',
+                    title: 'Overdue task',
+                    status: 'next',
+                    dueDate: '2020-01-01',
+                    contexts: [],
+                    tags: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+                {
+                    id: 'future-task',
+                    title: 'Future task',
+                    status: 'next',
+                    dueDate: '2999-01-01',
+                    contexts: [],
+                    tags: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+            ],
+            projects: [],
+            areas: [],
+            settings: {},
+        });
+        useUiStore.setState({ boardFilters: { criteria: { dueDateRange: { preset: 'overdue' } } } });
+
+        const { getByText, queryByText } = renderWithProviders();
+
+        expect(getByText('Overdue task')).toBeInTheDocument();
+        expect(queryByText('Future task')).not.toBeInTheDocument();
+    });
+
+    it('toggles a context filter from the board filter panel', () => {
+        setBoardStoreState({
+            tasks: [
+                {
+                    id: 'work-task',
+                    title: 'Work task',
+                    status: 'next',
+                    contexts: ['@work'],
+                    tags: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+                {
+                    id: 'home-task',
+                    title: 'Home task',
+                    status: 'next',
+                    contexts: ['@home'],
+                    tags: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+            ],
+            projects: [],
+            areas: [],
+            settings: {},
+        });
+
+        const { getByRole, getByText, queryByText } = renderWithProviders();
+
+        fireEvent.click(getByRole('button', { name: /^show$/i }));
+        fireEvent.click(getByRole('button', { name: '@work' }));
+
+        expect(getByText('Work task')).toBeInTheDocument();
+        expect(queryByText('Home task')).not.toBeInTheDocument();
     });
 
     it('uses the selected task sort instead of manual board order when non-default sort is selected', () => {

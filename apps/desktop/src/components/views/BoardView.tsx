@@ -14,9 +14,9 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { TaskItem } from '../TaskItem';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { shallow, useTaskStore, sortTasksBy, sortTasksByBoardOrder, safeParseDate, translateWithFallback, isTaskInActiveProject } from '@mindwtr/core';
+import { shallow, useTaskStore, sortTasksBy, sortTasksByBoardOrder, safeParseDate, translateWithFallback, isTaskInActiveProject, taskMatchesFilterCriteria, hasActiveFilterCriteria, getUsedTaskTokens, SAVED_FILTER_NO_PROJECT_ID } from '@mindwtr/core';
 import { resolveBoardDragEnd } from './board-view-dnd';
-import type { Task, TaskStatus } from '@mindwtr/core';
+import type { Task, TaskStatus, FilterCriteria } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
 import { Filter, GripVertical } from 'lucide-react';
@@ -52,6 +52,9 @@ const getColumns = (t: (key: string) => string): { id: TaskStatus; label: string
     { id: 'someday', label: t('list.someday') },
     { id: 'done', label: t('list.done') },
 ];
+
+const DUE_DATE_PRESETS = ['today', 'this_week', 'this_month', 'overdue', 'no_date'] as const;
+type DueDatePreset = (typeof DUE_DATE_PRESETS)[number];
 
 const STATUS_BORDER: Record<TaskStatus, string> = {
     inbox: 'border-t-[hsl(var(--status-inbox))]',
@@ -209,11 +212,16 @@ export function BoardView() {
         DEFAULT_BOARD_VIEW_STATE,
         sanitizeBoardViewState
     );
-    const selectedProjectIds = boardFilters.selectedProjectIds;
+    const criteria = boardFilters.criteria;
     const COLUMNS = getColumns(t);
-    const NO_PROJECT_FILTER = '__no_project__';
-    const hasProjectFilters = boardFilters.selectedProjectIds.length > 0;
+    const hasFilters = hasActiveFilterCriteria(criteria);
     const showFiltersPanel = persistedViewState.filtersOpen;
+    const selectedContexts = criteria.contexts ?? [];
+    const selectedTags = criteria.tags ?? [];
+    const selectedProjectIds = criteria.projects ?? [];
+    const selectedDuePreset = criteria.dueDateRange && 'preset' in criteria.dueDateRange
+        ? criteria.dueDateRange.preset
+        : undefined;
     const areaById = React.useMemo(() => new Map(areas.map((area) => [area.id, area])), [areas]);
     const projectMap = React.useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
     const resolvedAreaFilter = React.useMemo(
@@ -261,15 +269,30 @@ export function BoardView() {
         const timer = window.setTimeout(() => setComputeSequential(true), 0);
         return () => window.clearTimeout(timer);
     }, []);
+    const updateCriteria = (next: FilterCriteria) => {
+        setBoardFilters({ criteria: next });
+    };
+    const toggleStringValue = (key: 'contexts' | 'tags' | 'projects', value: string) => {
+        const current = criteria[key] ?? [];
+        const next = current.includes(value)
+            ? current.filter((item) => item !== value)
+            : [...current, value];
+        updateCriteria({ ...criteria, [key]: next.length > 0 ? next : undefined });
+    };
+    const toggleToken = (token: string) => {
+        toggleStringValue(token.trim().startsWith('#') ? 'tags' : 'contexts', token);
+    };
     const toggleProjectFilter = (projectId: string) => {
-        setBoardFilters({
-            selectedProjectIds: boardFilters.selectedProjectIds.includes(projectId)
-                ? boardFilters.selectedProjectIds.filter((item) => item !== projectId)
-                : [...boardFilters.selectedProjectIds, projectId],
+        toggleStringValue('projects', projectId);
+    };
+    const toggleDuePreset = (preset: DueDatePreset) => {
+        updateCriteria({
+            ...criteria,
+            dueDateRange: selectedDuePreset === preset ? undefined : { preset },
         });
     };
-    const clearProjectFilters = () => {
-        setBoardFilters({ selectedProjectIds: [] });
+    const clearFilters = () => {
+        updateCriteria({});
     };
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -281,21 +304,26 @@ export function BoardView() {
         () => sortTasksBy(tasks.filter(t => !t.deletedAt), sortBy),
         [tasks, sortBy],
     );
-    const filteredTasks = React.useMemo(() => {
-        const normalizedQuery = searchQuery.trim().toLowerCase();
-        const areaFiltered = sortedTasks.filter((task) =>
+    const areaFilteredTasks = React.useMemo(
+        () => sortedTasks.filter((task) =>
             isTaskInActiveProject(task, projectMap) &&
             taskMatchesAreaFilter(task, resolvedAreaFilter, projectMap, areaById)
-        );
-        const searchFiltered = normalizedQuery
-            ? areaFiltered.filter((task) => task.title.toLowerCase().includes(normalizedQuery))
-            : areaFiltered;
-        if (!hasProjectFilters) return searchFiltered;
-        return searchFiltered.filter((task) => {
-            const projectKey = task.projectId ?? NO_PROJECT_FILTER;
-            return boardFilters.selectedProjectIds.includes(projectKey);
-        });
-    }, [hasProjectFilters, sortedTasks, boardFilters.selectedProjectIds, searchQuery, resolvedAreaFilter, projectMap, areaById]);
+        ),
+        [sortedTasks, projectMap, resolvedAreaFilter, areaById]
+    );
+    const allTokens = React.useMemo(
+        () => getUsedTaskTokens(areaFilteredTasks, (task) => [...(task.contexts || []), ...(task.tags || [])]),
+        [areaFilteredTasks]
+    );
+    const filteredTasks = React.useMemo(() => {
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+        const now = new Date();
+        const criteriaFiltered = hasActiveFilterCriteria(criteria)
+            ? areaFilteredTasks.filter((task) => taskMatchesFilterCriteria(task, criteria, { projects, now }))
+            : areaFilteredTasks;
+        if (!normalizedQuery) return criteriaFiltered;
+        return criteriaFiltered.filter((task) => task.title.toLowerCase().includes(normalizedQuery));
+    }, [areaFilteredTasks, criteria, searchQuery, projects]);
 
     const sequentialProjectIds = React.useMemo(() => {
         return new Set(projects.filter((p) => p.isSequential && !p.deletedAt).map((p) => p.id));
@@ -468,10 +496,10 @@ export function BoardView() {
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
-                            {hasProjectFilters && (
+                            {hasFilters && (
                                 <button
                                     type="button"
-                                    onClick={clearProjectFilters}
+                                    onClick={clearFilters}
                                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     {t('filters.clear')}
@@ -504,47 +532,99 @@ export function BoardView() {
                     )}
 
                     {showFiltersPanel && (
-                        <div className="mt-3 bg-card border border-border rounded-lg p-3 space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                                <Filter className="w-4 h-4" />
-                                {t('filters.projects')}
+                        <div className="mt-3 bg-card border border-border rounded-lg p-3 space-y-4">
+                            {allTokens.length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                        <Filter className="w-4 h-4" />
+                                        {t('filters.contexts')}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                        {allTokens.map((token) => {
+                                            const isActive = token.trim().startsWith('#')
+                                                ? selectedTags.includes(token)
+                                                : selectedContexts.includes(token);
+                                            return (
+                                                <button
+                                                    key={token}
+                                                    type="button"
+                                                    onClick={() => toggleToken(token)}
+                                                    aria-pressed={isActive}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                                        isActive
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {token}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="space-y-2">
+                                <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('search.due.label')}</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {DUE_DATE_PRESETS.map((preset) => {
+                                        const isActive = selectedDuePreset === preset;
+                                        return (
+                                            <button
+                                                key={preset}
+                                                type="button"
+                                                onClick={() => toggleDuePreset(preset)}
+                                                aria-pressed={isActive}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                                    isActive
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                                                }`}
+                                            >
+                                                {t(`filters.datePreset.${preset}`)}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => toggleProjectFilter(NO_PROJECT_FILTER)}
-                                    aria-pressed={selectedProjectIds.includes(NO_PROJECT_FILTER)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                        selectedProjectIds.includes(NO_PROJECT_FILTER)
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                                    }`}
-                                >
-                                    {t('taskEdit.noProjectOption')}
-                                </button>
-                                {sortedProjects.map((project) => {
-                                    const isActive = selectedProjectIds.includes(project.id);
-                                    const projectColor = project.areaId ? areaById.get(project.areaId)?.color : undefined;
-                                    return (
-                                        <button
-                                            key={project.id}
-                                            type="button"
-                                            onClick={() => toggleProjectFilter(project.id)}
-                                            aria-pressed={isActive}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-2 ${
-                                                isActive
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                                            }`}
-                                        >
-                                            <span
-                                                className="w-2 h-2 rounded-full"
-                                                style={{ backgroundColor: projectColor || "#6B7280" }}
-                                            />
-                                            <span className="truncate max-w-[140px]">{project.title}</span>
-                                        </button>
-                                    );
-                                })}
+                            <div className="space-y-2">
+                                <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('filters.projects')}</div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleProjectFilter(SAVED_FILTER_NO_PROJECT_ID)}
+                                        aria-pressed={selectedProjectIds.includes(SAVED_FILTER_NO_PROJECT_ID)}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                            selectedProjectIds.includes(SAVED_FILTER_NO_PROJECT_ID)
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                                        }`}
+                                    >
+                                        {t('taskEdit.noProjectOption')}
+                                    </button>
+                                    {sortedProjects.map((project) => {
+                                        const isActive = selectedProjectIds.includes(project.id);
+                                        const projectColor = project.areaId ? areaById.get(project.areaId)?.color : undefined;
+                                        return (
+                                            <button
+                                                key={project.id}
+                                                type="button"
+                                                onClick={() => toggleProjectFilter(project.id)}
+                                                aria-pressed={isActive}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-2 ${
+                                                    isActive
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                                                }`}
+                                            >
+                                                <span
+                                                    className="w-2 h-2 rounded-full"
+                                                    style={{ backgroundColor: projectColor || "#6B7280" }}
+                                                />
+                                                <span className="truncate max-w-[140px]">{project.title}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     )}

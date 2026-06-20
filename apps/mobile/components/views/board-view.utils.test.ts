@@ -1,5 +1,47 @@
 import { describe, expect, it } from 'vitest';
-import { resolveBoardColumnReorder, resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY } from './board-view.utils';
+import { countActiveBoardFilters, resolveBoardColumnReorder, resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY, toggleCriteriaDuePreset, toggleCriteriaToken } from './board-view.utils';
+
+describe('toggleCriteriaToken', () => {
+    it('adds a context token under contexts', () => {
+        expect(toggleCriteriaToken({}, '@work')).toEqual({ contexts: ['@work'] });
+    });
+
+    it('routes a tag token under tags', () => {
+        expect(toggleCriteriaToken({}, '#urgent')).toEqual({ tags: ['#urgent'] });
+    });
+
+    it('removes a context token that is already selected', () => {
+        expect(toggleCriteriaToken({ contexts: ['@work'] }, '@work')).toEqual({});
+    });
+
+    it('keeps other selected tokens when toggling one off', () => {
+        expect(toggleCriteriaToken({ contexts: ['@work', '@home'] }, '@work')).toEqual({ contexts: ['@home'] });
+    });
+});
+
+describe('toggleCriteriaDuePreset', () => {
+    it('sets the due-date preset when none is active', () => {
+        expect(toggleCriteriaDuePreset({}, 'overdue')).toEqual({ dueDateRange: { preset: 'overdue' } });
+    });
+
+    it('clears the due-date range when the same preset is toggled off', () => {
+        expect(toggleCriteriaDuePreset({ dueDateRange: { preset: 'overdue' } }, 'overdue')).toEqual({});
+    });
+
+    it('replaces a different active preset', () => {
+        expect(toggleCriteriaDuePreset({ dueDateRange: { preset: 'today' } }, 'overdue')).toEqual({ dueDateRange: { preset: 'overdue' } });
+    });
+});
+
+describe('countActiveBoardFilters', () => {
+    it('counts contexts, tags, and the due-date range', () => {
+        expect(countActiveBoardFilters({ contexts: ['@a', '@b'], tags: ['#x'], dueDateRange: { preset: 'today' } })).toBe(4);
+    });
+
+    it('is zero for empty criteria', () => {
+        expect(countActiveBoardFilters({})).toBe(0);
+    });
+});
 
 describe('resolveBoardDropColumnIndex', () => {
     it('keeps current column when drag is below trigger distance', () => {

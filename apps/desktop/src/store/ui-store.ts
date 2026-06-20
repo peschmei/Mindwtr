@@ -1,5 +1,5 @@
 import { createWithEqualityFn } from 'zustand/traditional';
-import type { TaskPriority, TimeEstimate } from '@mindwtr/core';
+import type { FilterCriteria, TaskPriority, TimeEstimate } from '@mindwtr/core';
 
 const toastTimeouts = new Map<string, number>();
 type ListNextGroupBy = 'none' | 'context' | 'area' | 'project' | 'energy' | 'priority' | 'person' | 'tag';
@@ -110,7 +110,7 @@ interface UiState {
     setTaskExpanded: (taskId: string, expanded: boolean) => void;
     toggleTaskExpanded: (taskId: string) => void;
     boardFilters: {
-        selectedProjectIds: string[];
+        criteria: FilterCriteria;
     };
     setBoardFilters: (partial: Partial<UiState['boardFilters']>) => void;
     projectView: {
@@ -202,7 +202,7 @@ export const useUiStore = createWithEqualityFn<UiState>()((set) => ({
             };
         }),
     boardFilters: {
-        selectedProjectIds: [],
+        criteria: {},
     },
     setBoardFilters: (partial) =>
         set((state) => ({ boardFilters: { ...state.boardFilters, ...partial } })),
