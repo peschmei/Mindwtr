@@ -67,7 +67,7 @@ Or let an MCP client launch it through npx:
         "-y",
         "mindwtr-mcp",
         "--db",
-        "/home/dd/.local/share/mindwtr/mindwtr.db"
+        "~/.local/share/mindwtr/mindwtr.db"
       ]
     }
   }
@@ -208,7 +208,7 @@ MCP clients run the server as a subprocess. You point them to **the command** an
       "args": [
         "/absolute/path/to/Mindwtr/apps/mcp-server/src/index.ts",
         "--db",
-        "/home/dd/.local/share/mindwtr/mindwtr.db"
+        "~/.local/share/mindwtr/mindwtr.db"
       ]
     }
   }
@@ -232,7 +232,7 @@ cd /path/to/Mindwtr && bun run --filter mindwtr-mcp build
       "args": [
         "/absolute/path/to/Mindwtr/apps/mcp-server/dist/index.js",
         "--db",
-        "/home/dd/.local/share/mindwtr/mindwtr.db"
+        "~/.local/share/mindwtr/mindwtr.db"
       ]
     }
   }
@@ -273,7 +273,7 @@ Or edit `~/.claude.json` directly:
           "args": [
             "/absolute/path/to/Mindwtr/apps/mcp-server/src/index.ts",
             "--db",
-            "/home/dd/.local/share/mindwtr/mindwtr.db",
+            "~/.local/share/mindwtr/mindwtr.db",
             "--write"
           ]
         }
@@ -434,7 +434,7 @@ All tools return JSON text payloads with the resulting task, project, section, a
 
 1) Start the server (read‑only):
 ```bash
-bun run mindwtr:mcp -- --db "/home/dd/.local/share/mindwtr/mindwtr.db"
+bun run mindwtr:mcp -- --db "~/.local/share/mindwtr/mindwtr.db"
 ```
 
 2) Connect via your MCP client and run:
@@ -442,7 +442,7 @@ bun run mindwtr:mcp -- --db "/home/dd/.local/share/mindwtr/mindwtr.db"
 
 If you want to test writes, restart with `--write`:
 ```bash
-bun run mindwtr:mcp -- --db "/home/dd/.local/share/mindwtr/mindwtr.db" --write
+bun run mindwtr:mcp -- --db "~/.local/share/mindwtr/mindwtr.db" --write
 ```
 
 Then test:

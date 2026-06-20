@@ -42,4 +42,4 @@ Describe the action right before the error appeared.
 
 ### 📎 Logs / Attachments
 Attach logs if available:
-https://github.com/dongdongbh/Mindwtr/wiki/Diagnostics-and-Logs
+https://docs.mindwtr.app/data-sync/diagnostics-logs

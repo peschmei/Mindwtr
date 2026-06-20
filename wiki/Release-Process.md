@@ -15,7 +15,8 @@ Release automation and version metadata are centered in:
 - `metadata/`
 - `metadata/metadata.json`
 - `apps/desktop/src-tauri/linux/Mindwtr.metainfo.xml`
-- `wiki/`
+- `https://github.com/dongdongbh/mindwtr-web/tree/main/docs` for public docs changes
+- `wiki/` only for legacy GitHub Wiki pages that still need mirroring
 - `.github/workflows/`
 
 ---
@@ -51,7 +52,7 @@ This updates workspace package versions and bumps the Android `versionCode`.
    - `metadata/*/changelogs/<androidVersionCode>.txt`
    - `metadata/metadata.json`
    - `apps/desktop/src-tauri/linux/Mindwtr.metainfo.xml`
-5. Update wiki pages in `wiki/` when release/docs process details changed. Do not run git in a separate `.wiki` checkout.
+5. Update public docs in the [Mindwtr web docs source](https://github.com/dongdongbh/mindwtr-web/tree/main/docs) when release/docs process details changed. Update `wiki/` only for legacy GitHub Wiki pages that still need mirroring. Do not run git in a separate `.wiki` checkout.
 6. Review the resulting version and metadata changes carefully.
 7. Commit the release prep:
 
@@ -94,7 +95,7 @@ For larger releases, also verify:
 
 - desktop updater metadata
 - mobile store metadata / Fastlane inputs
-- wiki/docs changes for user-visible features
+- docs-site changes for user-visible features in the [Mindwtr web docs source](https://github.com/dongdongbh/mindwtr-web/tree/main/docs)
 - cross-backend sync smoke with a small seed dataset: add, update, delete, and attachment transfer should converge across Cloud, WebDAV/file sync, and any platform-native backend available to the release tester; a second sync should report no new conflicts
 
 ---

@@ -10,7 +10,7 @@ The free, open-source, cross-platform GTD app. Local-first, no account required.
 
 _New to GTD? Read [GTD in 15 minutes](https://hamberg.no/gtd) for a quick introduction._
 
-[Install](#installation) · [Getting Started](https://github.com/dongdongbh/Mindwtr/wiki/Getting-Started) · [FAQ](https://github.com/dongdongbh/Mindwtr/wiki/FAQ) · [Data & Sync](https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync) · [Cloud Deployment](https://github.com/dongdongbh/Mindwtr/wiki/Cloud-Deployment) · [MCP Server](https://github.com/dongdongbh/Mindwtr/wiki/MCP-Server)
+[Website](https://mindwtr.app/) · [Docs](https://docs.mindwtr.app/) · [Install](#installation) · [Getting Started](https://docs.mindwtr.app/start/getting-started) · [FAQ](https://docs.mindwtr.app/start/faq) · [Data & Sync](https://docs.mindwtr.app/data-sync/) · [Cloud Deployment](https://docs.mindwtr.app/data-sync/cloud-deployment) · [MCP Server](https://docs.mindwtr.app/power-users/mcp)
 
 [![CI](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml/badge.svg)](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dongdongbh/Mindwtr?color=brightgreen)](LICENSE)
@@ -167,7 +167,7 @@ _Don't show me a cockpit when I just want to ride a bike._
 
 ### Data & Sync
 
-- 🔄 **Sync Options** - See the [Data & Sync wiki](https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync) for supported backends and setup
+- 🔄 **Sync Options** - See the [Data & Sync docs](https://docs.mindwtr.app/data-sync/) for supported backends and setup
 - 🍎 **Native iCloud / CloudKit Sync** - Apple-only structured sync on supported iPhone, iPad, and macOS builds
 - ☁️ **Dropbox OAuth Sync (Optional)** - Native Dropbox App Folder sync in supported non-FOSS builds
 - 📤 **Export/Backup** - Export data to JSON
@@ -369,7 +369,7 @@ Run the web app (PWA) and the self-hosted sync server with Docker:
 
 - Guide: [`docker/README.md`](docker/README.md)
 
-Install guides: 🚀 [Getting Started](https://github.com/dongdongbh/Mindwtr/wiki/Getting-Started)
+Install guides: 🚀 [Getting Started](https://docs.mindwtr.app/start/getting-started)
 
 ## Community
 
@@ -393,14 +393,16 @@ You can help in several ways:
 
 ## Documentation
 
-- 📚 [Wiki](https://github.com/dongdongbh/Mindwtr/wiki) - Complete user guide
-- 🚀 [Getting Started](https://github.com/dongdongbh/Mindwtr/wiki/Getting-Started)
-- ❓ [FAQ](https://github.com/dongdongbh/Mindwtr/wiki/FAQ)
-- 🔄 [Data & Sync](https://github.com/dongdongbh/Mindwtr/wiki/Data-and-Sync)
-- 🔗 [Markdown Links](https://github.com/dongdongbh/Mindwtr/wiki/Markdown-Links)
-- 🛠️ [Cloud Deployment](https://github.com/dongdongbh/Mindwtr/wiki/Cloud-Deployment)
-- ☁️ [Cloud API](https://github.com/dongdongbh/Mindwtr/wiki/Cloud-API)
-- 🧠 [MCP Server](https://github.com/dongdongbh/Mindwtr/wiki/MCP-Server)
+- 🌐 [Website](https://mindwtr.app/) - Landing page and download entry point
+- 📚 [Official Docs](https://docs.mindwtr.app/) - Searchable documentation with better navigation
+- 🚀 [Getting Started](https://docs.mindwtr.app/start/getting-started)
+- ❓ [FAQ](https://docs.mindwtr.app/start/faq)
+- 🔄 [Data & Sync](https://docs.mindwtr.app/data-sync/)
+- 🔗 [Markdown Links](https://docs.mindwtr.app/use/markdown-links)
+- 🛠️ [Cloud Deployment](https://docs.mindwtr.app/data-sync/cloud-deployment)
+- ☁️ [Cloud API](https://docs.mindwtr.app/developers/cloud-api)
+- 🧠 [MCP Server](https://docs.mindwtr.app/power-users/mcp)
+- 🗂️ [GitHub Wiki](https://github.com/dongdongbh/Mindwtr/wiki) - Legacy wiki while docs migration continues
 - 📝 [Release Notes Index](docs/release-notes/README.md)
 
 ## Star History

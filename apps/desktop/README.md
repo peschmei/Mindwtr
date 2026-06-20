@@ -125,7 +125,7 @@ Configure sync in Settings:
 - **File Sync** - iCloud Drive, Dropbox folders, Google Drive, Syncthing, network shares, etc.
 - **WebDAV** - Nextcloud, ownCloud, self-hosted servers
 - **Dropbox** - Direct Dropbox App Folder sync in supported builds
-- **Cloud** - Self-hosted cloud backend (see `../../wiki/Data-and-Sync.md` and `../../wiki/Cloud-Deployment.md`)
+- **Cloud** - Self-hosted cloud backend (see https://docs.mindwtr.app/data-sync/ and https://docs.mindwtr.app/data-sync/cloud-deployment)
 - **External Calendars (ICS)** - View-only calendar overlay
 
 Sync recommendation:

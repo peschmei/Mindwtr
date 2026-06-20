@@ -15,6 +15,10 @@
 
 ---
 
+> **New docs site:** Mindwtr documentation is gradually moving to [docs.mindwtr.app](https://docs.mindwtr.app/) for better search and navigation. The GitHub Wiki remains available during the transition.
+>
+> **Main website:** [mindwtr.app](https://mindwtr.app/)
+
 ## 🧠 Design Philosophy
 
 Mindwtr is **simple by default and powerful when needed**. We focus on reducing cognitive load, cutting the fat, and keeping you in flow.

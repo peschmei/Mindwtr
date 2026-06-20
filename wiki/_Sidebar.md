@@ -75,6 +75,8 @@
 ---
 
 **Links**
+* [Website](https://mindwtr.app/)
+* [Official Docs](https://docs.mindwtr.app/)
 * [GitHub Repository](https://github.com/dongdongbh/Mindwtr)
 * [Releases](https://github.com/dongdongbh/Mindwtr/releases)
 * [Report Issue](https://github.com/dongdongbh/Mindwtr/issues)

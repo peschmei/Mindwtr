@@ -126,7 +126,7 @@ Add a server entry to your Claude Desktop configuration file.
         "-y",
         "mindwtr-mcp",
         "--db",
-        "/home/dd/.local/share/mindwtr/mindwtr.db",
+        "~/.local/share/mindwtr/mindwtr.db",
         "--write"
       ]
     }

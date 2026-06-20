@@ -73,7 +73,7 @@ If applicable, add screenshots or paste relevant logs.
 <details>
 <summary><strong>📋 How to collect logs (Click to expand)</strong></summary>
 
-For detailed instructions, please see the [Diagnostics and Logs Wiki](https://github.com/dongdongbh/Mindwtr/wiki/Diagnostics-and-Logs).
+For detailed instructions, please see the [Diagnostics and Logs docs](https://docs.mindwtr.app/data-sync/diagnostics-logs).
 
 **Desktop:**
 1. Go to **Settings → Sync**.

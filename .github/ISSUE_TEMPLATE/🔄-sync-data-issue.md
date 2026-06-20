@@ -49,4 +49,4 @@ What should have happened?
 - Approximate time window (with timezone and local time on each device)
 - Whether this reproduces every sync or intermittently
 
-For log collection, see: https://github.com/dongdongbh/Mindwtr/wiki/Diagnostics-and-Logs
+For log collection, see: https://docs.mindwtr.app/data-sync/diagnostics-logs

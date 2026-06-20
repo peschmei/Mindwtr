@@ -243,9 +243,9 @@ OSI-approved open-source license.
 
 ## Documentation contributions
 
-Documentation updates are welcome in `wiki/`, `docs/`, `README.md`, and `README_zh.md`.
+Documentation updates are welcome in the docs site repo, `README.md`, `README_zh.md`, and repository-local docs.
 
-Most user-facing documentation should go in `wiki/`. That directory is the source for the GitHub wiki and is synced to the live wiki page by GitHub Actions. Use `docs/` for repository-local documentation such as contribution guides, architecture summaries, ADRs, and release notes.
+Most user-facing documentation should go in the Mindwtr web docs source, which builds the public docs site at https://docs.mindwtr.app/. Use this repository's `docs/` directory for repository-local documentation such as contribution guides, architecture summaries, ADRs, and release notes. The `wiki/` directory is legacy GitHub Wiki source while the docs migration continues; update it only when a page still needs to stay mirrored there.
 
 When changing docs:
 
@@ -254,13 +254,14 @@ When changing docs:
 - Validate links
 - Update both English and Chinese docs when the content is mirrored
 - Keep `README.md` and `README_zh.md` heading structure aligned; CI runs `bun run docs:check-readme`
-- Prefer updating `wiki/` when the content is part of the public user/developer wiki
+- Prefer updating the [Mindwtr web docs source](https://github.com/dongdongbh/mindwtr-web/tree/main/docs) when the content is public user/developer documentation
 
 Useful references:
 
-- [Developer Guide](https://github.com/dongdongbh/Mindwtr/wiki/Developer-Guide)
-- [Architecture](https://github.com/dongdongbh/Mindwtr/wiki/Architecture)
-- [Wiki index](https://github.com/dongdongbh/Mindwtr/wiki)
+- [Official docs](https://docs.mindwtr.app/)
+- [Docs source](https://github.com/dongdongbh/mindwtr-web/tree/main/docs)
+- [Developer Guide](https://docs.mindwtr.app/developers/developer-guide)
+- [Architecture](https://docs.mindwtr.app/developers/architecture)
 
 ## Translation contributions
 
