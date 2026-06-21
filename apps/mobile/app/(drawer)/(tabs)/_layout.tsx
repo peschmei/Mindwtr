@@ -594,10 +594,13 @@ export default function TabLayout() {
 
   const iconTint = tc.tabIconSelected;
   const inactiveTint = tc.tabIconDefault;
-  // Material 3: the capture FAB uses the primary-container role + the M3 "large"
-  // corner radius. Non-Material themes keep today's primary tint + 10px radius.
-  const captureBg = tokens.isMaterial && tokens.roles ? tokens.roles.primaryContainer : tc.tint;
-  const captureFg = tokens.isMaterial && tokens.roles ? tokens.roles.onPrimaryContainer : tc.onTint;
+  // Material 3: capture is Mindwtr's most important action, so the FAB uses the
+  // high-emphasis M3 FAB role (primary/onPrimary) rather than the deliberately
+  // subdued primaryContainer — keeping it the visual top of the action hierarchy.
+  // Other primary buttons stay primaryContainer (canonical). Non-Material themes
+  // keep today's primary tint + 10px radius. M3 also applies the "large" radius.
+  const captureBg = tokens.isMaterial && tokens.roles ? tokens.roles.primary : tc.tint;
+  const captureFg = tokens.isMaterial && tokens.roles ? tokens.roles.onPrimary : tc.onTint;
   const captureRadius = tokens.isMaterial ? tokens.shape.large : 10;
   const defaultCapture = settings.gtd?.defaultCaptureMethod ?? 'text';
   const defaultAutoRecord = defaultCapture === 'audio';
