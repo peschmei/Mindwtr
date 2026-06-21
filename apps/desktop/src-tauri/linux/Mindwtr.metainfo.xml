@@ -88,6 +88,23 @@
   <url type="bugtracker">https://github.com/dongdongbh/Mindwtr/issues</url>
   <url type="vcs-browser">https://github.com/dongdongbh/Mindwtr</url>
   <releases>
+    <release version="1.0.5" date="2026-06-21">
+      <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v1.0.5</url>
+      <description>
+        <p>Mindwtr 1.0.5 improves desktop planning, import, sync diagnostics, and Linux beta release coverage.</p>
+        <p xml:lang="de">Mindwtr 1.0.5 verbessert Desktop-Planung, Import, Sync-Diagnosen und Linux-Beta-Release-Kanaele.</p>
+        <ul>
+          <li>Added repeat reminders for timed tasks plus board filters for contexts, tags, and dates.</li>
+          <li xml:lang="de">Wiederhol-Erinnerungen fuer Aufgaben mit Uhrzeit sowie Board-Filter fuer Kontexte, Tags und Daten hinzugefuegt.</li>
+          <li>Added TickTick import support, desktop reference fields, and a slash-command title picker.</li>
+          <li xml:lang="de">TickTick-Import, Desktop-Referenzfelder und eine Slash-Command-Titelauswahl hinzugefuegt.</li>
+          <li>Made project scrolling, popup editing focus, WebDAV/native sync errors, and parent-reference repair steadier.</li>
+          <li xml:lang="de">Projekt-Scrollposition, Popup-Bearbeitungsfokus, WebDAV/native Sync-Fehler und Parent-Referenzreparatur stabiler gemacht.</li>
+          <li>Added release candidate automation for GitHub prereleases, Flathub beta, and AUR beta testing.</li>
+          <li xml:lang="de">Release-Candidate-Automation fuer GitHub-Prereleases, Flathub-Beta und AUR-Beta-Tests hinzugefuegt.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-06-15">
       <url type="details">https://github.com/dongdongbh/Mindwtr/releases/tag/v1.0.0</url>
       <description>

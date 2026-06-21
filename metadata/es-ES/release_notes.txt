@@ -1,3 +1,3 @@
-- Sync y copias conservan mejor personas/asignados, con fixes para bucles de personas duplicadas y borrado de proyectos mas seguro.
-- Quick Capture, proyectos y calendario van mas fluidos con mejor teclado, accesibilidad y refresco.
-- Listas grandes, enlaces Markdown, recurrencia y casos de almacenamiento son mas estables.
+- Los recordatorios repetidos vuelven a avisar tareas con hora hasta completarlas o posponerlas.
+- Bulk Quick Add, importacion TickTick, Apple Shortcuts, widgets, grupos Focus y filtros de tablero son mas fluidos.
+- Reparacion de sync, inicio, ventanas sobre teclado y edicion de tareas son mas fiables.

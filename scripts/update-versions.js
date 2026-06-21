@@ -7,6 +7,11 @@ if (!newVersion) {
     process.exit(1);
 }
 
+if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
+    console.error('Error: App/package version must be a stable x.y.z version. For RC releases, pass the RC tag to scripts/bump-version.sh so it can derive the stable base version.');
+    process.exit(1);
+}
+
 const jsonFiles = [
     'package.json',
     'apps/desktop/package.json',

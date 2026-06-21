@@ -139,6 +139,7 @@ static const MWFieldSpec kTaskFields[] = {
     {"isFocusedToday", "isFocusedToday",  MWFieldKindBool},
     {"timeEstimate",   "timeEstimate",    MWFieldKindString},
     {"suppressMindwtrReminders", "suppressMindwtrReminders", MWFieldKindBool},
+    {"repeatReminderMinutes", "repeatReminderMinutes", MWFieldKindInt},
     {"reviewAt",       "reviewAt",        MWFieldKindDate},
     {"completedAt",    "completedAt",     MWFieldKindDate},
     {"rev",            "rev",             MWFieldKindInt},

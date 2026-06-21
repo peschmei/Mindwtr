@@ -1,3 +1,3 @@
-- Sync and backups preserve people/assignee data more reliably, with fixes for duplicate people loops and safer project deletes.
-- Quick capture, project screens, and calendar planning are smoother with better keyboard handling, accessibility, and refresh behavior.
-- Large task lists, Markdown links, recurrence, and storage edge cases are steadier.
+- Repeat reminders can now re-notify timed tasks until you complete or snooze them.
+- Bulk Quick Add, TickTick import, Apple Shortcuts, widgets, Focus grouping, and board filters are smoother.
+- Sync repair, startup state, keyboard-covered popups, and task editing are more reliable.
