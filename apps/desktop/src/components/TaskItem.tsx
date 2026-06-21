@@ -18,6 +18,7 @@ import {
     formatFocusTaskLimitText,
     FOCUS_ELIGIBILITY_ACTIVE_STATUSES,
     getTaskFocusEligibility,
+    parseQuickAddDateCommands,
     useTaskStore,
 } from '@mindwtr/core';
 import { cn } from '../lib/utils';
@@ -48,6 +49,7 @@ import { reportError } from '../lib/report-error';
 import { resolveNativeDateInputLocale } from '../lib/native-date-input-locale';
 import { setCalendarTaskDragData } from '../lib/calendar-task-drag';
 import { useTaskItemStoreState, useTaskItemUiState } from './Task/useTaskItemStoreState';
+import type { TaskInputAcceptedSuggestion } from './Task/TaskInput';
 
 interface TaskItemProps {
     task: Task;
@@ -1080,6 +1082,50 @@ export const TaskItem = memo(function TaskItem({
             quickActionReturnFocusRef.current = null;
         }, 0);
     }, []);
+
+    const handleTitleSuggestionAccept = useCallback((suggestion: TaskInputAcceptedSuggestion): boolean => {
+        if (suggestion.kind !== 'command') return false;
+        const value = suggestion.value.trim();
+
+        if (suggestion.command === 'note') {
+            if (!value) return false;
+            const existingDescription = editDescription.trimEnd();
+            setEditDescription(existingDescription ? `${existingDescription}\n\n${value}` : value);
+            return true;
+        }
+
+        if (suggestion.command === 'due' || suggestion.command === 'start' || suggestion.command === 'review') {
+            if (!value) return false;
+            const parsed = parseQuickAddDateCommands(`/${suggestion.command}:${value}`, new Date());
+            if (parsed.invalidDateCommands?.length) return false;
+            const parsedValue = suggestion.command === 'due'
+                ? parsed.props.dueDate
+                : suggestion.command === 'start'
+                    ? parsed.props.startTime
+                    : parsed.props.reviewAt;
+            if (!parsedValue) return false;
+            const editorValue = toDateTimeLocalValue(parsedValue);
+            if (suggestion.command === 'due') {
+                setEditDueDate(editorValue);
+            } else if (suggestion.command === 'start') {
+                setEditStartTime(editorValue);
+            } else {
+                setEditReviewAt(editorValue);
+            }
+            return true;
+        }
+
+        setEditStatus(suggestion.command);
+        return true;
+    }, [
+        editDescription,
+        setEditDescription,
+        setEditDueDate,
+        setEditReviewAt,
+        setEditStartTime,
+        setEditStatus,
+    ]);
+
     useEffect(() => {
         if (!isEditing) return;
         const handleGlobalCancel = (event: Event) => {
@@ -1160,6 +1206,7 @@ export const TaskItem = memo(function TaskItem({
             renderField={renderField}
             language={language}
             inputContexts={allContexts}
+            onAcceptTitleSuggestion={handleTitleSuggestionAccept}
             isDoneActionActive={editStatus === 'done'}
             onMarkDone={task.status !== 'done' && task.status !== 'archived' && task.status !== 'reference' ? handleEditorMarkDone : undefined}
             onDuplicateTask={() => duplicateTask(task.id, false)}

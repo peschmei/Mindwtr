@@ -76,6 +76,7 @@ interface TaskItemEditorProps {
     renderField: (fieldId: TaskEditorFieldId) => ReactNode;
     language: string;
     inputContexts: string[];
+    onAcceptTitleSuggestion?: (suggestion: TaskInputAcceptedSuggestion) => boolean | Promise<boolean>;
     isDoneActionActive?: boolean;
     onMarkDone?: () => void;
     onDuplicateTask: () => void;
@@ -156,6 +157,7 @@ export function TaskItemEditor({
     renderField,
     language,
     inputContexts,
+    onAcceptTitleSuggestion,
     isDoneActionActive = false,
     onMarkDone,
     onDuplicateTask,
@@ -189,6 +191,9 @@ export function TaskItemEditor({
     const aiMenuRef = useRef<HTMLDivElement>(null);
     const handleTitleSuggestionAccept = async (suggestion: TaskInputAcceptedSuggestion) => {
         resetCopilotDraft();
+        if (await onAcceptTitleSuggestion?.(suggestion)) {
+            return true;
+        }
         if (suggestion.kind === 'context') {
             setEditContexts(appendCommaToken(editContexts, ensureTokenPrefix(suggestion.value, '@')));
             return true;

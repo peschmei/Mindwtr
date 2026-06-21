@@ -280,6 +280,121 @@ describe('TaskItem', () => {
         });
     });
 
+    it('applies accepted slash date commands as metadata without keeping the command in the title', async () => {
+        const editableTask: Task = {
+            ...mockTask,
+            id: 'editor-title-slash-date-task',
+            title: 'Email',
+            status: 'next',
+        };
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                tasks: [editableTask],
+                _allTasks: [editableTask],
+                _tasksById: new Map([[editableTask.id, editableTask]]),
+                projects: [],
+                _allProjects: [],
+                _projectsById: new Map(),
+                sections: [],
+                _allSections: [],
+                _sectionsById: new Map(),
+                areas: [],
+                _allAreas: [],
+                _areasById: new Map(),
+            }));
+        });
+
+        const { findByRole, getAllByRole, getByDisplayValue, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={editableTask} />
+            </LanguageProvider>
+        );
+
+        await act(async () => {
+            fireEvent.click(getAllByRole('button', { name: /edit/i })[0]);
+        });
+        const titleInput = getByDisplayValue('Email') as HTMLInputElement;
+        fireEvent.change(titleInput, { target: { value: 'Email /due:2026-05-01 today' } });
+        titleInput.setSelectionRange('Email /due:2026-05-01'.length, 'Email /due:2026-05-01'.length);
+        fireEvent.click(titleInput);
+
+        expect(await findByRole('option', { name: '/due:2026-05-01' })).toBeInTheDocument();
+        await act(async () => {
+            fireEvent.keyDown(titleInput, { key: 'Enter' });
+        });
+
+        await waitFor(() => expect(titleInput.value).toBe('Email today'));
+
+        await act(async () => {
+            fireEvent.click(getByRole('button', { name: 'Save' }));
+        });
+
+        await waitFor(() => {
+            const updatedTask = useTaskStore.getState()._allTasks.find((task) => task.id === 'editor-title-slash-date-task');
+            expect(updatedTask?.title).toBe('Email today');
+            expect(updatedTask?.dueDate).toBe('2026-05-01');
+        });
+    });
+
+    it('appends accepted slash notes instead of overwriting an existing description', async () => {
+        const editableTask: Task = {
+            ...mockTask,
+            id: 'editor-title-slash-note-task',
+            title: 'Email',
+            status: 'next',
+            description: 'Existing note',
+        };
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                tasks: [editableTask],
+                _allTasks: [editableTask],
+                _tasksById: new Map([[editableTask.id, editableTask]]),
+                projects: [],
+                _allProjects: [],
+                _projectsById: new Map(),
+                sections: [],
+                _allSections: [],
+                _sectionsById: new Map(),
+                areas: [],
+                _allAreas: [],
+                _areasById: new Map(),
+            }));
+        });
+
+        const { findByRole, getAllByRole, getByDisplayValue, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={editableTask} />
+            </LanguageProvider>
+        );
+
+        await act(async () => {
+            fireEvent.click(getAllByRole('button', { name: /edit/i })[0]);
+        });
+        const titleInput = getByDisplayValue('Email') as HTMLInputElement;
+        fireEvent.change(titleInput, { target: { value: 'Email /note:Follow up today' } });
+        titleInput.setSelectionRange('Email /note:Follow up'.length, 'Email /note:Follow up'.length);
+        fireEvent.click(titleInput);
+
+        expect(await findByRole('option', { name: '/note:Follow up' })).toBeInTheDocument();
+        await act(async () => {
+            fireEvent.keyDown(titleInput, { key: 'Enter' });
+        });
+
+        await waitFor(() => expect(titleInput.value).toBe('Email today'));
+
+        await act(async () => {
+            fireEvent.click(getByRole('button', { name: 'Save' }));
+        });
+
+        await waitFor(() => {
+            const updatedTask = useTaskStore.getState()._allTasks.find((task) => task.id === 'editor-title-slash-note-task');
+            expect(updatedTask?.title).toBe('Email today');
+            expect(updatedTask?.description).toBe('Existing note\n\nFollow up');
+        });
+    });
+
     it('keeps unaccepted quick-add-looking text literal in existing title edits', async () => {
         const editableTask: Task = {
             ...mockTask,

@@ -8,7 +8,8 @@ import {
     normalizeAutocompleteTokens,
 } from './token-autocomplete';
 
-type TriggerType = 'project' | 'context' | 'tag' | 'area';
+type TriggerType = 'project' | 'context' | 'tag' | 'area' | 'command';
+type SlashCommand = 'due' | 'start' | 'review' | 'note' | 'inbox' | 'next' | 'waiting' | 'someday' | 'done';
 
 interface TriggerState {
     type: TriggerType;
@@ -38,14 +39,16 @@ type Option =
     | { kind: 'project'; label: string; value: string; id: string }
     | { kind: 'context'; label: string; value: string }
     | { kind: 'tag'; label: string; value: string }
-    | { kind: 'area'; label: string; value: string; id: string };
+    | { kind: 'area'; label: string; value: string; id: string }
+    | { kind: 'command'; label: string; value: string; command: SlashCommand; requiresArgument: boolean };
 
 export type TaskInputAcceptedSuggestion =
     | { kind: 'project'; label: string; value: string; projectId: string }
     | { kind: 'createProject'; label: string; value: string; projectId: string | null }
     | { kind: 'context'; label: string; value: string }
     | { kind: 'tag'; label: string; value: string }
-    | { kind: 'area'; label: string; value: string; areaId: string };
+    | { kind: 'area'; label: string; value: string; areaId: string }
+    | { kind: 'command'; label: string; value: string; command: SlashCommand };
 
 interface TaskInputProps {
     id?: string;
@@ -67,20 +70,77 @@ interface TaskInputProps {
     ariaLabel?: string;
 }
 
+const SLASH_COMMANDS: Array<{
+    command: SlashCommand;
+    hint?: string;
+    requiresArgument: boolean;
+}> = [
+    { command: 'due', hint: '<when>', requiresArgument: true },
+    { command: 'start', hint: '<when>', requiresArgument: true },
+    { command: 'review', hint: '<when>', requiresArgument: true },
+    { command: 'note', hint: '<text>', requiresArgument: true },
+    { command: 'next', requiresArgument: false },
+    { command: 'waiting', requiresArgument: false },
+    { command: 'someday', requiresArgument: false },
+    { command: 'inbox', requiresArgument: false },
+    { command: 'done', requiresArgument: false },
+];
+
+function getSlashCommandOptions(query: string): Option[] {
+    const separatorIndex = query.indexOf(':');
+    const rawCommandQuery = (separatorIndex >= 0 ? query.slice(0, separatorIndex) : query).trim().toLowerCase();
+    const rawValue = separatorIndex >= 0 ? query.slice(separatorIndex + 1).trim() : '';
+
+    return SLASH_COMMANDS
+        .filter(({ command }) => (
+            rawCommandQuery.length === 0
+            || command.startsWith(rawCommandQuery)
+            || command.includes(rawCommandQuery)
+        ))
+        .map(({ command, hint, requiresArgument }) => {
+            const label = requiresArgument
+                ? `/${command}:${rawValue || hint || ''}`
+                : `/${command}`;
+            return {
+                kind: 'command' as const,
+                label,
+                value: rawValue,
+                command,
+                requiresArgument,
+            };
+        });
+}
+
 function getTrigger(text: string, caret: number): TriggerState | null {
     if (caret < 0) return null;
     const before = text.slice(0, caret);
+    const commandMatch = /(?:^|\s)\/([a-z-]*)(?::([\s\S]*))?$/i.exec(before);
+    if (commandMatch) {
+        const rawMatch = commandMatch[0] ?? '';
+        const slashOffset = rawMatch.indexOf('/');
+        if (slashOffset >= 0) {
+            const start = (commandMatch.index ?? 0) + slashOffset;
+            return {
+                type: 'command',
+                start,
+                end: caret,
+                query: before.slice(start + 1),
+            };
+        }
+    }
     const lastSpace = Math.max(before.lastIndexOf(' '), before.lastIndexOf('\n'), before.lastIndexOf('\t'));
     const start = lastSpace + 1;
     const token = before.slice(start);
-    if (!token.startsWith('+') && !token.startsWith('@') && !token.startsWith('#') && !token.startsWith('!')) return null;
+    if (!token.startsWith('+') && !token.startsWith('@') && !token.startsWith('#') && !token.startsWith('!') && !token.startsWith('/')) return null;
     const type: TriggerType = token.startsWith('+')
         ? 'project'
         : token.startsWith('@')
             ? 'context'
             : token.startsWith('#')
                 ? 'tag'
-            : 'area';
+                : token.startsWith('!')
+                    ? 'area'
+                    : 'command';
     return {
         type,
         start,
@@ -152,6 +212,9 @@ export function TaskInput({
     const options = useMemo<Option[]>(() => {
         if (!trigger) return [];
         const query = trigger.query.trim().toLowerCase();
+        if (trigger.type === 'command') {
+            return getSlashCommandOptions(trigger.query);
+        }
         if (trigger.type === 'project') {
             const activeProjects = projects.filter((project) => project.status !== 'archived');
             const matches = activeProjects
@@ -310,6 +373,19 @@ export function TaskInput({
 
         let tokenValue = option.value;
         let createdProjectId: string | null = null;
+        if (option.kind === 'command' && option.requiresArgument && !option.value.trim()) {
+            tokenValue = `/${option.command}:`;
+            const before = active.text.slice(0, activeTrigger.start);
+            const after = active.text.slice(activeTrigger.end);
+            const nextValue = `${before}${tokenValue}${after}`;
+            pushUndoEntry(active.text, active.selection);
+            valueRef.current = nextValue;
+            onChange(nextValue);
+            closeTrigger();
+            const caret = before.length + tokenValue.length;
+            scheduleSelectionRestore({ start: caret, end: caret });
+            return;
+        }
         if (option.kind === 'create' && onCreateProject) {
             const title = option.value.trim();
             if (title) {
@@ -323,6 +399,8 @@ export function TaskInput({
                     ? { kind: 'createProject', label: option.label, value: option.value, projectId: createdProjectId }
                     : option.kind === 'area'
                         ? { kind: 'area', label: option.label, value: option.value, areaId: option.id }
+                        : option.kind === 'command'
+                            ? { kind: 'command', label: option.label, value: option.value, command: option.command }
                         : option.kind === 'context'
                             ? { kind: 'context', label: option.label, value: option.value }
                             : { kind: 'tag', label: option.label, value: option.value };
@@ -336,6 +414,10 @@ export function TaskInput({
                 scheduleSelectionRestore({ start: next.caret, end: next.caret });
                 return;
             }
+            if (option.kind === 'command') {
+                closeTrigger();
+                return;
+            }
         }
         if (activeTrigger.type === 'project') {
             tokenValue = `+${tokenValue}`;
@@ -343,6 +425,8 @@ export function TaskInput({
             tokenValue = `!${tokenValue}`;
         } else if (activeTrigger.type === 'tag') {
             tokenValue = tokenValue.startsWith('#') ? tokenValue : `#${tokenValue}`;
+        } else if (activeTrigger.type === 'command' && option.kind === 'command') {
+            tokenValue = option.requiresArgument ? `/${option.command}:${option.value}` : `/${option.command}`;
         } else {
             tokenValue = tokenValue.startsWith('@') ? tokenValue : `@${tokenValue}`;
         }

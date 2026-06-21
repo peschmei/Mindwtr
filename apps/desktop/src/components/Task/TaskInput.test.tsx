@@ -158,6 +158,51 @@ describe('TaskInput autocomplete', () => {
         });
     });
 
+    it('offers slash command suggestions and removes accepted slash commands when metadata is applied', async () => {
+        const onAcceptSuggestion = vi.fn(() => true);
+        const { getByRole } = render(
+            <TaskInputHarness
+                initialValue="Email /due:2026-05-01 today"
+                onAcceptSuggestion={onAcceptSuggestion}
+            />
+        );
+        const input = getByRole('combobox') as HTMLInputElement;
+        input.focus();
+        input.setSelectionRange('Email /due:2026-05-01'.length, 'Email /due:2026-05-01'.length);
+        fireEvent.click(input);
+
+        expect(getByRole('option', { name: '/due:2026-05-01' })).toBeInTheDocument();
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+            expect(onAcceptSuggestion).toHaveBeenCalledWith({
+                kind: 'command',
+                command: 'due',
+                label: '/due:2026-05-01',
+                value: '2026-05-01',
+            });
+            expect(input.value).toBe('Email today');
+            expect(input.selectionStart).toBe('Email '.length);
+            expect(input.selectionEnd).toBe('Email '.length);
+        });
+    });
+
+    it('completes an accepted slash command prefix when no argument is present', async () => {
+        const { getByRole } = render(<TaskInputHarness initialValue="/du" />);
+        const input = getByRole('combobox') as HTMLInputElement;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+        fireEvent.click(input);
+
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+            expect(input.value).toBe('/due:');
+            expect(input.selectionStart).toBe('/due:'.length);
+            expect(input.selectionEnd).toBe('/due:'.length);
+        });
+    });
+
     it('keeps the metadata-applied caret when the parent value update is delayed', async () => {
         const onAcceptSuggestion = vi.fn(() => true);
         const rafCallbacks: FrameRequestCallback[] = [];
