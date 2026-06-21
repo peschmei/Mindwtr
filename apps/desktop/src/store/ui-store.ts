@@ -1,5 +1,5 @@
 import { createWithEqualityFn } from 'zustand/traditional';
-import type { FilterCriteria, TaskPriority, TimeEstimate } from '@mindwtr/core';
+import type { FilterCriteria } from '@mindwtr/core';
 
 const toastTimeouts = new Map<string, number>();
 type ListNextGroupBy = 'none' | 'context' | 'area' | 'project' | 'energy' | 'priority' | 'person' | 'tag';
@@ -94,9 +94,7 @@ interface UiState {
     ) => void;
     dismissToast: (id: string) => void;
     listFilters: {
-        tokens: string[];
-        priorities: TaskPriority[];
-        estimates: TimeEstimate[];
+        criteria: FilterCriteria;
         open: boolean;
     };
     setListFilters: (partial: Partial<UiState['listFilters']>) => void;
@@ -142,9 +140,7 @@ export const useUiStore = createWithEqualityFn<UiState>()((set) => ({
         set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) }));
     },
     listFilters: {
-        tokens: [],
-        priorities: [],
-        estimates: [],
+        criteria: {},
         open: false,
     },
     setListFilters: (partial) =>
@@ -153,9 +149,7 @@ export const useUiStore = createWithEqualityFn<UiState>()((set) => ({
         set((state) => ({
             listFilters: {
                 ...state.listFilters,
-                tokens: [],
-                priorities: [],
-                estimates: [],
+                criteria: {},
             },
         })),
     listOptions: readStoredListOptions(),

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { Task } from '@mindwtr/core';
 
 import {
+  buildMobileTaskListFilterCriteria,
+  buildMobileTaskListFilters,
   countActiveMobileTaskFilters,
   taskMatchesMobileTaskFilters,
-  type MobileTaskListFilters,
+  type MobileTaskListFilterInput,
 } from './task-list-filter-utils';
 
-const emptyFilters: MobileTaskListFilters = {
+const emptyFilterInput: MobileTaskListFilterInput = {
   energyLevels: [],
   locationQuery: '',
   priorities: [],
@@ -16,6 +18,10 @@ const emptyFilters: MobileTaskListFilters = {
   tokens: [],
   contextMatchMode: 'all',
 };
+
+const makeFilters = (overrides: Partial<MobileTaskListFilterInput> = {}) => (
+  buildMobileTaskListFilters({ ...emptyFilterInput, ...overrides })
+);
 
 const task: Task = {
   contexts: ['@work/deep'],
@@ -33,73 +39,88 @@ const task: Task = {
 };
 
 describe('task-list-filter-utils', () => {
+  it('builds core filter criteria from mobile filter controls', () => {
+    expect(buildMobileTaskListFilterCriteria({
+      ...emptyFilterInput,
+      contextMatchMode: 'any',
+      energyLevels: ['high'],
+      locationQuery: 'office',
+      priorities: ['urgent'],
+      timeEstimates: ['30min'],
+      tokens: ['@work', '@phone', '#client'],
+    })).toEqual({
+      contexts: ['@work', '@phone'],
+      contextMatchMode: 'any',
+      tags: ['#client'],
+      priority: ['urgent'],
+      energy: ['high'],
+      timeEstimates: ['30min'],
+      locations: ['office'],
+    });
+  });
+
   it('counts active filters across text and chip dimensions', () => {
-    expect(countActiveMobileTaskFilters(emptyFilters)).toBe(0);
-    expect(countActiveMobileTaskFilters({
-      ...emptyFilters,
+    expect(countActiveMobileTaskFilters(makeFilters())).toBe(0);
+    expect(countActiveMobileTaskFilters(makeFilters({
       energyLevels: ['high'],
       locationQuery: 'office',
       priorities: ['urgent'],
       searchQuery: 'release',
       timeEstimates: ['30min'],
       tokens: ['@work', '#client'],
-    })).toBe(7);
+    }))).toBe(7);
   });
 
   it('matches search query against title and description', () => {
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, searchQuery: 'release' })).toBe(true);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, searchQuery: 'launch notes' })).toBe(true);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, searchQuery: 'vacation' })).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ searchQuery: 'release' }))).toBe(true);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ searchQuery: 'launch notes' }))).toBe(true);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ searchQuery: 'vacation' }))).toBe(false);
   });
 
   it('matches fielded task id searches with full and partial UUIDs', () => {
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, searchQuery: 'id:c5290e2c-1b77-4f77-8927-6d187e141891' })).toBe(true);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, searchQuery: 'id:6d187e141891' })).toBe(true);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, searchQuery: 'id:missing-task-id' })).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ searchQuery: 'id:c5290e2c-1b77-4f77-8927-6d187e141891' }))).toBe(true);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ searchQuery: 'id:6d187e141891' }))).toBe(true);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ searchQuery: 'id:missing-task-id' }))).toBe(false);
   });
 
   it('matches context and tag filters using hierarchy prefixes', () => {
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, tokens: ['@work', '#client'] })).toBe(true);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, tokens: ['@workshop'] })).toBe(false);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, tokens: ['#ops'] })).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ tokens: ['@work', '#client'] }))).toBe(true);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ tokens: ['@workshop'] }))).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ tokens: ['#ops'] }))).toBe(false);
   });
 
   it('can match any selected context while keeping tag filters required', () => {
-    expect(taskMatchesMobileTaskFilters(task, {
-      ...emptyFilters,
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({
       tokens: ['@work', '@phone'],
       contextMatchMode: 'all',
-    })).toBe(false);
-    expect(taskMatchesMobileTaskFilters(task, {
-      ...emptyFilters,
+    }))).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({
       tokens: ['@work', '@phone'],
       contextMatchMode: 'any',
-    })).toBe(true);
-    expect(taskMatchesMobileTaskFilters(task, {
-      ...emptyFilters,
+    }))).toBe(true);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({
       tokens: ['@work', '@phone', '#ops'],
       contextMatchMode: 'any',
-    })).toBe(false);
+    }))).toBe(false);
   });
 
   it('matches priority, energy, time estimate, and location filters', () => {
-    expect(taskMatchesMobileTaskFilters(task, {
-      ...emptyFilters,
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({
       energyLevels: ['high'],
       locationQuery: 'off',
       priorities: ['urgent'],
       timeEstimates: ['30min'],
-    })).toBe(true);
+    }))).toBe(true);
 
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, priorities: ['low'] })).toBe(false);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, energyLevels: ['low'] })).toBe(false);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, timeEstimates: ['5min'] })).toBe(false);
-    expect(taskMatchesMobileTaskFilters(task, { ...emptyFilters, locationQuery: 'home' })).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ priorities: ['low'] }))).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ energyLevels: ['low'] }))).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ timeEstimates: ['5min'] }))).toBe(false);
+    expect(taskMatchesMobileTaskFilters(task, makeFilters({ locationQuery: 'home' }))).toBe(false);
   });
 
   it('matches custom time estimates by their coarse bucket', () => {
     const customTask = { ...task, timeEstimate: 'custom:150' as const };
-    expect(taskMatchesMobileTaskFilters(customTask, { ...emptyFilters, timeEstimates: ['3hr'] })).toBe(true);
-    expect(taskMatchesMobileTaskFilters(customTask, { ...emptyFilters, timeEstimates: ['2hr'] })).toBe(false);
+    expect(taskMatchesMobileTaskFilters(customTask, makeFilters({ timeEstimates: ['3hr'] }))).toBe(true);
+    expect(taskMatchesMobileTaskFilters(customTask, makeFilters({ timeEstimates: ['2hr'] }))).toBe(false);
   });
 });

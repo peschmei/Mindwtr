@@ -67,9 +67,7 @@ describe('ListView', () => {
     useUiStore.setState((state) => ({
       ...state,
       listFilters: {
-        tokens: [],
-        priorities: [],
-        estimates: [],
+        criteria: {},
         open: false,
       },
       listOptions: {
@@ -333,7 +331,7 @@ describe('ListView', () => {
     const { queryByText } = renderListView();
 
     act(() => {
-      useUiStore.getState().setListFilters({ tokens: ['@work'] });
+      useUiStore.getState().setListFilters({ criteria: { contexts: ['@work'] } });
     });
 
     await waitFor(() => {

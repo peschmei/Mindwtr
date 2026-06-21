@@ -88,6 +88,7 @@ import {
   type TaskListLayoutRevision,
 } from './task-list/task-list-layout';
 import {
+  buildMobileTaskListFilters,
   countActiveMobileTaskFilters,
   taskMatchesMobileTaskFilters,
   type MobileTaskListFilters,
@@ -528,7 +529,7 @@ function TaskListComponent({
     if (!filtersVisible) return false;
     return filterableTasks.some((task) => String(task.location ?? '').trim().length > 0);
   }, [filterableTasks, filtersVisible, locationFilter]);
-  const taskListFilters = useMemo<MobileTaskListFilters>(() => ({
+  const taskListFilters = useMemo<MobileTaskListFilters>(() => buildMobileTaskListFilters({
     energyLevels: selectedEnergyLevels,
     locationQuery: locationFilter,
     priorities: prioritiesEnabled ? selectedPriorities : [],

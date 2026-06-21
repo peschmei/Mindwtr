@@ -7,19 +7,20 @@ import {
     formatTimeEstimateLabel,
     getQuickAddProjectInitialProps,
     getWaitingPerson,
+    hasActiveFilterCriteria,
     isTaskInActiveProject,
-    matchesHierarchicalToken,
     parseQuickAdd,
     resolveDefaultNewTaskAreaId,
     safeParseDate,
     shallow,
     sortTasksBy,
+    taskMatchesFilterCriteria,
     TaskPriority,
     TimeEstimate,
     translateWithFallback as translateTextWithFallback,
     useTaskStore,
 } from '@mindwtr/core';
-import type { Task, TaskStatus } from '@mindwtr/core';
+import type { FilterCriteria, Task, TaskStatus } from '@mindwtr/core';
 import type { BulkOrganizeTaskUpdateInput } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
 import { ConfirmModal } from '../ConfirmModal';
@@ -75,6 +76,28 @@ type ShowToast = (
     durationMs?: number,
     action?: { label: string; onClick: () => void }
 ) => void;
+
+function getListFilterTokens(criteria: FilterCriteria): string[] {
+    return [...(criteria.contexts ?? []), ...(criteria.tags ?? [])];
+}
+
+function getListFilterPriorities(criteria: FilterCriteria): TaskPriority[] {
+    return (criteria.priority ?? []).filter((priority): priority is TaskPriority => priority !== 'none');
+}
+
+function withListFilterValue<K extends keyof Pick<FilterCriteria, 'contexts' | 'tags' | 'priority' | 'timeEstimates'>>(
+    criteria: FilterCriteria,
+    key: K,
+    values: NonNullable<FilterCriteria[K]>,
+): FilterCriteria {
+    const next = { ...criteria };
+    if (values.length > 0) {
+        next[key] = values;
+    } else {
+        delete next[key];
+    }
+    return next;
+}
 
 function sanitizeReferenceViewState(value: unknown, fallback: ReferencePersistedViewState): ReferencePersistedViewState {
     const parsed = value && typeof value === 'object' && !Array.isArray(value)
@@ -177,9 +200,10 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const setProjectView = useUiStore((state) => state.setProjectView);
     const [baseTasks, setBaseTasks] = useState<Task[]>(() => (statusFilter === 'archived' ? [] : tasks));
     const queryCacheRef = useRef<Map<string, Task[]>>(new Map());
-    const selectedTokens = listFilters.tokens;
-    const selectedPriorities = listFilters.priorities;
-    const selectedTimeEstimates = listFilters.estimates;
+    const listFilterCriteria = listFilters.criteria;
+    const selectedTokens = useMemo(() => getListFilterTokens(listFilterCriteria), [listFilterCriteria]);
+    const selectedPriorities = useMemo(() => getListFilterPriorities(listFilterCriteria), [listFilterCriteria]);
+    const selectedTimeEstimates = listFilterCriteria.timeEstimates ?? EMPTY_ESTIMATES;
     const filtersOpen = listFilters.open;
     const [selectedWaitingPerson, setSelectedWaitingPerson] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -200,6 +224,18 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
     const activePriorities = prioritiesEnabled ? selectedPriorities : EMPTY_PRIORITIES;
     const activeTimeEstimates = timeEstimatesEnabled ? selectedTimeEstimates : EMPTY_ESTIMATES;
+    const activeListFilterCriteria = useMemo<FilterCriteria>(() => ({
+        ...listFilterCriteria,
+        priority: prioritiesEnabled ? activePriorities : undefined,
+        timeEstimates: timeEstimatesEnabled ? activeTimeEstimates : undefined,
+        timeEstimateRange: timeEstimatesEnabled ? listFilterCriteria.timeEstimateRange : undefined,
+    }), [
+        activePriorities,
+        activeTimeEstimates,
+        listFilterCriteria,
+        prioritiesEnabled,
+        timeEstimatesEnabled,
+    ]);
     const defaultNewTaskAreaId = resolveDefaultNewTaskAreaId(settings, areas);
 
     useEffect(() => {
@@ -366,17 +402,13 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     // Background task refreshes can still be deferred without shifting the list UI.
     const filterFeedbackInputs = useMemo(() => ({
         statusFilter,
-        selectedTokens,
-        activePriorities,
-        activeTimeEstimates,
+        filterCriteria: activeListFilterCriteria,
         resolvedAreaFilter,
         selectedWaitingPerson,
         normalizedSearchQuery,
     }), [
         statusFilter,
-        selectedTokens,
-        activePriorities,
-        activeTimeEstimates,
+        activeListFilterCriteria,
         resolvedAreaFilter,
         selectedWaitingPerson,
         normalizedSearchQuery,
@@ -387,11 +419,10 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const filterInputs = useMemo(() => ({
         baseTasks,
         statusFilter,
-        selectedTokens,
-        activePriorities,
-        activeTimeEstimates,
+        filterCriteria: activeListFilterCriteria,
         sequentialProjectFirstTasks,
         projectMap,
+        projects,
         sortBy,
         sortByProjectOrder,
         resolvedAreaFilter,
@@ -400,11 +431,10 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     }), [
         baseTasks,
         statusFilter,
-        selectedTokens,
-        activePriorities,
-        activeTimeEstimates,
+        activeListFilterCriteria,
         sequentialProjectFirstTasks,
         projectMap,
+        projects,
         sortBy,
         sortByProjectOrder,
         resolvedAreaFilter,
@@ -449,20 +479,12 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 }
 
 
-                const taskTokens = [...(t.contexts || []), ...(t.tags || [])];
-                if (deferredFilterInputs.selectedTokens.length > 0) {
-                    const matchesAll = deferredFilterInputs.selectedTokens.every((token) =>
-                        taskTokens.some((taskToken) => matchesHierarchicalToken(token, taskToken))
-                    );
-                    if (!matchesAll) return false;
-                }
                 if (
-                    deferredFilterInputs.activePriorities.length > 0
-                    && (!t.priority || !deferredFilterInputs.activePriorities.includes(t.priority))
-                ) return false;
-                if (
-                    deferredFilterInputs.activeTimeEstimates.length > 0
-                    && (!t.timeEstimate || !deferredFilterInputs.activeTimeEstimates.includes(t.timeEstimate))
+                    hasActiveFilterCriteria(deferredFilterInputs.filterCriteria)
+                    && !taskMatchesFilterCriteria(t, deferredFilterInputs.filterCriteria, {
+                        projects: deferredFilterInputs.projects,
+                        tokenMatchMode: 'all',
+                    })
                 ) return false;
                 if (deferredFilterInputs.statusFilter === 'waiting' && deferredFilterInputs.selectedWaitingPerson) {
                     const person = getWaitingPerson(t);
@@ -806,35 +828,42 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const filterSummarySuffix = filterSummary.length > 3 ? ` +${filterSummary.length - 3}` : '';
     const showFiltersPanel = filtersOpen;
     const toggleTokenFilter = useCallback((token: string) => {
-        const nextTokens = selectedTokens.includes(token)
-            ? selectedTokens.filter((item) => item !== token)
-            : [...selectedTokens, token];
-        setListFilters({ tokens: nextTokens });
-    }, [selectedTokens, setListFilters]);
+        const key = token.trim().startsWith('#') ? 'tags' : 'contexts';
+        const current = listFilterCriteria[key] ?? [];
+        const nextValues = current.includes(token)
+            ? current.filter((item) => item !== token)
+            : [...current, token];
+        setListFilters({ criteria: withListFilterValue(listFilterCriteria, key, nextValues) });
+    }, [listFilterCriteria, setListFilters]);
     const togglePriorityFilter = useCallback((priority: TaskPriority) => {
         const nextPriorities = selectedPriorities.includes(priority)
             ? selectedPriorities.filter((item) => item !== priority)
             : [...selectedPriorities, priority];
-        setListFilters({ priorities: nextPriorities });
-    }, [selectedPriorities, setListFilters]);
+        setListFilters({ criteria: withListFilterValue(listFilterCriteria, 'priority', nextPriorities) });
+    }, [listFilterCriteria, selectedPriorities, setListFilters]);
     const toggleTimeFilter = useCallback((estimate: TimeEstimate) => {
         const nextEstimates = selectedTimeEstimates.includes(estimate)
             ? selectedTimeEstimates.filter((item) => item !== estimate)
             : [...selectedTimeEstimates, estimate];
-        setListFilters({ estimates: nextEstimates });
-    }, [selectedTimeEstimates, setListFilters]);
+        setListFilters({ criteria: withListFilterValue(listFilterCriteria, 'timeEstimates', nextEstimates) });
+    }, [listFilterCriteria, selectedTimeEstimates, setListFilters]);
     const clearFilters = () => {
         resetListFilters();
     };
 
     useEffect(() => {
+        let nextCriteria: FilterCriteria | null = null;
         if (!prioritiesEnabled && selectedPriorities.length > 0) {
-            setListFilters({ priorities: [] });
+            nextCriteria = { ...(nextCriteria ?? listFilterCriteria) };
+            delete nextCriteria.priority;
         }
         if (!timeEstimatesEnabled && selectedTimeEstimates.length > 0) {
-            setListFilters({ estimates: [] });
+            nextCriteria = { ...(nextCriteria ?? listFilterCriteria) };
+            delete nextCriteria.timeEstimates;
+            delete nextCriteria.timeEstimateRange;
         }
-    }, [prioritiesEnabled, timeEstimatesEnabled, selectedPriorities.length, selectedTimeEstimates.length, setListFilters]);
+        if (nextCriteria) setListFilters({ criteria: nextCriteria });
+    }, [listFilterCriteria, prioritiesEnabled, timeEstimatesEnabled, selectedPriorities.length, selectedTimeEstimates.length, setListFilters]);
 
     const openQuickAdd = useCallback((status: TaskStatus | 'all', captureMode?: 'text' | 'audio') => {
         const initialStatus = status === 'all' ? 'inbox' : status;
