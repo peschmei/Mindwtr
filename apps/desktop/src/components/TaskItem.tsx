@@ -752,6 +752,7 @@ export const TaskItem = memo(function TaskItem({
         if (isEditing) return;
         if (editingTaskId === task.id && !effectiveReadOnly) {
             setTaskExpanded(task.id, false);
+            setAutoFocusTitle(true);
             setIsEditing(true);
         }
     }, [editingTaskId, effectiveReadOnly, isEditing, setTaskExpanded, task.id]);
@@ -1028,6 +1029,10 @@ export const TaskItem = memo(function TaskItem({
 
         lastFocusedBeforeModalRef.current = document.activeElement as HTMLElement | null;
         const timer = setTimeout(() => {
+            const active = document.activeElement as HTMLElement | null;
+            if (active && modalEditorRef.current?.contains(active)) {
+                return;
+            }
             const focusable = getModalFocusableElements();
             if (focusable.length > 0) {
                 focusable[0].focus();

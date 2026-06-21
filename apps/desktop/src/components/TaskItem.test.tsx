@@ -103,6 +103,35 @@ describe('TaskItem', () => {
         expect(getByDisplayValue('Test Task')).toBeInTheDocument();
     });
 
+    it('focuses the title input when the pop-up editor opens from an external edit request', async () => {
+        act(() => {
+            useTaskStore.setState({
+                settings: {
+                    gtd: {
+                        taskEditor: {
+                            presentation: 'modal',
+                        },
+                    },
+                },
+            });
+        });
+
+        const { getByDisplayValue, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={mockTask} />
+            </LanguageProvider>
+        );
+
+        await act(async () => {
+            useUiStore.getState().setEditingTaskId(mockTask.id);
+            await new Promise((resolve) => window.setTimeout(resolve, 0));
+        });
+
+        const dialog = getByRole('dialog', { name: /edit task/i });
+        expect(dialog).toBeInTheDocument();
+        expect(getByDisplayValue('Test Task')).toHaveFocus();
+    });
+
     it('shows a delete action while editing inbox tasks', async () => {
         const { getAllByRole, getByRole, findByRole } = render(
             <LanguageProvider>
