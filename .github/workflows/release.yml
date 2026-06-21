@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '!v*-rc.*'
   workflow_dispatch:
     inputs:
       tag:
@@ -85,22 +86,22 @@ env:
 
 jobs:
   linux:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_linux }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_linux) }}
     uses: ./.github/workflows/release-linux.yml
     secrets: inherit
 
   macos:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_macos }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_macos) }}
     uses: ./.github/workflows/release-macos.yml
     secrets: inherit
 
   windows:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_windows }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_windows) }}
     uses: ./.github/workflows/release-windows.yml
     secrets: inherit
 
   android:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_android }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_android) }}
     permissions:
       actions: read
       contents: read
@@ -108,12 +109,12 @@ jobs:
     secrets: inherit
 
   android-foss:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_android_foss }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_android_foss) }}
     uses: ./.github/workflows/release-android-foss.yml
     secrets: inherit
 
   ios-appstore:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_ios_appstore }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_ios_appstore) }}
     uses: ./.github/workflows/release-ios-appstore.yml
     with:
       upload: true
@@ -122,7 +123,7 @@ jobs:
     secrets: inherit
 
   macos-appstore:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_macos_appstore }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_macos_appstore) }}
     uses: ./.github/workflows/release-macos-appstore.yml
     with:
       upload: true
@@ -131,7 +132,7 @@ jobs:
     secrets: inherit
 
   release:
-    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.run_linux && inputs.run_macos && inputs.run_windows && inputs.run_android && inputs.run_android_foss) }}
+    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || (inputs.run_linux && inputs.run_macos && inputs.run_windows && inputs.run_android && inputs.run_android_foss)) }}
     needs: [linux, macos, windows, android, android-foss]
     runs-on: ubuntu-latest
     name: Create Release
@@ -300,7 +301,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-    if: ${{ always() && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_packages && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_packages && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
     steps:
       - name: Checkout release repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -549,7 +550,7 @@ jobs:
   update-flathub:
     needs: release
     name: Update Flathub
-    if: ${{ always() && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success' && !contains(github.ref_name, '-')) || (github.event_name == 'workflow_dispatch' && inputs.run_update_flathub && (needs.release.result == 'success' || needs.release.result == 'skipped') && !contains(inputs.tag, '-'))) }}
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success' && !contains(github.ref_name, '-')) || (github.event_name == 'workflow_dispatch' && inputs.run_update_flathub && (needs.release.result == 'success' || needs.release.result == 'skipped') && !contains(inputs.tag, '-'))) }}
     uses: ./.github/workflows/update-flathub.yml
     with:
       tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
@@ -557,7 +558,7 @@ jobs:
 
   update-linux-repos:
     needs: release
-    if: ${{ always() && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_linux_repos && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_linux_repos && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
     permissions:
       contents: write
     uses: ./.github/workflows/publish-repo.yml
@@ -572,7 +573,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-    if: ${{ always() && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success' && !contains(github.ref, '-')) || (github.event_name == 'workflow_dispatch' && inputs.run_publish_chocolatey && (needs.release.result == 'success' || needs.release.result == 'skipped'))) && vars.CHOCOLATEY_PUBLISH_ENABLED == 'true' }}
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success' && !contains(github.ref, '-')) || (github.event_name == 'workflow_dispatch' && inputs.run_publish_chocolatey && (needs.release.result == 'success' || needs.release.result == 'skipped'))) && vars.CHOCOLATEY_PUBLISH_ENABLED == 'true' }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -696,7 +697,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-    if: ${{ always() && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_aur && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_aur && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -833,7 +834,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    if: ${{ always() && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_aur_source && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_aur_source && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
     steps:
       - name: Checkout release repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0

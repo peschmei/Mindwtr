@@ -10,7 +10,7 @@ The free, open-source, cross-platform GTD app. Local-first, no account required.
 
 _New to GTD? Read [GTD in 15 minutes](https://hamberg.no/gtd) for a quick introduction._
 
-[Website](https://mindwtr.app/) · [Docs](https://docs.mindwtr.app/) · [Install](#installation) · [Getting Started](https://docs.mindwtr.app/start/getting-started) · [FAQ](https://docs.mindwtr.app/start/faq) · [Data & Sync](https://docs.mindwtr.app/data-sync/) · [Cloud Deployment](https://docs.mindwtr.app/data-sync/cloud-deployment) · [MCP Server](https://docs.mindwtr.app/power-users/mcp)
+[Docs](https://docs.mindwtr.app/) · [Install](#installation) · [Getting Started](https://docs.mindwtr.app/start/getting-started) · [FAQ](https://docs.mindwtr.app/start/faq) · [Data & Sync](https://docs.mindwtr.app/data-sync/) · [Cloud Deployment](https://docs.mindwtr.app/data-sync/cloud-deployment) · [MCP Server](https://docs.mindwtr.app/power-users/mcp)
 
 [![CI](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml/badge.svg)](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dongdongbh/Mindwtr?color=brightgreen)](LICENSE)
@@ -393,7 +393,6 @@ You can help in several ways:
 
 ## Documentation
 
-- 🌐 [Website](https://mindwtr.app/) - Landing page and download entry point
 - 📚 [Official Docs](https://docs.mindwtr.app/) - Searchable documentation with better navigation
 - 🚀 [Getting Started](https://docs.mindwtr.app/start/getting-started)
 - ❓ [FAQ](https://docs.mindwtr.app/start/faq)

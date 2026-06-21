@@ -257,7 +257,7 @@ jobs:
         shell: bash
 
       - name: Publish Snap (stable)
-        if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && steps.snap_build.outcome == 'success' && steps.snap_build.outputs.snap != ''
+        if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && !contains(github.ref_name, '-') && steps.snap_build.outcome == 'success' && steps.snap_build.outputs.snap != ''
         timeout-minutes: 10
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_TOKEN }}

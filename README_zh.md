@@ -12,7 +12,7 @@
 
 *GTD 新手？可阅读 [15 分钟入门 GTD](https://hamberg.no/gtd)。*
 
-[官网](https://mindwtr.app/) · [文档](https://docs.mindwtr.app/) · [立即安装](#安装) · [快速开始](https://docs.mindwtr.app/start/getting-started) · [常见问题](https://docs.mindwtr.app/start/faq) · [数据与同步](https://docs.mindwtr.app/data-sync/) · [云端部署](https://docs.mindwtr.app/data-sync/cloud-deployment) · [MCP 服务器](https://docs.mindwtr.app/power-users/mcp)
+[文档](https://docs.mindwtr.app/) · [立即安装](#安装) · [快速开始](https://docs.mindwtr.app/start/getting-started) · [常见问题](https://docs.mindwtr.app/start/faq) · [数据与同步](https://docs.mindwtr.app/data-sync/) · [云端部署](https://docs.mindwtr.app/data-sync/cloud-deployment) · [MCP 服务器](https://docs.mindwtr.app/power-users/mcp)
 
 [![CI](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml/badge.svg)](https://github.com/dongdongbh/Mindwtr/actions/workflows/ci.yml)
 [![GitHub license](https://img.shields.io/github/license/dongdongbh/Mindwtr?color=brightgreen)](LICENSE)
@@ -377,7 +377,6 @@ Mindwtr 的发展离不开用户与贡献者的支持，感谢大家一起把它
 
 ## 文档
 
-- 🌐 [官网](https://mindwtr.app/) - 下载与项目入口
 - 📚 [官方文档](https://docs.mindwtr.app/) - 搜索与导航体验更好的文档站
 - 🚀 [快速开始](https://docs.mindwtr.app/start/getting-started)
 - ❓ [FAQ](https://docs.mindwtr.app/start/faq)

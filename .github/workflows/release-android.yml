@@ -7,13 +7,18 @@ on:
         description: 'Release tag (e.g., v0.2.3)'
         required: false
         type: string
+      play_track:
+        description: 'Google Play track to publish. Use production for stable, internal/alpha/beta/custom for RCs, or none to skip Play upload.'
+        required: false
+        default: 'production'
+        type: string
       internal_test_release:
         description: 'Publish a profileable build to the Google Play internal track'
         required: false
         default: false
         type: boolean
       release_notes:
-        description: 'Internal tester release notes'
+        description: 'Testing-track release notes'
         required: false
         default: 'Diagnostic build with lightweight sync timing logs.'
         type: string
@@ -28,13 +33,18 @@ on:
         description: 'Release tag (e.g., v0.2.3)'
         required: false
         type: string
+      play_track:
+        description: 'Google Play track to publish. Use production for stable, internal/alpha/beta/custom for RCs, or none to skip Play upload.'
+        required: false
+        default: 'production'
+        type: string
       internal_test_release:
         description: 'Publish a profileable build to the Google Play internal track'
         required: true
         default: false
         type: boolean
       release_notes:
-        description: 'Internal tester release notes'
+        description: 'Testing-track release notes'
         required: false
         default: 'Diagnostic build with lightweight sync timing logs.'
         type: string
@@ -272,7 +282,7 @@ jobs:
           retention-days: 28
 
   publish:
-    if: ${{ always() && needs.preflight.result == 'success' && needs.build-aab.result == 'success' && ((startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && needs.build-apk.result == 'success') || inputs.internal_test_release) }}
+    if: ${{ always() && inputs.play_track != 'none' && needs.preflight.result == 'success' && needs.build-aab.result == 'success' && ((needs.build-apk.result == 'success' && (inputs.play_track != 'production' || (startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && !contains(github.ref_name, '-')))) || inputs.internal_test_release) }}
     needs: [preflight, build-aab, build-apk]
     runs-on: ubuntu-latest
     name: Android Publish
@@ -306,7 +316,7 @@ jobs:
           ls -la apps/mobile/build
 
       - name: Prepare Google Play release notes
-        if: ${{ !inputs.internal_test_release }}
+        if: ${{ !inputs.internal_test_release && inputs.play_track == 'production' }}
         run: |
           set -euo pipefail
           VERSION=${{ needs.preflight.outputs.version }}
@@ -368,7 +378,7 @@ jobs:
           ls -la "$OUT_DIR"
 
       - name: Prepare Google Play listing assets
-        if: ${{ !inputs.internal_test_release }}
+        if: ${{ !inputs.internal_test_release && inputs.play_track == 'production' }}
         run: |
           set -euo pipefail
           python3 scripts/ci/prepare-google-play-listing-assets.py \
@@ -377,7 +387,7 @@ jobs:
           cat apps/mobile/build/play-listing-assets.json
 
       - name: Prepare Google Play listing metadata
-        if: ${{ !inputs.internal_test_release }}
+        if: ${{ !inputs.internal_test_release && inputs.play_track == 'production' }}
         run: |
           set -euo pipefail
           python3 scripts/ci/prepare-google-play-listing-metadata.py \
@@ -386,7 +396,7 @@ jobs:
           cat apps/mobile/build/play-listing-metadata.json
 
       - name: Publish to Google Play Store (Production)
-        if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch'
+        if: inputs.play_track == 'production' && startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && !contains(github.ref_name, '-')
         env:
           ACCESS_TOKEN: ${{ steps.play_auth.outputs.access_token }}
         run: |
@@ -566,6 +576,99 @@ jobs:
           fi
           echo "Published versionCode $VERSION_CODE to Google Play production."
 
+      - name: Publish to Google Play testing track
+        if: ${{ !inputs.internal_test_release && inputs.play_track != 'production' && inputs.play_track != 'none' }}
+        env:
+          ACCESS_TOKEN: ${{ steps.play_auth.outputs.access_token }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          set -euo pipefail
+          PACKAGE="tech.dongdongbh.mindwtr"
+          VERSION="${{ needs.preflight.outputs.version }}"
+          TRACK="${{ inputs.play_track }}"
+          AAB_PATH="apps/mobile/build/mindwtr-${VERSION}.aab"
+
+          if [[ ! "$TRACK" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Invalid Google Play track name: $TRACK" >&2
+            exit 1
+          fi
+          if [ ! -f "$AAB_PATH" ]; then
+            echo "Missing AAB artifact: $AAB_PATH" >&2
+            exit 1
+          fi
+
+          EDIT_FILE=$(mktemp)
+          EDIT_CODE=$(curl -sS -o "$EDIT_FILE" -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits" \
+            -d '{}')
+          if [ "$EDIT_CODE" != "200" ]; then
+            echo "Failed to create Google Play edit (HTTP $EDIT_CODE): $(cat "$EDIT_FILE")" >&2
+            exit 1
+          fi
+          EDIT_ID=$(jq -r '.id' "$EDIT_FILE")
+          if [ -z "$EDIT_ID" ] || [ "$EDIT_ID" = "null" ]; then
+            echo "Failed to parse Google Play edit id: $(cat "$EDIT_FILE")" >&2
+            exit 1
+          fi
+
+          UPLOAD_FILE=$(mktemp)
+          UPLOAD_CODE=$(curl -sS -o "$UPLOAD_FILE" -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @"$AAB_PATH" \
+            "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID/bundles?uploadType=media")
+          if [ "$UPLOAD_CODE" != "200" ]; then
+            echo "Failed to upload AAB to Google Play (HTTP $UPLOAD_CODE): $(cat "$UPLOAD_FILE")" >&2
+            exit 1
+          fi
+          VERSION_CODE=$(jq -r '.versionCode' "$UPLOAD_FILE")
+          if [ -z "$VERSION_CODE" ] || [ "$VERSION_CODE" = "null" ]; then
+            echo "Failed to parse uploaded versionCode: $(cat "$UPLOAD_FILE")" >&2
+            exit 1
+          fi
+
+          PAYLOAD_FILE=$(mktemp)
+          jq -n \
+            --arg track "$TRACK" \
+            --arg version "$VERSION" \
+            --arg version_code "$VERSION_CODE" \
+            --arg release_notes "$RELEASE_NOTES" \
+            '{
+              track: $track,
+              releases: [{
+                name: ($version + " release candidate"),
+                status: "completed",
+                versionCodes: [$version_code],
+                releaseNotes: [{
+                  language: "en-US",
+                  text: $release_notes
+                }]
+              }]
+            }' > "$PAYLOAD_FILE"
+
+          TRACK_FILE=$(mktemp)
+          TRACK_CODE=$(curl -sS -o "$TRACK_FILE" -w "%{http_code}" -X PUT \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID/tracks/$TRACK" \
+            -d @"$PAYLOAD_FILE")
+          if [ "$TRACK_CODE" != "200" ]; then
+            echo "Failed to update Google Play $TRACK track (HTTP $TRACK_CODE): $(cat "$TRACK_FILE")" >&2
+            exit 1
+          fi
+
+          COMMIT_FILE=$(mktemp)
+          COMMIT_CODE=$(curl -sS -o "$COMMIT_FILE" -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID:commit")
+          if [ "$COMMIT_CODE" != "200" ]; then
+            echo "Failed to commit Google Play testing-track edit (HTTP $COMMIT_CODE): $(cat "$COMMIT_FILE")" >&2
+            exit 1
+          fi
+          echo "Published versionCode $VERSION_CODE to Google Play $TRACK track."
+
       - name: Publish to Google Play Store (Internal test)
         if: ${{ inputs.internal_test_release }}
         id: internal_publish
@@ -657,7 +760,7 @@ jobs:
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - name: Publish same versionCode to internal track (no re-upload)
-        if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch'
+        if: inputs.play_track == 'production' && startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && !contains(github.ref_name, '-')
         env:
           ACCESS_TOKEN: ${{ steps.play_auth.outputs.access_token }}
         run: |

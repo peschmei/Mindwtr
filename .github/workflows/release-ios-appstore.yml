@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: true
+      distribute_testflight:
+        description: Distribute the uploaded build to the configured TestFlight external group without App Store review submission
+        required: false
+        type: boolean
+        default: false
       testflight_group:
         description: TestFlight external group for review-blocked uploads
         required: false
@@ -32,6 +37,11 @@ on:
         default: true
       submit_for_review:
         description: Submit build for review after upload
+        required: false
+        type: boolean
+        default: false
+      distribute_testflight:
+        description: Distribute the uploaded build to the configured TestFlight external group without App Store review submission
         required: false
         type: boolean
         default: false
@@ -921,6 +931,7 @@ jobs:
           IOS_ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
           IOS_ASC_PRIVATE_KEY: ${{ secrets.IOS_ASC_PRIVATE_KEY }}
           REQUESTED_SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review && 'true' || 'false' }}
+          REQUESTED_DISTRIBUTE_TESTFLIGHT: ${{ inputs.distribute_testflight && 'true' || 'false' }}
         run: |
           set -euo pipefail
 
@@ -932,7 +943,14 @@ jobs:
             EFFECTIVE_SUBMIT_FOR_REVIEW="false"
             echo "Review submission disabled by input; checking App Store review state for TestFlight external routing."
           fi
-          echo "ENABLE_TESTFLIGHT_EXTERNAL_RELEASE=false" >> "$GITHUB_ENV"
+          if [ "${REQUESTED_DISTRIBUTE_TESTFLIGHT:-false}" = "true" ]; then
+            echo "ENABLE_TESTFLIGHT_EXTERNAL_RELEASE=true" >> "$GITHUB_ENV"
+            echo "SKIP_METADATA_FOR_UPLOAD=true" >> "$GITHUB_ENV"
+            echo "FASTLANE_SCREENSHOTS_PATH=" >> "$GITHUB_ENV"
+            echo "SKIP_SCREENSHOTS_FOR_UPLOAD=true" >> "$GITHUB_ENV"
+          else
+            echo "ENABLE_TESTFLIGHT_EXTERNAL_RELEASE=false" >> "$GITHUB_ENV"
+          fi
           echo "SKIP_APPSTORE_UPLOAD=false" >> "$GITHUB_ENV"
 
           if [ -z "${IOS_ASC_KEY_ID:-}" ] || [ -z "${IOS_ASC_ISSUER_ID:-}" ] || [ -z "${IOS_ASC_PRIVATE_KEY:-}" ]; then
