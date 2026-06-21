@@ -1,6 +1,7 @@
 import React, { type ReactNode, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CircleDot, Repeat } from 'lucide-react-native';
+import { useThemeTokens } from '../../hooks/use-theme-tokens';
 import {
     getInlineMarkdownPreview,
     getTaskAgeLabel,
@@ -363,10 +364,14 @@ export function SwipeableTaskItemContent({
         );
     }
 
+    const { isMaterial, shape, state } = useThemeTokens();
+
     return (
         <Pressable
+            android_ripple={isMaterial && state.rippleColor ? { color: state.rippleColor } : undefined}
             style={[
                 styles.taskItem,
+                isMaterial ? { borderRadius: shape.large } : undefined,
                 { backgroundColor: tc.taskItemBg },
                 { borderWidth: StyleSheet.hairlineWidth, borderColor: tc.border },
                 isAvailableNextAction && !selectionMode && {

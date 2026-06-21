@@ -14,6 +14,7 @@ import {
 import { TaskEditAreaPicker } from '../task-edit/TaskEditAreaPicker';
 import { TaskEditProjectPicker } from '../task-edit/TaskEditProjectPicker';
 import { styles } from './task-list.styles';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 
 type ThemeColors = {
   border: string;
@@ -54,6 +55,7 @@ export function TaskListBulkOrganizeModal({
   themeColors,
   visible,
 }: TaskListBulkOrganizeModalProps) {
+  const filledButton = useFilledButtonColors();
   const [status, setStatus] = useState<BulkOrganizeStatus>('next');
   const [projectChoice, setProjectChoice] = useState(KEEP_VALUE);
   const [areaChoice, setAreaChoice] = useState(KEEP_VALUE);
@@ -405,14 +407,14 @@ export function TaskListBulkOrganizeModal({
                 disabled={isApplying || selectedCount === 0}
                 style={[
                   styles.bulkOrganizeApplyButton,
-                  { backgroundColor: themeColors.tint, opacity: isApplying || selectedCount === 0 ? 0.6 : 1 },
+                  { backgroundColor: filledButton.backgroundColor, opacity: isApplying || selectedCount === 0 ? 0.6 : 1 },
                 ]}
                 accessibilityRole="button"
               >
                 {isApplying ? (
-                  <ActivityIndicator size="small" color={themeColors.onTint} />
+                  <ActivityIndicator size="small" color={filledButton.textColor ?? themeColors.onTint} />
                 ) : null}
-                <Text style={[styles.bulkOrganizeApplyText, { color: themeColors.onTint }]}>
+                <Text style={[styles.bulkOrganizeApplyText, { color: filledButton.textColor ?? themeColors.onTint }]}>
                   {tFallback(t, 'bulk.applyToSelected', 'Apply to selected')}
                 </Text>
               </TouchableOpacity>

@@ -240,6 +240,10 @@ vi.mock('../contexts/toast-context', () => ({
   }),
 }));
 
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({ isMaterial: false, roles: null, shape: { large: 16 } }),
+}));
+
 vi.mock('@/hooks/use-theme-colors', () => ({
   useThemeColors: () => ({
     bg: '#fff',

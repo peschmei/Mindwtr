@@ -105,3 +105,6 @@ Mindwtr.wiki/
 # Local workspace configuration
 .worktrees/
 pnpm-workspace.yaml
+
+# Brainstorming/implementation working files (decisions distilled to docs/adr/)
+docs/superpowers/

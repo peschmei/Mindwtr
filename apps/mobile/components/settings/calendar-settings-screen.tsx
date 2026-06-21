@@ -46,6 +46,7 @@ import {
 import { useToast } from '@/contexts/toast-context';
 import { maskCalendarUrl } from '@/lib/settings-utils';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
 
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
@@ -93,6 +94,7 @@ function CollapsibleSettingHeader({
 
 export function CalendarSettingsScreen() {
     const tc = useThemeColors();
+    const filledButton = useFilledButtonColors();
     const { showToast } = useToast();
     const { isChineseLanguage, tr, t } = useSettingsLocalization();
     const { settings, updateSettings } = useTaskStore();
@@ -850,13 +852,13 @@ export function CalendarSettingsScreen() {
                             <TouchableOpacity
                                 style={[
                                     styles.backendOption,
-                                    { borderColor: tc.border, backgroundColor: newCalendarUrl.trim() ? tc.tint : tc.filterBg },
+                                    { borderColor: tc.border, backgroundColor: newCalendarUrl.trim() ? filledButton.backgroundColor : tc.filterBg },
                                 ]}
                                 onPress={() => void handleAddCalendar()}
                                 disabled={!newCalendarUrl.trim()}
                             >
                                 <Text
-                                    style={[styles.backendOptionText, { color: newCalendarUrl.trim() ? '#FFFFFF' : tc.secondaryText }]}
+                                    style={[styles.backendOptionText, { color: newCalendarUrl.trim() ? (filledButton.textColor ?? '#FFFFFF') : tc.secondaryText }]}
                                     maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                 >
                                     {t('settings.externalCalendarAdd')}

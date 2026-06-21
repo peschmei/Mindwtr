@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
+import { Plus } from 'lucide-react-native';
 import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +14,13 @@ const mockTaskSettings = vi.hoisted(() => ({
     defaultCaptureMethod: 'text',
   },
   savedSearches: [],
+}));
+const mockThemeTokens = vi.hoisted(() => ({
+  value: { isMaterial: false, roles: null, shape: { large: 16 } } as {
+    isMaterial: boolean;
+    roles: Record<string, string> | null;
+    shape: { large: number };
+  },
 }));
 
 vi.mock('expo-router', () => {
@@ -122,6 +130,10 @@ vi.mock('@/hooks/use-theme-colors', () => ({
   }),
 }));
 
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => mockThemeTokens.value,
+}));
+
 vi.mock('../contexts/language-context', () => ({
   useLanguage: () => ({
     t: (key: string) => ({
@@ -201,6 +213,22 @@ const getCaptureButtonInnerStyle = (tree: ReturnType<typeof create>) => {
   ))[0];
   if (!view) throw new Error('Capture button inner view not found');
   return flattenStyle(view.props.style);
+};
+
+const getCaptureInnerStyleBySize = (tree: ReturnType<typeof create>) => {
+  const view = tree.root.findAll((node) => {
+    if (String(node.type) !== 'View') return false;
+    const s = flattenStyle(node.props.style);
+    return s.width === 40 && s.height === 34;
+  })[0];
+  if (!view) throw new Error('Capture button inner view not found');
+  return flattenStyle(view.props.style);
+};
+
+const getCaptureIconColor = (tree: ReturnType<typeof create>) => {
+  const icon = tree.root.findAllByType(Plus)[0];
+  if (!icon) throw new Error('Capture plus icon not found');
+  return icon.props.color;
 };
 
 const getMenuButton = (tree: ReturnType<typeof create>) => {
@@ -304,6 +332,7 @@ describe('mobile tab quick capture', () => {
     mockTaskSettings.appearance = {};
     mockTaskSettings.gtd.defaultCaptureMethod = 'text';
     mockTaskSettings.savedSearches = [];
+    mockThemeTokens.value = { isMaterial: false, roles: null, shape: { large: 16 } };
   });
 
   it('unmounts the quick capture sheet after close so the next plus tap gets a fresh modal', () => {
@@ -416,6 +445,33 @@ describe('mobile tab quick capture', () => {
       borderRadius: 10,
       marginTop: -2,
     }));
+  });
+
+  it('boosts the capture FAB to the high-emphasis M3 primary role under Material', () => {
+    // Capture is Mindwtr's most important action, so under M3 the FAB uses the
+    // high-emphasis FAB role (primary/onPrimary), not the deliberately subdued
+    // primaryContainer. Other primary buttons stay primaryContainer (canonical),
+    // preserving M3's emphasis hierarchy with capture at the top.
+    mockThemeTokens.value = {
+      isMaterial: true,
+      roles: {
+        primary: '#AAC7FF',
+        onPrimary: '#003063',
+        primaryContainer: '#00458B',
+        onPrimaryContainer: '#D7E2FF',
+      },
+      shape: { large: 16 },
+    };
+
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(<TabLayout />);
+    });
+
+    const inner = getCaptureInnerStyleBySize(tree);
+    expect(inner.backgroundColor).toBe('#AAC7FF');
+    expect(inner.borderRadius).toBe(16);
+    expect(getCaptureIconColor(tree)).toBe('#003063');
   });
 
   it('opens the More sheet from the menu tab and navigates from its original calendar icon', () => {

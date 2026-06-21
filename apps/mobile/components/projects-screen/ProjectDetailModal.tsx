@@ -38,6 +38,7 @@ import {
 } from '@mindwtr/core';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { KeyboardAccessoryHost } from '../../components/keyboard-accessory-host';
 import { ExpandedMarkdownEditor } from '../../components/expanded-markdown-editor';
 import { MarkdownFormatToolbar } from '../../components/markdown-format-toolbar';
@@ -143,6 +144,7 @@ function ProjectSectionManagerModal({
     updateSection: (id: string, updates: Partial<Section>) => Promise<unknown> | unknown;
     visible: boolean;
 }) {
+    const filledButton = useFilledButtonColors();
     const [draft, setDraft] = React.useState('');
     const [editingSectionId, setEditingSectionId] = React.useState<string | null>(null);
     const [saving, setSaving] = React.useState(false);
@@ -268,11 +270,11 @@ function ProjectSectionManagerModal({
                             accessibilityRole="button"
                             accessibilityLabel={addSectionLabel}
                             onPress={openCreate}
-                            style={[styles.sectionManagerAddButton, { backgroundColor: tc.tint, borderColor: tc.tint }]}
+                            style={[styles.sectionManagerAddButton, { backgroundColor: filledButton.backgroundColor, borderColor: filledButton.backgroundColor }]}
                             testID="project-section-add-button"
                         >
-                            <Ionicons name="add" size={16} color={tc.onTint} />
-                            <Text style={[styles.sectionManagerAddButtonText, { color: tc.onTint }]} numberOfLines={1}>
+                            <Ionicons name="add" size={16} color={filledButton.textColor ?? tc.onTint} />
+                            <Text style={[styles.sectionManagerAddButtonText, { color: filledButton.textColor ?? tc.onTint }]} numberOfLines={1}>
                                 {addSectionLabel}
                             </Text>
                         </TouchableOpacity>
@@ -310,12 +312,12 @@ function ProjectSectionManagerModal({
                                     onPress={saveSection}
                                     style={[
                                         styles.linkModalButton,
-                                        { backgroundColor: tc.tint },
+                                        { backgroundColor: filledButton.backgroundColor },
                                         (!draft.trim() || saving) && styles.linkModalButtonDisabled,
                                     ]}
                                     testID="project-section-save-button"
                                 >
-                                    <Text style={[styles.linkModalButtonText, { color: tc.onTint }]}>{saveLabel}</Text>
+                                    <Text style={[styles.linkModalButtonText, { color: filledButton.textColor ?? tc.onTint }]}>{saveLabel}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -536,6 +538,7 @@ export function ProjectDetailModal({
     updateProject,
     updateSection,
 }: ProjectDetailModalProps) {
+    const filledButton = useFilledButtonColors();
     const [projectTaskReorderMode, setProjectTaskReorderMode] = React.useState(false);
     const [projectTaskFilterOpenSignal, setProjectTaskFilterOpenSignal] = React.useState(0);
     const [projectTaskFilterActiveCount, setProjectTaskFilterActiveCount] = React.useState(0);
@@ -757,11 +760,11 @@ export function ProjectDetailModal({
                     hitSlop={8}
                     style={[
                         styles.projectTaskPinnedAddButton,
-                        { backgroundColor: tc.tint, borderColor: tc.tint },
+                        { backgroundColor: filledButton.backgroundColor, borderColor: filledButton.backgroundColor },
                     ]}
                     testID="project-add-task-button"
                 >
-                    <Ionicons name="add" size={24} color={tc.onTint} />
+                    <Ionicons name="add" size={24} color={filledButton.textColor ?? tc.onTint} />
                 </TouchableOpacity>
             ) : null}
         </View>

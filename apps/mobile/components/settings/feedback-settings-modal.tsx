@@ -17,6 +17,7 @@ import { Bug, Lightbulb, MessageSquare, X, type LucideIcon } from 'lucide-react-
 
 import { FEEDBACK_CATEGORIES, type FeedbackCategory } from '@mindwtr/core';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { styles } from './settings.styles';
 
 export type FeedbackSubmitInput = {
@@ -64,6 +65,7 @@ export function FeedbackSettingsModal({
     visible,
 }: FeedbackSettingsModalProps) {
     const tc = useThemeColors();
+    const filledButton = useFilledButtonColors();
     const [category, setCategory] = useState<FeedbackCategory>('bug');
     const [message, setMessage] = useState('');
     const [email, setEmail] = useState('');
@@ -185,10 +187,10 @@ export function FeedbackSettingsModal({
                                     </Text>
                                 </View>
                                 <TouchableOpacity
-                                    style={[styles.feedbackPrimaryButton, { backgroundColor: tc.tint }]}
+                                    style={[styles.feedbackPrimaryButton, { backgroundColor: filledButton.backgroundColor }]}
                                     onPress={onClose}
                                 >
-                                    <Text style={[styles.feedbackPrimaryButtonText, { color: tc.onTint }]}>
+                                    <Text style={[styles.feedbackPrimaryButtonText, { color: filledButton.textColor ?? tc.onTint }]}>
                                         {tr('common.close')}
                                     </Text>
                                 </TouchableOpacity>
@@ -393,15 +395,15 @@ export function FeedbackSettingsModal({
                                     disabled={!canSubmit}
                                     style={[
                                         styles.feedbackPrimaryButton,
-                                        { backgroundColor: tc.tint },
+                                        { backgroundColor: filledButton.backgroundColor },
                                         !canSubmit && styles.feedbackButtonDisabled,
                                     ]}
                                     onPress={() => void submit()}
                                 >
                                     {status === 'sending' ? (
-                                        <ActivityIndicator size="small" color={tc.onTint} />
+                                        <ActivityIndicator size="small" color={filledButton.textColor ?? tc.onTint} />
                                     ) : null}
-                                    <Text style={[styles.feedbackPrimaryButtonText, { color: tc.onTint }]}>
+                                    <Text style={[styles.feedbackPrimaryButtonText, { color: filledButton.textColor ?? tc.onTint }]}>
                                         {status === 'sending'
                                             ? tr('settings.feedbackSending')
                                             : tr('settings.feedbackSubmit')}

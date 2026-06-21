@@ -18,6 +18,7 @@ import {
     type TaskEditorPresetId,
 } from '@/components/task-edit/task-edit-modal.utils';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
 import { dispatchMobileOnboardingEvent } from '@/lib/mobile-onboarding-events';
 import { logSettingsError } from '@/lib/settings-utils';
@@ -67,6 +68,7 @@ export function GtdSettingsScreen({
     screen: GtdScreen;
 }) {
     const tc = useThemeColors();
+    const filledButton = useFilledButtonColors();
     const insets = useSafeAreaInsets();
     const { isChineseLanguage, language, tr, t } = useSettingsLocalization();
     const { showToast } = useToast();
@@ -1544,10 +1546,10 @@ export function GtdSettingsScreen({
                                 </View>
 
                                 <TouchableOpacity
-                                    style={[styles.taskEditorSheetDoneButton, { backgroundColor: tc.tint }]}
+                                    style={[styles.taskEditorSheetDoneButton, { backgroundColor: filledButton.backgroundColor }]}
                                     onPress={() => setTaskEditorSelectedField(null)}
                                 >
-                                    <Text style={styles.taskEditorSheetDoneButtonText}>{doneLabel}</Text>
+                                    <Text style={[styles.taskEditorSheetDoneButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>{doneLabel}</Text>
                                 </TouchableOpacity>
                             </>
                         )}

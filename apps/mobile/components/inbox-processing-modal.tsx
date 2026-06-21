@@ -5,6 +5,7 @@ import { tFallback } from '@mindwtr/core';
 
 import { AIResponseModal } from './ai-response-modal';
 import { styles } from './inbox-processing-modal.styles';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { useInboxProcessingController } from './inbox-processing/useInboxProcessingController';
 import { InboxActionabilitySection } from './inbox-processing/InboxActionabilitySection';
 import { InboxContextSection } from './inbox-processing/InboxContextSection';
@@ -25,6 +26,7 @@ type InboxProcessingModalProps = {
 const IOS_KEYBOARD_FOOTER_OFFSET = 48;
 
 export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalProps) {
+  const filledButton = useFilledButtonColors();
   const {
     actionabilityChoice,
     addCustomContextMobile,
@@ -520,13 +522,13 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                 <TouchableOpacity
                   style={[
                     styles.bottomNextButton,
-                    { backgroundColor: tc.tint },
+                    { backgroundColor: filledButton.backgroundColor },
                     isDelegateConfirmationDisabled && { opacity: 0.5 },
                   ]}
                   disabled={isDelegateConfirmationDisabled}
                   onPress={handleNextTask}
                 >
-                  <Text style={styles.bottomNextButtonText}>
+                  <Text style={[styles.bottomNextButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
                     {tFallback(t, 'inbox.nextTask', 'Next task →')}
                   </Text>
                 </TouchableOpacity>

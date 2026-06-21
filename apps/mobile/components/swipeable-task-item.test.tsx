@@ -229,6 +229,14 @@ vi.mock('../contexts/toast-context', () => ({
   }),
 }));
 
+vi.mock('../hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({
+    isMaterial: false,
+    shape: { large: 16 },
+    state: { rippleColor: undefined, stateLayerColor: () => 'transparent' },
+  }),
+}));
+
 vi.mock('lucide-react-native', () => ({
   ArrowRight: (props: any) => React.createElement('ArrowRight', props),
   Check: (props: any) => React.createElement('Check', props),

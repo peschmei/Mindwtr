@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { styles } from '../inbox-processing-modal.styles';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 
 type Area = { id: string; name: string; color?: string };
 type Project = { id: string; title: string; areaId?: string };
@@ -62,6 +63,7 @@ export function InboxProjectSection({
   handleProjectConversionStart,
   selectProjectEarly,
 }: Props) {
+  const filledButton = useFilledButtonColors();
   if (!show) return null;
 
   const areaOptions = Array.from(areaById.values());
@@ -151,10 +153,10 @@ export function InboxProjectSection({
             />
             {!hasExactProjectMatch && projectSearch.trim() && (
               <TouchableOpacity
-                style={[styles.createProjectButton, { backgroundColor: tc.tint }]}
+                style={[styles.createProjectButton, { backgroundColor: filledButton.backgroundColor }]}
                 onPress={handleCreateProjectEarly}
               >
-                <Text style={styles.createProjectButtonText}>{t('projects.create')}</Text>
+                <Text style={[styles.createProjectButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>{t('projects.create')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -234,10 +236,10 @@ export function InboxProjectSection({
           />
         </View>
         <TouchableOpacity
-          style={[styles.createProjectButton, styles.projectConversionSubmit, { backgroundColor: tc.tint }]}
+          style={[styles.createProjectButton, styles.projectConversionSubmit, { backgroundColor: filledButton.backgroundColor }]}
           onPress={handleConvertToProject}
         >
-          <Text style={styles.createProjectButtonText}>{t('process.createProject')}</Text>
+          <Text style={[styles.createProjectButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>{t('process.createProject')}</Text>
         </TouchableOpacity>
       </View>
     </>

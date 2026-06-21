@@ -8,6 +8,13 @@ const mockScrollTo = vi.hoisted(() => vi.fn());
 const mockFindNodeHandle = vi.hoisted(() => vi.fn(() => 9001));
 const mockMeasureInWindow = vi.hoisted(() => vi.fn());
 
+vi.mock('@/hooks/use-theme-colors', () => ({
+  useThemeColors: () => ({ tint: '#3b82f6', onTint: '#ffffff' }),
+}));
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({ isMaterial: false, roles: null, shape: { large: 16 } }),
+}));
+
 vi.mock('react-native', async (importOriginal) => {
     const actual = await importOriginal<typeof import('react-native')>();
     const ReactModule = await import('react');

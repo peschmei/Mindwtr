@@ -17,6 +17,7 @@ import {
 
 import { useLanguage } from '../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import {
   cancelMobilePomodoroCompletionNotification,
   scheduleMobilePomodoroCompletionNotification,
@@ -39,6 +40,7 @@ export function PomodoroPanel({
 }) {
   const { t } = useLanguage();
   const tc = useThemeColors();
+  const filledButton = useFilledButtonColors();
   const notificationsEnabled = useTaskStore((state) => state.settings.notificationsEnabled !== false);
   const customDurations = useTaskStore((state) => state.settings.gtd?.pomodoro?.customDurations);
   const linkTaskEnabled = useTaskStore((state) => state.settings.gtd?.pomodoro?.linkTask === true);
@@ -388,12 +390,12 @@ export function PomodoroPanel({
             styles.actionPrimary,
             {
               opacity: isHydratingSession ? 0.5 : 1,
-              backgroundColor: tc.tint,
-              borderColor: tc.tint,
+              backgroundColor: filledButton.backgroundColor,
+              borderColor: filledButton.backgroundColor,
             },
           ]}
         >
-          <Text style={[styles.actionPrimaryText, { color: tc.onTint }]}>
+          <Text style={[styles.actionPrimaryText, { color: filledButton.textColor ?? tc.onTint }]}>
             {timerState.isRunning ? pauseLabel : startLabel}
           </Text>
         </Pressable>

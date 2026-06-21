@@ -4,6 +4,7 @@ import { Database, Download, RefreshCw, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 
 type MobileOnboardingFlowProps = {
   busy?: boolean;
@@ -25,6 +26,7 @@ export function MobileOnboardingFlow({
   onStartFresh,
 }: MobileOnboardingFlowProps) {
   const tc = useThemeColors();
+  const filledButton = useFilledButtonColors();
 
   return (
     <Modal animationType="fade" transparent visible={isOpen} onRequestClose={onSkip}>
@@ -75,18 +77,18 @@ export function MobileOnboardingFlow({
               style={[
                 styles.option,
                 styles.primaryOption,
-                { backgroundColor: tc.tint, borderColor: tc.tint, opacity: busy ? 0.68 : 1 },
+                { backgroundColor: filledButton.backgroundColor, borderColor: filledButton.backgroundColor, opacity: busy ? 0.68 : 1 },
               ]}
             >
               <View style={[styles.iconSlot, styles.primaryIconSlot]}>
                 {busy ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color={filledButton.textColor ?? '#FFFFFF'} size="small" />
                 ) : (
-                  <Database color="#FFFFFF" size={22} strokeWidth={2.2} />
+                  <Database color={filledButton.textColor ?? '#FFFFFF'} size={22} strokeWidth={2.2} />
                 )}
               </View>
               <View style={styles.optionText}>
-                <Text style={styles.primaryOptionTitle}>{busy ? 'Starting...' : 'Start fresh'}</Text>
+                <Text style={[styles.primaryOptionTitle, filledButton.textColor ? { color: filledButton.textColor } : null]}>{busy ? 'Starting...' : 'Start fresh'}</Text>
                 <Text style={styles.primaryOptionDescription}>
                   Add a guided Getting Started project and two sample inbox items.
                 </Text>

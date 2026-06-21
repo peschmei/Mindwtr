@@ -26,6 +26,7 @@ import {
 import { useTheme } from '../contexts/theme-context';
 import { useLanguage } from '../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 import { SwipeableTaskItem } from './swipeable-task-item';
 import { TaskEditModal } from './task-edit-modal';
@@ -55,6 +56,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
     const { isDark } = useTheme();
     const { t } = useLanguage();
     const tc = useThemeColors();
+    const filledButton = useFilledButtonColors();
     const insets = useSafeAreaInsets();
 
     const [currentStep, setCurrentStep] = useState<DailyReviewStep>('today');
@@ -550,14 +552,14 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                         </View>
                         {inboxTasks.length > 0 && (
                             <TouchableOpacity
-                                style={[styles.processButton, { backgroundColor: tc.tint }]}
+                                style={[styles.processButton, { backgroundColor: filledButton.backgroundColor }]}
                                 onPress={() => setShowInboxProcessing(true)}
                                 hitSlop={8}
                                 accessibilityRole="button"
                                 accessibilityLabel={t('inbox.processButton')}
                             >
-                                <Play size={14} color="#FFFFFF" strokeWidth={2.5} fill="#FFFFFF" />
-                                <Text style={styles.processButtonText}>
+                                <Play size={14} color={filledButton.textColor ?? '#FFFFFF'} strokeWidth={2.5} fill={filledButton.textColor ?? '#FFFFFF'} />
+                                <Text style={[styles.processButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
                                     {t('inbox.processButton')}
                                 </Text>
                             </TouchableOpacity>
@@ -601,8 +603,8 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                         <CheckCircle2 size={56} color={tc.tint} strokeWidth={1.5} style={styles.bigIcon} />
                         <Text style={[styles.heading, { color: tc.text }]}>{t('dailyReview.completeTitle')}</Text>
                         <Text style={[styles.description, { color: tc.secondaryText }]}>{t('dailyReview.completeDesc')}</Text>
-                        <TouchableOpacity style={[styles.primaryButton, { backgroundColor: tc.tint }]} onPress={onClose}>
-                            <Text style={styles.primaryButtonText}>{t('review.finish')}</Text>
+                        <TouchableOpacity style={[styles.primaryButton, { backgroundColor: filledButton.backgroundColor }]} onPress={onClose}>
+                            <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>{t('review.finish')}</Text>
                         </TouchableOpacity>
                     </View>
                 );
@@ -660,8 +662,8 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                         >
                             <Text style={[styles.footerButtonText, { color: tc.text }]}>{t('review.back')}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={next} style={[styles.footerButton, { backgroundColor: tc.tint }]}>
-                            <Text style={styles.footerPrimaryText}>{t('review.nextStepBtn')}</Text>
+                        <TouchableOpacity onPress={next} style={[styles.footerButton, { backgroundColor: filledButton.backgroundColor }]}>
+                            <Text style={[styles.footerPrimaryText, filledButton.textColor ? { color: filledButton.textColor } : null]}>{t('review.nextStepBtn')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}

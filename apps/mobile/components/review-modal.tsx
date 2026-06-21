@@ -31,6 +31,7 @@ import {
     useReviewModalController,
 } from './review/useReviewModalController';
 import { styles } from './review-modal.styles';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 
 interface ReviewModalProps {
     visible: boolean;
@@ -41,6 +42,7 @@ export const checkReviewTime = () => true;
 
 export function ReviewModal({ visible, onClose }: ReviewModalProps) {
     const { t } = useLanguage();
+    const filledButton = useFilledButtonColors();
     const [showInboxProcessing, setShowInboxProcessing] = useState(false);
     const [showMindSweep, setShowMindSweep] = useState(false);
     const {
@@ -378,14 +380,14 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                         {renderMindSweepNudge()}
                         {inboxTasks.length > 0 && (
                             <TouchableOpacity
-                                style={[styles.processButton, { backgroundColor: tc.tint }]}
+                                style={[styles.processButton, { backgroundColor: filledButton.backgroundColor }]}
                                 onPress={() => setShowInboxProcessing(true)}
                                 hitSlop={8}
                                 accessibilityRole="button"
                                 accessibilityLabel={t('inbox.processButton')}
                             >
-                                <Play size={14} color="#FFFFFF" strokeWidth={2.5} fill="#FFFFFF" />
-                                <Text style={styles.processButtonText}>
+                                <Play size={14} color={filledButton.textColor ?? '#FFFFFF'} strokeWidth={2.5} fill={filledButton.textColor ?? '#FFFFFF'} />
+                                <Text style={[styles.processButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
                                     {t('inbox.processButton')}
                                 </Text>
                             </TouchableOpacity>
@@ -416,11 +418,11 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                             {labels.aiDesc}
                         </Text>
                         <TouchableOpacity
-                            style={[styles.primaryButton, { backgroundColor: tc.tint, marginTop: 12 }]}
+                            style={[styles.primaryButton, { backgroundColor: filledButton.backgroundColor, marginTop: 12 }]}
                             onPress={runAiAnalysis}
                             disabled={aiLoading}
                         >
-                            <Text style={styles.primaryButtonText}>
+                            <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
                                 {aiLoading ? labels.aiRunning : labels.aiRun}
                             </Text>
                         </TouchableOpacity>
@@ -478,11 +480,11 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                                     );
                                 })}
                                 <TouchableOpacity
-                                    style={[styles.primaryButton, { backgroundColor: tc.tint, marginTop: 12 }]}
+                                    style={[styles.primaryButton, { backgroundColor: filledButton.backgroundColor, marginTop: 12 }]}
                                     onPress={applyAiSuggestions}
                                     disabled={aiSelectedIds.size === 0}
                                 >
-                                    <Text style={styles.primaryButtonText}>
+                                    <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
                                         {labels.aiApply} ({aiSelectedIds.size})
                                     </Text>
                                 </TouchableOpacity>
@@ -688,8 +690,8 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                             {labels.completeDesc}
                         </Text>
                         {renderMindSweepNudge()}
-                        <TouchableOpacity style={styles.primaryButton} onPress={handleFinish}>
-                            <Text style={styles.primaryButtonText}>
+                        <TouchableOpacity style={[styles.primaryButton, filledButton.textColor ? { backgroundColor: filledButton.backgroundColor } : null]} onPress={handleFinish}>
+                            <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
                                 {labels.finish}
                             </Text>
                         </TouchableOpacity>
@@ -740,8 +742,8 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                             <TouchableOpacity style={styles.backButton} onPress={prevStep}>
                                 <Text style={[styles.backButtonText, { color: tc.secondaryText }]}>← {labels.back}</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.primaryButton} onPress={nextStep}>
-                                <Text style={styles.primaryButtonText}>{labels.next} →</Text>
+                            <TouchableOpacity style={[styles.primaryButton, filledButton.textColor ? { backgroundColor: filledButton.backgroundColor } : null]} onPress={nextStep}>
+                                <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>{labels.next} →</Text>
                             </TouchableOpacity>
                         </View>
                     )}

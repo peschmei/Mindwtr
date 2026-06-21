@@ -6,6 +6,13 @@ import type { Area, Project } from '@mindwtr/core';
 
 import { TaskListBulkOrganizeModal } from './TaskListBulkOrganizeModal';
 
+vi.mock('@/hooks/use-theme-colors', () => ({
+  useThemeColors: () => ({ tint: '#3b82f6', onTint: '#ffffff' }),
+}));
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({ isMaterial: false, roles: null, shape: { large: 16 } }),
+}));
+
 vi.mock('lucide-react-native', () => {
   const Icon = (props: any) => React.createElement('Icon', props, props.children);
   return {

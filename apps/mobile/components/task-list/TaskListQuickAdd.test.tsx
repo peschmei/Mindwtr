@@ -5,6 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TaskListQuickAdd } from './TaskListQuickAdd';
 
+vi.mock('@/hooks/use-theme-colors', () => ({
+  useThemeColors: () => ({ tint: '#3b82f6', onTint: '#ffffff' }),
+}));
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({ isMaterial: false, roles: null, shape: { large: 16 } }),
+}));
+
 vi.mock('react-native', () => ({
   ActivityIndicator: ({ color, size }: any) => React.createElement('span', { 'data-activity': size, style: { color } }),
   StyleSheet: { create: (styles: any) => styles },

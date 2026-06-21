@@ -136,6 +136,10 @@ vi.mock('../contexts/quick-capture-context', () => ({
   useQuickCapture: () => ({ openQuickCapture: vi.fn() }),
 }));
 
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({ isMaterial: false, roles: null, shape: { large: 16 } }),
+}));
+
 vi.mock('@/hooks/use-theme-colors', () => ({
   useThemeColors: () => ({
     bg: '#111827',

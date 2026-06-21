@@ -6,6 +6,7 @@ import { translateWithFallback } from '@mindwtr/core';
 
 import { useLanguage } from '@/contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import {
   authenticateWithDeviceLock,
   getMobileAppLockErrorKey,
@@ -21,6 +22,7 @@ const AUTHENTICATE_AFTER_ACTIVE_DELAY_MS = 250;
 
 export function MobileAppLockGate({ enabled, children }: MobileAppLockGateProps) {
   const tc = useThemeColors();
+  const filledButton = useFilledButtonColors();
   const { t } = useLanguage();
   const [locked, setLocked] = useState(enabled);
   const [authenticating, setAuthenticating] = useState(false);
@@ -146,10 +148,10 @@ export function MobileAppLockGate({ enabled, children }: MobileAppLockGateProps)
           onPress={() => void authenticate()}
           style={[
             styles.unlockButton,
-            { backgroundColor: tc.tint, opacity: authenticating ? 0.7 : 1 },
+            { backgroundColor: filledButton.backgroundColor, opacity: authenticating ? 0.7 : 1 },
           ]}
         >
-          <Text style={[styles.unlockText, { color: tc.onTint }]}>
+          <Text style={[styles.unlockText, { color: filledButton.textColor ?? tc.onTint }]}>
             {authenticating
               ? resolveText('appLock.authenticating', 'Authenticating...')
               : resolveText('appLock.unlock', 'Unlock')}

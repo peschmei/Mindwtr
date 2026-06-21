@@ -10,6 +10,7 @@ import { ErrorBoundary } from '../../../components/ErrorBoundary';
 
 import { useLanguage } from '../../../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { taskMatchesAreaFilter } from '@mindwtr/core';
@@ -23,6 +24,7 @@ export default function InboxScreen() {
   }), shallow);
   const { t } = useLanguage();
   const tc = useThemeColors();
+  const filledButton = useFilledButtonColors();
   const { openQuickCapture } = useQuickCapture();
   const router = useRouter();
   const [showProcessing, setShowProcessing] = useState(false);
@@ -77,14 +79,14 @@ export default function InboxScreen() {
     <View style={styles.actionRow}>
       {hasInboxTasks ? (
         <TouchableOpacity
-          style={[styles.processButton, { backgroundColor: tc.tint }]}
+          style={[styles.processButton, { backgroundColor: filledButton.backgroundColor }]}
           onPress={() => setShowProcessing(true)}
           accessibilityRole="button"
           accessibilityLabel={`${t('inbox.processButton')} (${inboxTasks.length})`}
         >
-          <ListChecks size={18} color={tc.onTint} strokeWidth={2.2} />
+          <ListChecks size={18} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.2} />
           <Text
-            style={[styles.actionLabel, { color: tc.onTint }]}
+            style={[styles.actionLabel, { color: filledButton.textColor ?? tc.onTint }]}
             numberOfLines={2}
             maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           >
@@ -93,14 +95,14 @@ export default function InboxScreen() {
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={[styles.processButton, { backgroundColor: tc.tint }]}
+          style={[styles.processButton, { backgroundColor: filledButton.backgroundColor }]}
           onPress={() => router.push('/mind-sweep-modal')}
           accessibilityRole="button"
           accessibilityLabel={t('mindSweep.launchButton')}
         >
-          <Brain size={18} color={tc.onTint} strokeWidth={2.2} />
+          <Brain size={18} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.2} />
           <Text
-            style={[styles.actionLabel, { color: tc.onTint }]}
+            style={[styles.actionLabel, { color: filledButton.textColor ?? tc.onTint }]}
             numberOfLines={2}
             maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           >

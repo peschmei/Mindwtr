@@ -39,6 +39,10 @@ vi.mock('@/hooks/use-theme-colors', () => ({
   }),
 }));
 
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({ isMaterial: false, roles: null, shape: { large: 16 } }),
+}));
+
 import MindSweepModalScreen from '../app/mind-sweep-modal';
 
 const findByTestId = (tree: renderer.ReactTestRenderer, testID: string) =>

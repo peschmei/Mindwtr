@@ -104,6 +104,14 @@ vi.mock('@mindwtr/core', () => ({
   useTaskStore: selectStore,
 }));
 
+const mockThemeTokens = vi.hoisted(() => ({
+  value: { isMaterial: false, roles: null, shape: { large: 16 } } as {
+    isMaterial: boolean;
+    roles: Record<string, string> | null;
+    shape: { large: number };
+  },
+}));
+
 vi.mock('expo-document-picker', () => ({
   getDocumentAsync: documentPickerGetDocumentAsync,
 }));
@@ -159,6 +167,10 @@ vi.mock('@/hooks/use-theme-colors', () => ({
     text: '#f8fafc',
     tint: '#3b82f6',
   }),
+}));
+
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => mockThemeTokens.value,
 }));
 
 vi.mock('@/lib/task-meta-navigation', () => ({
@@ -227,6 +239,43 @@ describe('QuickCaptureSheet save handling', () => {
       props: {},
       invalidDateCommands: [],
     }));
+    mockThemeTokens.value = { isMaterial: false, roles: null, shape: { large: 16 } };
+  });
+
+  it('uses primaryContainer for the save button under Material, below the high-emphasis capture FAB', async () => {
+    mockThemeTokens.value = {
+      isMaterial: true,
+      roles: { primaryContainer: '#00458B', onPrimaryContainer: '#D7E2FF' },
+      shape: { large: 16 },
+    };
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet visible openRequestId={1} initialValue="" onClose={vi.fn()} />
+      );
+      await Promise.resolve();
+    });
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+    expect(body.props.saveButtonBackgroundColor).toBe('#00458B');
+    expect(body.props.saveButtonTextColor).toBe('#D7E2FF');
+  });
+
+  it('keeps the save button on the primary tint under non-Material themes', async () => {
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet visible openRequestId={1} initialValue="" onClose={vi.fn()} />
+      );
+      await Promise.resolve();
+    });
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+    expect(body.props.saveButtonBackgroundColor).toBe('#3b82f6');
+    expect(body.props.saveButtonTextColor).toBeUndefined();
   });
 
   it('opens organize options collapsed for global capture', async () => {

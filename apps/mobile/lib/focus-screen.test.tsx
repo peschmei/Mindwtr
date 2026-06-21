@@ -175,6 +175,10 @@ vi.mock('@react-native-community/datetimepicker', () => ({
   default: (props: any) => React.createElement('DateTimePicker', props),
 }));
 
+vi.mock('@/hooks/use-theme-tokens', () => ({
+  useThemeTokens: () => ({ isMaterial: false, roles: null, shape: { large: 16 } }),
+}));
+
 vi.mock('@/hooks/use-theme-colors', () => ({
   useThemeColors: () => ({
     bg: '#0f172a',

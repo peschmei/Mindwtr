@@ -41,6 +41,7 @@ import { useQuickCapture } from '../../contexts/quick-capture-context';
 import { useLanguage } from '../../contexts/language-context';
 import { useToast } from '../../contexts/toast-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { ListSectionHeader, defaultListContentStyle } from '@/components/list-layout';
 import { logError, logWarn } from '../../lib/app-log';
 import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '@mindwtr/core';
@@ -104,6 +105,7 @@ export default function ProjectsScreen() {
   const { showToast } = useToast();
   const { openQuickCapture } = useQuickCapture();
   const tc = useThemeColors();
+  const filledButton = useFilledButtonColors();
   const {
     focusedProjectCount,
     projectTaskSummaryById,
@@ -751,12 +753,12 @@ export default function ProjectsScreen() {
             onPress={handleAddProject}
             style={[
               styles.addIconButton,
-              { backgroundColor: tc.tint },
+              { backgroundColor: filledButton.backgroundColor },
               !newProjectTitle.trim() && styles.addButtonDisabled,
             ]}
             disabled={!newProjectTitle.trim()}
           >
-            <Plus size={22} color={tc.onTint} strokeWidth={2.4} />
+            <Plus size={22} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.4} />
           </TouchableOpacity>
         </View>
         <View style={styles.filterSection}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { translateWithFallback } from '@mindwtr/core';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { CheckCircle2, Pencil, Plus, Sparkles } from 'lucide-react-native';
 
 import { styles } from './task-list.styles';
@@ -79,6 +80,7 @@ export function TaskListQuickAdd({
   typeaheadOpen,
   typeaheadOptions,
 }: TaskListQuickAddProps) {
+  const filledButton = useFilledButtonColors();
   const resolveText = (key: string, fallback: string) => {
     return translateWithFallback(t, key, fallback);
   };
@@ -140,7 +142,7 @@ export function TaskListQuickAdd({
           onPress={() => { void handleAddTask(); }}
           style={[
             styles.addButton,
-            { backgroundColor: themeColors.tint },
+            { backgroundColor: filledButton.backgroundColor },
             addDisabled && styles.addButtonDisabled,
           ]}
           disabled={addDisabled}
@@ -150,7 +152,7 @@ export function TaskListQuickAdd({
           activeOpacity={0.85}
           hitSlop={8}
         >
-          <Plus size={22} color={themeColors.onTint} strokeWidth={2.6} />
+          <Plus size={22} color={filledButton.textColor ?? themeColors.onTint} strokeWidth={2.6} />
         </TouchableOpacity>
       </View>
       {typeaheadOpen && trigger && typeaheadOptions.length > 0 && (
