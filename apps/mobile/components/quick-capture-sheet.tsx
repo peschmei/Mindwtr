@@ -28,6 +28,7 @@ import {
 } from '@mindwtr/core';
 import { useLanguage } from '../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useThemeTokens } from '@/hooks/use-theme-tokens';
 import { useToast } from '@/contexts/toast-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAndroidKeyboardInset } from '../lib/use-android-keyboard-inset';
@@ -97,6 +98,16 @@ export function QuickCaptureSheet({
   }), shallow);
   const { t } = useLanguage();
   const tc = useThemeColors();
+  const tokens = useThemeTokens();
+  // Two-tier M3 emphasis: the capture FAB owns the high-emphasis `primary` role
+  // (see tab _layout.tsx); secondary primary actions like Save sit one step below
+  // it on the canonical `primaryContainer`, preserving the action hierarchy.
+  const saveButtonBackgroundColor = tokens.isMaterial && tokens.roles
+    ? tokens.roles.primaryContainer
+    : tc.tint;
+  const saveButtonTextColor = tokens.isMaterial && tokens.roles
+    ? tokens.roles.onPrimaryContainer
+    : undefined;
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -934,6 +945,8 @@ export function QuickCaptureSheet({
         recording={Boolean(recording)}
         recordingBusy={recordingBusy}
         recordingReady={recordingReady}
+        saveButtonBackgroundColor={saveButtonBackgroundColor}
+        saveButtonTextColor={saveButtonTextColor}
         sheetMaxHeight={sheetMaxHeight}
         showDueTime={Boolean(dueDate)}
         t={t}

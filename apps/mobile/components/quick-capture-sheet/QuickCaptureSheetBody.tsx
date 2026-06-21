@@ -53,6 +53,8 @@ interface QuickCaptureSheetBodyProps {
   recording: boolean;
   recordingBusy: boolean;
   recordingReady: boolean;
+  saveButtonBackgroundColor?: string;
+  saveButtonTextColor?: string;
   sheetMaxHeight: number;
   showDueTime: boolean;
   t: (key: string) => string;
@@ -102,6 +104,8 @@ export function QuickCaptureSheetBody({
   recording,
   recordingBusy,
   recordingReady,
+  saveButtonBackgroundColor,
+  saveButtonTextColor,
   sheetMaxHeight,
   showDueTime,
   t,
@@ -488,13 +492,13 @@ export function QuickCaptureSheetBody({
                 ) : null}
                 <TouchableOpacity
                   onPress={handleSave}
-                  style={[styles.saveButton, { backgroundColor: tc.tint, opacity: value.trim() ? 1 : 0.5 }]}
+                  style={[styles.saveButton, { backgroundColor: saveButtonBackgroundColor ?? tc.tint, opacity: value.trim() ? 1 : 0.5 }]}
                   disabled={!value.trim()}
                   accessibilityRole="button"
                   accessibilityLabel={t('common.save')}
                 >
                   <Text
-                    style={styles.saveText}
+                    style={[styles.saveText, saveButtonTextColor ? { color: saveButtonTextColor } : null]}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.8}
