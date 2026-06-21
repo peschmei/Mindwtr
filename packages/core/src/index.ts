@@ -998,6 +998,33 @@ export type {
     LogPayload,
 } from './logger';
 
+
+export {
+    beginPerformanceLogMeasurement,
+    buildPerformanceLogContext,
+    buildPerformanceLogEntry,
+    buildPerformanceLogLine,
+    isPerformanceOperation,
+    isPerformancePlatform,
+    isPerformanceRoute,
+    PERFORMANCE_LOG_CONTEXT_KEYS,
+    PERFORMANCE_LOG_FORBIDDEN_CONTEXT_KEYS,
+    PERFORMANCE_LOG_MESSAGE,
+    PERFORMANCE_LOG_OPERATIONS,
+    PERFORMANCE_LOG_PLATFORMS,
+    PERFORMANCE_LOG_ROUTES,
+    PERFORMANCE_LOG_SCOPE,
+} from './performance-log';
+export type {
+    PerformanceLogEntry,
+    PerformanceLogInput,
+    PerformanceLogMeasurementFinishInput,
+    PerformanceLogMeasurementInput,
+    PerformanceOperation,
+    PerformancePlatform,
+    PerformanceRoute,
+} from './performance-log';
+
 export {
     addBreadcrumb,
     clearBreadcrumbs,
