@@ -187,7 +187,7 @@ describe('ticktick import', () => {
             title: 'Packing list',
             tags: ['#travel'],
             priority: 'medium',
-            status: 'done',
+            status: 'archived',
             completedAt: '2026-06-15T12:00:00.000Z',
             checklist: [
                 { title: 'Passport', isCompleted: false },
@@ -285,5 +285,14 @@ describe('ticktick import', () => {
             revBy: result.data.settings.deviceId,
         });
         expect(importedTask?.checklist).toHaveLength(1);
+
+        const importedArchivedTask = result.data.tasks.find((task) => task.title === 'Packing list');
+        expect(importedArchivedTask).toMatchObject({
+            status: 'archived',
+            projectId: importedProject?.id,
+            completedAt: '2026-06-15T12:00:00.000Z',
+            rev: 1,
+            revBy: result.data.settings.deviceId,
+        });
     });
 });

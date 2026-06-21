@@ -447,7 +447,8 @@ const resolveTaskStatus = (
     counters: TickTickWarningCounters
 ): { isCompleted: boolean; status: TaskStatus } => {
     const status = Math.trunc(toNumber(statusValue, 0));
-    if (completedAt || status === 1 || status === 2) return { status: 'done', isCompleted: true };
+    if (status === 2) return { status: 'archived', isCompleted: true };
+    if (completedAt || status === 1) return { status: 'done', isCompleted: true };
     if (status === 0) return { status: 'inbox', isCompleted: false };
     counters.unknownStatuses += 1;
     return { status: 'inbox', isCompleted: false };
@@ -877,6 +878,9 @@ export const applyTickTickImport = (
             : undefined;
         const createdAt = resolveTimestamp(task.createdAt, nowIso);
         const updatedAt = resolveTimestamp(task.updatedAt, createdAt);
+        const completedAt = task.status === 'done' || task.status === 'archived'
+            ? task.completedAt ?? updatedAt
+            : undefined;
         const nextTask: Task = {
             id: uuidv4(),
             title: task.title,
@@ -889,7 +893,7 @@ export const applyTickTickImport = (
             startTime: task.startTime,
             dueDate: task.dueDate,
             recurrence: task.recurrence,
-            completedAt: task.completedAt,
+            completedAt,
             checklist,
             pushCount: 0,
             createdAt,
