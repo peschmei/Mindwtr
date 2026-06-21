@@ -17,6 +17,7 @@ import { useTheme } from '../../contexts/theme-context';
 import { useLanguage } from '../../contexts/language-context';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
 import { ReviewModal } from '../../components/review-modal';
@@ -61,6 +62,7 @@ export default function ReviewScreen() {
   const [expandedReviewProjectIds, setExpandedReviewProjectIds] = useState<Set<string>>(new Set());
 
   const tc = useThemeColors();
+  const filledButton = useFilledButtonColors();
   const insets = useSafeAreaInsets();
   const { areaById, resolvedAreaFilter, sortedAreas } = useMobileAreaFilter();
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
@@ -340,11 +342,11 @@ export default function ReviewScreen() {
               : <ChevronsDown size={20} color={tc.secondaryText} strokeWidth={2.4} />}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.startReviewButton, { backgroundColor: tc.tint }]}
+            style={[styles.startReviewButton, { backgroundColor: filledButton.backgroundColor }]}
             onPress={() => setReviewPickerVisible(true)}
             activeOpacity={0.85}
           >
-            <Text style={styles.startReviewButtonText} numberOfLines={2} ellipsizeMode="tail">
+            <Text style={[styles.startReviewButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]} numberOfLines={2} ellipsizeMode="tail">
               {startReviewLabel}
             </Text>
           </TouchableOpacity>

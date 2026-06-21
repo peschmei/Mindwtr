@@ -56,6 +56,7 @@ import {
 } from '@mindwtr/core';
 import { SwipeableTaskItem } from '@/components/swipeable-task-item';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
 import { useTheme } from '../../../contexts/theme-context';
 import { useLanguage } from '../../../contexts/language-context';
@@ -310,6 +311,7 @@ export default function FocusScreen() {
   const { t } = useLanguage();
   const { showToast } = useToast();
   const tc = useThemeColors();
+  const filledButton = useFilledButtonColors();
   const pullSync = useManualPullSync();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -1918,10 +1920,10 @@ export default function FocusScreen() {
                 style={[
                   styles.dialogButton,
                   styles.dialogPrimaryButton,
-                  { backgroundColor: saveFilterName.trim() ? tc.tint : tc.filterBg },
+                  { backgroundColor: saveFilterName.trim() ? filledButton.backgroundColor : tc.filterBg },
                 ]}
               >
-                <Text style={[styles.dialogButtonText, { color: saveFilterName.trim() ? tc.onTint : tc.secondaryText }]}>
+                <Text style={[styles.dialogButtonText, { color: saveFilterName.trim() ? (filledButton.textColor ?? tc.onTint) : tc.secondaryText }]}>
                   {resolveText('common.save', 'Save')}
                 </Text>
               </TouchableOpacity>
