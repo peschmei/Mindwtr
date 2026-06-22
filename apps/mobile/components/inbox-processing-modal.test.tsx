@@ -978,9 +978,19 @@ describe('InboxProcessingModal', () => {
       throw new Error('No date button not found');
     }
 
+    expect(noDateButton.props.accessibilityState?.selected).toBe(false);
+
     act(() => {
       noDateButton.props.onPress();
     });
+
+    const selectedNoDateButton = findNodeWithText(root, 'No date').parent;
+
+    if (!selectedNoDateButton) {
+      throw new Error('No date button not found after selection');
+    }
+
+    expect(selectedNoDateButton.props.accessibilityState?.selected).toBe(true);
 
     const nextTaskButton = findNodeWithText(root, 'Next task →').parent;
 

@@ -65,6 +65,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
     isDelegateConfirmationDisabled,
     newContext,
     nextActionDraft,
+    laterNoDateSelected,
     pendingDueDate,
     pendingDueDateOnly,
     pendingReviewDate,
@@ -304,6 +305,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                 laterHint={laterHint}
                 dateOnlyLabel={dateOnlyLabel}
                 pendingStartDate={pendingStartDate}
+                laterNoDateSelected={laterNoDateSelected}
                 setPendingStartDate={setPendingStartDate}
                 setLaterNoDateSelected={setLaterNoDateSelected}
                 pendingStartDateOnly={pendingStartDateOnly}
@@ -490,7 +492,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                     show: (showStartDateField || actionabilityChoice === 'later') && showStartDatePicker,
                     value: pendingStartDate,
                     onClose: () => setShowStartDatePicker(false),
-                    onSelect: (date) => { setPendingStartDate(date); setPendingStartDateOnly(false); },
+                    onSelect: (date) => { setPendingStartDate(date); setPendingStartDateOnly(false); setLaterNoDateSelected(false); },
                   },
                   {
                     show: showDueDateField && showDueDatePicker,

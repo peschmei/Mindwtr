@@ -10,6 +10,7 @@ type Props = {
   t: (key: string) => string;
   label: string;
   value: Date | null;
+  selectedPreset?: QuickDatePreset | null;
   onOpen: () => void;
   onClear: () => void;
   onQuickDateSelect?: (date: Date | null, preset: QuickDatePreset) => void;
@@ -27,6 +28,7 @@ export function InboxDateSelectorRow({
   t,
   label,
   value,
+  selectedPreset,
   onOpen,
   onClear,
   onQuickDateSelect,
@@ -75,6 +77,7 @@ export function InboxDateSelectorRow({
           t={t}
           tc={tc}
           selectedDate={value}
+          selectedPreset={selectedPreset}
           onSelect={(date, preset) => onQuickDateSelect(date, preset)}
         />
       ) : null}

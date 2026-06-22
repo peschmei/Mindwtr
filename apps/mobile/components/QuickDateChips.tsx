@@ -24,6 +24,7 @@ type QuickDateChipsProps = {
   t: (key: string) => string;
   tc: ThemeColors;
   selectedDate?: Date | null;
+  selectedPreset?: QuickDatePreset | null;
   onSelect: (date: Date | null, preset: QuickDatePreset) => void;
   /** Which presets to render. Defaults to the full core set. */
   presets?: readonly QuickDatePreset[];
@@ -37,6 +38,7 @@ export function QuickDateChips({
   t,
   tc,
   selectedDate,
+  selectedPreset,
   onSelect,
   presets = QUICK_DATE_PRESETS,
   trailing,
@@ -53,7 +55,7 @@ export function QuickDateChips({
       {presets.map((preset) => {
         const labelConfig = QUICK_DATE_LABELS[preset];
         const label = tFallback(t, labelConfig.key, labelConfig.fallback);
-        const active = isQuickDatePresetSelected(preset, selectedDate, now);
+        const active = selectedPreset === preset || isQuickDatePresetSelected(preset, selectedDate, now);
 
         return (
           <Pressable
