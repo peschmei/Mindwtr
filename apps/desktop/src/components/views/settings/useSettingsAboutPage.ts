@@ -26,6 +26,7 @@ import {
     isTauriRuntime,
 } from '../../../lib/runtime';
 import { reportError } from '../../../lib/report-error';
+import { resolveDesktopAnalyticsVersion } from '../../../lib/analytics-heartbeat';
 import { getLogPath } from '../../../lib/app-log';
 import { measureSettingsOpenStep } from '../../../lib/settings-open-diagnostics';
 import type { SettingsLabels } from './labels';
@@ -125,7 +126,7 @@ export function useSettingsAboutPage({
             if (cancelled) return;
             measureSettingsOpenStep('app-version', async () => {
                 const { getVersion } = await import('@tauri-apps/api/app');
-                return await getVersion();
+                return resolveDesktopAnalyticsVersion(await getVersion());
             })
                 .then((version) => {
                     if (!cancelled) setAppVersion(version);

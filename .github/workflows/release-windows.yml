@@ -132,9 +132,21 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release-artifacts | Out-Null
+          $releaseVersion = "${{ steps.version.outputs.version }}"
+          $tauriConfig = Get-Content -Raw "apps/desktop/src-tauri/tauri.conf.json" | ConvertFrom-Json
+          $baseVersion = [string]$tauriConfig.version
+
+          function Resolve-ReleaseAssetName {
+            param([Parameter(Mandatory = $true)][string]$Name)
+            $target = $Name.ToLowerInvariant()
+            $target = $target.Replace("_${baseVersion}_", "_${releaseVersion}_")
+            $target = $target.Replace("-${baseVersion}-", "-${releaseVersion}-")
+            return $target
+          }
+
           Get-ChildItem "apps/desktop/src-tauri/target/release/bundle/nsis/*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
-            $lower = $_.Name.ToLower()
-            Copy-Item $_.FullName "release-artifacts/$lower"
+            $target = Resolve-ReleaseAssetName -Name $_.Name
+            Copy-Item $_.FullName "release-artifacts/$target"
           }
           Get-ChildItem "mindwtr_*_windows_x64_portable.zip" -ErrorAction SilentlyContinue | ForEach-Object {
             Copy-Item $_.FullName "release-artifacts/$($_.Name)"

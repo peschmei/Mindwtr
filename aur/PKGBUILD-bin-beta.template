@@ -1,6 +1,7 @@
 # Maintainer: dongdongbh <dongdongbhbh@gmail.com>
 pkgname=mindwtr-bin-beta
 pkgver=__PKGVER__
+epoch=1
 pkgrel=1
 pkgdesc="A complete Getting Things Done (GTD) productivity system - Mind Like Water (beta binary release)"
 arch=('x86_64')

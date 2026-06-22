@@ -523,12 +523,31 @@ jobs:
 
       - name: Collect macOS artifacts
         run: |
+          set -euo pipefail
           mkdir -p release-artifacts
-          for f in $(find apps/desktop/src-tauri/target/${{ matrix.rust_target }}/release/bundle -name "*.dmg" -o -name "*.app.tar.gz"); do
-            base=$(basename "$f")
-            lower=$(echo "$base" | tr 'A-Z' 'a-z')
-            cp "$f" "release-artifacts/$lower"
-          done
+          TAG_INPUT="${{ inputs.tag || github.event.inputs.tag }}"
+          TAG="${TAG_INPUT:-${GITHUB_REF#refs/tags/}}"
+          VERSION="${TAG#v}"
+          BASE_VERSION="$(python3 -c 'import json; print(json.load(open("apps/desktop/src-tauri/tauri.conf.json", encoding="utf-8"))["version"])')"
+          if ! [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            VERSION="${BASE_VERSION}"
+          fi
+
+          release_asset_name() {
+            local raw="$1"
+            local name
+            name="$(echo "$raw" | tr 'A-Z' 'a-z')"
+            name="${name//_${BASE_VERSION}_/_${VERSION}_}"
+            name="${name//-${BASE_VERSION}-/-${VERSION}-}"
+            printf '%s\n' "$name"
+          }
+
+          find "apps/desktop/src-tauri/target/${{ matrix.rust_target }}/release/bundle" -type f \( -name "*.dmg" -o -name "*.app.tar.gz" \) -print0 \
+            | while IFS= read -r -d '' f; do
+                base="$(basename "$f")"
+                target="$(release_asset_name "$base")"
+                cp "$f" "release-artifacts/$target"
+              done
           ls -la release-artifacts/ || true
         shell: bash
 
