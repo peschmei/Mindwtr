@@ -167,6 +167,12 @@ const GLOBAL_QUICK_ADD_SHORTCUT_ALTERNATE_N: &str = "Control+Alt+N";
 const GLOBAL_QUICK_ADD_SHORTCUT_ALTERNATE_Q: &str = "Control+Alt+Q";
 const GLOBAL_QUICK_ADD_SHORTCUT_LEGACY: &str = "CommandOrControl+Shift+A";
 const GLOBAL_QUICK_ADD_SHORTCUT_DISABLED: &str = "disabled";
+#[cfg(any(target_os = "windows", test))]
+const WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS_ENV: &str = "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
+#[cfg(any(target_os = "windows", test))]
+const WEBVIEW2_DISABLE_GPU_ARG: &str = "--disable-gpu";
+#[cfg(target_os = "windows")]
+const MINDWTR_WEBVIEW2_ENABLE_GPU_ENV: &str = "MINDWTR_WEBVIEW2_ENABLE_GPU";
 
 #[cfg(target_os = "linux")]
 fn flatpak_notification_id() -> String {
@@ -715,6 +721,44 @@ where
         .any(|arg| arg.as_ref().eq_ignore_ascii_case(QUICK_ADD_CLI_FLAG))
 }
 
+#[cfg(any(target_os = "windows", test))]
+fn with_webview2_disable_gpu_argument(existing: Option<&str>) -> String {
+    let existing = existing.unwrap_or_default().trim();
+    if existing
+        .split_whitespace()
+        .any(|argument| argument == WEBVIEW2_DISABLE_GPU_ARG)
+    {
+        return existing.to_string();
+    }
+    if existing.is_empty() {
+        WEBVIEW2_DISABLE_GPU_ARG.to_string()
+    } else {
+        format!("{existing} {WEBVIEW2_DISABLE_GPU_ARG}")
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn webview2_gpu_override_enabled() -> bool {
+    env::var(MINDWTR_WEBVIEW2_ENABLE_GPU_ENV)
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "windows")]
+fn configure_windows_webview2_browser_arguments() {
+    if webview2_gpu_override_enabled() {
+        return;
+    }
+    let existing = env::var(WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS_ENV).ok();
+    let arguments = with_webview2_disable_gpu_argument(existing.as_deref());
+    env::set_var(WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS_ENV, arguments);
+}
+
 #[cfg(target_os = "linux")]
 struct FlatpakInstanceListener {
     listener: UnixListener,
@@ -963,6 +1007,9 @@ fn enable_desktop_spellcheck(_window: &tauri::WebviewWindow) {}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "windows")]
+    configure_windows_webview2_browser_arguments();
+
     let launch_args = env::args().collect::<Vec<_>>();
     let initial_launch_requests_quick_add = launch_requests_quick_add(launch_args.iter());
     #[cfg(target_os = "linux")]
@@ -1421,6 +1468,19 @@ arch=x86_64
         assert!(launch_requests_quick_add(["mindwtr", "--QUICK-ADD"]));
         assert!(!launch_requests_quick_add(["mindwtr"]));
         assert!(!launch_requests_quick_add(["mindwtr", "--foo"]));
+    }
+
+    #[test]
+    fn webview2_browser_arguments_add_disable_gpu_once() {
+        assert_eq!(with_webview2_disable_gpu_argument(None), "--disable-gpu");
+        assert_eq!(
+            with_webview2_disable_gpu_argument(Some("--foo=bar")),
+            "--foo=bar --disable-gpu",
+        );
+        assert_eq!(
+            with_webview2_disable_gpu_argument(Some("--foo=bar --disable-gpu")),
+            "--foo=bar --disable-gpu",
+        );
     }
 
     #[cfg(target_os = "linux")]
