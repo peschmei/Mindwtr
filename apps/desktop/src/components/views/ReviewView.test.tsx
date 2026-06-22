@@ -274,6 +274,70 @@ describe('ReviewView', () => {
         expect(getByText('Inbox Zero Goal')).toBeInTheDocument();
     });
 
+    it('can apply AI Someday suggestions for stale projects', async () => {
+        const project = makeProject('project-1', {
+            title: 'Stale Project',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+        });
+        const updateProject = vi.fn(async () => ({ success: true }));
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            suggestions: [{
+                                id: 'project:project-1',
+                                action: 'someday',
+                                reason: 'No movement for a long time.',
+                            }],
+                        }),
+                    },
+                }],
+            }),
+        } as Response);
+        useTaskStore.setState({
+            projects: [project],
+            _allProjects: [project],
+            settings: {
+                ai: {
+                    enabled: true,
+                    provider: 'openai',
+                    baseUrl: 'https://ai.example.com/v1',
+                    model: 'gpt-4o-mini',
+                },
+                gtd: {
+                    weeklyReview: {
+                        includeContextStep: false,
+                    },
+                },
+            },
+            updateProject,
+        });
+
+        const { getByRole, getByText } = renderWithProviders(<ReviewView />);
+
+        fireEvent.click(getByText('Weekly Review'));
+        await waitFor(() => expect(getByRole('heading', { level: 1, name: 'AI insight' })).toBeInTheDocument());
+
+        fireEvent.click(getByRole('button', { name: 'Run analysis' }));
+
+        await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+        const projectSuggestion = await waitFor(() => (
+            getByRole('button', { name: 'Stale Project: Move to Someday' })
+        ));
+        expect(projectSuggestion).toHaveAttribute('aria-pressed', 'true');
+
+        fireEvent.click(getByRole('button', { name: 'Apply selected (1)' }));
+
+        await waitFor(() => {
+            expect(updateProject).toHaveBeenCalledWith('project-1', { status: 'someday' });
+        });
+        fetchSpy.mockRestore();
+    });
+
     it('parses quick-add date commands when adding a task during project review', async () => {
         const addTask = vi.fn(async () => ({ success: true }));
         const project = makeProject('project-1', { title: 'Launch Project' });

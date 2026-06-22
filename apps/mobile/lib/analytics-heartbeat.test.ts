@@ -34,6 +34,7 @@ vi.mock('expo-application', () => ({
 
 import {
   isMobileAnalyticsHeartbeatConfigured,
+  resolveMobileAnalyticsVersion,
   sendMobileAnalyticsOptOut,
   sendMobileDailyHeartbeat,
 } from './analytics-heartbeat';
@@ -90,5 +91,16 @@ describe('sendMobileDailyHeartbeat', () => {
 
     expect(sendHeartbeatOptOut).toHaveBeenCalledTimes(1);
     expect(sendDailyHeartbeat).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('resolveMobileAnalyticsVersion', () => {
+  it('uses the RC tag suffix when it matches the app base version', () => {
+    expect(resolveMobileAnalyticsVersion('1.0.5', 'v1.0.5-rc.1')).toBe('1.0.5-rc.1');
+  });
+
+  it('keeps the app version when the configured release tag does not match', () => {
+    expect(resolveMobileAnalyticsVersion('1.0.5', 'v1.0.6-rc.1')).toBe('1.0.5');
   });
 });

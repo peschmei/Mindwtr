@@ -30,6 +30,7 @@ import {
 import {
     isMobileAnalyticsHeartbeatConfigured,
     resetMobileAnalyticsOptOutMarker,
+    resolveMobileAnalyticsVersion,
     sendMobileAnalyticsOptOut,
 } from '@/lib/analytics-heartbeat';
 
@@ -95,7 +96,11 @@ function SyncSettingsView({
     const analyticsHeartbeatChannel = typeof extraConfig?.analyticsHeartbeatChannel === 'string'
         ? extraConfig.analyticsHeartbeatChannel.trim()
         : '';
+    const analyticsReleaseVersion = typeof extraConfig?.analyticsReleaseVersion === 'string'
+        ? extraConfig.analyticsReleaseVersion.trim()
+        : '';
     const appVersion = Constants.expoConfig?.version ?? '0.0.0';
+    const analyticsAppVersion = resolveMobileAnalyticsVersion(appVersion, analyticsReleaseVersion);
     const dropboxAppKey = typeof extraConfig?.dropboxAppKey === 'string' ? extraConfig.dropboxAppKey.trim() : '';
     const dropboxConfigured = !isFossBuild && isDropboxClientConfigured(dropboxAppKey);
     const isExpoGo = Constants.appOwnership === 'expo';
@@ -246,7 +251,7 @@ function SyncSettingsView({
                     await sendMobileAnalyticsOptOut({
                         analyticsHeartbeatUrl,
                         analyticsHeartbeatChannel,
-                        appVersion,
+                        appVersion: analyticsAppVersion,
                         isExpoGo,
                         isFossBuild,
                     });
@@ -274,7 +279,7 @@ function SyncSettingsView({
         analyticsHeartbeatAvailable,
         analyticsHeartbeatChannel,
         analyticsHeartbeatUrl,
-        appVersion,
+        analyticsAppVersion,
         isExpoGo,
         isFossBuild,
         settings.analytics,

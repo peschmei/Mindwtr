@@ -226,6 +226,7 @@ jobs:
     needs: validate
     uses: ./.github/workflows/release-ios-appstore.yml
     with:
+      tag: ${{ needs.validate.outputs.tag }}
       upload: true
       submit_for_review: false
       distribute_testflight: true
@@ -238,6 +239,7 @@ jobs:
     needs: validate
     uses: ./.github/workflows/release-macos-appstore.yml
     with:
+      tag: ${{ needs.validate.outputs.tag }}
       upload: true
       submit_for_review: false
       distribute_testflight: true

@@ -73,7 +73,9 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
-      version_code: ${{ steps.version_code.outputs.local_code }}
+      version_code: ${{ steps.version_code.outputs.resolved_code || steps.version_code.outputs.local_code }}
+      local_version_code: ${{ steps.version_code.outputs.local_code }}
+      remote_max_version_code: ${{ steps.version_code.outputs.remote_max_code }}
 
     steps:
       - name: Checkout code
@@ -137,12 +139,16 @@ jobs:
             echo "Missing expo.android.versionCode in apps/mobile/app.json" >&2
             exit 1
           fi
-          echo "local_code=$LOCAL_CODE" >> "$GITHUB_OUTPUT"
+          RESOLVED_CODE="$LOCAL_CODE"
           if [ "$MAX_CODE" -ge "$LOCAL_CODE" ]; then
-            echo "::error::Google Play already has versionCode $MAX_CODE; local versionCode $LOCAL_CODE must be increased in apps/mobile/app.json before release."
-            exit 1
+            RESOLVED_CODE=$((MAX_CODE + 1))
+            echo "::warning::Google Play already has versionCode $MAX_CODE; local versionCode $LOCAL_CODE will be bumped to $RESOLVED_CODE for this CI build."
+          else
+            echo "versionCode ok: local $LOCAL_CODE > store $MAX_CODE"
           fi
-          echo "versionCode ok: local $LOCAL_CODE > store $MAX_CODE"
+          echo "local_code=$LOCAL_CODE" >> "$GITHUB_OUTPUT"
+          echo "remote_max_code=$MAX_CODE" >> "$GITHUB_OUTPUT"
+          echo "resolved_code=$RESOLVED_CODE" >> "$GITHUB_OUTPUT"
 
   build-aab:
     needs: preflight
@@ -184,6 +190,28 @@ jobs:
       - name: Setup EAS CLI
         run: npm install -g eas-cli
 
+      - name: Apply resolved Android versionCode
+        if: ${{ needs.preflight.outputs.version_code != '' }}
+        env:
+          VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = 'apps/mobile/app.json';
+          const versionCode = Number(process.env.VERSION_CODE);
+          if (!Number.isInteger(versionCode) || versionCode <= 0) {
+            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
+          }
+          const json = JSON.parse(fs.readFileSync(path, 'utf8'));
+          json.expo = json.expo || {};
+          json.expo.android = json.expo.android || {};
+          const previous = json.expo.android.versionCode;
+          json.expo.android.versionCode = versionCode;
+          fs.writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+          console.log(`Android versionCode: ${previous} -> ${versionCode}`);
+          NODE
+
       - name: Build Android AAB (local EAS)
         timeout-minutes: 60
         run: |
@@ -200,6 +228,7 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           ANALYTICS_HEARTBEAT_URL: ${{ secrets.ANALYTICS_HEARTBEAT_URL }}
           ANALYTICS_HEARTBEAT_CHANNEL: ${{ inputs.internal_test_release && 'android-internal-test' || '' }}
+          ANALYTICS_RELEASE_VERSION: ${{ inputs.tag || github.event.inputs.tag || github.ref_name }}
           FEEDBACK_ENDPOINT_URL: ${{ vars.FEEDBACK_ENDPOINT_URL || vars.VITE_FEEDBACK_ENDPOINT_URL || 'https://mindwtr-feedback.mindwtr.workers.dev' }}
 
       - name: Upload Android AAB build artifact
@@ -249,6 +278,28 @@ jobs:
       - name: Setup EAS CLI
         run: npm install -g eas-cli
 
+      - name: Apply resolved Android versionCode
+        if: ${{ needs.preflight.outputs.version_code != '' }}
+        env:
+          VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = 'apps/mobile/app.json';
+          const versionCode = Number(process.env.VERSION_CODE);
+          if (!Number.isInteger(versionCode) || versionCode <= 0) {
+            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
+          }
+          const json = JSON.parse(fs.readFileSync(path, 'utf8'));
+          json.expo = json.expo || {};
+          json.expo.android = json.expo.android || {};
+          const previous = json.expo.android.versionCode;
+          json.expo.android.versionCode = versionCode;
+          fs.writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+          console.log(`Android versionCode: ${previous} -> ${versionCode}`);
+          NODE
+
       - name: Build Android APK (local EAS)
         timeout-minutes: 60
         run: |
@@ -260,6 +311,7 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           ANALYTICS_HEARTBEAT_URL: ${{ secrets.ANALYTICS_HEARTBEAT_URL }}
+          ANALYTICS_RELEASE_VERSION: ${{ inputs.tag || github.event.inputs.tag || github.ref_name }}
           FEEDBACK_ENDPOINT_URL: ${{ vars.FEEDBACK_ENDPOINT_URL || vars.VITE_FEEDBACK_ENDPOINT_URL || 'https://mindwtr-feedback.mindwtr.workers.dev' }}
 
       - name: Collect Android release artifacts
@@ -792,10 +844,11 @@ jobs:
           echo "Published profileable versionCode $VERSION_CODE to Google Play internal track."
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
-      - name: Publish same versionCode to internal track (no re-upload)
+      - name: Publish same versionCode to stable testing tracks (no re-upload)
         if: inputs.play_track == 'production' && startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && !contains(github.ref_name, '-')
         env:
           ACCESS_TOKEN: ${{ steps.play_auth.outputs.access_token }}
+          TESTING_TRACKS: internal,beta
         run: |
           set -euo pipefail
           PACKAGE="tech.dongdongbh.mindwtr"
@@ -803,6 +856,35 @@ jobs:
           VERSION_CODE=${{ needs.preflight.outputs.version_code }}
           if [ -z "$VERSION_CODE" ] || [ "$VERSION_CODE" = "null" ]; then
             echo "Missing preflight Android versionCode output" >&2
+            exit 1
+          fi
+
+          IFS=',' read -r -a RAW_TRACKS <<< "$TESTING_TRACKS"
+          TRACKS=()
+          for raw_track in "${RAW_TRACKS[@]}"; do
+            track="${raw_track//[[:space:]]/}"
+            [ -n "$track" ] || continue
+            if [ "$track" = "production" ] || [ "$track" = "none" ]; then
+              echo "Production and none are not valid stable testing-track entries: $track" >&2
+              exit 1
+            fi
+            if [[ ! "$track" =~ ^[A-Za-z0-9._-]+$ ]]; then
+              echo "Invalid Google Play track name: $track" >&2
+              exit 1
+            fi
+            duplicate=false
+            for existing in "${TRACKS[@]}"; do
+              if [ "$existing" = "$track" ]; then
+                duplicate=true
+                break
+              fi
+            done
+            if [ "$duplicate" = "false" ]; then
+              TRACKS+=("$track")
+            fi
+          done
+          if [ "${#TRACKS[@]}" -eq 0 ]; then
+            echo "No stable testing tracks configured." >&2
             exit 1
           fi
 
@@ -822,40 +904,43 @@ jobs:
             exit 1
           fi
 
-          PAYLOAD_FILE=$(mktemp)
-          cat > "$PAYLOAD_FILE" <<EOF
-          {
-            "track": "internal",
-            "releases": [
-              {
-                "name": "${VERSION} (internal)",
-                "status": "completed",
-                "versionCodes": ["${VERSION_CODE}"]
-              }
-            ]
-          }
-          EOF
+          for TRACK in "${TRACKS[@]}"; do
+            PAYLOAD_FILE=$(mktemp)
+            jq -n \
+              --arg track "$TRACK" \
+              --arg version "$VERSION" \
+              --arg version_code "$VERSION_CODE" \
+              '{
+                track: $track,
+                releases: [{
+                  name: ($version + " stable " + $track),
+                  status: "completed",
+                  versionCodes: [$version_code]
+                }]
+              }' > "$PAYLOAD_FILE"
 
-          TRACK_FILE=$(mktemp)
-          TRACK_CODE=$(curl -sS -o "$TRACK_FILE" -w "%{http_code}" -X PUT \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID/tracks/internal" \
-            -d @"$PAYLOAD_FILE")
-          if [ "$TRACK_CODE" != "200" ]; then
-            echo "Failed to update internal track (HTTP $TRACK_CODE): $(cat "$TRACK_FILE")" >&2
-            exit 1
-          fi
+            TRACK_FILE=$(mktemp)
+            TRACK_CODE=$(curl -sS -o "$TRACK_FILE" -w "%{http_code}" -X PUT \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID/tracks/$TRACK" \
+              -d @"$PAYLOAD_FILE")
+            if [ "$TRACK_CODE" != "200" ]; then
+              echo "Failed to update $TRACK track (HTTP $TRACK_CODE): $(cat "$TRACK_FILE")" >&2
+              exit 1
+            fi
+          done
 
           COMMIT_FILE=$(mktemp)
           COMMIT_CODE=$(curl -sS -o "$COMMIT_FILE" -w "%{http_code}" -X POST \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID:commit")
           if [ "$COMMIT_CODE" != "200" ]; then
-            echo "Failed to commit internal-track edit (HTTP $COMMIT_CODE): $(cat "$COMMIT_FILE")" >&2
+            echo "Failed to commit stable testing-track edit (HTTP $COMMIT_CODE): $(cat "$COMMIT_FILE")" >&2
             exit 1
           fi
-          echo "Published versionCode $VERSION_CODE to internal track without uploading a second AAB."
+          TRACK_LIST="$(IFS=,; echo "${TRACKS[*]}")"
+          echo "Published stable versionCode $VERSION_CODE to Google Play testing tracks without uploading a second AAB: $TRACK_LIST."
 
       - name: Collect Android internal test artifacts
         if: ${{ inputs.internal_test_release }}

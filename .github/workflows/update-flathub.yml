@@ -36,6 +36,7 @@ jobs:
     env:
       VITE_DROPBOX_APP_KEY: ${{ vars.VITE_DROPBOX_APP_KEY || secrets.VITE_DROPBOX_APP_KEY }}
       VITE_FEEDBACK_ENDPOINT_URL: ${{ vars.VITE_FEEDBACK_ENDPOINT_URL || 'https://mindwtr-feedback.mindwtr.workers.dev' }}
+      VITE_ANALYTICS_RELEASE_VERSION: ${{ inputs.tag }}
 
     steps:
       - name: Checkout Mindwtr

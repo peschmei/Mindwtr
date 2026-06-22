@@ -11,6 +11,7 @@ const analyticsHeartbeatChannel = (
   process.env.ANALYTICS_HEARTBEAT_CHANNEL
     ?? (isFossBuild && analyticsHeartbeatUrl ? 'fdroid' : '')
 ).trim();
+const analyticsReleaseVersion = (process.env.ANALYTICS_RELEASE_VERSION ?? '').trim();
 const feedbackEndpointUrl = (process.env.FEEDBACK_ENDPOINT_URL ?? '').trim();
 const dropboxAppKey = (process.env.DROPBOX_APP_KEY ?? '').trim();
 const donationPromptEnabled = process.env.DONATION_PROMPT_ENABLED === '1'
@@ -25,6 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     isFossBuild,
     analyticsHeartbeatUrl,
     analyticsHeartbeatChannel,
+    analyticsReleaseVersion,
     feedbackEndpointUrl,
     dropboxAppKey,
     donationPromptEnabled,

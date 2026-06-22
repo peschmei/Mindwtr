@@ -170,9 +170,15 @@ export function TaskQuickActionMenu({
     }, []);
 
     useEffect(() => {
+        const isInsideMenuSurface = (target: Node | null) => {
+            if (!target) return false;
+            if (menuRef.current?.contains(target) || panelRef.current?.contains(target)) return true;
+            const targetElement = target instanceof Element ? target : target.parentElement;
+            return Boolean(targetElement?.closest('[data-selector-dropdown="true"]'));
+        };
         const handlePointer = (event: Event) => {
             const target = event.target as Node | null;
-            if (target && (menuRef.current?.contains(target) || panelRef.current?.contains(target))) return;
+            if (isInsideMenuSurface(target)) return;
             onClose();
         };
         const handleScrollOrResize = () => onClose();

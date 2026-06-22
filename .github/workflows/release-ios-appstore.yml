@@ -3,6 +3,10 @@ name: Release iOS App Store
 on:
   workflow_call:
     inputs:
+      tag:
+        description: Release tag (e.g., v1.0.5 or v1.0.5-rc.1)
+        required: false
+        type: string
       upload:
         description: Upload to App Store Connect
         required: false
@@ -30,6 +34,10 @@ on:
         default: false
   workflow_dispatch:
     inputs:
+      tag:
+        description: Release tag (e.g., v1.0.5 or v1.0.5-rc.1)
+        required: false
+        type: string
       upload:
         description: Upload to App Store Connect
         required: false
@@ -78,6 +86,7 @@ jobs:
       EXPECTED_APP_GROUP: group.tech.dongdongbh.mindwtr
       EXPECTED_ICLOUD_CONTAINER: iCloud.tech.dongdongbh.mindwtr
       ANALYTICS_HEARTBEAT_URL: ${{ secrets.ANALYTICS_HEARTBEAT_URL }}
+      ANALYTICS_RELEASE_VERSION: ${{ inputs.tag || github.ref_name }}
       DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY || secrets.DROPBOX_APP_KEY }}
       FEEDBACK_ENDPOINT_URL: ${{ vars.FEEDBACK_ENDPOINT_URL || vars.VITE_FEEDBACK_ENDPOINT_URL || 'https://mindwtr-feedback.mindwtr.workers.dev' }}
       DONATION_PROMPT_ENABLED: "true"
@@ -945,9 +954,11 @@ jobs:
           fi
           if [ "${REQUESTED_DISTRIBUTE_TESTFLIGHT:-false}" = "true" ]; then
             echo "ENABLE_TESTFLIGHT_EXTERNAL_RELEASE=true" >> "$GITHUB_ENV"
-            echo "SKIP_METADATA_FOR_UPLOAD=true" >> "$GITHUB_ENV"
-            echo "FASTLANE_SCREENSHOTS_PATH=" >> "$GITHUB_ENV"
-            echo "SKIP_SCREENSHOTS_FOR_UPLOAD=true" >> "$GITHUB_ENV"
+            if [ "$REQUESTED_SUBMIT_FOR_REVIEW" != "true" ]; then
+              echo "SKIP_METADATA_FOR_UPLOAD=true" >> "$GITHUB_ENV"
+              echo "FASTLANE_SCREENSHOTS_PATH=" >> "$GITHUB_ENV"
+              echo "SKIP_SCREENSHOTS_FOR_UPLOAD=true" >> "$GITHUB_ENV"
+            fi
           else
             echo "ENABLE_TESTFLIGHT_EXTERNAL_RELEASE=false" >> "$GITHUB_ENV"
           fi

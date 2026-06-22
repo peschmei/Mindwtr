@@ -49,6 +49,7 @@ import { useRootLayoutContextAutomation } from '@/hooks/root-layout/use-root-lay
 import { useRootLayoutExternalCapture } from '@/hooks/root-layout/use-root-layout-external-capture';
 import { useRootLayoutNotificationOpenHandler } from '@/hooks/root-layout/use-root-layout-notification-open-handler';
 import { useRootLayoutStartup } from '@/hooks/root-layout/use-root-layout-startup';
+import { resolveMobileAnalyticsVersion } from '@/lib/analytics-heartbeat';
 import { useRootLayoutSyncEffects } from '@/hooks/root-layout/use-root-layout-sync-effects';
 import { ProjectNextActionPromptProvider } from '@/components/project-next-action-prompt';
 import { ThemedAlertProvider } from '@/components/themed-alert';
@@ -125,6 +126,7 @@ type MobileExtraConfig = {
   isFossBuild?: boolean | string;
   analyticsHeartbeatUrl?: string;
   analyticsHeartbeatChannel?: string;
+  analyticsReleaseVersion?: string;
   donationPromptEnabled?: boolean | string;
   promptTestControlsEnabled?: boolean | string;
 };
@@ -336,11 +338,13 @@ function RootLayoutContentInner() {
   const isFossBuild = parseBool(extraConfig?.isFossBuild);
   const analyticsHeartbeatUrl = String(extraConfig?.analyticsHeartbeatUrl || '').trim();
   const analyticsHeartbeatChannel = String(extraConfig?.analyticsHeartbeatChannel || '').trim();
+  const analyticsReleaseVersion = String(extraConfig?.analyticsReleaseVersion || '').trim();
   const donationPromptEnabled = parseBool(extraConfig?.donationPromptEnabled);
   const promptTestControlsEnabled = process.env.NODE_ENV !== 'test'
     && (__DEV__ || parseBool(extraConfig?.promptTestControlsEnabled));
   const isExpoGo = Constants.appOwnership === 'expo';
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
+  const analyticsAppVersion = resolveMobileAnalyticsVersion(appVersion, analyticsReleaseVersion);
   const settingsLanguage = useTaskStore((state) => state.settings?.language);
   const settingsDateFormat = useTaskStore((state) => state.settings?.dateFormat);
   const settingsCalendarSystem = useTaskStore((state) => state.settings?.calendarSystem);
@@ -405,7 +409,7 @@ function RootLayoutContentInner() {
   const { dataReady } = useRootLayoutStartup({
     analyticsHeartbeatUrl,
     analyticsHeartbeatChannel,
-    appVersion,
+    appVersion: analyticsAppVersion,
     isExpoGo,
     isFossBuild,
     requestSync,

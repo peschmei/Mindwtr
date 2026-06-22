@@ -13,6 +13,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/../.." && pwd)"
 default_analytics_heartbeat_url="https://mindwtr-analytics.mindwtr.workers.dev/"
 analytics_heartbeat_url="${ANALYTICS_HEARTBEAT_URL:-${default_analytics_heartbeat_url}}"
+analytics_release_version="${VITE_ANALYTICS_RELEASE_VERSION:-${ref}}"
 dropbox_app_key="${VITE_DROPBOX_APP_KEY:-}"
 
 manifest_path="${flathub_dir}/tech.dongdongbh.mindwtr.yml"
@@ -69,7 +70,7 @@ fi
 
 upstream_commit="$(git -C "${repo_root}" rev-parse "${ref}^{commit}")"
 
-python3 - "${manifest_path}" "${upstream_commit}" "${analytics_heartbeat_url}" "${dropbox_app_key}" <<'PY'
+python3 - "${manifest_path}" "${upstream_commit}" "${analytics_heartbeat_url}" "${analytics_release_version}" "${dropbox_app_key}" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -77,7 +78,8 @@ import sys
 manifest_path = Path(sys.argv[1])
 commit = sys.argv[2]
 heartbeat_url = sys.argv[3]
-dropbox_app_key = sys.argv[4]
+release_version = sys.argv[4]
+dropbox_app_key = sys.argv[5]
 text = manifest_path.read_text()
 updated, count = re.subn(
     r'(^\s*commit:\s*)([0-9a-f]{7,40})(\s*$)',
@@ -212,6 +214,7 @@ def remove_env_value(name: str) -> None:
         env_order.remove(name)
 
 set_env_value('VITE_ANALYTICS_HEARTBEAT_URL', heartbeat_url)
+set_env_value('VITE_ANALYTICS_RELEASE_VERSION', release_version)
 set_env_value('VITE_DONATION_PROMPT_ENABLED', 'true')
 if dropbox_app_key:
     set_env_value('VITE_DROPBOX_APP_KEY', dropbox_app_key)

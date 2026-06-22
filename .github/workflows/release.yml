@@ -106,6 +106,8 @@ jobs:
       actions: read
       contents: read
     uses: ./.github/workflows/release-android.yml
+    with:
+      play_track: production
     secrets: inherit
 
   android-foss:
@@ -117,8 +119,10 @@ jobs:
     if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_ios_appstore) }}
     uses: ./.github/workflows/release-ios-appstore.yml
     with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       upload: true
       submit_for_review: true
+      distribute_testflight: true
       testflight_group: 'external_testing'
     secrets: inherit
 
@@ -126,8 +130,10 @@ jobs:
     if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_macos_appstore) }}
     uses: ./.github/workflows/release-macos-appstore.yml
     with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       upload: true
       submit_for_review: true
+      distribute_testflight: true
       testflight_group: 'external_testing'
     secrets: inherit
 

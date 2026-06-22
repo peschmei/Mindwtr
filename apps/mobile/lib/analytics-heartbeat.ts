@@ -36,6 +36,17 @@ export function isMobileAnalyticsHeartbeatConfigured({
   return !isExpoGo && Boolean(analyticsHeartbeatUrl.trim());
 }
 
+export function resolveMobileAnalyticsVersion(
+  baseVersion: string,
+  releaseVersion?: string | null
+): string {
+  const base = String(baseVersion || '').trim() || '0.0.0';
+  const release = String(releaseVersion || '').trim().replace(/^v/i, '');
+  if (!release || release === base) return base;
+  if (release.startsWith(`${base}-`)) return release;
+  return base;
+}
+
 function canSendMobileAnalyticsHeartbeat(config: MobileAnalyticsHeartbeatConfig): boolean {
   return isMobileAnalyticsHeartbeatConfigured(config) && !__DEV__;
 }

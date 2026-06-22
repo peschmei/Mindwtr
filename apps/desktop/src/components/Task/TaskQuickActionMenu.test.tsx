@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import type { Task } from '@mindwtr/core';
 
 import { TaskQuickActionMenu } from './TaskQuickActionMenu';
@@ -40,26 +40,46 @@ const t = (key: string) => ({
     'taskEdit.startDateLabel': 'Start Date',
 }[key] ?? key);
 
+const createMenuProps = (overrides: Partial<ComponentProps<typeof TaskQuickActionMenu>> = {}): ComponentProps<typeof TaskQuickActionMenu> => ({
+    task,
+    x: 16,
+    y: 16,
+    t,
+    dateFormatSetting: 'system',
+    nativeDateInputLocale: 'en-US',
+    contextOptions: [],
+    areas: [],
+    readOnly: false,
+    onClose: vi.fn(),
+    onDuplicate: vi.fn(),
+    onDelete: vi.fn(),
+    onStatusChange: vi.fn(),
+    onCreateArea: vi.fn(async () => null),
+    onUpdateTask: vi.fn(async () => ({ success: true })),
+    ...overrides,
+});
+
 const renderMenu = (overrides: Partial<ComponentProps<typeof TaskQuickActionMenu>> = {}) => {
-    const props: ComponentProps<typeof TaskQuickActionMenu> = {
-        task,
-        x: 16,
-        y: 16,
-        t,
-        dateFormatSetting: 'system',
-        nativeDateInputLocale: 'en-US',
-        contextOptions: [],
-        areas: [],
-        readOnly: false,
-        onClose: vi.fn(),
-        onDuplicate: vi.fn(),
-        onDelete: vi.fn(),
-        onStatusChange: vi.fn(),
-        onCreateArea: vi.fn(async () => null),
-        onUpdateTask: vi.fn(async () => ({ success: true })),
-        ...overrides,
-    };
+    const props = createMenuProps(overrides);
     render(<TaskQuickActionMenu {...props} />);
+    return props;
+};
+
+const renderClosableMenu = (overrides: Partial<ComponentProps<typeof TaskQuickActionMenu>> = {}) => {
+    const props = createMenuProps(overrides);
+    function Harness() {
+        const [open, setOpen] = useState(true);
+        return open ? (
+            <TaskQuickActionMenu
+                {...props}
+                onClose={() => {
+                    props.onClose();
+                    setOpen(false);
+                }}
+            />
+        ) : null;
+    }
+    render(<Harness />);
     return props;
 };
 
@@ -218,6 +238,39 @@ describe('TaskQuickActionMenu', () => {
 
         expect(screen.queryByRole('menuitem', { name: 'Mark reviewed' })).not.toBeInTheDocument();
         expect(screen.getByRole('menuitem', { name: /review date/i })).toBeInTheDocument();
+    });
+
+    it('keeps the menu open while selecting an area from the selector dropdown', async () => {
+        const onUpdateTask = vi.fn(async () => ({ success: true as const }));
+        const props = renderClosableMenu({
+            areas: [{
+                id: 'area-work',
+                name: 'Work',
+                color: '#2563eb',
+                order: 0,
+                createdAt: now,
+                updatedAt: now,
+            }],
+            onUpdateTask,
+        });
+
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Area…' }));
+        fireEvent.click(screen.getByRole('button', { name: 'No Area' }));
+
+        const option = screen.getByRole('option', { name: 'Work' });
+        fireEvent.mouseDown(option);
+        expect(props.onClose).not.toHaveBeenCalled();
+
+        fireEvent.click(option);
+        const panel = screen.getByRole('dialog', { name: 'Area' });
+        expect(within(panel).getByRole('button', { name: 'Work' })).toBeInTheDocument();
+
+        fireEvent.click(within(panel).getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(onUpdateTask).toHaveBeenCalledWith({ areaId: 'area-work' });
+        });
+        expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
     it('keeps secondary task row actions in the quick menu', () => {

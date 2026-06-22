@@ -14,6 +14,7 @@ import {
     type ExternalCalendarEvent,
     type ReviewSuggestion,
     useTaskStore,
+    type Project,
     type Task,
     type TaskStatus,
     type AIProviderId,
@@ -64,13 +65,14 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
     const [expandedExternalDays, setExpandedExternalDays] = useState<Set<string>>(new Set());
     const [expandedContextGroups, setExpandedContextGroups] = useState<Set<string>>(new Set());
     const [projectTaskPrompt, setProjectTaskPrompt] = useState<{ projectId: string; projectTitle: string } | null>(null);
-    const { tasks, projects, areas, settings, addProject, updateTask, deleteTask, batchUpdateTasks } = useTaskStore(
+    const { tasks, projects, areas, settings, addProject, updateProject, updateTask, deleteTask, batchUpdateTasks } = useTaskStore(
         (state) => ({
             tasks: state.tasks,
             projects: state.projects,
             areas: state.areas,
             settings: state.settings,
             addProject: state.addProject,
+            updateProject: state.updateProject,
             updateTask: state.updateTask,
             deleteTask: state.deleteTask,
             batchUpdateTasks: state.batchUpdateTasks,
@@ -364,10 +366,19 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
         </div>
     );
 
-    const isActionableSuggestion = (suggestion: ReviewSuggestion) => {
-        if (suggestion.id.startsWith('project:')) return false;
-        return suggestion.action === 'someday' || suggestion.action === 'archive';
+    const getSuggestionProjectId = (id: string) => (
+        id.startsWith('project:') ? id.slice('project:'.length) : null
+    );
+
+    const getSuggestionProjectStatus = (action: ReviewSuggestion['action']): Project['status'] | null => {
+        if (action === 'someday') return 'someday';
+        if (action === 'archive') return 'archived';
+        return null;
     };
+
+    const isActionableSuggestion = (suggestion: ReviewSuggestion) => (
+        suggestion.action === 'someday' || suggestion.action === 'archive'
+    );
 
     const toggleSuggestion = (id: string) => {
         setAiSelectedIds((prev) => {
@@ -418,9 +429,12 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
     };
 
     const applyAiSuggestions = async () => {
-        const updates = aiSuggestions
+        const selectedSuggestions = aiSuggestions
             .filter((suggestion) => aiSelectedIds.has(suggestion.id))
-            .filter(isActionableSuggestion)
+            .filter(isActionableSuggestion);
+
+        const taskUpdates = selectedSuggestions
+            .filter((suggestion) => !getSuggestionProjectId(suggestion.id))
             .map((suggestion) => {
                 if (suggestion.action === 'someday') {
                     return { id: suggestion.id, updates: { status: 'someday' as TaskStatus } };
@@ -432,8 +446,19 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
             })
             .filter(Boolean) as Array<{ id: string; updates: Partial<Task> }>;
 
-        if (updates.length === 0) return;
-        await batchUpdateTasks(updates);
+        const projectUpdates = selectedSuggestions
+            .map((suggestion) => {
+                const projectId = getSuggestionProjectId(suggestion.id);
+                const status = getSuggestionProjectStatus(suggestion.action);
+                return projectId && status ? { id: projectId, updates: { status } } : null;
+            })
+            .filter(Boolean) as Array<{ id: string; updates: Partial<Project> }>;
+
+        if (taskUpdates.length === 0 && projectUpdates.length === 0) return;
+        if (taskUpdates.length > 0) {
+            await batchUpdateTasks(taskUpdates);
+        }
+        await Promise.all(projectUpdates.map((update) => updateProject(update.id, update.updates)));
     };
 
     const openQuickAdd = (initialProps?: Partial<Task>) => {
@@ -766,6 +791,8 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                             <div className="space-y-3">
                                 {aiSuggestions.map((suggestion) => {
                                     const actionable = isActionableSuggestion(suggestion);
+                                    const suggestionTitle = staleItemTitleMap[suggestion.id] || suggestion.id;
+                                    const actionLabel = t(`review.aiAction.${suggestion.action}`);
                                     return (
                                         <div
                                             key={suggestion.id}
@@ -781,6 +808,7 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                                                             ? "bg-primary text-primary-foreground border-primary"
                                                             : "border-border text-muted-foreground",
                                                     )}
+                                                    aria-label={`${suggestionTitle}: ${actionLabel}`}
                                                     aria-pressed={aiSelectedIds.has(suggestion.id)}
                                                 >
                                                     {aiSelectedIds.has(suggestion.id) ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
@@ -790,9 +818,9 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                                             )}
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-medium">{staleItemTitleMap[suggestion.id] || suggestion.id}</span>
+                                                    <span className="text-sm font-medium">{suggestionTitle}</span>
                                                     <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                                        {t(`review.aiAction.${suggestion.action}`)}
+                                                        {actionLabel}
                                                     </span>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground mt-1">{suggestion.reason}</div>
