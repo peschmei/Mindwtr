@@ -318,7 +318,7 @@ pub(crate) async fn check_microsoft_store_update() -> Result<MicrosoftStoreUpdat
         let updates = context
             .GetAppAndOptionalStorePackageUpdatesAsync()
             .map_err(|error| error.to_string())?
-            .await
+            .get()
             .map_err(|error| error.to_string())?;
         let count = updates.Size().map_err(|error| error.to_string())?;
         let mut latest_version: Option<String> = None;
