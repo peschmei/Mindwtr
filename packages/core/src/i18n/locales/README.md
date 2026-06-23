@@ -20,10 +20,11 @@ Parser and command tokens stay in English inside translated help text, for examp
 
 ## How to contribute a language fix
 
-1. Open the language file (for example `fr.ts`).
+1. Open the language file (for example `vi.ts` for Vietnamese or `fr.ts` for French).
 2. Add or update keys in `<lang>Overrides`.
-3. Keep command tokens in English where applicable (`/start:`, `/due:`, `/review:`, `/note:`, `/next`, `@context`, `#tag`, `+Project`).
-4. Run tests:
+3. For a new language, also register it in `i18n-types.ts`, `i18n-constants.ts`, `i18n-translations.ts`, `i18n-loader.ts`, `date.ts`, app language pickers, and the locale parity checks.
+4. Keep command tokens in English where applicable (`/start:`, `/due:`, `/review:`, `/note:`, `/next`, `@context`, `#tag`, `+Project`).
+5. Run tests:
 
 ```bash
 bun run --filter @mindwtr/core test
@@ -39,7 +40,7 @@ From the repo root, run:
 bun run scripts/i18n-locale-diff.ts de
 ```
 
-Replace `de` with another locale code such as `fr`, `it`, or `nl`.
+Replace `de` with another locale code such as `vi`, `fr`, `it`, or `nl`.
 
 The script reports:
 

@@ -558,7 +558,7 @@ Make sure notifications are enabled:
 ### General
 
 - **Appearance** — System, Light, or Dark
-- **Language** — English, Chinese (Simplified), Chinese (Traditional), Spanish, Hindi, Arabic, German, Russian, Japanese, French, Portuguese, Polish, Korean, Italian, Turkish
+- **Language** — English, Vietnamese, Chinese (Simplified), Chinese (Traditional), Spanish, Hindi, Arabic, German, Russian, Japanese, French, Portuguese, Polish, Korean, Czech, Italian, Turkish, Dutch
 
 ### Notifications
 

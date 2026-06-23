@@ -108,7 +108,7 @@ Mindwtr is **simple by default and powerful when needed**. We focus on reducing 
 | 📲 **Android Widget**  | Home screen focus/next widget                      |
 | **Apple Shortcuts** | iOS capture and GTD navigation actions             |
 | 🌐 **Web App (PWA)**   | Offline-capable browser version                    |
-| 🌍 **i18n**            | EN, 中文, ES, HI, AR, DE, RU, JA, FR, PT, PL, KO, IT, TR, NL |
+| 🌍 **i18n**            | EN, VI, 中文, ES, HI, AR, DE, RU, JA, FR, PT, PL, KO, CS, IT, TR, NL |
 | 🖥️ **Cross-Platform**  | Desktop (Tauri) + Mobile (React Native)            |
 
 ## 📱 Feature Parity Matrix

@@ -202,7 +202,7 @@ interface AppData {
     people?: Person[];
     settings: {
         theme?: 'light' | 'dark' | 'system';
-        language?: 'en' | 'zh' | 'zh-Hant' | 'es' | 'hi' | 'ar' | 'de' | 'ru' | 'ja' | 'fr' | 'pt' | 'pl' | 'ko' | 'it' | 'tr' | 'nl' | 'system';
+        language?: 'en' | 'vi' | 'zh' | 'zh-Hant' | 'es' | 'hi' | 'ar' | 'de' | 'ru' | 'ja' | 'fr' | 'pt' | 'pl' | 'ko' | 'cs' | 'it' | 'tr' | 'nl' | 'system';
         weekStart?: 'monday' | 'sunday';
         dateFormat?: string;
         timeFormat?: string;

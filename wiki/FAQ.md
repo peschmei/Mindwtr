@@ -64,20 +64,23 @@ Yes — GitHub Sponsors: https://github.com/sponsors/dongdongbh
 Mindwtr currently supports:
 
 - English
+- Tiếng Việt
 - 中文（简体）
 - 中文（繁體）
 - Español
-- Deutsch
-- 日本語
 - हिन्दी
 - العربية
+- Deutsch
 - Русский
+- 日本語
 - Français
 - Português
 - Polski
 - 한국어
+- Čeština
 - Italiano
 - Türkçe
+- Nederlands
 
 ### Where is my data stored?
 

@@ -454,7 +454,7 @@ Access Settings from the sidebar.
 
 ### General
 - **Appearance**: Light, Dark, or System
-- **Language**: English, Chinese (Simplified), Chinese (Traditional), Spanish, Hindi, Arabic, German, Russian, Japanese, French, Portuguese, Polish, Korean, Italian, Turkish
+- **Language**: English, Vietnamese, Chinese (Simplified), Chinese (Traditional), Spanish, Hindi, Arabic, German, Russian, Japanese, French, Portuguese, Polish, Korean, Czech, Italian, Turkish, Dutch
 - **Keyboard Shortcuts**: Vim or Emacs preset
 - **Launch at Startup**: Start Mindwtr automatically when you sign in
 

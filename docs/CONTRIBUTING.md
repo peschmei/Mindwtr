@@ -273,6 +273,8 @@ When updating translations:
 
 - Keep placeholders and interpolation keys unchanged
 - Keep command tokens intact where parser behavior depends on English commands
+- For a new language, register the locale in the shared i18n registries, date locale mapping, desktop/mobile language pickers, and locale parity checks
+- Run `bun run i18n:check` and relevant core i18n tests
 - Confirm UI still fits in small mobile layouts
 
 ## Need help?
