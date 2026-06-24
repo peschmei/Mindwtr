@@ -1055,6 +1055,7 @@ describeSqlite('SqliteAdapter', () => {
         expect(names).toContain('areaId');
         expect(names).toContain('sectionId');
         expect(names).toContain('purgedAt');
+        expect(names).toContain('relativeStartOffset');
         expect(names).toContain('rev');
         expect(names).toContain('revBy');
         const taskIndexes = allSql<{ name: string }>(db, 'PRAGMA index_list(tasks)');
@@ -1140,6 +1141,13 @@ describeSqlite('SqliteAdapter', () => {
                 VALUES ('bad-json', 'Bad json', 'next', '{invalid', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
             `)
         ).toThrow(/invalid_tasks_tags_json/i);
+
+        expect(() =>
+            runSql(db, `
+                INSERT INTO tasks (id, title, status, relativeStartOffset, createdAt, updatedAt)
+                VALUES ('bad-relative-start-json', 'Bad relative start json', 'next', '{invalid', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')
+            `)
+        ).toThrow(/invalid_tasks_relative_start_offset_json/i);
     });
 
     it('creates composite indexes used by sync queries', async () => {

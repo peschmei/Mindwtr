@@ -33,6 +33,7 @@ type UseTaskItemSubmitParams = {
     editRepeatReminderMinutes: number | undefined;
     editSectionId: string;
     editStartTime: string;
+    editRelativeStartOffset: Task['relativeStartOffset'];
     editStatus: Task['status'];
     editTags: string;
     editTimeEstimate: TimeEstimate | '';
@@ -68,6 +69,7 @@ export function useTaskItemSubmit({
     editRepeatReminderMinutes,
     editSectionId,
     editStartTime,
+    editRelativeStartOffset,
     editStatus,
     editTags,
     editTimeEstimate,
@@ -126,6 +128,7 @@ export function useTaskItemSubmit({
             status: options?.statusOverride ?? editStatus,
             dueDate: editDueDate || undefined,
             startTime: editStartTime || undefined,
+            relativeStartOffset: editRelativeStartOffset,
             projectId: resolvedProjectId,
             sectionId: resolvedSectionId,
             areaId: resolvedAreaId,
@@ -172,6 +175,7 @@ export function useTaskItemSubmit({
         editRepeatReminderMinutes,
         editSectionId,
         editStartTime,
+        editRelativeStartOffset,
         editStatus,
         editTags,
         editTimeEstimate,

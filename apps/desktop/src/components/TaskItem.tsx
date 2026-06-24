@@ -223,6 +223,8 @@ export const TaskItem = memo(function TaskItem({
         setEditDueDate,
         editStartTime,
         setEditStartTime,
+        editRelativeStartOffset,
+        setEditRelativeStartOffset,
         editProjectId,
         setEditProjectId,
         editSectionId,
@@ -603,6 +605,7 @@ export const TaskItem = memo(function TaskItem({
         attachmentError,
         visibleEditAttachments,
         editStartTime,
+        editRelativeStartOffset,
         editDueDate,
         editReviewAt,
         editRepeatReminderMinutes,
@@ -636,6 +639,7 @@ export const TaskItem = memo(function TaskItem({
         attachmentError,
         visibleEditAttachments,
         editStartTime,
+        editRelativeStartOffset,
         editDueDate,
         editReviewAt,
         editRepeatReminderMinutes,
@@ -672,6 +676,7 @@ export const TaskItem = memo(function TaskItem({
         openAttachment,
         removeAttachment,
         setEditStartTime,
+        setEditRelativeStartOffset,
         setEditDueDate,
         setEditReviewAt,
         setEditRepeatReminderMinutes,
@@ -700,6 +705,7 @@ export const TaskItem = memo(function TaskItem({
         openAttachment,
         removeAttachment,
         setEditStartTime,
+        setEditRelativeStartOffset,
         setEditDueDate,
         setEditReviewAt,
         setEditRepeatReminderMinutes,
@@ -808,6 +814,7 @@ export const TaskItem = memo(function TaskItem({
         editRepeatReminderMinutes,
         editSectionId,
         editStartTime,
+        editRelativeStartOffset,
         editStatus,
         editTags,
         editTimeEstimate,
@@ -980,6 +987,7 @@ export const TaskItem = memo(function TaskItem({
         if (editAssignedTo !== (task.assignedTo || '')) return true;
         if (editDueDate !== toDateTimeLocalValue(task.dueDate)) return true;
         if (editStartTime !== toDateTimeLocalValue(task.startTime)) return true;
+        if (JSON.stringify(editRelativeStartOffset ?? null) !== JSON.stringify(task.relativeStartOffset ?? null)) return true;
         if (editReviewAt !== toDateTimeLocalValue(task.reviewAt)) return true;
         if ((editRepeatReminderMinutes ?? undefined) !== (task.repeatReminderMinutes ?? undefined)) return true;
         return false;
@@ -1003,6 +1011,7 @@ export const TaskItem = memo(function TaskItem({
         editAssignedTo,
         editDueDate,
         editStartTime,
+        editRelativeStartOffset,
         editReviewAt,
         editRepeatReminderMinutes,
         task,

@@ -8,6 +8,7 @@ import {
     addCalendarMonths,
     buildRRuleString,
     continueMarkdownOnEnter,
+    computeRelativeStartTime,
     formatCalendarInputDate,
     getCalendarDayOfMonth,
     getCalendarMonthIndex,
@@ -535,6 +536,7 @@ export type TaskItemFieldRendererData = {
     attachmentError: string | null;
     visibleEditAttachments: Attachment[];
     editStartTime: string;
+    editRelativeStartOffset: Task['relativeStartOffset'];
     editDueDate: string;
     editReviewAt: string;
     editRepeatReminderMinutes: number | undefined;
@@ -572,6 +574,7 @@ export type TaskItemFieldRendererHandlers = {
     openAttachment: (attachment: Attachment) => void;
     removeAttachment: (id: string) => void;
     setEditStartTime: (value: string) => void;
+    setEditRelativeStartOffset: (value: Task['relativeStartOffset']) => void;
     setEditDueDate: (value: string) => void;
     setEditReviewAt: (value: string) => void;
     setEditRepeatReminderMinutes: (value: number | undefined) => void;
@@ -612,6 +615,7 @@ export function TaskItemFieldRenderer({
         attachmentError,
         visibleEditAttachments,
         editStartTime,
+        editRelativeStartOffset,
         editDueDate,
         editReviewAt,
         editRepeatReminderMinutes,
@@ -677,6 +681,7 @@ export function TaskItemFieldRenderer({
         openAttachment,
         removeAttachment,
         setEditStartTime,
+        setEditRelativeStartOffset,
         setEditDueDate,
         setEditReviewAt,
         setEditRepeatReminderMinutes,
@@ -1095,6 +1100,7 @@ export function TaskItemFieldRenderer({
                 const dateValue = parsed ? safeFormatDate(parsed, 'yyyy-MM-dd') : '';
                 const timeValue = hasTime && parsed ? safeFormatDate(parsed, 'HH:mm') : '';
                 const handleDateChange = (value: string) => {
+                    setEditRelativeStartOffset(undefined);
                     const normalizedDate = normalizeDateInputValue(value);
                     if (!normalizedDate) {
                         setEditStartTime('');
@@ -1111,6 +1117,7 @@ export function TaskItemFieldRenderer({
                     setEditStartTime(normalizedDate);
                 };
                 const handleTimeChange = (value: string) => {
+                    setEditRelativeStartOffset(undefined);
                     if (!value) {
                         if (dateValue) setEditStartTime(dateValue);
                         else setEditStartTime('');
@@ -1119,26 +1126,88 @@ export function TaskItemFieldRenderer({
                     const datePart = dateValue || safeFormatDate(new Date(), 'yyyy-MM-dd');
                     setEditStartTime(`${datePart}T${value}`);
                 };
-                return renderDateField({
-                    label: t('taskEdit.startDateLabel'),
-                    dateAriaLabel: t('task.aria.startDate'),
-                    dateValue,
-                    selectedDate: parsed,
-                    onDateChange: handleDateChange,
-                    timeInput: (
-                        <input
-                            type="time"
-                            lang={nativeDateInputLocale}
-                            aria-label={t('task.aria.startTime')}
-                            value={timeValue}
-                            onChange={(event) => handleTimeChange(event.target.value)}
-                            className={timeInputClassName}
-                        />
-                    ),
-                    onClear: () => setEditStartTime(''),
-                    hasValue: Boolean(editStartTime),
-                    warning: dateIssueLabel,
-                });
+                const relativeUnit = editRelativeStartOffset?.unit ?? 'day';
+                const relativeAmount = editRelativeStartOffset ? Math.abs(editRelativeStartOffset.amount) : 3;
+                const applyRelativeStartOffset = (amountValue: number, unitValue: NonNullable<Task['relativeStartOffset']>['unit']) => {
+                    if (!editDueDate || !Number.isFinite(amountValue)) return;
+                    const offset = { amount: -Math.max(1, Math.floor(amountValue)), unit: unitValue };
+                    setEditRelativeStartOffset(offset);
+                    const computedStart = computeRelativeStartTime(editDueDate, offset);
+                    if (computedStart) setEditStartTime(computedStart);
+                };
+                return (
+                    <>
+                        {renderDateField({
+                            label: t('taskEdit.startDateLabel'),
+                            dateAriaLabel: t('task.aria.startDate'),
+                            dateValue,
+                            selectedDate: parsed,
+                            onDateChange: handleDateChange,
+                            timeInput: (
+                                <input
+                                    type="time"
+                                    lang={nativeDateInputLocale}
+                                    aria-label={t('task.aria.startTime')}
+                                    value={timeValue}
+                                    onChange={(event) => handleTimeChange(event.target.value)}
+                                    className={timeInputClassName}
+                                />
+                            ),
+                            onClear: () => {
+                                setEditRelativeStartOffset(undefined);
+                                setEditStartTime('');
+                            },
+                            hasValue: Boolean(editStartTime),
+                            warning: dateIssueLabel,
+                        })}
+                        {editDueDate && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5" aria-label={tFallback(t, 'taskEdit.startModeLabel', 'Start mode')}>
+                                    <button
+                                        type="button"
+                                        aria-pressed={!editRelativeStartOffset}
+                                        onClick={() => setEditRelativeStartOffset(undefined)}
+                                        className={`rounded px-2 py-1 ${!editRelativeStartOffset ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                    >
+                                        {tFallback(t, 'taskEdit.startModeAbsolute', 'Absolute')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-pressed={Boolean(editRelativeStartOffset)}
+                                        onClick={() => applyRelativeStartOffset(relativeAmount, relativeUnit)}
+                                        className={`rounded px-2 py-1 ${editRelativeStartOffset ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                    >
+                                        {tFallback(t, 'taskEdit.startModeRelative', 'Relative')}
+                                    </button>
+                                </div>
+                                {editRelativeStartOffset && (
+                                    <>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={10000}
+                                            value={relativeAmount}
+                                            onChange={(event) => applyRelativeStartOffset(Number(event.target.value), relativeUnit)}
+                                            className="h-8 w-16 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                                            aria-label={tFallback(t, 'taskEdit.relativeStartAmount', 'Start lead time')}
+                                        />
+                                        <select
+                                            value={relativeUnit}
+                                            onChange={(event) => applyRelativeStartOffset(relativeAmount, event.target.value as NonNullable<Task['relativeStartOffset']>['unit'])}
+                                            className="h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                                            aria-label={tFallback(t, 'taskEdit.relativeStartUnit', 'Start lead time unit')}
+                                        >
+                                            <option value="minute">{tFallback(t, 'taskEdit.relativeStartMinutes', 'minutes before due')}</option>
+                                            <option value="hour">{tFallback(t, 'taskEdit.relativeStartHours', 'hours before due')}</option>
+                                            <option value="day">{tFallback(t, 'taskEdit.relativeStartDays', 'days before due')}</option>
+                                            <option value="week">{tFallback(t, 'taskEdit.relativeStartWeeks', 'weeks before due')}</option>
+                                        </select>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </>
+                );
             }
         case 'dueDate':
             {
@@ -1146,30 +1215,40 @@ export function TaskItemFieldRenderer({
                 const parsed = editDueDate ? safeParseDate(editDueDate) : null;
                 const dateValue = parsed ? safeFormatDate(parsed, 'yyyy-MM-dd') : '';
                 const timeValue = hasTime && parsed ? safeFormatDate(parsed, 'HH:mm') : '';
+                const updateDueDate = (nextDueDate: string) => {
+                    setEditDueDate(nextDueDate);
+                    if (!editRelativeStartOffset) return;
+                    if (!nextDueDate) {
+                        setEditRelativeStartOffset(undefined);
+                        return;
+                    }
+                    const computedStart = computeRelativeStartTime(nextDueDate, editRelativeStartOffset);
+                    if (computedStart) setEditStartTime(computedStart);
+                };
                 const handleDateChange = (value: string) => {
                     const normalizedDate = normalizeDateInputValue(value);
                     if (!normalizedDate) {
-                        setEditDueDate('');
+                        updateDueDate('');
                         return;
                     }
                     if (hasTime && timeValue) {
-                        setEditDueDate(`${normalizedDate}T${timeValue}`);
+                        updateDueDate(`${normalizedDate}T${timeValue}`);
                         return;
                     }
                     if (defaultScheduleTime) {
-                        setEditDueDate(`${normalizedDate}T${defaultScheduleTime}`);
+                        updateDueDate(`${normalizedDate}T${defaultScheduleTime}`);
                         return;
                     }
-                    setEditDueDate(normalizedDate);
+                    updateDueDate(normalizedDate);
                 };
                 const handleTimeChange = (value: string) => {
                     if (!value) {
-                        if (dateValue) setEditDueDate(dateValue);
-                        else setEditDueDate('');
+                        if (dateValue) updateDueDate(dateValue);
+                        else updateDueDate('');
                         return;
                     }
                     const datePart = dateValue || safeFormatDate(new Date(), 'yyyy-MM-dd');
-                    setEditDueDate(`${datePart}T${value}`);
+                    updateDueDate(`${datePart}T${value}`);
                 };
                 return (
                     <>
@@ -1189,7 +1268,7 @@ export function TaskItemFieldRenderer({
                                     className={timeInputClassName}
                                 />
                             ),
-                            onClear: () => setEditDueDate(''),
+                            onClear: () => updateDueDate(''),
                             hasValue: Boolean(editDueDate),
                             warning: dateIssueLabel,
                         })}

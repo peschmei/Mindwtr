@@ -1,4 +1,4 @@
-export const SQLITE_SCHEMA_VERSION = 9;
+export const SQLITE_SCHEMA_VERSION = 10;
 
 export const SQLITE_BASE_SCHEMA = `
 PRAGMA journal_mode = WAL;
@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   assignedTo TEXT,
   taskMode TEXT,
   startTime TEXT,
+  relativeStartOffset TEXT,
   dueDate TEXT,
   recurrence TEXT,
   showFutureRecurrence INTEGER,
@@ -161,6 +162,8 @@ BEGIN
   WHERE new.attachments IS NOT NULL AND json_valid(new.attachments) = 0;
   SELECT RAISE(ABORT, 'invalid_tasks_recurrence_json')
   WHERE new.recurrence IS NOT NULL AND json_valid(new.recurrence) = 0;
+  SELECT RAISE(ABORT, 'invalid_tasks_relative_start_offset_json')
+  WHERE new.relativeStartOffset IS NOT NULL AND json_valid(new.relativeStartOffset) = 0;
 END;
 
 CREATE TRIGGER IF NOT EXISTS tasks_validate_update
@@ -178,6 +181,8 @@ BEGIN
   WHERE new.attachments IS NOT NULL AND json_valid(new.attachments) = 0;
   SELECT RAISE(ABORT, 'invalid_tasks_recurrence_json')
   WHERE new.recurrence IS NOT NULL AND json_valid(new.recurrence) = 0;
+  SELECT RAISE(ABORT, 'invalid_tasks_relative_start_offset_json')
+  WHERE new.relativeStartOffset IS NOT NULL AND json_valid(new.relativeStartOffset) = 0;
 END;
 
 CREATE TRIGGER IF NOT EXISTS projects_validate_insert

@@ -887,6 +887,12 @@ export type {
 } from './external-calendar-colors';
 
 export {
+    computeRelativeStartTime,
+    normalizeRelativeStartOffset,
+    resolveRelativeStartUpdates,
+} from './task-relative-start';
+
+export {
     normalizeTaskForLoad,
     normalizeTaskStatus,
     TASK_STATUS_ORDER,

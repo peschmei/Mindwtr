@@ -3,6 +3,7 @@ import { Keyboard, Platform, Pressable, Text, TextInput, TouchableOpacity, View 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
     buildRRuleString,
+    computeRelativeStartTime,
     getProjectedRecurringTaskCalendarDate,
     getTaskDateCoherenceIssues,
     getRecurrenceUntilValue,
@@ -312,6 +313,29 @@ export function TaskEditScheduleField({
                 )}
             </View>
         );
+    };
+
+    const applyRelativeStartOffset = (amountValue: number, unitValue: NonNullable<Task['relativeStartOffset']>['unit']) => {
+        if (!editedTask.dueDate || !Number.isFinite(amountValue)) return;
+        const offset = { amount: -Math.max(1, Math.floor(amountValue)), unit: unitValue };
+        const computedStart = computeRelativeStartTime(editedTask.dueDate, offset);
+        setEditedTask((prev) => ({
+            ...prev,
+            relativeStartOffset: offset,
+            ...(computedStart ? { startTime: computedStart } : {}),
+        }));
+    };
+
+    const updateDueDate = (dueDate: string | undefined) => {
+        setEditedTask((prev) => {
+            if (!dueDate) return { ...prev, dueDate: undefined, relativeStartOffset: undefined };
+            const computedStart = computeRelativeStartTime(dueDate, prev.relativeStartOffset);
+            return {
+                ...prev,
+                dueDate,
+                ...(computedStart ? { startTime: computedStart } : {}),
+            };
+        });
     };
 
     switch (fieldId) {
@@ -698,7 +722,7 @@ export function TaskEditScheduleField({
                             {!!editedTask.startTime && hasTime && (
                                 <TouchableOpacity
                                     style={[styles.clearDateBtn, { borderColor: tc.border, backgroundColor: tc.filterBg }]}
-                                    onPress={() => setEditedTask((prev) => ({ ...prev, startTime: clearTimePart(prev.startTime) }))}
+                                    onPress={() => setEditedTask((prev) => ({ ...prev, startTime: clearTimePart(prev.startTime), relativeStartOffset: undefined }))}
                                 >
                                     <Text style={[styles.clearDateText, { color: tc.secondaryText }]}>{dateOnlyLabel}</Text>
                                 </TouchableOpacity>
@@ -706,7 +730,7 @@ export function TaskEditScheduleField({
                             {!!editedTask.startTime && (
                                 <TouchableOpacity
                                     style={[styles.clearDateBtn, { borderColor: tc.border, backgroundColor: tc.filterBg }]}
-                                    onPress={() => setEditedTask((prev) => ({ ...prev, startTime: undefined }))}
+                                    onPress={() => setEditedTask((prev) => ({ ...prev, startTime: undefined, relativeStartOffset: undefined }))}
                                 >
                                     <Text style={[styles.clearDateText, { color: tc.secondaryText }]}>{t('common.clear')}</Text>
                                 </TouchableOpacity>
@@ -714,6 +738,75 @@ export function TaskEditScheduleField({
                         </View>
                         {renderQuickDateChips('start', parsed)}
                         {renderDateIssue()}
+                        {!!editedTask.dueDate && (() => {
+                            const relativeUnit = editedTask.relativeStartOffset?.unit ?? 'day';
+                            const relativeAmount = editedTask.relativeStartOffset ? Math.abs(editedTask.relativeStartOffset.amount) : 3;
+                            const modeOptions = [
+                                { label: tFallback(t, 'taskEdit.startModeAbsolute', 'Absolute'), active: !editedTask.relativeStartOffset, onPress: () => setEditedTask((prev) => ({ ...prev, relativeStartOffset: undefined })) },
+                                { label: tFallback(t, 'taskEdit.startModeRelative', 'Relative'), active: Boolean(editedTask.relativeStartOffset), onPress: () => applyRelativeStartOffset(relativeAmount, relativeUnit) },
+                            ];
+                            const unitOptions: Array<{ value: NonNullable<Task['relativeStartOffset']>['unit']; label: string }> = [
+                                { value: 'minute', label: tFallback(t, 'taskEdit.relativeStartMinutesShort', 'Min') },
+                                { value: 'hour', label: tFallback(t, 'taskEdit.relativeStartHoursShort', 'Hr') },
+                                { value: 'day', label: tFallback(t, 'taskEdit.relativeStartDaysShort', 'Day') },
+                                { value: 'week', label: tFallback(t, 'taskEdit.relativeStartWeeksShort', 'Wk') },
+                            ];
+                            return (
+                                <View style={{ marginTop: 10, gap: 8 }}>
+                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                        {modeOptions.map((option) => (
+                                            <TouchableOpacity
+                                                key={option.label}
+                                                accessibilityRole="button"
+                                                accessibilityState={{ selected: option.active }}
+                                                style={[
+                                                    styles.statusChip,
+                                                    { backgroundColor: option.active ? tc.tint : tc.filterBg, borderColor: option.active ? tc.tint : tc.border },
+                                                ]}
+                                                onPress={option.onPress}
+                                            >
+                                                <Text style={[styles.statusText, { color: option.active ? '#fff' : tc.secondaryText }]}>{option.label}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                    {!!editedTask.relativeStartOffset && (
+                                        <View style={{ gap: 8 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                <TextInput
+                                                    value={String(relativeAmount)}
+                                                    keyboardType="number-pad"
+                                                    onChangeText={(text) => applyRelativeStartOffset(Number(text), relativeUnit)}
+                                                    style={[styles.input, { width: 74, color: tc.text, backgroundColor: tc.inputBg, borderColor: tc.border }]}
+                                                    accessibilityLabel={tFallback(t, 'taskEdit.relativeStartAmount', 'Start lead time')}
+                                                />
+                                                <Text style={{ color: tc.secondaryText }}>
+                                                    {tFallback(t, 'taskEdit.relativeStartBeforeDue', 'before due')}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                {unitOptions.map((option) => {
+                                                    const active = relativeUnit === option.value;
+                                                    return (
+                                                        <TouchableOpacity
+                                                            key={option.value}
+                                                            accessibilityRole="button"
+                                                            accessibilityState={{ selected: active }}
+                                                            style={[
+                                                                styles.statusChip,
+                                                                { backgroundColor: active ? tc.tint : tc.filterBg, borderColor: active ? tc.tint : tc.border },
+                                                            ]}
+                                                            onPress={() => applyRelativeStartOffset(relativeAmount, option.value)}
+                                                        >
+                                                            <Text style={[styles.statusText, { color: active ? '#fff' : tc.secondaryText }]}>{option.label}</Text>
+                                                        </TouchableOpacity>
+                                                    );
+                                                })}
+                                            </View>
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        })()}
                         {renderInlineIOSDatePicker(['start', 'start-time'])}
                     </View>
                 </View>
@@ -771,7 +864,7 @@ export function TaskEditScheduleField({
                             {!!editedTask.dueDate && hasTime && (
                                 <TouchableOpacity
                                     style={[styles.clearDateBtn, { borderColor: tc.border, backgroundColor: tc.filterBg }]}
-                                    onPress={() => setEditedTask((prev) => ({ ...prev, dueDate: clearTimePart(prev.dueDate) }))}
+                                    onPress={() => updateDueDate(clearTimePart(editedTask.dueDate))}
                                 >
                                     <Text style={[styles.clearDateText, { color: tc.secondaryText }]}>{dateOnlyLabel}</Text>
                                 </TouchableOpacity>
@@ -779,7 +872,7 @@ export function TaskEditScheduleField({
                             {!!editedTask.dueDate && (
                                 <TouchableOpacity
                                     style={[styles.clearDateBtn, { borderColor: tc.border, backgroundColor: tc.filterBg }]}
-                                    onPress={() => setEditedTask((prev) => ({ ...prev, dueDate: undefined }))}
+                                    onPress={() => updateDueDate(undefined)}
                                 >
                                     <Text style={[styles.clearDateText, { color: tc.secondaryText }]}>{t('common.clear')}</Text>
                                 </TouchableOpacity>

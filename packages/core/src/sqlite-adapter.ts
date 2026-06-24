@@ -11,6 +11,7 @@ import { SEARCH_RESULT_LIMIT, type SearchProjectResult, type SearchResults, type
 import { SQLITE_BASE_SCHEMA, SQLITE_FTS_SCHEMA, SQLITE_INDEX_SCHEMA } from './sqlite-schema';
 import { normalizeTaskStatus } from './task-status';
 import { normalizeRecurrenceForLoad } from './recurrence';
+import { normalizeRelativeStartOffset } from './task-relative-start';
 import { logWarn } from './logger';
 import { normalizeSavedFilter, normalizeSavedFilters } from './saved-filters';
 import { normalizeProjectSequentialScope } from './project-utils';
@@ -131,6 +132,7 @@ export const TASK_SQLITE_COLUMNS = [
     'assignedTo',
     'taskMode',
     'startTime',
+    'relativeStartOffset',
     'dueDate',
     'recurrence',
     'showFutureRecurrence',
@@ -174,6 +176,7 @@ energyLevel=excluded.energyLevel,
 assignedTo=excluded.assignedTo,
 taskMode=excluded.taskMode,
 startTime=excluded.startTime,
+relativeStartOffset=excluded.relativeStartOffset,
 dueDate=excluded.dueDate,
 recurrence=excluded.recurrence,
 showFutureRecurrence=excluded.showFutureRecurrence,
@@ -219,6 +222,7 @@ export const taskToSqliteRow = (task: Task): unknown[] => {
         task.assignedTo ?? null,
         task.taskMode ?? null,
         task.startTime ?? null,
+        toJson(task.relativeStartOffset),
         task.dueDate ?? null,
         toJson(task.recurrence),
         toBool(task.showFutureRecurrence),
@@ -367,6 +371,7 @@ export function mapSqliteTaskRow(row: Record<string, unknown>): Task {
         assignedTo: row.assignedTo as string | undefined,
         taskMode: row.taskMode as Task['taskMode'] | undefined,
         startTime: row.startTime as string | undefined,
+        relativeStartOffset: normalizeRelativeStartOffset(fromJson<unknown>(row.relativeStartOffset, undefined)),
         dueDate: row.dueDate as string | undefined,
         recurrence: normalizeRecurrenceForLoad(fromJson<unknown>(row.recurrence, null)),
         showFutureRecurrence: fromBool(row.showFutureRecurrence),
@@ -631,6 +636,7 @@ export class SqliteAdapter {
             { name: 'assignedTo', sql: 'ALTER TABLE tasks ADD COLUMN assignedTo TEXT' },
             { name: 'taskMode', sql: 'ALTER TABLE tasks ADD COLUMN taskMode TEXT' },
             { name: 'startTime', sql: 'ALTER TABLE tasks ADD COLUMN startTime TEXT' },
+            { name: 'relativeStartOffset', sql: 'ALTER TABLE tasks ADD COLUMN relativeStartOffset TEXT' },
             { name: 'dueDate', sql: 'ALTER TABLE tasks ADD COLUMN dueDate TEXT' },
             { name: 'recurrence', sql: 'ALTER TABLE tasks ADD COLUMN recurrence TEXT' },
             { name: 'showFutureRecurrence', sql: 'ALTER TABLE tasks ADD COLUMN showFutureRecurrence INTEGER' },

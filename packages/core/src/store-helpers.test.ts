@@ -5,6 +5,7 @@ import {
     computeProjectDerivedState,
     computeTaskDerivedState,
     createProjectOrderReserver,
+    applyTaskUpdates,
     getNextProjectOrder,
     hasSameEntityIdentity,
     reconcileEntityCollection,
@@ -67,6 +68,89 @@ const createSection = (
     rev: 1,
     revBy: 'device-a',
     ...overrides,
+});
+
+
+describe('relative start updates', () => {
+    it('recomputes startTime from the stored due-date offset when dueDate changes', () => {
+        const task = createTask('t1', undefined, undefined, {
+            dueDate: '2026-04-24',
+            startTime: '2026-04-21',
+            relativeStartOffset: { amount: -3, unit: 'day' },
+        } as Partial<Task>);
+
+        const { updatedTask } = applyTaskUpdates(task, {
+            dueDate: '2026-05-01',
+        }, '2026-04-20T10:00:00.000Z');
+
+        expect(updatedTask.dueDate).toBe('2026-05-01');
+        expect(updatedTask.startTime).toBe('2026-04-28');
+        expect((updatedTask as Task & { relativeStartOffset?: unknown }).relativeStartOffset).toEqual({
+            amount: -3,
+            unit: 'day',
+        });
+    });
+
+    it('sets startTime when a relative offset is added to a task with a dueDate', () => {
+        const task = createTask('t1', undefined, undefined, {
+            dueDate: '2026-04-24',
+            startTime: undefined,
+        });
+
+        const { updatedTask } = applyTaskUpdates(task, {
+            relativeStartOffset: { amount: -1, unit: 'week' },
+        }, '2026-04-20T10:00:00.000Z');
+
+        expect(updatedTask.startTime).toBe('2026-04-17');
+        expect(updatedTask.relativeStartOffset).toEqual({ amount: -1, unit: 'week' });
+    });
+
+    it('recomputes when full-form saves include an unchanged startTime', () => {
+        const task = createTask('t1', undefined, undefined, {
+            dueDate: '2026-04-24',
+            startTime: '2026-04-21',
+            relativeStartOffset: { amount: -3, unit: 'day' },
+        } as Partial<Task>);
+
+        const { updatedTask } = applyTaskUpdates(task, {
+            dueDate: '2026-05-01',
+            startTime: '2026-04-21',
+        }, '2026-04-20T10:00:00.000Z');
+
+        expect(updatedTask.startTime).toBe('2026-04-28');
+        expect(updatedTask.relativeStartOffset).toEqual({ amount: -3, unit: 'day' });
+    });
+
+    it('clears the relative start link when startTime is edited directly', () => {
+        const task = createTask('t1', undefined, undefined, {
+            dueDate: '2026-04-24',
+            startTime: '2026-04-21',
+            relativeStartOffset: { amount: -3, unit: 'day' },
+        } as Partial<Task>);
+
+        const { updatedTask } = applyTaskUpdates(task, {
+            startTime: '2026-04-22',
+        }, '2026-04-20T10:00:00.000Z');
+
+        expect(updatedTask.startTime).toBe('2026-04-22');
+        expect((updatedTask as Task & { relativeStartOffset?: unknown }).relativeStartOffset).toBeUndefined();
+    });
+
+    it('keeps the current startTime as absolute when dueDate is removed', () => {
+        const task = createTask('t1', undefined, undefined, {
+            dueDate: '2026-04-24',
+            startTime: '2026-04-21',
+            relativeStartOffset: { amount: -3, unit: 'day' },
+        } as Partial<Task>);
+
+        const { updatedTask } = applyTaskUpdates(task, {
+            dueDate: undefined,
+        }, '2026-04-20T10:00:00.000Z');
+
+        expect(updatedTask.dueDate).toBeUndefined();
+        expect(updatedTask.startTime).toBe('2026-04-21');
+        expect((updatedTask as Task & { relativeStartOffset?: unknown }).relativeStartOffset).toBeUndefined();
+    });
 });
 
 describe('entity collection helpers', () => {

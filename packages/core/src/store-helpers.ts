@@ -4,6 +4,7 @@ import {
     collectTaskTokenUsage,
     getUsedTaskTokensFromUsage,
 } from './task-token-usage';
+import { resolveRelativeStartUpdates } from './task-relative-start';
 import { rescheduleTask } from './task-utils';
 import { filterNotDeleted } from './sync-helpers';
 import { nextRevision, normalizeRevision } from './sync-revision';
@@ -38,6 +39,7 @@ export const getReferenceTaskFieldClears = (): Partial<Task> => ({
     status: 'reference',
     startTime: undefined,
     dueDate: undefined,
+    relativeStartOffset: undefined,
     reviewAt: undefined,
     recurrence: undefined,
     priority: undefined,
@@ -84,8 +86,12 @@ export function applyTaskUpdates(oldTask: Task, updates: Partial<Task>, now: str
         };
     }
 
-    if (Object.prototype.hasOwnProperty.call(updatesToApply, 'dueDate') && incomingStatus !== 'reference') {
-        const rescheduled = rescheduleTask(oldTask, updatesToApply.dueDate);
+    if (incomingStatus !== 'reference') {
+        finalUpdates = resolveRelativeStartUpdates(oldTask, finalUpdates);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(finalUpdates, 'dueDate') && incomingStatus !== 'reference') {
+        const rescheduled = rescheduleTask(oldTask, finalUpdates.dueDate);
         finalUpdates = {
             ...finalUpdates,
             dueDate: rescheduled.dueDate,

@@ -19,6 +19,8 @@ type TaskItemEditState = {
     setEditDueDate: (value: string) => void;
     editStartTime: string;
     setEditStartTime: (value: string) => void;
+    editRelativeStartOffset: Task['relativeStartOffset'];
+    setEditRelativeStartOffset: (value: Task['relativeStartOffset']) => void;
     editProjectId: string;
     setEditProjectId: (value: string) => void;
     editSectionId: string;
@@ -69,6 +71,7 @@ export function useTaskItemEditState({
     const [editTitle, setEditTitle] = useState(task.title);
     const [editDueDate, setEditDueDate] = useState(toDateTimeLocalValue(task.dueDate));
     const [editStartTime, setEditStartTime] = useState(toDateTimeLocalValue(task.startTime));
+    const [editRelativeStartOffset, setEditRelativeStartOffset] = useState<Task['relativeStartOffset']>(task.relativeStartOffset);
     const [editProjectId, setEditProjectId] = useState(task.projectId || '');
     const [editSectionId, setEditSectionId] = useState(task.sectionId || '');
     const [editAreaId, setEditAreaId] = useState(task.areaId || '');
@@ -99,6 +102,7 @@ export function useTaskItemEditState({
         setEditTitle(task.title);
         setEditDueDate(toDateTimeLocalValue(task.dueDate));
         setEditStartTime(toDateTimeLocalValue(task.startTime));
+        setEditRelativeStartOffset(task.relativeStartOffset);
         setEditProjectId(task.projectId || '');
         setEditSectionId(task.sectionId || '');
         setEditAreaId(task.areaId || '');
@@ -128,6 +132,8 @@ export function useTaskItemEditState({
         setEditDueDate,
         editStartTime,
         setEditStartTime,
+        editRelativeStartOffset,
+        setEditRelativeStartOffset,
         editProjectId,
         setEditProjectId,
         editSectionId,

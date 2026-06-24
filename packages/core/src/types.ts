@@ -177,6 +177,15 @@ export interface ChecklistItem {
     isCompleted: boolean;
 }
 
+
+export type RelativeStartOffsetUnit = 'minute' | 'hour' | 'day' | 'week';
+
+export interface RelativeStartOffset {
+    /** Negative offset from dueDate; e.g. -3 day means start three days before due. */
+    amount: number;
+    unit: RelativeStartOffsetUnit;
+}
+
 export interface Task {
     id: string;
     title: string;
@@ -186,6 +195,7 @@ export interface Task {
     assignedTo?: string;
     taskMode?: TaskMode; // 'list' for checklist-first tasks
     startTime?: string; // ISO date string
+    relativeStartOffset?: RelativeStartOffset; // Offset from dueDate that recomputes startTime when dueDate changes
     dueDate?: string; // ISO date string
     recurrence?: Recurrence | RecurrenceRule; // Legacy string inputs are normalized to Recurrence on load/store writes
     showFutureRecurrence?: boolean; // Calendar-only preview of the next recurrence; does not create a real task.
