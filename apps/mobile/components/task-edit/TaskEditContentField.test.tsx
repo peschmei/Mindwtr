@@ -189,30 +189,32 @@ const createChecklistState = (checklist = [{ id: 'check-1', title: 'Item 1', isC
 };
 
 describe('TaskEditContentField', () => {
-  it('does not register the long description input as a keyboard auto-scroll target', () => {
+  it('registers the iOS description input as a keyboard auto-scroll target', () => {
     const handleInputFocus = vi.fn();
     const setIsDescriptionInputFocused = vi.fn();
     let tree!: ReturnType<typeof create>;
 
-    act(() => {
-      tree = create(
-        <TaskEditContentField
-          {...baseProps}
-          fieldId="description"
-          handleInputFocus={handleInputFocus}
-          setIsDescriptionInputFocused={setIsDescriptionInputFocused}
-        />
-      );
+    withPlatform('ios', () => {
+      act(() => {
+        tree = create(
+          <TaskEditContentField
+            {...baseProps}
+            fieldId="description"
+            handleInputFocus={handleInputFocus}
+            setIsDescriptionInputFocused={setIsDescriptionInputFocused}
+          />
+        );
+      });
+
+      const input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.descriptionLabel' });
+
+      act(() => {
+        input.props.onFocus({ nativeEvent: { target: 42 } });
+      });
+
+      expect(setIsDescriptionInputFocused).toHaveBeenCalledWith(true);
+      expect(handleInputFocus).toHaveBeenCalledWith(42);
     });
-
-    const input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.descriptionLabel' });
-
-    act(() => {
-      input.props.onFocus({ nativeEvent: { target: 42 } });
-    });
-
-    expect(setIsDescriptionInputFocused).toHaveBeenCalledWith(true);
-    expect(handleInputFocus).toHaveBeenCalledWith(undefined);
   });
 
   it('does not register Android description focus as a whole-input scroll target', () => {

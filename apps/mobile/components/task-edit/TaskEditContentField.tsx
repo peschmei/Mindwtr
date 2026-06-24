@@ -348,9 +348,10 @@ export function TaskEditContentField({
                                 ref={descriptionInputRef}
                                 style={[styles.input, styles.textArea, inputStyle, textDirectionStyle]}
                                 value={descriptionDraft}
-                                onFocus={() => {
+                                onFocus={(event) => {
                                     setIsDescriptionInputFocused(true);
-                                    handleInputFocus(undefined);
+                                    const target = event.nativeEvent.target;
+                                    handleInputFocus(Platform.OS === 'ios' && target ? target : undefined);
                                 }}
                                 onBlur={() => {
                                     const preserveFocus = descriptionToolbarInteractionUntilRef.current > Date.now();
