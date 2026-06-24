@@ -750,8 +750,8 @@ const runFullCalendarSyncUnsafe = async (): Promise<void> => {
     const target = await resolveCalendarPushTarget();
     if (!target) return;
 
-    const { tasks } = useTaskStore.getState();
-    const calendarTasks = getCalendarPushTasks(tasks as Task[]);
+    const { _allTasks } = useTaskStore.getState();
+    const calendarTasks = getCalendarPushTasks(_allTasks as Task[]);
 
     // Sync all tasks currently in the store
     const results = await runLimitedSettled(calendarTasks, (task) => syncTaskToCalendar(task, target));

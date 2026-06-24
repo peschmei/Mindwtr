@@ -884,6 +884,37 @@ describe('runFullCalendarSync — selected target calendar', () => {
         }));
     });
 
+    it('exports existing due-date tasks from the full store when a target calendar is selected', async () => {
+        setupEnabled('cal-managed', 'davx5-calendar');
+        mockGetCalendarsAsync.mockResolvedValue([
+            {
+                id: 'davx5-calendar',
+                title: 'DAVx5',
+                accessLevel: 'owner',
+                allowsModifications: true,
+            },
+        ]);
+        const visibleTask = makeTask({ id: 'visible-task', title: 'Visible task', dueDate: '2026-04-20' });
+        const existingTask = makeTask({ id: 'existing-task', title: 'Existing task', dueDate: '2026-04-21' });
+        setStoreTasks([visibleTask], [visibleTask, existingTask]);
+
+        await runFullCalendarSync();
+
+        expect(mockCreateCalendarAsync).not.toHaveBeenCalled();
+        expect(mockCreateEventAsync).toHaveBeenCalledWith('davx5-calendar', expect.objectContaining({
+            calendarId: 'davx5-calendar',
+            title: visibleTask.title,
+        }));
+        expect(mockCreateEventAsync).toHaveBeenCalledWith('davx5-calendar', expect.objectContaining({
+            calendarId: 'davx5-calendar',
+            title: existingTask.title,
+        }));
+        expect(mockUpsertCalendarSyncEntry).toHaveBeenCalledWith(expect.objectContaining({
+            taskId: existingTask.id,
+            calendarId: 'davx5-calendar',
+        }));
+    });
+
     it('keeps titles unprefixed when the selected target is the managed Mindwtr calendar', async () => {
         setupEnabled('cal-managed', 'cal-managed');
         mockGetCalendarsAsync.mockResolvedValue([
