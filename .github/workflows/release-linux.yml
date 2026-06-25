@@ -163,6 +163,14 @@ jobs:
                 done
               fi
 
+              # libwayland-client must come from the host Mesa/EGL stack. If the
+              # AppImage bundles the build host copy, newer distros can fail on
+              # startup with EGL_BAD_PARAMETER before the webview is created.
+              while IFS= read -r WAYLAND_CLIENT_LIB; do
+                rm -f "$WAYLAND_CLIENT_LIB"
+                echo "Removed bundled Wayland client library: $WAYLAND_CLIENT_LIB"
+              done < <(find appdir \( -type f -o -type l \) -name 'libwayland-client.so*' | sort)
+
               # Some Tauri/linuxdeploy builds can leave AppRun.wrapped as 770.
               # AppImageHub runs the app as an unprivileged user and fails with:
               # "AppRun.wrapped: Permission denied". Normalize to world-executable.
