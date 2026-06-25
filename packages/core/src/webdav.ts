@@ -89,6 +89,25 @@ function buildHeaders(options: WebDavOptions): Record<string, string> {
     return headers;
 }
 
+function buildReadHeaders(options: WebDavOptions): Record<string, string> {
+    const headers = buildHeaders(options);
+    headers['Cache-Control'] = 'no-cache';
+    headers.Pragma = 'no-cache';
+    return headers;
+}
+
+function buildReadRequestInit(options: WebDavOptions, method: 'GET' | 'HEAD'): RequestInit {
+    const init: RequestInit = {
+        method,
+        headers: buildReadHeaders(options),
+        cache: 'no-store',
+    };
+    if (options.signal) {
+        init.signal = options.signal;
+    }
+    return init;
+}
+
 const WEBDAV_HTTPS_ERROR = 'WebDAV requires HTTPS for public URLs (HTTP allowed for localhost, private IPs, and local hostnames).';
 const WEBDAV_TIMEOUT_ERROR = 'WebDAV request timed out';
 const WEBDAV_AUTOMKCOL_HEADER = 'X-NC-WebDAV-AutoMkcol';
@@ -325,10 +344,7 @@ export async function webdavGetJson<T>(
     const fetcher = options.fetcher ?? fetch;
     const res = await fetchWithTimeout(
         url,
-        {
-            method: 'GET',
-            headers: buildHeaders(options),
-        },
+        buildReadRequestInit(options, 'GET'),
         options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         fetcher,
         WEBDAV_TIMEOUT_ERROR,
@@ -461,7 +477,7 @@ export async function webdavFileExists(
     const fetcher = options.fetcher ?? fetch;
     const res = await fetchWithTimeout(
         url,
-        { method: 'HEAD', headers: buildHeaders(options), signal: options.signal },
+        buildReadRequestInit(options, 'HEAD'),
         options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         fetcher,
         WEBDAV_TIMEOUT_ERROR,
@@ -485,7 +501,7 @@ export async function webdavHeadFile(
     const fetcher = options.fetcher ?? fetch;
     const res = await fetchWithTimeout(
         url,
-        { method: 'HEAD', headers: buildHeaders(options), signal: options.signal },
+        buildReadRequestInit(options, 'HEAD'),
         options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         fetcher,
         WEBDAV_TIMEOUT_ERROR,
@@ -520,7 +536,7 @@ export async function webdavGetFile(
     const fetcher = options.fetcher ?? fetch;
     const res = await fetchWithTimeout(
         url,
-        { method: 'GET', headers: buildHeaders(options), signal: options.signal },
+        buildReadRequestInit(options, 'GET'),
         options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         fetcher,
         WEBDAV_TIMEOUT_ERROR,

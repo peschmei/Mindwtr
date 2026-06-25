@@ -98,6 +98,56 @@ describe('webdav http helpers', () => {
         await expect(webdavGetJson<{ ok: boolean }>('https://example.com/data.json', { fetcher })).resolves.toEqual({ ok: true });
     });
 
+    it('bypasses HTTP caches for JSON and metadata reads', async () => {
+        const getFetcher = vi.fn(
+            async () =>
+                ({
+                    ok: true,
+                    status: 200,
+                    statusText: 'OK',
+                    text: async () => '{"ok":true}',
+                }) as Response,
+        );
+
+        await expect(webdavGetJson<{ ok: boolean }>('https://example.com/data.json', { fetcher: getFetcher })).resolves.toEqual({ ok: true });
+        expect(getFetcher.mock.calls[0]?.[1]).toMatchObject({
+            method: 'GET',
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache',
+                Pragma: 'no-cache',
+            },
+        });
+
+        const headFetcher = vi.fn(
+            async () =>
+                ({
+                    ok: true,
+                    status: 200,
+                    statusText: 'OK',
+                    headers: {
+                        get: (name: string) => ({
+                            etag: '"rev-1"',
+                        }[name.toLowerCase()] ?? null),
+                    },
+                    text: async () => '',
+                }) as unknown as Response,
+        );
+
+        await expect(webdavHeadFile('https://example.com/data.json', { fetcher: headFetcher })).resolves.toMatchObject({
+            exists: true,
+            fingerprint: 'webdav:v1:etag="rev-1"',
+        });
+        expect(headFetcher.mock.calls[0]?.[1]).toMatchObject({
+            method: 'HEAD',
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache',
+                Pragma: 'no-cache',
+            },
+        });
+    });
+
     it('reads HEAD metadata for fast sync checks', async () => {
         const fetcher = vi.fn(
             async () =>
