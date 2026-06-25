@@ -925,7 +925,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             const newTask: Task = {
                 ...sourceTask,
                 id: duplicatedTaskId,
-                title: `${sourceTask.title} (Copy)`,
+                title: sourceTask.title,
                 status: asNextAction ? 'next' : sourceTask.status,
                 checklist: duplicatedChecklist.length > 0 ? duplicatedChecklist : undefined,
                 attachments: duplicatedAttachments.length > 0 ? duplicatedAttachments : undefined,
@@ -961,7 +961,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
     },
 
     /**
-     * Promote a task into a project while keeping the task as the first action.
+     * Create or reuse a project from a task while keeping the task as the first action.
      */
     promoteTaskToProject: async (id: string, options?: { title?: string; color?: string; areaId?: string }) => {
         const changeAt = Date.now();
@@ -1001,6 +1001,12 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                     typeof project.title === 'string' &&
                     project.title.trim().toLowerCase() === normalizedTitle
             );
+            const projectSupportNotes = typeof sourceTask.description === 'string' && sourceTask.description.trim()
+                ? sourceTask.description.trim()
+                : undefined;
+            const projectTagIds = Array.from(new Set((sourceTask.tags || [])
+                .map((tag) => typeof tag === 'string' ? tag.trim() : '')
+                .filter(Boolean)));
             const deviceState = ensureDeviceId(state.settings);
             let targetProject = existingProject;
             let nextAllProjects = state._allProjects;
@@ -1021,7 +1027,8 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                     updatedAt: now,
                     ...(targetAreaId ? { areaId: targetAreaId } : {}),
                     ...(useSequentialDefault ? { isSequential: true } : {}),
-                    tagIds: [],
+                    ...(projectSupportNotes ? { supportNotes: projectSupportNotes } : {}),
+                    tagIds: projectTagIds,
                 };
                 targetProject = newProject;
                 nextAllProjects = [...state._allProjects, newProject];

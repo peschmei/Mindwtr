@@ -587,7 +587,7 @@ describe('TaskItem', () => {
 
         const duplicatedTask = useTaskStore.getState()._allTasks.find((task) => task.id !== menuTask.id);
         expect(duplicatedTask).toMatchObject({
-            title: 'Test Task (Copy)',
+            title: 'Test Task',
             status: 'waiting',
         });
         expect(useUiStore.getState().editingTaskId).toBe(duplicatedTask?.id);

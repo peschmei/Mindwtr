@@ -417,9 +417,10 @@ describe('TaskStore', () => {
         expect(duplicateResult.id).toBeTruthy();
 
         const duplicatedTask = useTaskStore.getState()._allTasks.find((task) => (
-            task.id !== addResult.id && task.title === 'Launch Checklist (Copy)'
+            task.id !== addResult.id && task.title === 'Launch Checklist'
         ));
         expect(duplicatedTask?.id).toBe(duplicateResult.id);
+        expect(duplicatedTask?.title).toBe('Launch Checklist');
         expect(duplicatedTask?.status).toBe('waiting');
         expect(duplicatedTask?.projectId).toBe(project!.id);
         expect(duplicatedTask?.sectionId).toBe(section!.id);
@@ -454,13 +455,14 @@ describe('TaskStore', () => {
         ]);
     });
 
-    it('promotes a task into a new project without replacing the task', async () => {
+    it('creates a project from a task without replacing the task', async () => {
         const { addArea, addTask, promoteTaskToProject } = useTaskStore.getState();
         const area = await addArea('Work');
         expect(area).toBeTruthy();
         const addResult = await addTask('Plan launch', {
             status: 'next',
             areaId: area!.id,
+            description: 'Coordinate launch work with the team.',
             contexts: ['@desk'],
             tags: ['#launch'],
         });
@@ -475,6 +477,8 @@ describe('TaskStore', () => {
             title: 'Plan launch',
             areaId: area!.id,
             status: 'active',
+            supportNotes: 'Coordinate launch work with the team.',
+            tagIds: ['#launch'],
         });
 
         const promotedTask = useTaskStore.getState()._tasksById.get(addResult.id!);
@@ -482,6 +486,7 @@ describe('TaskStore', () => {
             id: addResult.id,
             title: 'Plan launch',
             status: 'next',
+            description: 'Coordinate launch work with the team.',
             projectId: project!.id,
             contexts: ['@desk'],
             tags: ['#launch'],
