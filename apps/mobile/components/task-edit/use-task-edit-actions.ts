@@ -17,6 +17,8 @@ import {
     getUsedTaskTokens,
     extractChecklistFromMarkdown,
     syncMarkdownChecklistWithCanonical,
+    tFallback,
+    type StoreActionResult,
 } from '@mindwtr/core';
 
 import type { AIResponseAction } from '../ai-response-modal';
@@ -25,6 +27,7 @@ import { areTaskFieldValuesEqual } from './task-edit-modal.helpers';
 import { getEditedTaskValue, logTaskError, logTaskWarn } from './task-edit-modal.utils';
 import { applyMarkdownChecklistToTask, parseTokenList } from './task-edit-token-utils';
 import { buildRecurrenceValue } from './recurrence-utils';
+import { openProjectScreen, openTaskScreen } from '../../lib/task-meta-navigation';
 
 type AIResponseModalState = {
     title: string;
@@ -51,7 +54,8 @@ type TaskEditActionsParams = {
     descriptionDebounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
     descriptionDraft: string;
     descriptionDraftRef: React.MutableRefObject<string>;
-    duplicateTask: (taskId: string, includeDoneSubtasks?: boolean) => Promise<unknown>;
+    duplicateTask: (taskId: string, includeDoneSubtasks?: boolean) => Promise<StoreActionResult>;
+    promoteTaskToProject?: (taskId: string, options?: { title?: string; color?: string; areaId?: string }) => Promise<StoreActionResult>;
     editedTask: Partial<Task>;
     formatDate: (dateStr?: string) => string;
     formatDueDate: (dateStr?: string) => string;
@@ -96,6 +100,7 @@ export function useTaskEditActions({
     descriptionDraft,
     descriptionDraftRef,
     duplicateTask,
+    promoteTaskToProject,
     editedTask,
     formatDate,
     formatDueDate,
@@ -440,9 +445,52 @@ export function useTaskEditActions({
 
     const handleDuplicateTask = useCallback(async () => {
         if (!task) return;
-        await duplicateTask(task.id, false).catch((error) => logTaskError('Failed to duplicate task', error));
-        Alert.alert(t('taskEdit.duplicateDoneTitle'), t('taskEdit.duplicateDoneBody'));
-    }, [duplicateTask, t, task]);
+        try {
+            const result = await duplicateTask(task.id, false);
+            if (!result.success || !result.id) {
+                showToast({
+                    title: tFallback(t, 'common.error', 'Error'),
+                    message: result.error || tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'),
+                    tone: 'error',
+                });
+                return;
+            }
+            onClose();
+            openTaskScreen(result.id, task.projectId, 'task');
+        } catch (error) {
+            logTaskError('Failed to duplicate task', error);
+            showToast({
+                title: tFallback(t, 'common.error', 'Error'),
+                message: tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'),
+                tone: 'error',
+            });
+        }
+    }, [duplicateTask, onClose, showToast, t, task]);
+
+    const handlePromoteTaskToProject = useCallback(async () => {
+        if (!task || !promoteTaskToProject) return;
+        try {
+            const title = String(titleDraftRef.current || editedTask.title || task.title || '').trim();
+            const result = await promoteTaskToProject(task.id, { title });
+            if (!result.success || !result.id) {
+                showToast({
+                    title: tFallback(t, 'common.error', 'Error'),
+                    message: result.error || tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'),
+                    tone: 'error',
+                });
+                return;
+            }
+            onClose();
+            openProjectScreen(result.id);
+        } catch (error) {
+            logTaskError('Failed to create project from task', error);
+            showToast({
+                title: tFallback(t, 'common.error', 'Error'),
+                message: tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'),
+                tone: 'error',
+            });
+        }
+    }, [editedTask.title, onClose, promoteTaskToProject, showToast, t, task, titleDraftRef]);
 
     const handleDeleteTask = useCallback(async () => {
         if (!task) return;
@@ -649,6 +697,7 @@ export function useTaskEditActions({
         handleDeleteTask,
         handleDone,
         handleDuplicateTask,
+        handlePromoteTaskToProject,
         handleResetChecklist,
         handleSave,
         handleShare,

@@ -91,6 +91,7 @@ function TaskEditModalInner({
         people,
         settings,
         duplicateTask,
+        promoteTaskToProject,
         resetTaskChecklist,
         addProject,
         addSection,
@@ -111,6 +112,7 @@ function TaskEditModalInner({
             people: state.people,
             settings: state.settings,
             duplicateTask: state.duplicateTask,
+            promoteTaskToProject: state.promoteTaskToProject,
             resetTaskChecklist: state.resetTaskChecklist,
             addProject: state.addProject,
             addSection: state.addSection,
@@ -567,6 +569,7 @@ function TaskEditModalInner({
         handleDeleteTask,
         handleDone,
         handleDuplicateTask,
+        handlePromoteTaskToProject,
         handleResetChecklist,
         handleShare,
     } = useTaskEditActions({
@@ -580,6 +583,7 @@ function TaskEditModalInner({
         descriptionDraft,
         descriptionDraftRef,
         duplicateTask,
+        promoteTaskToProject,
         editedTask,
         formatDate,
         formatDueDate,
@@ -841,6 +845,7 @@ function TaskEditModalInner({
                         onDone={handleDone}
                         onShare={handleShare}
                         onDuplicate={handleDuplicateTask}
+                        onPromoteToProject={handlePromoteTaskToProject}
                         onDelete={handleDeleteTask}
                         onConvertToReference={handleConvertToReference}
                         showConvertToReference={!isReference}

@@ -9,6 +9,7 @@ type TaskEditHeaderProps = {
   onDone: () => void;
   onShare: () => void;
   onDuplicate: () => void;
+  onPromoteToProject?: () => void;
   onDelete: () => void;
   onConvertToReference?: () => void;
   showConvertToReference?: boolean;
@@ -19,6 +20,7 @@ export function TaskEditHeader({
   onDone,
   onShare,
   onDuplicate,
+  onPromoteToProject,
   onDelete,
   onConvertToReference,
   showConvertToReference = false,
@@ -26,6 +28,10 @@ export function TaskEditHeader({
   const { t } = useLanguage();
   const tc = useThemeColors();
   const [menuVisible, setMenuVisible] = useState(false);
+  const createProjectFromTaskText = t('task.createProjectFromTask');
+  const createProjectFromTaskLabel = createProjectFromTaskText === 'task.createProjectFromTask'
+    ? 'Create project from task'
+    : createProjectFromTaskText;
 
   return (
     <>
@@ -78,6 +84,17 @@ export function TaskEditHeader({
               >
                 <Text style={[styles.menuItemText, { color: tc.text }]}>{t('taskEdit.duplicateTask')}</Text>
               </Pressable>
+              {onPromoteToProject && (
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    onPromoteToProject();
+                  }}
+                >
+                  <Text style={[styles.menuItemText, { color: tc.text }]}>{createProjectFromTaskLabel}</Text>
+                </Pressable>
+              )}
               {showConvertToReference && onConvertToReference && (
                 <Pressable
                   style={styles.menuItem}

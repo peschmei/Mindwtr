@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, MapPin, Tag, Trash2 } from 'lucide-react';
+import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, FolderPlus, MapPin, Tag, Trash2 } from 'lucide-react';
 import {
     hasTimeComponent,
     isDueForReview,
@@ -48,6 +48,7 @@ interface TaskQuickActionMenuProps {
     };
     onClose: () => void;
     onDuplicate: () => void;
+    onPromoteToProject?: () => void;
     onDelete: () => void;
     onStatusChange: (status: TaskStatus) => void;
     onCreateArea: (name: string) => Promise<string | null>;
@@ -90,6 +91,7 @@ export function TaskQuickActionMenu({
     focusAction,
     onClose,
     onDuplicate,
+    onPromoteToProject,
     onDelete,
     onStatusChange,
     onCreateArea,
@@ -126,6 +128,7 @@ export function TaskQuickActionMenu({
     const contextsLabel = tFallback(t, 'taskEdit.contextsLabel', 'Contexts');
     const noAreaLabel = tFallback(t, 'taskEdit.noAreaOption', 'No Area');
     const duplicateLabel = tFallback(t, 'projects.duplicate', 'Duplicate');
+    const promoteToProjectLabel = tFallback(t, 'task.createProjectFromTask', 'Create project from task');
     const deleteLabel = tFallback(t, 'common.delete', 'Delete');
     const convertToReferenceLabel = tFallback(t, 'task.convertToReference', 'Convert to Reference');
     const markReviewedLabel = tFallback(t, 'review.markReviewed', 'Mark reviewed');
@@ -542,6 +545,14 @@ export function TaskQuickActionMenu({
                     label: duplicateLabel,
                     onClick: () => {
                         onDuplicate();
+                        onClose();
+                    },
+                })}
+                {!readOnly && onPromoteToProject && renderMenuAction({
+                    icon: <FolderPlus className="h-4 w-4" />,
+                    label: promoteToProjectLabel,
+                    onClick: () => {
+                        onPromoteToProject();
                         onClose();
                     },
                 })}

@@ -131,6 +131,7 @@ export const TaskItem = memo(function TaskItem({
         settings,
         focusedCount,
         duplicateTask,
+        promoteTaskToProject,
         resetTaskChecklist,
         restoreTask,
         highlightTaskId,
@@ -835,6 +836,56 @@ export const TaskItem = memo(function TaskItem({
         setSelectedProjectId(projectId);
         dispatchNavigateEvent('projects');
     }, [setHighlightTask, setSelectedProjectId, task.id]);
+    const handleDuplicateTask = useCallback(async () => {
+        if (effectiveReadOnly) return;
+        try {
+            const result = await duplicateTask(task.id, false);
+            if (!result.success || !result.id) {
+                showToast(result.error || tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'), 'error');
+                return;
+            }
+            setHighlightTask(result.id);
+            if (task.projectId) {
+                setSelectedProjectId(task.projectId);
+                dispatchNavigateEvent('projects');
+            }
+            setTaskExpanded(result.id, false);
+            setEditingTaskId(result.id);
+        } catch (error) {
+            reportError('Failed to duplicate task', error);
+            showToast(tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'), 'error');
+        }
+    }, [duplicateTask, effectiveReadOnly, setEditingTaskId, setHighlightTask, setSelectedProjectId, setTaskExpanded, showToast, t, task.id, task.projectId]);
+    const handlePromoteTaskToProject = useCallback(async () => {
+        if (effectiveReadOnly) return;
+        try {
+            const result = await promoteTaskToProject(task.id);
+            if (!result.success || !result.id) {
+                showToast(result.error || tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'), 'error');
+                return;
+            }
+            setHighlightTask(task.id);
+            setSelectedProjectId(result.id);
+            setEditingTaskId(null);
+            setTaskExpanded(task.id, false);
+            dispatchNavigateEvent('projects');
+            if (typeof window !== 'undefined') {
+                window.setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('mindwtr:quick-add', {
+                        detail: {
+                            initialProps: {
+                                projectId: result.id,
+                                status: 'next',
+                            },
+                        },
+                    }));
+                }, 80);
+            }
+        } catch (error) {
+            reportError('Failed to create project from task', error);
+            showToast(tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'), 'error');
+        }
+    }, [effectiveReadOnly, promoteTaskToProject, setEditingTaskId, setHighlightTask, setSelectedProjectId, setTaskExpanded, showToast, t, task.id]);
     const handleOpenContextToken = useCallback((token: string) => {
         setHighlightTask(task.id);
         dispatchContextsTokenSelection(token);
@@ -1218,7 +1269,7 @@ export const TaskItem = memo(function TaskItem({
             onAcceptTitleSuggestion={handleTitleSuggestionAccept}
             isDoneActionActive={editStatus === 'done'}
             onMarkDone={task.status !== 'done' && task.status !== 'archived' && task.status !== 'reference' ? handleEditorMarkDone : undefined}
-            onDuplicateTask={() => duplicateTask(task.id, false)}
+            onDuplicateTask={handleDuplicateTask}
             onDeleteTask={task.status === 'inbox' ? () => setShowDeleteConfirm(true) : undefined}
             onCancel={handleEditorCancel}
             onSubmit={handleSubmit}
@@ -1231,7 +1282,7 @@ export const TaskItem = memo(function TaskItem({
         onToggleView: () => toggleTaskExpanded(task.id),
         onEdit: startEditing,
         onDelete: () => setShowDeleteConfirm(true),
-        onDuplicate: () => duplicateTask(task.id, false),
+        onDuplicate: handleDuplicateTask,
         onStatusChange: handleStatusChange,
         onOpenQuickActions: handleOpenQuickActionButton,
         onOpenProject: project ? handleOpenProject : undefined,
@@ -1240,7 +1291,7 @@ export const TaskItem = memo(function TaskItem({
         onToggleChecklistItem: handleToggleChecklistItem,
         focusToggle: effectiveFocusToggle,
     }), [
-        duplicateTask,
+        handleDuplicateTask,
         effectiveFocusToggle,
         handleOpenContextToken,
         handleOpenProject,
@@ -1362,9 +1413,8 @@ export const TaskItem = memo(function TaskItem({
                     readOnly={effectiveReadOnly}
                     focusAction={quickActionFocus}
                     onClose={handleCloseQuickActionMenu}
-                    onDuplicate={() => {
-                        duplicateTask(task.id, false);
-                    }}
+                    onDuplicate={handleDuplicateTask}
+                    onPromoteToProject={handlePromoteTaskToProject}
                     onDelete={() => {
                         setShowDeleteConfirm(true);
                     }}

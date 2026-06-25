@@ -44,6 +44,7 @@ export const useTaskItemStoreState = ({ task, propProject, isEditing, hasQuickAc
             settings: state.settings,
             focusedCount: derived.focusedCount,
             duplicateTask: state.duplicateTask,
+            promoteTaskToProject: state.promoteTaskToProject,
             resetTaskChecklist: state.resetTaskChecklist,
             restoreTask: state.restoreTask,
             highlightTaskId: state.highlightTaskId,

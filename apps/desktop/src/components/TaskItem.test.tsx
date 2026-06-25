@@ -560,6 +560,40 @@ describe('TaskItem', () => {
         expect(getByRole('menuitem', { name: /duplicate/i })).toBeInTheDocument();
     });
 
+    it('opens duplicated tasks from the quick actions menu', async () => {
+        const menuTask: Task = {
+            ...mockTask,
+            id: 'quick-actions-duplicate-task',
+            status: 'waiting',
+        };
+        act(() => {
+            useTaskStore.setState({
+                tasks: [menuTask],
+                _allTasks: [menuTask],
+                _tasksById: new Map([[menuTask.id, menuTask]]),
+            });
+        });
+        const { findByRole, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={menuTask} />
+            </LanguageProvider>
+        );
+
+        fireEvent.click(getByRole('button', { name: /more options/i }));
+        const duplicateItem = await findByRole('menuitem', { name: /duplicate/i });
+        await act(async () => {
+            fireEvent.click(duplicateItem);
+        });
+
+        const duplicatedTask = useTaskStore.getState()._allTasks.find((task) => task.id !== menuTask.id);
+        expect(duplicatedTask).toMatchObject({
+            title: 'Test Task (Copy)',
+            status: 'waiting',
+        });
+        expect(useUiStore.getState().editingTaskId).toBe(duplicatedTask?.id);
+        expect(useTaskStore.getState().highlightTaskId).toBe(duplicatedTask?.id);
+    });
+
     it('adds an eligible next action to today focus from the task quick actions menu', async () => {
         const nextTask: Task = {
             ...mockTask,

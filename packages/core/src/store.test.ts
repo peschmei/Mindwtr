@@ -377,10 +377,21 @@ describe('TaskStore', () => {
         expect(updatedTask.pushCount).toBe(0);
     });
 
-    it('duplicates reference items into Inbox with checklist items reset', async () => {
-        const { addTask, duplicateTask } = useTaskStore.getState();
-        const addResult = await addTask('Reference Checklist', {
-            status: 'reference',
+    it('duplicates tasks as true copies with fresh child ids', async () => {
+        const { addArea, addProject, addSection, addTask, duplicateTask } = useTaskStore.getState();
+        const area = await addArea('Work');
+        expect(area).toBeTruthy();
+        const project = await addProject('Launch', '#123456', { areaId: area!.id });
+        expect(project).toBeTruthy();
+        const section = await addSection(project!.id, 'Prep');
+        expect(section).toBeTruthy();
+        const addResult = await addTask('Launch Checklist', {
+            status: 'waiting',
+            projectId: project!.id,
+            sectionId: section!.id,
+            startTime: '2026-02-01',
+            dueDate: '2026-02-10',
+            reviewAt: '2026-02-05',
             checklist: [
                 { id: 'c1', title: 'Pack charger', isCompleted: true },
                 { id: 'c2', title: 'Print agenda', isCompleted: false },
@@ -401,17 +412,26 @@ describe('TaskStore', () => {
         });
         expect(addResult.success).toBe(true);
 
-        await duplicateTask(addResult.id!, false);
+        const duplicateResult = await duplicateTask(addResult.id!, false);
+        expect(duplicateResult.success).toBe(true);
+        expect(duplicateResult.id).toBeTruthy();
 
         const duplicatedTask = useTaskStore.getState()._allTasks.find((task) => (
-            task.id !== addResult.id && task.title === 'Reference Checklist (Copy)'
+            task.id !== addResult.id && task.title === 'Launch Checklist (Copy)'
         ));
-        expect(duplicatedTask?.status).toBe('inbox');
+        expect(duplicatedTask?.id).toBe(duplicateResult.id);
+        expect(duplicatedTask?.status).toBe('waiting');
+        expect(duplicatedTask?.projectId).toBe(project!.id);
+        expect(duplicatedTask?.sectionId).toBe(section!.id);
+        expect(duplicatedTask?.areaId).toBeUndefined();
+        expect(duplicatedTask?.startTime).toBe('2026-02-01');
+        expect(duplicatedTask?.dueDate).toBe('2026-02-10');
+        expect(duplicatedTask?.reviewAt).toBe('2026-02-05');
         expect(duplicatedTask?.checklist?.map((item) => ({
             title: item.title,
             isCompleted: item.isCompleted,
         }))).toEqual([
-            { title: 'Pack charger', isCompleted: false },
+            { title: 'Pack charger', isCompleted: true },
             { title: 'Print agenda', isCompleted: false },
         ]);
         expect(duplicatedTask?.checklist?.map((item) => item.id)).not.toEqual(['c1', 'c2']);
@@ -432,6 +452,41 @@ describe('TaskStore', () => {
                 localStatus: undefined,
             },
         ]);
+    });
+
+    it('promotes a task into a new project without replacing the task', async () => {
+        const { addArea, addTask, promoteTaskToProject } = useTaskStore.getState();
+        const area = await addArea('Work');
+        expect(area).toBeTruthy();
+        const addResult = await addTask('Plan launch', {
+            status: 'next',
+            areaId: area!.id,
+            contexts: ['@desk'],
+            tags: ['#launch'],
+        });
+        expect(addResult.success).toBe(true);
+
+        const promoteResult = await promoteTaskToProject(addResult.id!);
+        expect(promoteResult.success).toBe(true);
+        expect(promoteResult.id).toBeTruthy();
+
+        const project = useTaskStore.getState()._allProjects.find((candidate) => candidate.id === promoteResult.id);
+        expect(project).toMatchObject({
+            title: 'Plan launch',
+            areaId: area!.id,
+            status: 'active',
+        });
+
+        const promotedTask = useTaskStore.getState()._tasksById.get(addResult.id!);
+        expect(promotedTask).toMatchObject({
+            id: addResult.id,
+            title: 'Plan launch',
+            status: 'next',
+            projectId: project!.id,
+            contexts: ['@desk'],
+            tags: ['#launch'],
+        });
+        expect(promotedTask?.areaId).toBeUndefined();
     });
 
     it('rejects promoting a fourth task into today focus', async () => {

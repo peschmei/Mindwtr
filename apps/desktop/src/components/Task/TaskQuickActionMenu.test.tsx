@@ -282,6 +282,16 @@ describe('TaskQuickActionMenu', () => {
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
+    it('runs the promote-to-project action from the quick menu', () => {
+        const onPromoteToProject = vi.fn();
+        const props = renderMenu({ onPromoteToProject });
+
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Create project from task' }));
+
+        expect(onPromoteToProject).toHaveBeenCalledTimes(1);
+        expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+
     it('runs the focus action from the quick menu and closes it', () => {
         const onToggle = vi.fn();
         const props = renderMenu({

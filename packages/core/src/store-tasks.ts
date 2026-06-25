@@ -1,4 +1,4 @@
-import type { AppData, PendingRemoteAttachmentDelete, Task, TaskStatus } from './types';
+import type { AppData, PendingRemoteAttachmentDelete, Project, Task, TaskStatus } from './types';
 import type { StorageAdapter, TaskQueryOptions } from './storage';
 import type { StoreActionResult, TaskStore } from './store-types';
 import {
@@ -21,6 +21,7 @@ import {
 } from './store-helpers';
 import { logWarn } from './logger';
 import { generateUUID as uuidv4 } from './uuid';
+import { DEFAULT_PROJECT_COLOR } from './color-constants';
 import { normalizeRecurrenceForLoad } from './recurrence';
 import { normalizeRepeatReminderMinutes } from './schedule-utils';
 import { normalizeFocusTaskLimit } from './focus-utils';
@@ -129,6 +130,7 @@ type TaskActions = Pick<
     | 'purgeTask'
     | 'purgeDeletedTasks'
     | 'duplicateTask'
+    | 'promoteTaskToProject'
     | 'resetTaskChecklist'
     | 'moveTask'
     | 'batchUpdateTasks'
@@ -891,6 +893,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
         const now = new Date().toISOString();
         let snapshot: AppData | null = null;
         let missingTask = false;
+        let duplicatedTaskId: string | undefined;
         set((state) => {
             const sourceTask = state._tasksById.get(id);
             if (!sourceTask || sourceTask.deletedAt) {
@@ -902,7 +905,6 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             const duplicatedChecklist = (sourceTask.checklist || []).map((item) => ({
                 ...item,
                 id: uuidv4(),
-                isCompleted: false,
             }));
             const duplicatedAttachments = (sourceTask.attachments || []).map((attachment) => ({
                 ...attachment,
@@ -918,22 +920,19 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             const duplicatedOrder = sourceTask.projectId
                 ? projectOrderReserver(sourceTask.projectId)
                 : undefined;
+            duplicatedTaskId = uuidv4();
 
             const newTask: Task = {
                 ...sourceTask,
-                id: uuidv4(),
+                id: duplicatedTaskId,
                 title: `${sourceTask.title} (Copy)`,
-                status: asNextAction ? 'next' : 'inbox',
+                status: asNextAction ? 'next' : sourceTask.status,
                 checklist: duplicatedChecklist.length > 0 ? duplicatedChecklist : undefined,
                 attachments: duplicatedAttachments.length > 0 ? duplicatedAttachments : undefined,
-                startTime: undefined,
-                dueDate: undefined,
-                recurrence: undefined,
-                reviewAt: undefined,
-                completedAt: undefined,
+                completedAt: asNextAction ? undefined : sourceTask.completedAt,
                 isFocusedToday: false,
-                pushCount: 0,
                 deletedAt: undefined,
+                purgedAt: undefined,
                 createdAt: now,
                 updatedAt: now,
                 rev: 1,
@@ -958,7 +957,126 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
         if (snapshot) {
             debouncedSave(snapshot, (msg) => set({ error: msg }));
         }
-        return missingTask ? actionFail('Task not found') : actionOk();
+        return missingTask ? actionFail('Task not found') : actionOk({ id: duplicatedTaskId });
+    },
+
+    /**
+     * Promote a task into a project while keeping the task as the first action.
+     */
+    promoteTaskToProject: async (id: string, options?: { title?: string; color?: string; areaId?: string }) => {
+        const changeAt = Date.now();
+        const now = new Date().toISOString();
+        let snapshot: AppData | null = null;
+        let missingTask = false;
+        let errorMessage: string | undefined;
+        let promotedProjectId: string | undefined;
+        set((state) => {
+            const sourceTask = state._tasksById.get(id);
+            if (!sourceTask || sourceTask.deletedAt) {
+                missingTask = true;
+                return state;
+            }
+
+            const trimmedTitle = (typeof options?.title === 'string' ? options.title : sourceTask.title).trim();
+            if (!trimmedTitle) {
+                errorMessage = 'Project title is required';
+                return { error: errorMessage };
+            }
+
+            const explicitAreaId = normalizeOptionalReferenceId(options?.areaId);
+            const sourceProject = sourceTask.projectId ? state._projectsById.get(sourceTask.projectId) : undefined;
+            const inheritedAreaId = explicitAreaId ?? sourceTask.areaId ?? sourceProject?.areaId;
+            const targetAreaId = inheritedAreaId && state._allAreas.some((area) => area.id === inheritedAreaId && !area.deletedAt)
+                ? inheritedAreaId
+                : undefined;
+            if (explicitAreaId && !targetAreaId) {
+                errorMessage = 'Area not found';
+                return { error: errorMessage };
+            }
+
+            const normalizedTitle = trimmedTitle.toLowerCase();
+            const existingProject = state._allProjects.find(
+                (project) =>
+                    !project.deletedAt &&
+                    typeof project.title === 'string' &&
+                    project.title.trim().toLowerCase() === normalizedTitle
+            );
+            const deviceState = ensureDeviceId(state.settings);
+            let targetProject = existingProject;
+            let nextAllProjects = state._allProjects;
+            if (!targetProject) {
+                const maxOrder = state._allProjects
+                    .filter((project) => (project.areaId ?? undefined) === (targetAreaId ?? undefined))
+                    .reduce((max, project) => Math.max(max, Number.isFinite(project.order) ? project.order : -1), -1);
+                const useSequentialDefault = state.settings.gtd?.defaultProjectFlowMode === 'sequential';
+                const newProject: Project = {
+                    id: uuidv4(),
+                    title: trimmedTitle,
+                    color: options?.color ?? DEFAULT_PROJECT_COLOR,
+                    order: maxOrder + 1,
+                    status: 'active',
+                    rev: 1,
+                    revBy: deviceState.deviceId,
+                    createdAt: now,
+                    updatedAt: now,
+                    ...(targetAreaId ? { areaId: targetAreaId } : {}),
+                    ...(useSequentialDefault ? { isSequential: true } : {}),
+                    tagIds: [],
+                };
+                targetProject = newProject;
+                nextAllProjects = [...state._allProjects, newProject];
+            }
+
+            promotedProjectId = targetProject.id;
+            const projectOrderReserver = createProjectOrderReserver(state._allTasks);
+            const preparedUpdates = prepareTaskUpdatesForStore({
+                task: sourceTask,
+                updates: {
+                    projectId: targetProject.id,
+                    sectionId: undefined,
+                    areaId: undefined,
+                },
+                allTasks: state._allTasks,
+                allProjects: nextAllProjects,
+                allSections: state._allSections,
+                allAreas: state._allAreas,
+                projectOrderReserver,
+            });
+            if (!preparedUpdates.ok) {
+                errorMessage = preparedUpdates.error;
+                return { error: errorMessage };
+            }
+
+            const { updatedTask } = applyTaskUpdates(
+                sourceTask,
+                {
+                    ...preparedUpdates.updates,
+                    rev: nextRevision(sourceTask.rev),
+                    revBy: deviceState.deviceId,
+                },
+                now
+            );
+            const nextAllTasks = replaceEntityInArray(state._allTasks, id, updatedTask);
+            const nextVisibleTasks = updateVisibleTasks(state.tasks, sourceTask, updatedTask);
+            snapshot = buildSaveSnapshot(state, {
+                tasks: nextAllTasks,
+                projects: nextAllProjects,
+                ...(deviceState.updated ? { settings: deviceState.settings } : {}),
+            });
+            return {
+                tasks: nextVisibleTasks,
+                _allTasks: nextAllTasks,
+                _allProjects: nextAllProjects,
+                lastDataChangeAt: getNextDataChangeAt(state.lastDataChangeAt, changeAt),
+                ...(deviceState.updated ? { settings: deviceState.settings } : {}),
+            };
+        });
+        if (snapshot) {
+            debouncedSave(snapshot, (msg) => set({ error: msg }));
+        }
+        if (missingTask) return actionFail('Task not found');
+        if (errorMessage) return actionFail(errorMessage);
+        return actionOk({ id: promotedProjectId });
     },
 
     /**
