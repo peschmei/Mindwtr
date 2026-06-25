@@ -269,6 +269,7 @@ export const arOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': 'مرة',
         'recurrence.dayUnit': 'أيام)',
         'recurrence.monthUnit': 'شهور)',
+        'recurrence.yearUnit': 'سنوات',
         'recurrence.onLabel': 'على',
         'recurrence.ordinal.first': 'أولاً',
         'recurrence.ordinal.second': 'ثانية',

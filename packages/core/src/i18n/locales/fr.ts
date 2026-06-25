@@ -287,6 +287,7 @@ export const frOverrides: Record<string, string> = {
         'recurrence.dayUnit': 'jour(s)',
         'recurrence.weekUnit': 'semaine(s)',
         'recurrence.monthUnit': 'mois',
+        'recurrence.yearUnit': 'an(s)',
         'recurrence.onLabel': 'le',
         'recurrence.onDayOfMonth': 'Jour {day}',
         'recurrence.onNthWeekday': 'Le {ordinal} {weekday}',

@@ -300,6 +300,7 @@ export const en: Record<string, string> = {
         'recurrence.dayUnit': 'day(s)',
         'recurrence.weekUnit': 'week(s)',
         'recurrence.monthUnit': 'month(s)',
+        'recurrence.yearUnit': 'year(s)',
         'recurrence.onLabel': 'On',
         'recurrence.onDayOfMonth': 'Day {day}',
         'recurrence.onNthWeekday': 'The {ordinal} {weekday}',

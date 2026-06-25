@@ -266,6 +266,7 @@ export const ruOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': 'раз(а)',
         'recurrence.dayUnit': 'день(а)',
         'recurrence.monthUnit': 'месяц(ы)',
+        'recurrence.yearUnit': 'год(а)',
         'recurrence.onLabel': 'На',
         'recurrence.ordinal.first': 'Первый',
         'recurrence.ordinal.second': 'Второй',

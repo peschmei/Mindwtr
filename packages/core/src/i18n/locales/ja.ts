@@ -266,6 +266,7 @@ export const jaOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': '回',
         'recurrence.dayUnit': '日',
         'recurrence.monthUnit': '月',
+        'recurrence.yearUnit': '年',
         'recurrence.onLabel': 'の上',
         'recurrence.ordinal.first': '初め',
         'recurrence.ordinal.second': '2番',

@@ -70,6 +70,7 @@ const t = (key: string) => {
         'recurrence.dayUnit': 'day(s)',
         'recurrence.weekUnit': 'week(s)',
         'recurrence.afterCompletion': 'Repeat after completion',
+        'recurrence.yearUnit': 'year(s)',
         'recurrence.endsLabel': 'Ends',
         'recurrence.endsNever': 'Never',
         'recurrence.endsOnDate': 'On date',
@@ -894,13 +895,35 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const input = container.querySelector('input[type="number"]') as HTMLInputElement | null;
 
         expect(input).toBeTruthy();
-        fireEvent.change(input!, { target: { value: '4' } });
+        fireEvent.change(input!, { target: { value: '78' } });
 
-        expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=WEEKLY;INTERVAL=4;BYDAY=TU');
+        expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=WEEKLY;INTERVAL=78;BYDAY=TU');
 
         fireEvent.click(getByRole('button', { name: 'Wed' }));
 
         expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,WE');
+    });
+
+    it('updates yearly recurrence intervals', () => {
+        const handlers = createHandlers();
+        const { container } = render(
+            <LanguageProvider>
+                <TaskItemFieldRenderer
+                    fieldId="recurrence"
+                    data={createData({
+                        editRecurrence: 'yearly',
+                        editRecurrenceRRule: 'FREQ=YEARLY',
+                    })}
+                    handlers={handlers}
+                />
+            </LanguageProvider>
+        );
+        const input = container.querySelector('input[type="number"]') as HTMLInputElement | null;
+
+        expect(input).toBeTruthy();
+        fireEvent.change(input!, { target: { value: '2' } });
+
+        expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=YEARLY;INTERVAL=2');
     });
 
     it('updates monthly recurrence intervals from the monthly recurrence controls', () => {

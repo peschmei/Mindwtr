@@ -64,9 +64,11 @@ const t = (key: string) => ({
     'recurrence.none': 'None',
     'recurrence.weekly': 'Weekly',
     'recurrence.monthly': 'Monthly',
+    'recurrence.yearly': 'Yearly',
     'recurrence.repeatEvery': 'Repeat every',
     'recurrence.weekUnit': 'week(s)',
     'recurrence.monthUnit': 'month(s)',
+    'recurrence.yearUnit': 'year(s)',
     'recurrence.endsLabel': 'Ends',
     'recurrence.endsNever': 'Never',
     'recurrence.endsOnDate': 'On date',
@@ -550,7 +552,7 @@ describe('TaskEditScheduleField', () => {
         expect(intervalInput?.props.value).toBe('2');
 
         act(() => {
-            intervalInput?.props.onChangeText('4');
+            intervalInput?.props.onChangeText('78');
         });
 
         const update = setEditedTask.mock.calls[0][0] as (previous: any) => any;
@@ -567,7 +569,79 @@ describe('TaskEditScheduleField', () => {
             rule: 'weekly',
             strategy: 'strict',
             byDay: ['TU'],
-            rrule: 'FREQ=WEEKLY;INTERVAL=4;BYDAY=TU',
+            rrule: 'FREQ=WEEKLY;INTERVAL=78;BYDAY=TU',
+        });
+    });
+
+    it('updates yearly recurrence intervals', () => {
+        const setEditedTask = vi.fn();
+
+        let tree!: renderer.ReactTestRenderer;
+        act(() => {
+            tree = renderer.create(
+                <TaskEditScheduleField {...({
+                    customWeekdays: [],
+                    dailyInterval: 1,
+                    editedTask: {
+                        recurrence: {
+                            rule: 'yearly',
+                            strategy: 'strict',
+                            rrule: 'FREQ=YEARLY',
+                        },
+                    },
+                    fieldId: 'recurrence',
+                    formatDate: (value?: string) => value ?? '',
+                    formatDueDate: (value?: string) => value ?? '',
+                    getSafePickerDateValue: () => new Date('2026-04-01T00:00:00.000Z'),
+                    monthlyPattern: 'date',
+                    onDateChange: vi.fn(),
+                    openCustomRecurrence: vi.fn(),
+                    pendingDueDate: null,
+                    pendingStartDate: null,
+                    recurrenceOptions: [
+                        { value: '', label: 'None' },
+                        { value: 'yearly', label: 'Yearly' },
+                    ],
+                    recurrenceRRuleValue: 'FREQ=YEARLY',
+                    recurrenceRuleValue: 'yearly',
+                    recurrenceStrategyValue: 'strict',
+                    recurrenceWeekdayButtons: [],
+                    setCustomWeekdays: vi.fn(),
+                    setEditedTask,
+                    setShowDatePicker: vi.fn(),
+                    showDatePicker: null,
+                    styles,
+                    t,
+                    task: null,
+                    tc,
+                } as any)}
+                />
+            );
+        });
+
+        const intervalInput = tree.root
+            .findAllByType(TextInput)
+            .find((node) => node.props.accessibilityHint === 'year(s)');
+
+        expect(intervalInput?.props.value).toBe('1');
+
+        act(() => {
+            intervalInput?.props.onChangeText('2');
+        });
+
+        const update = setEditedTask.mock.calls[0][0] as (previous: any) => any;
+        const next = update({
+            recurrence: {
+                rule: 'yearly',
+                strategy: 'strict',
+                rrule: 'FREQ=YEARLY',
+            },
+        });
+
+        expect(next.recurrence).toMatchObject({
+            rule: 'yearly',
+            strategy: 'strict',
+            rrule: 'FREQ=YEARLY;INTERVAL=2',
         });
     });
 });

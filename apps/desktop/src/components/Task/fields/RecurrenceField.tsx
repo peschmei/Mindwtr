@@ -1,4 +1,4 @@
-import { buildRRuleString, parseRRuleString, tFallback, type RecurrenceByDay, type RecurrenceRule, type RecurrenceStrategy } from '@mindwtr/core';
+import { buildRRuleString, parseRRuleString, RECURRENCE_INTERVAL_MAX, tFallback, type RecurrenceByDay, type RecurrenceRule, type RecurrenceStrategy } from '@mindwtr/core';
 
 import { cn } from '../../../lib/utils';
 import { WeekdaySelector } from '../TaskForm/WeekdaySelector';
@@ -32,6 +32,12 @@ type RecurrenceFieldProps = {
         },
     ) => string;
 };
+
+const normalizeRecurrenceIntervalInput = (value: number): number => (
+    Number.isFinite(value) && value > 0
+        ? Math.min(Math.round(value), RECURRENCE_INTERVAL_MAX)
+        : 1
+);
 
 export function RecurrenceField({
     t,
@@ -111,13 +117,10 @@ export function RecurrenceField({
                     <input
                         type="number"
                         min={1}
-                        max={365}
+                        max={RECURRENCE_INTERVAL_MAX}
                         value={Math.max(parsedRecurrenceRRule.interval ?? 1, 1)}
                         onChange={(event) => {
-                            const intervalValue = Number(event.target.valueAsNumber);
-                            const safeInterval = Number.isFinite(intervalValue) && intervalValue > 0
-                                ? Math.min(Math.round(intervalValue), 365)
-                                : 1;
+                            const safeInterval = normalizeRecurrenceIntervalInput(Number(event.target.valueAsNumber));
                             onRecurrenceRRuleChange(buildRecurrenceRRule('daily', {
                                 byDay: undefined,
                                 byMonthDay: undefined,
@@ -168,13 +171,10 @@ export function RecurrenceField({
                         <input
                             type="number"
                             min={1}
-                            max={52}
+                            max={RECURRENCE_INTERVAL_MAX}
                             value={Math.max(parsedRecurrenceRRule.interval ?? 1, 1)}
                             onChange={(event) => {
-                                const intervalValue = Number(event.target.valueAsNumber);
-                                const safeInterval = Number.isFinite(intervalValue) && intervalValue > 0
-                                    ? Math.min(Math.round(intervalValue), 52)
-                                    : 1;
+                                const safeInterval = normalizeRecurrenceIntervalInput(Number(event.target.valueAsNumber));
                                 onRecurrenceRRuleChange(buildRecurrenceRRule('weekly', {
                                     byDay: parsedRecurrenceRRule.byDay,
                                     byMonthDay: undefined,
@@ -280,13 +280,10 @@ export function RecurrenceField({
                         <input
                             type="number"
                             min={1}
-                            max={120}
+                            max={RECURRENCE_INTERVAL_MAX}
                             value={Math.max(parsedRecurrenceRRule.interval ?? 1, 1)}
                             onChange={(event) => {
-                                const intervalValue = Number(event.target.valueAsNumber);
-                                const safeInterval = Number.isFinite(intervalValue) && intervalValue > 0
-                                    ? Math.min(Math.round(intervalValue), 120)
-                                    : 1;
+                                const safeInterval = normalizeRecurrenceIntervalInput(Number(event.target.valueAsNumber));
                                 onRecurrenceRRuleChange(buildRecurrenceRRule('monthly', {
                                     interval: safeInterval,
                                 }));
@@ -325,6 +322,27 @@ export function RecurrenceField({
                             {t('recurrence.custom')}
                         </button>
                     </div>
+                </div>
+            )}
+            {editRecurrence === 'yearly' && (
+                <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[10px] text-muted-foreground">{t('recurrence.repeatEvery')}</span>
+                    <input
+                        type="number"
+                        min={1}
+                        max={RECURRENCE_INTERVAL_MAX}
+                        value={Math.max(parsedRecurrenceRRule.interval ?? 1, 1)}
+                        onChange={(event) => {
+                            const safeInterval = normalizeRecurrenceIntervalInput(Number(event.target.valueAsNumber));
+                            onRecurrenceRRuleChange(buildRecurrenceRRule('yearly', {
+                                byDay: undefined,
+                                byMonthDay: undefined,
+                                interval: safeInterval,
+                            }));
+                        }}
+                        className="w-20 text-xs bg-muted/50 border border-border rounded px-2 py-1 text-foreground"
+                    />
+                    <span className="text-[10px] text-muted-foreground">{t('recurrence.yearUnit')}</span>
                 </div>
             )}
         </div>

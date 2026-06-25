@@ -297,6 +297,7 @@ export const viOverrides: Record<string, string> = {
         'recurrence.dayUnit': 'ngày',
         'recurrence.weekUnit': 'tuần',
         'recurrence.monthUnit': 'tháng',
+        'recurrence.yearUnit': 'năm',
         'recurrence.onLabel': 'Vào',
         'recurrence.onDayOfMonth': 'Ngày {day}',
         'recurrence.onNthWeekday': '{ordinal} {weekday}',

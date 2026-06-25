@@ -9,6 +9,7 @@ import {
     getRecurrenceUntilValue,
     hasTimeComponent,
     parseRRuleString,
+    RECURRENCE_INTERVAL_MAX,
     REPEAT_REMINDER_INTERVAL_OPTIONS,
     safeFormatDate,
     safeParseDate,
@@ -31,6 +32,12 @@ type ScheduleFieldId = 'recurrence' | 'startTime' | 'dueDate' | 'reviewAt';
 type TaskEditScheduleFieldProps = TaskEditFieldRendererProps & {
     fieldId: ScheduleFieldId;
 };
+
+const normalizeRecurrenceIntervalInput = (value: number): number => (
+    Number.isFinite(value) && value > 0
+        ? Math.min(Math.round(value), RECURRENCE_INTERVAL_MAX)
+        : 1
+);
 
 export function TaskEditScheduleField({
     applyQuickDate,
@@ -401,7 +408,9 @@ export function TaskEditScheduleField({
                                             recurrence: buildEditedRecurrence('yearly', {
                                                 byDay: undefined,
                                                 byMonthDay: undefined,
-                                                interval: undefined,
+                                                interval: parsedRecurrenceRRule.rule === 'yearly' && parsedRecurrenceRRule.interval && parsedRecurrenceRRule.interval > 0
+                                                    ? parsedRecurrenceRRule.interval
+                                                    : 1,
                                             }),
                                         }));
                                         return;
@@ -424,7 +433,7 @@ export function TaskEditScheduleField({
                                     value={String(Math.max(parsedRecurrenceRRule.interval ?? 1, 1))}
                                     onChangeText={(value) => {
                                         const parsed = Number.parseInt(value, 10);
-                                        const interval = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 52) : 1;
+                                        const interval = normalizeRecurrenceIntervalInput(parsed);
                                         setEditedTask((prev) => ({
                                             ...prev,
                                             recurrence: buildEditedRecurrence('weekly', {
@@ -482,7 +491,7 @@ export function TaskEditScheduleField({
                                 value={String(dailyInterval)}
                                 onChangeText={(value) => {
                                     const parsed = Number.parseInt(value, 10);
-                                    const interval = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 1;
+                                    const interval = normalizeRecurrenceIntervalInput(parsed);
                                     setEditedTask((prev) => ({
                                         ...prev,
                                         recurrence: buildEditedRecurrence('daily', {
@@ -508,7 +517,7 @@ export function TaskEditScheduleField({
                                     value={String(monthlyInterval)}
                                     onChangeText={(value) => {
                                         const parsed = Number.parseInt(value, 10);
-                                        const interval = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 120) : 1;
+                                        const interval = normalizeRecurrenceIntervalInput(parsed);
                                         setEditedTask((prev) => ({
                                             ...prev,
                                             recurrence: buildEditedRecurrence('monthly', { interval }),
@@ -548,6 +557,31 @@ export function TaskEditScheduleField({
                                 </TouchableOpacity>
                             </View>
                         </>
+                    )}
+                    {recurrenceRuleValue === 'yearly' && (
+                        <View style={[styles.customRow, { marginTop: 8, borderColor: tc.border }]}>
+                            <Text style={[styles.modalLabel, { color: tc.secondaryText }]}>{t('recurrence.repeatEvery')}</Text>
+                            <TextInput
+                                value={String(Math.max(parsedRecurrenceRRule.interval ?? 1, 1))}
+                                onChangeText={(value) => {
+                                    const parsed = Number.parseInt(value, 10);
+                                    const interval = normalizeRecurrenceIntervalInput(parsed);
+                                    setEditedTask((prev) => ({
+                                        ...prev,
+                                        recurrence: buildEditedRecurrence('yearly', {
+                                            byDay: undefined,
+                                            byMonthDay: undefined,
+                                            interval,
+                                        }),
+                                    }));
+                                }}
+                                keyboardType="number-pad"
+                                style={[styles.customInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+                                accessibilityLabel={t('recurrence.repeatEvery')}
+                                accessibilityHint={t('recurrence.yearUnit')}
+                            />
+                            <Text style={[styles.modalLabel, { color: tc.secondaryText }]}>{t('recurrence.yearUnit')}</Text>
+                        </View>
                     )}
                     {!!recurrenceRuleValue && (
                         <View style={{ marginTop: 8 }}>

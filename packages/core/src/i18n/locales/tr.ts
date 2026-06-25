@@ -269,6 +269,7 @@ export const trOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': 'kez',
         'recurrence.dayUnit': 'gün(ler)',
         'recurrence.monthUnit': 'ay(lar)',
+        'recurrence.yearUnit': 'yıl',
         'recurrence.onLabel': 'Açık',
         'recurrence.onDayOfMonth': 'Gün {day}',
         'recurrence.onNthWeekday': '{ordinal} {weekday}',

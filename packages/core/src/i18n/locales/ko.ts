@@ -265,6 +265,7 @@ export const koOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': '회',
         'recurrence.dayUnit': '날)',
         'recurrence.monthUnit': '월',
+        'recurrence.yearUnit': '년',
         'recurrence.onLabel': '~에',
         'recurrence.ordinal.first': '첫 번째',
         'recurrence.ordinal.second': '두번째',

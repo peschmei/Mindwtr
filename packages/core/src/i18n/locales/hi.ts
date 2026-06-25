@@ -266,6 +266,7 @@ export const hiOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': 'बार',
         'recurrence.dayUnit': 'दिन',
         'recurrence.monthUnit': 'महीना',
+        'recurrence.yearUnit': 'साल',
         'recurrence.onLabel': 'पर',
         'recurrence.ordinal.first': 'पहला',
         'recurrence.ordinal.second': 'दूसरा',

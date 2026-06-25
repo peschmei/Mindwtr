@@ -271,6 +271,7 @@ export const csOverrides: Record<string, string> = {
         'recurrence.dayUnit': 'dní',
         'recurrence.weekUnit': 'týdnů',
         'recurrence.monthUnit': 'měsíců',
+        'recurrence.yearUnit': 'roků',
         'recurrence.onLabel': 'V',
         'recurrence.onDayOfMonth': '{day}. den',
         'recurrence.onNthWeekday': '{ordinal} {weekday}',

@@ -5,6 +5,7 @@ import { generateUUID as uuidv4 } from './uuid';
 import type { Recurrence, RecurrenceByDay, RecurrenceRule, RecurrenceStrategy, RecurrenceWeekday, Task, TaskStatus, ChecklistItem, Attachment } from './types';
 
 export const RECURRENCE_RULES: RecurrenceRule[] = ['daily', 'weekly', 'monthly', 'yearly'];
+export const RECURRENCE_INTERVAL_MAX = 999;
 
 const WEEKDAY_ORDER: RecurrenceWeekday[] = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
@@ -417,7 +418,9 @@ export function formatRecurrenceLabel({ recurrence, t, formatDate }: FormatRecur
             ? 'recurrence.weekUnit'
             : rule === 'monthly'
                 ? 'recurrence.monthUnit'
-                : undefined;
+                : rule === 'yearly'
+                    ? 'recurrence.yearUnit'
+                    : undefined;
 
     return [
         `${t(`recurrence.${rule}`) || rule}${strategy === 'fluid' ? ` · ${t('recurrence.afterCompletionShort')}` : ''}`,

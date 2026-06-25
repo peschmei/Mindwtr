@@ -456,6 +456,7 @@ export {
     isRecurrenceRule,
     normalizeRecurrenceForLoad,
     parseRRuleString,
+    RECURRENCE_INTERVAL_MAX,
     RECURRENCE_RULES,
 } from './recurrence';
 export type {

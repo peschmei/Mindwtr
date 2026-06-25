@@ -266,6 +266,7 @@ export const plOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': 'raz(y)',
         'recurrence.dayUnit': 'dzień(i)',
         'recurrence.monthUnit': 'miesiąc(e)',
+        'recurrence.yearUnit': 'rok/lat',
         'recurrence.onLabel': 'W',
         'recurrence.onDayOfMonth': 'Dzień {day}',
         'recurrence.onNthWeekday': '{ordinal} {weekday}',

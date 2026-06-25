@@ -316,6 +316,7 @@ export const itOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': 'occorrenza/e',
         'recurrence.dayUnit': 'giorno/i',
         'recurrence.monthUnit': 'mese/i',
+        'recurrence.yearUnit': 'anno/i',
         'recurrence.onLabel': 'Il',
         'recurrence.onDayOfMonth': 'Giorno {day}',
         'recurrence.onNthWeekday': 'Il {ordinal} {weekday}',

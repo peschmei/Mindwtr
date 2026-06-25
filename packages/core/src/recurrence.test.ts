@@ -43,9 +43,11 @@ describe('recurrence', () => {
     const t = (key: string) => ({
         'recurrence.daily': 'Daily',
         'recurrence.weekly': 'Weekly',
+        'recurrence.yearly': 'Yearly',
         'recurrence.repeatEvery': 'Repeat every',
         'recurrence.dayUnit': 'day(s)',
         'recurrence.weekUnit': 'week(s)',
+        'recurrence.yearUnit': 'year(s)',
         'recurrence.endsAfterCount': 'After',
         'recurrence.endsOnDate': 'On date',
         'recurrence.occurrenceUnit': 'occurrence(s)',
@@ -59,6 +61,18 @@ describe('recurrence', () => {
         });
 
         expect(label).toBe('Daily · Repeat every 3 day(s)');
+    });
+
+    it('formats long weekly and yearly recurrence intervals for display', () => {
+        expect(formatRecurrenceLabel({
+            recurrence: { rule: 'weekly', rrule: 'FREQ=WEEKLY;INTERVAL=78' },
+            t,
+        })).toBe('Weekly · Repeat every 78 week(s)');
+
+        expect(formatRecurrenceLabel({
+            recurrence: { rule: 'yearly', rrule: 'FREQ=YEARLY;INTERVAL=2' },
+            t,
+        })).toBe('Yearly · Repeat every 2 year(s)');
     });
 
     it('formats recurrence end metadata for display', () => {
@@ -101,6 +115,15 @@ describe('recurrence', () => {
         expect(parsed.byMonthDay).toEqual([15]);
         expect(parsed.count).toBe(4);
         expect(parsed.until).toBe('2025-06-15');
+    });
+
+    it('builds and parses yearly interval rules', () => {
+        const rrule = buildRRuleString('yearly', undefined, 2);
+        expect(rrule).toBe('FREQ=YEARLY;INTERVAL=2');
+
+        const parsed = parseRRuleString(rrule);
+        expect(parsed.rule).toBe('yearly');
+        expect(parsed.interval).toBe(2);
     });
 
     it('normalizes legacy recurrence values to object form', () => {
@@ -594,6 +617,28 @@ describe('recurrence', () => {
 
         expect(april.dueDate).toBe('2025-04-30');
         expect(july?.dueDate).toBe('2025-07-31');
+    });
+
+    it('carries yearly recurrence forward by the RRULE interval', () => {
+        const task: Task = {
+            id: 't7-biennial',
+            title: 'Biennial renewal',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            dueDate: '2025-06-15',
+            recurrence: { rule: 'yearly', rrule: 'FREQ=YEARLY;INTERVAL=2' },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+        };
+
+        const next = createNextRecurringTask(task, '2025-06-15T12:00:00.000Z', 'done');
+
+        expect(next?.dueDate).toBe('2027-06-15');
+        expect(next?.recurrence).toMatchObject({
+            rule: 'yearly',
+            rrule: 'FREQ=YEARLY;INTERVAL=2',
+        });
     });
 
     it('clamps yearly recurrence for leap-day tasks', () => {

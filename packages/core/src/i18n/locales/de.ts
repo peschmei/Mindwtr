@@ -292,6 +292,7 @@ export const deOverrides: Record<string, string> = {
         'recurrence.occurrenceUnit': 'Wiederholung(en)',
         'recurrence.dayUnit': 'Tag(e)',
         'recurrence.monthUnit': 'Monat(e)',
+        'recurrence.yearUnit': 'Jahr(e)',
         'recurrence.onLabel': 'Am',
         'recurrence.onDayOfMonth': 'Tag {day}',
         'recurrence.onNthWeekday': 'Dem {ordinal} {weekday}',

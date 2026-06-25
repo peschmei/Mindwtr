@@ -33,6 +33,7 @@ export const nlOverrides: Record<string, string> = {
         'quickAdd.inputHint': 'Typ een taak en druk op Enter om op te slaan.',
         'list.groupByArea': 'Gebied',
         'recurrence.weekUnit': 'Weken',
+        'recurrence.yearUnit': 'jaar',
         'recurrence.ordinalSelectLabel': 'Volgorde',
         'recurrence.weekdaySelectLabel': 'Weekdag',
         'mobileHelp.title': 'Mobiele hulp',

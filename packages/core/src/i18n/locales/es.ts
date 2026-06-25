@@ -246,6 +246,7 @@ export const esOverrides: Record<string, string> = {
         'recurrence.endsAfterCount': 'Después de',
         'recurrence.occurrenceUnit': 'ocurrencia(s)',
         'recurrence.monthUnit': 'Mes(s)',
+        'recurrence.yearUnit': 'Año(s)',
         'recurrence.onLabel': 'On',
         'recurrence.monthlyOnDay': 'Same day each Mes',
         'recurrence.strategyLabel': 'Estrategia',
