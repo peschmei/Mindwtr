@@ -28,10 +28,7 @@ export function TaskEditHeader({
   const { t } = useLanguage();
   const tc = useThemeColors();
   const [menuVisible, setMenuVisible] = useState(false);
-  const createProjectFromTaskText = t('task.createProjectFromTask');
-  const createProjectFromTaskLabel = createProjectFromTaskText === 'task.createProjectFromTask'
-    ? 'Create project from task'
-    : createProjectFromTaskText;
+  const createProjectFromTaskLabel = t('task.createProjectFromTask');
 
   return (
     <>

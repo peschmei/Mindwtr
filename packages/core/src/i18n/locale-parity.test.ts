@@ -93,6 +93,19 @@ describe('locale parity', () => {
         }
     });
 
+    it('keeps promoted task action labels translated in every shipped locale', () => {
+        const taskActionKeys = [
+            'task.createProjectFromTask',
+            'task.duplicateFailed',
+            'task.promoteToProjectFailed',
+        ];
+
+        for (const [language, translations] of Object.entries(shippedLocales)) {
+            const missing = taskActionKeys.filter((key) => !translations[key]);
+            expect(missing, `Missing promoted task action translations in ${language}`).toEqual([]);
+        }
+    });
+
     it('keeps shipped locales limited to known English keys', () => {
         const englishKeys = new Set(Object.keys(en));
 

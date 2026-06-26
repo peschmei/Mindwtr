@@ -7,6 +7,7 @@ import {
     TaskEditAudioModal,
     TaskEditImagePreviewModal,
     TaskEditLinkModal,
+    TaskEditWaitingAssignmentModal,
 } from './TaskEditOverlayModals';
 import { TaskEditProjectPicker } from './TaskEditProjectPicker';
 import { TaskEditSectionPicker } from './TaskEditSectionPicker';
@@ -64,6 +65,11 @@ export function TaskEditOverlayStack(props: TaskEditOverlayStackProps) {
         tc,
         retryAudioTranscription,
         toggleAudioPlayback,
+        waitingAssignmentInput,
+        waitingAssignmentModalVisible,
+        closeWaitingAssignmentModal,
+        confirmWaitingAssignment,
+        setWaitingAssignmentInput,
     } = props;
 
     return (
@@ -83,6 +89,17 @@ export function TaskEditOverlayStack(props: TaskEditOverlayStackProps) {
                     onBlurLinkInput={() => setLinkInputTouched(true)}
                     onClose={closeLinkModal}
                     onSave={confirmAddLink}
+                />
+            ) : null}
+            {waitingAssignmentModalVisible ? (
+                <TaskEditWaitingAssignmentModal
+                    visible
+                    t={t}
+                    tc={tc}
+                    value={waitingAssignmentInput}
+                    onChangeValue={setWaitingAssignmentInput}
+                    onClose={closeWaitingAssignmentModal}
+                    onSave={confirmWaitingAssignment}
                 />
             ) : null}
             {audioModalVisible ? (

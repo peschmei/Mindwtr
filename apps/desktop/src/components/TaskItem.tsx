@@ -841,7 +841,7 @@ export const TaskItem = memo(function TaskItem({
         try {
             const result = await duplicateTask(task.id, false);
             if (!result.success || !result.id) {
-                showToast(result.error || tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'), 'error');
+                showToast(result.error || t('task.duplicateFailed'), 'error');
                 return;
             }
             setHighlightTask(result.id);
@@ -853,7 +853,7 @@ export const TaskItem = memo(function TaskItem({
             setEditingTaskId(result.id);
         } catch (error) {
             reportError('Failed to duplicate task', error);
-            showToast(tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'), 'error');
+            showToast(t('task.duplicateFailed'), 'error');
         }
     }, [duplicateTask, effectiveReadOnly, setEditingTaskId, setHighlightTask, setSelectedProjectId, setTaskExpanded, showToast, t, task.id, task.projectId]);
     const handlePromoteTaskToProject = useCallback(async () => {
@@ -861,7 +861,7 @@ export const TaskItem = memo(function TaskItem({
         try {
             const result = await promoteTaskToProject(task.id);
             if (!result.success || !result.id) {
-                showToast(result.error || tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'), 'error');
+                showToast(result.error || t('task.promoteToProjectFailed'), 'error');
                 return;
             }
             setHighlightTask(task.id);
@@ -883,7 +883,7 @@ export const TaskItem = memo(function TaskItem({
             }
         } catch (error) {
             reportError('Failed to create project from task', error);
-            showToast(tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'), 'error');
+            showToast(t('task.promoteToProjectFailed'), 'error');
         }
     }, [effectiveReadOnly, promoteTaskToProject, setEditingTaskId, setHighlightTask, setSelectedProjectId, setTaskExpanded, showToast, t, task.id]);
     const handleOpenContextToken = useCallback((token: string) => {

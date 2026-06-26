@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPendingSave, resetForTests, setStorageAdapter, useTaskStore } from '../store';
 import type { StorageAdapter } from '../storage';
 import type { AppData } from '../types';
+import { buildNewProject } from './project-actions';
 
 const BASE_NOW = '2026-06-14T12:00:00.000Z';
 
@@ -49,6 +50,59 @@ describe('project actions', () => {
         expect(saved).toBeDefined();
         return saved!;
     };
+
+    it('builds new projects with shared add/promote defaults', () => {
+        const existingProject = {
+            id: 'project-existing',
+            title: 'Existing',
+            status: 'active' as const,
+            color: '#111111',
+            order: 4,
+            areaId: 'area-1',
+            tagIds: [],
+            createdAt: BASE_NOW,
+            updatedAt: BASE_NOW,
+        };
+
+        const project = buildNewProject({
+            title: '  Launch  ',
+            color: '#3b82f6',
+            initialProps: { areaId: 'area-1', tagIds: ['#launch'] },
+            existingProjects: [existingProject],
+            settings: { gtd: { defaultProjectFlowMode: 'sequential' } },
+            deviceId: 'device-1',
+            now: BASE_NOW,
+            id: 'project-new',
+        });
+
+        expect(project).toMatchObject({
+            id: 'project-new',
+            title: 'Launch',
+            color: '#3b82f6',
+            order: 5,
+            areaId: 'area-1',
+            status: 'active',
+            rev: 1,
+            revBy: 'device-1',
+            createdAt: BASE_NOW,
+            updatedAt: BASE_NOW,
+            isSequential: true,
+            tagIds: ['#launch'],
+        });
+
+        const explicitParallelProject = buildNewProject({
+            title: 'Parallel',
+            color: '#22c55e',
+            initialProps: { isSequential: false },
+            existingProjects: [],
+            settings: { gtd: { defaultProjectFlowMode: 'sequential' } },
+            deviceId: 'device-1',
+            now: BASE_NOW,
+            id: 'project-parallel',
+        });
+
+        expect(explicitParallelProject.isSequential).toBe(false);
+    });
 
     it('deletes the project while detaching live tasks from its project and sections', async () => {
         const { addProject, addSection, addTask, deleteProject, deleteTask } = useTaskStore.getState();

@@ -39,6 +39,7 @@ export function TaskEditOrganizationField({
     priorityOptions,
     projectSections,
     projects,
+    requestStatusChange,
     setEditedTask,
     setShowAreaPicker,
     setShowProjectPicker,
@@ -126,7 +127,7 @@ export function TaskEditOrganizationField({
                             <TouchableOpacity
                                 key={status}
                                 style={[styles.statusChipCompact, ...getStatusChipStyle(editedTask.status === status)]}
-                                onPress={() => setEditedTask((prev) => ({ ...prev, status }))}
+                                onPress={() => requestStatusChange(status)}
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: editedTask.status === status }}
                                 accessibilityLabel={`${t('taskEdit.statusLabel')}: ${getStatusLabel(status)}`}

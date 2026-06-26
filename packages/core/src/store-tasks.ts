@@ -1,4 +1,4 @@
-import type { AppData, PendingRemoteAttachmentDelete, Project, Task, TaskStatus } from './types';
+import type { AppData, PendingRemoteAttachmentDelete, Task, TaskStatus } from './types';
 import type { StorageAdapter, TaskQueryOptions } from './storage';
 import type { StoreActionResult, TaskStore } from './store-types';
 import {
@@ -21,13 +21,13 @@ import {
 } from './store-helpers';
 import { logWarn } from './logger';
 import { generateUUID as uuidv4 } from './uuid';
-import { DEFAULT_PROJECT_COLOR } from './color-constants';
 import { normalizeRecurrenceForLoad } from './recurrence';
 import { normalizeRepeatReminderMinutes } from './schedule-utils';
 import { normalizeFocusTaskLimit } from './focus-utils';
 import { getTaskFocusEligibility, isTaskFutureStart } from './task-utils';
 import { resolveTaskContainerHierarchy } from './task-container-rules';
 import { resolveDefaultNewTaskAreaId } from './area-utils';
+import { buildNewProject } from './store-projects/project-actions';
 
 const stripAttachmentRemoteMetadata = (attachments: Task['attachments']): Task['attachments'] =>
     attachments?.map((attachment) => (
@@ -1011,25 +1011,19 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             let targetProject = existingProject;
             let nextAllProjects = state._allProjects;
             if (!targetProject) {
-                const maxOrder = state._allProjects
-                    .filter((project) => (project.areaId ?? undefined) === (targetAreaId ?? undefined))
-                    .reduce((max, project) => Math.max(max, Number.isFinite(project.order) ? project.order : -1), -1);
-                const useSequentialDefault = state.settings.gtd?.defaultProjectFlowMode === 'sequential';
-                const newProject: Project = {
-                    id: uuidv4(),
+                const newProject = buildNewProject({
                     title: trimmedTitle,
-                    color: options?.color ?? DEFAULT_PROJECT_COLOR,
-                    order: maxOrder + 1,
-                    status: 'active',
-                    rev: 1,
-                    revBy: deviceState.deviceId,
-                    createdAt: now,
-                    updatedAt: now,
-                    ...(targetAreaId ? { areaId: targetAreaId } : {}),
-                    ...(useSequentialDefault ? { isSequential: true } : {}),
-                    ...(projectSupportNotes ? { supportNotes: projectSupportNotes } : {}),
-                    tagIds: projectTagIds,
-                };
+                    color: options?.color,
+                    initialProps: {
+                        ...(targetAreaId ? { areaId: targetAreaId } : {}),
+                        ...(projectSupportNotes ? { supportNotes: projectSupportNotes } : {}),
+                        tagIds: projectTagIds,
+                    },
+                    existingProjects: state._allProjects,
+                    settings: state.settings,
+                    deviceId: deviceState.deviceId,
+                    now,
+                });
                 targetProject = newProject;
                 nextAllProjects = [...state._allProjects, newProject];
             }

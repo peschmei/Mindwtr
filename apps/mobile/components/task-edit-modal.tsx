@@ -423,6 +423,8 @@ function TaskEditModalInner({
     const [customOrdinal, setCustomOrdinal] = useState<'1' | '2' | '3' | '4' | '-1'>('1');
     const [customWeekday, setCustomWeekday] = useState<RecurrenceWeekday>(monthlyWeekdayCode);
     const [customMonthDay, setCustomMonthDay] = useState<number>(monthlyAnchorDate.getDate());
+    const [waitingAssignmentModalVisible, setWaitingAssignmentModalVisible] = useState(false);
+    const [waitingAssignmentInput, setWaitingAssignmentInput] = useState('');
     const [isTitleInputFocused, setIsTitleInputFocused] = useState(false);
 
     const openCustomRecurrence = useCallback(() => {
@@ -533,6 +535,23 @@ function TaskEditModalInner({
     const applyAssignedToSuggestion = useCallback((assignedTo: string) => {
         setEditedTask((prev) => ({ ...prev, assignedTo }));
     }, [setEditedTask]);
+    const closeWaitingAssignmentModal = useCallback(() => {
+        setWaitingAssignmentModalVisible(false);
+    }, []);
+    const confirmWaitingAssignment = useCallback(() => {
+        const assignedTo = waitingAssignmentInput.trim() || undefined;
+        setEditedTask((prev) => ({ ...prev, status: 'waiting', assignedTo }));
+        setWaitingAssignmentModalVisible(false);
+    }, [setEditedTask, waitingAssignmentInput]);
+    const requestStatusChange = useCallback((status: TaskStatus) => {
+        const currentStatus = editedTask.status ?? task?.status;
+        if (status === 'waiting' && currentStatus !== 'waiting') {
+            setWaitingAssignmentInput(String(editedTask.assignedTo ?? task?.assignedTo ?? ''));
+            setWaitingAssignmentModalVisible(true);
+            return;
+        }
+        setEditedTask((prev) => ({ ...prev, status }));
+    }, [editedTask.assignedTo, editedTask.status, setEditedTask, task?.assignedTo, task?.status]);
     const toggleQuickContextToken = useCallback((token: string) => {
         const next = new Set(parseTokenList(contextInputDraft, '@'));
         if (next.has(token)) {
@@ -696,6 +715,7 @@ function TaskEditModalInner({
         recurrenceRuleValue,
         recurrenceStrategyValue,
         recurrenceWeekdayButtons,
+        requestStatusChange,
         removeAttachment,
         selectedContextTokens,
         selectedTagTokens,
@@ -782,6 +802,7 @@ function TaskEditModalInner({
         recurrenceRuleValue,
         recurrenceStrategyValue,
         recurrenceWeekdayButtons,
+        requestStatusChange,
         removeAttachment,
         selectedContextTokens,
         selectedTagTokens,
@@ -817,8 +838,8 @@ function TaskEditModalInner({
         <TaskEditFieldRenderer fieldId={fieldId} {...fieldRendererProps} />
     ), [fieldRendererProps]);
     const handleViewStatusUpdate = useCallback((status: TaskStatus) => {
-        setEditedTask((prev) => ({ ...prev, status }));
-    }, [setEditedTask]);
+        requestStatusChange(status);
+    }, [requestStatusChange]);
     const isTaskFormTextInputFocused = isTitleInputFocused
         || descriptionEditor.isDescriptionInputFocused
         || isContextInputFocused
@@ -1005,6 +1026,11 @@ function TaskEditModalInner({
                         tc={tc}
                         retryAudioTranscription={retryAudioTranscription}
                         toggleAudioPlayback={toggleAudioPlayback}
+                        waitingAssignmentInput={waitingAssignmentInput}
+                        waitingAssignmentModalVisible={waitingAssignmentModalVisible}
+                        closeWaitingAssignmentModal={closeWaitingAssignmentModal}
+                        confirmWaitingAssignment={confirmWaitingAssignment}
+                        setWaitingAssignmentInput={setWaitingAssignmentInput}
                         DEFAULT_PROJECT_COLOR={DEFAULT_PROJECT_COLOR}
                     />
                     <MarkdownFormatToolbar

@@ -128,7 +128,7 @@ export function TaskQuickActionMenu({
     const contextsLabel = tFallback(t, 'taskEdit.contextsLabel', 'Contexts');
     const noAreaLabel = tFallback(t, 'taskEdit.noAreaOption', 'No Area');
     const duplicateLabel = tFallback(t, 'projects.duplicate', 'Duplicate');
-    const promoteToProjectLabel = tFallback(t, 'task.createProjectFromTask', 'Create project from task');
+    const promoteToProjectLabel = t('task.createProjectFromTask');
     const deleteLabel = tFallback(t, 'common.delete', 'Delete');
     const convertToReferenceLabel = tFallback(t, 'task.convertToReference', 'Convert to Reference');
     const markReviewedLabel = tFallback(t, 'review.markReviewed', 'Mark reviewed');

@@ -13,7 +13,9 @@ import {
 import { logWarn } from '../logger';
 import { clearDerivedCache } from '../store-settings';
 import { generateUUID as uuidv4 } from '../uuid';
+import { DEFAULT_PROJECT_COLOR } from '../color-constants';
 import type { Project, ProjectCoreActions, ProjectActionContext, Task, TaskStatus } from './shared';
+import type { TaskStore } from '../store-types';
 import { actionFail, actionOk } from './shared';
 
 const duplicateProjectAttachmentCopy = (attachment: NonNullable<Project['attachments']>[number], now: string) => ({
@@ -26,6 +28,55 @@ const duplicateProjectAttachmentCopy = (attachment: NonNullable<Project['attachm
     fileHash: undefined,
     localStatus: undefined,
 });
+
+type BuildNewProjectParams = {
+    title: string;
+    color?: string;
+    initialProps?: Partial<Project>;
+    existingProjects: readonly Project[];
+    settings: TaskStore['settings'];
+    deviceId: string;
+    now: string;
+    id?: string;
+};
+
+export const buildNewProject = ({
+    title,
+    color,
+    initialProps,
+    existingProjects,
+    settings,
+    deviceId,
+    now,
+    id,
+}: BuildNewProjectParams): Project => {
+    const trimmedTitle = typeof title === 'string' ? title.trim() : '';
+    const targetAreaId = initialProps?.areaId;
+    const maxOrder = existingProjects
+        .filter((project) => (project.areaId ?? undefined) === (targetAreaId ?? undefined))
+        .reduce((max, project) => Math.max(max, Number.isFinite(project.order) ? project.order : -1), -1);
+    const baseOrder = Number.isFinite(initialProps?.order) ? (initialProps?.order as number) : maxOrder + 1;
+    const hasExplicitFlowMode = Boolean(
+        initialProps && Object.prototype.hasOwnProperty.call(initialProps, 'isSequential')
+    );
+    const useSequentialDefault = !hasExplicitFlowMode
+        && settings.gtd?.defaultProjectFlowMode === 'sequential';
+
+    return {
+        id: id ?? uuidv4(),
+        title: trimmedTitle,
+        color: color ?? DEFAULT_PROJECT_COLOR,
+        order: baseOrder,
+        status: 'active',
+        rev: 1,
+        revBy: deviceId,
+        createdAt: now,
+        updatedAt: now,
+        ...(useSequentialDefault ? { isSequential: true } : {}),
+        ...initialProps,
+        tagIds: initialProps?.tagIds ?? [],
+    };
+};
 
 export const createProjectCoreActions = ({
     set,
@@ -55,31 +106,16 @@ export const createProjectCoreActions = ({
                 return state;
             }
             const deviceState = ensureDeviceId(state.settings);
-            const targetAreaId = initialProps?.areaId;
-            const maxOrder = state._allProjects
-                .filter((project) => (project.areaId ?? undefined) === (targetAreaId ?? undefined))
-                .reduce((max, project) => Math.max(max, Number.isFinite(project.order) ? project.order : -1), -1);
-            const baseOrder = Number.isFinite(initialProps?.order) ? (initialProps?.order as number) : maxOrder + 1;
             const now = new Date().toISOString();
-            const hasExplicitFlowMode = Boolean(
-                initialProps && Object.prototype.hasOwnProperty.call(initialProps, 'isSequential')
-            );
-            const useSequentialDefault = !hasExplicitFlowMode
-                && state.settings.gtd?.defaultProjectFlowMode === 'sequential';
-            const newProject: Project = {
-                id: uuidv4(),
+            const newProject = buildNewProject({
                 title: trimmedTitle,
                 color,
-                order: baseOrder,
-                status: 'active',
-                rev: 1,
-                revBy: deviceState.deviceId,
-                createdAt: now,
-                updatedAt: now,
-                ...(useSequentialDefault ? { isSequential: true } : {}),
-                ...initialProps,
-                tagIds: initialProps?.tagIds ?? [],
-            };
+                initialProps,
+                existingProjects: state._allProjects,
+                settings: state.settings,
+                deviceId: deviceState.deviceId,
+                now,
+            });
             createdProject = newProject;
             const newAllProjects = [...state._allProjects, newProject];
             const newVisibleProjects = [...state.projects, newProject];

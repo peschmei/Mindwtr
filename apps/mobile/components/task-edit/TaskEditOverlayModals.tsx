@@ -91,6 +91,77 @@ export const TaskEditLinkModal = ({
     </Modal>
 );
 
+type TaskEditWaitingAssignmentModalProps = {
+    visible: boolean;
+    t: Translator;
+    tc: ThemeColors;
+    value: string;
+    onChangeValue: (value: string) => void;
+    onClose: () => void;
+    onSave: () => void;
+};
+
+export const TaskEditWaitingAssignmentModal = ({
+    visible,
+    t,
+    tc,
+    value,
+    onChangeValue,
+    onClose,
+    onSave,
+}: TaskEditWaitingAssignmentModalProps) => {
+    const title = translateWithFallback(t, 'process.waitingFor', 'Who/what are you waiting for?');
+    const description = translateWithFallback(
+        t,
+        'process.waitingForDesc',
+        "Add a note to remember what you're waiting on",
+    );
+    const placeholder = translateWithFallback(
+        t,
+        'taskEdit.assignedToPlaceholder',
+        'Who is this waiting for?',
+    );
+
+    return (
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+            onRequestClose={onClose}
+        >
+            <Pressable style={styles.overlay} onPress={onClose}>
+                <Pressable
+                    style={[styles.modalCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}
+                    onPress={(event) => event.stopPropagation()}
+                >
+                    <Text style={[styles.modalTitle, { color: tc.text }]}>{title}</Text>
+                    <Text style={[styles.modalLabel, { color: tc.secondaryText }]}>{description}</Text>
+                    <TextInput
+                        value={value}
+                        onChangeText={onChangeValue}
+                        placeholder={placeholder}
+                        placeholderTextColor={tc.secondaryText}
+                        style={[styles.modalInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+                        autoCapitalize="words"
+                        returnKeyType="done"
+                        accessibilityLabel={title}
+                        accessibilityHint={description}
+                        onSubmitEditing={onSave}
+                    />
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity onPress={onClose} style={styles.modalButton}>
+                            <Text style={[styles.modalButtonText, { color: tc.secondaryText }]}>{t('common.cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={onSave} style={styles.modalButton}>
+                            <Text style={[styles.modalButtonText, { color: tc.tint }]}>{t('common.save')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Pressable>
+            </Pressable>
+        </Modal>
+    );
+};
+
 type AudioStatusLike = {
     isLoaded?: boolean;
     playing?: boolean;

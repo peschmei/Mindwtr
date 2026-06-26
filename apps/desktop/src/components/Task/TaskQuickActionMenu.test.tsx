@@ -28,6 +28,7 @@ const t = (key: string) => ({
     'projects.duplicate': 'Duplicate',
     'review.markReviewed': 'Mark reviewed',
     'task.convertToReference': 'Convert to Reference',
+    'task.createProjectFromTask': 'Create project from task',
     'task.aria.dueTime': 'Due time',
     'task.aria.reviewTime': 'Review time',
     'task.aria.startTime': 'Start time',

@@ -428,6 +428,59 @@ describe('TaskEditModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('asks who or what is being waited on before setting status to waiting', async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    let tree: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={onClose}
+          onSave={onSave}
+        />
+      );
+    });
+
+    const viewTab = tree!.root.find((node) => typeof node.props.onStatusUpdate === 'function');
+    await act(async () => {
+      viewTab.props.onStatusUpdate('waiting');
+    });
+
+    const waitingInput = tree!.root.findByProps({ placeholder: 'Who is this waiting for?' });
+    await act(async () => {
+      waitingInput.props.onChangeText('Alex');
+    });
+
+    await act(async () => {
+      waitingInput.props.onSubmitEditing();
+    });
+
+    const header = tree!.root.find((node) =>
+      typeof node.props.onDone === 'function'
+      && typeof node.props.onDelete === 'function'
+    );
+    await act(async () => {
+      header.props.onDone();
+    });
+
+    expect(onSave).toHaveBeenCalledWith('t1', expect.objectContaining({
+      status: 'waiting',
+      assignedTo: 'Alex',
+    }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the project area when clearing a task project', () => {
     const onClose = vi.fn();
     const onSave = vi.fn();

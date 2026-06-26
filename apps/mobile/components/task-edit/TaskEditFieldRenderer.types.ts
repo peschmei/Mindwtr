@@ -93,6 +93,7 @@ export type TaskEditFieldRendererProps = {
     recurrenceRuleValue: RecurrenceRule | '';
     recurrenceStrategyValue: RecurrenceStrategy;
     recurrenceWeekdayButtons: WeekdayButton[];
+    requestStatusChange: (status: TaskStatus) => void;
     removeAttachment: (attachmentId: string) => void | Promise<void>;
     selectedContextTokens: Set<string>;
     selectedTagTokens: Set<string>;

@@ -5,7 +5,6 @@ Mindwtr keeps translations under this folder so community contributions are easy
 - `en.ts`: English source strings (base dictionary).
 - `zh-Hans.ts`: Full Simplified Chinese dictionary.
 - `zh-Hant.ts`: Full Traditional Chinese dictionary.
-- `zh.ts`: Legacy alias that points to `zh-Hans.ts` for backward compatibility.
 - `*.ts` for other languages: manual override dictionaries. These locales are partial by design; missing keys fall back to English.
 
 English and Chinese are the only full dictionaries today. For languages using overrides, prefer adding explicit translations for all keys, but do not copy English strings into override files as placeholders. CI enforces each partial locale's current coverage floor so newly added English keys cannot silently lower existing coverage.

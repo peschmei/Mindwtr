@@ -450,7 +450,7 @@ export function useTaskEditActions({
             if (!result.success || !result.id) {
                 showToast({
                     title: tFallback(t, 'common.error', 'Error'),
-                    message: result.error || tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'),
+                    message: result.error || t('task.duplicateFailed'),
                     tone: 'error',
                 });
                 return;
@@ -461,7 +461,7 @@ export function useTaskEditActions({
             logTaskError('Failed to duplicate task', error);
             showToast({
                 title: tFallback(t, 'common.error', 'Error'),
-                message: tFallback(t, 'task.duplicateFailed', 'Failed to duplicate task'),
+                message: t('task.duplicateFailed'),
                 tone: 'error',
             });
         }
@@ -475,7 +475,7 @@ export function useTaskEditActions({
             if (!result.success || !result.id) {
                 showToast({
                     title: tFallback(t, 'common.error', 'Error'),
-                    message: result.error || tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'),
+                    message: result.error || t('task.promoteToProjectFailed'),
                     tone: 'error',
                 });
                 return;
@@ -486,7 +486,7 @@ export function useTaskEditActions({
             logTaskError('Failed to create project from task', error);
             showToast({
                 title: tFallback(t, 'common.error', 'Error'),
-                message: tFallback(t, 'task.promoteToProjectFailed', 'Failed to create project from task'),
+                message: t('task.promoteToProjectFailed'),
                 tone: 'error',
             });
         }
