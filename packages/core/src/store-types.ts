@@ -7,6 +7,8 @@ export type StoreActionResult = {
     success: boolean;
     error?: string;
     id?: string;
+    /** For promoteTaskToProject: true when an existing same-named project was reused instead of created. */
+    reused?: boolean;
 };
 
 /**

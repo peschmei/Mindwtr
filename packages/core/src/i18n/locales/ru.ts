@@ -163,6 +163,8 @@ export const ruOverrides: Record<string, string> = {
         'task.createProjectFromTask': 'Создать проект из задачи',
         'task.duplicateFailed': 'Не удалось дублировать задачу',
         'task.promoteToProjectFailed': 'Не удалось создать проект из задачи',
+        'task.promoteToProjectCreated': 'Проект создан из задачи',
+        'task.promoteToProjectMoved': 'Задача перемещена в существующий проект',
         'taskEdit.duplicateTask': 'Повторяющаяся задача',
         'taskEdit.duplicateDoneTitle': 'Задача дублируется.',
         'taskEdit.duplicateDoneBody': 'В папке «Входящие» была создана новая копия.',

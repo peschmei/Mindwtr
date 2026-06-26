@@ -886,7 +886,9 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
     },
 
     /**
-     * Duplicate a task for reusable lists/templates.
+     * Duplicate a task as a fresh, re-doable copy: clones the details (title, dates,
+     * recurrence, tags, project) but resets completion — unchecks the checklist, clears
+     * completedAt, and reactivates done/archived tasks so the copy is always actionable.
      */
     duplicateTask: async (id: string, asNextAction?: boolean) => {
         const changeAt = Date.now();
@@ -905,6 +907,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             const duplicatedChecklist = (sourceTask.checklist || []).map((item) => ({
                 ...item,
                 id: uuidv4(),
+                isCompleted: false,
             }));
             const duplicatedAttachments = (sourceTask.attachments || []).map((attachment) => ({
                 ...attachment,
@@ -926,10 +929,10 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 ...sourceTask,
                 id: duplicatedTaskId,
                 title: sourceTask.title,
-                status: asNextAction ? 'next' : sourceTask.status,
+                status: asNextAction || sourceTask.status === 'done' || sourceTask.status === 'archived' ? 'next' : sourceTask.status,
                 checklist: duplicatedChecklist.length > 0 ? duplicatedChecklist : undefined,
                 attachments: duplicatedAttachments.length > 0 ? duplicatedAttachments : undefined,
-                completedAt: asNextAction ? undefined : sourceTask.completedAt,
+                completedAt: undefined,
                 isFocusedToday: false,
                 deletedAt: undefined,
                 purgedAt: undefined,
@@ -970,6 +973,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
         let missingTask = false;
         let errorMessage: string | undefined;
         let promotedProjectId: string | undefined;
+        let reusedExistingProject = false;
         set((state) => {
             const sourceTask = state._tasksById.get(id);
             if (!sourceTask || sourceTask.deletedAt) {
@@ -1001,6 +1005,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                     typeof project.title === 'string' &&
                     project.title.trim().toLowerCase() === normalizedTitle
             );
+            reusedExistingProject = Boolean(existingProject);
             const projectSupportNotes = typeof sourceTask.description === 'string' && sourceTask.description.trim()
                 ? sourceTask.description.trim()
                 : undefined;
@@ -1077,7 +1082,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
         }
         if (missingTask) return actionFail('Task not found');
         if (errorMessage) return actionFail(errorMessage);
-        return actionOk({ id: promotedProjectId });
+        return actionOk({ id: promotedProjectId, reused: reusedExistingProject });
     },
 
     /**

@@ -163,6 +163,8 @@ export const koOverrides: Record<string, string> = {
         'task.createProjectFromTask': '작업에서 프로젝트 만들기',
         'task.duplicateFailed': '작업을 복제하지 못했습니다',
         'task.promoteToProjectFailed': '작업에서 프로젝트를 만들지 못했습니다',
+        'task.promoteToProjectCreated': '작업에서 프로젝트를 만들었습니다',
+        'task.promoteToProjectMoved': '기존 프로젝트로 작업을 이동했습니다',
         'taskEdit.duplicateTask': '중복된 작업',
         'taskEdit.duplicateDoneTitle': '작업이 중복되었습니다.',
         'taskEdit.aiClarify': 'AI가 명확하게',

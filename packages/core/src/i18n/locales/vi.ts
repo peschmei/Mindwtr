@@ -175,6 +175,8 @@ export const viOverrides: Record<string, string> = {
         'task.createProjectFromTask': 'Tạo dự án từ tác vụ',
         'task.duplicateFailed': 'Không thể nhân đôi tác vụ',
         'task.promoteToProjectFailed': 'Không thể tạo dự án từ tác vụ',
+        'task.promoteToProjectCreated': 'Đã tạo dự án từ nhiệm vụ',
+        'task.promoteToProjectMoved': 'Đã chuyển nhiệm vụ vào dự án hiện có',
         'taskEdit.duplicateTask': 'Nhân đôi nhiệm vụ',
         'taskEdit.duplicateDoneTitle': 'Đã nhân đôi nhiệm vụ',
         'taskEdit.duplicateDoneBody': 'Một bản sao mới đã được tạo trong Hộp thư đến.',

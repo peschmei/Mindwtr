@@ -178,6 +178,8 @@ export const en: Record<string, string> = {
         'task.createProjectFromTask': 'Create project from task',
         'task.duplicateFailed': 'Failed to duplicate task',
         'task.promoteToProjectFailed': 'Failed to create project from task',
+        'task.promoteToProjectCreated': 'Project created from task',
+        'task.promoteToProjectMoved': 'Moved task into existing project',
         'taskEdit.duplicateTask': 'Duplicate task',
         'taskEdit.duplicateDoneTitle': 'Task duplicated',
         'taskEdit.duplicateDoneBody': 'A fresh copy was created in Inbox.',

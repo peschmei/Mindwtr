@@ -164,6 +164,8 @@ export const plOverrides: Record<string, string> = {
         'task.createProjectFromTask': 'Utwórz projekt z zadania',
         'task.duplicateFailed': 'Nie udało się zduplikować zadania',
         'task.promoteToProjectFailed': 'Nie udało się utworzyć projektu z zadania',
+        'task.promoteToProjectCreated': 'Utworzono projekt z zadania',
+        'task.promoteToProjectMoved': 'Przeniesiono zadanie do istniejącego projektu',
         'taskEdit.duplicateTask': 'Duplikuj zadanie',
         'taskEdit.duplicateDoneTitle': 'Zadanie zdublowane',
         'taskEdit.duplicateDoneBody': 'W skrzynce odbiorczej utworzono nową kopię.',

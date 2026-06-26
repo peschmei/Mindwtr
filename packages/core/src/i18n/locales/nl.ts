@@ -24,6 +24,8 @@ export const nlOverrides: Record<string, string> = {
         'task.createProjectFromTask': 'Project maken van taak',
         'task.duplicateFailed': 'Taak dupliceren mislukt',
         'task.promoteToProjectFailed': 'Project maken van taak mislukt',
+        'task.promoteToProjectCreated': 'Project gemaakt van taak',
+        'task.promoteToProjectMoved': 'Taak verplaatst naar bestaand project',
         'nav.sectionLists': 'Lijsten',
         'nav.sectionOrganize': 'Organiseren',
         'nav.sectionArchive': 'Archief',

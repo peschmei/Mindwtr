@@ -163,6 +163,8 @@ export const hiOverrides: Record<string, string> = {
         'task.createProjectFromTask': 'कार्य से प्रोजेक्ट बनाएं',
         'task.duplicateFailed': 'कार्य डुप्लिकेट नहीं हो सका',
         'task.promoteToProjectFailed': 'कार्य से प्रोजेक्ट नहीं बन सका',
+        'task.promoteToProjectCreated': 'कार्य से प्रोजेक्ट बनाया गया',
+        'task.promoteToProjectMoved': 'कार्य को मौजूदा प्रोजेक्ट में ले जाया गया',
         'taskEdit.duplicateTask': 'डुप्लिकेट कार्य',
         'taskEdit.duplicateDoneTitle': 'कार्य डुप्लिकेट किया गया',
         'taskEdit.duplicateDoneBody': 'इनबॉक्स में एक नई प्रति बनाई गई।',

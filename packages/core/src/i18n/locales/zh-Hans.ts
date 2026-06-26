@@ -149,6 +149,8 @@ export const zhHans: Record<string, string> = {
         'task.createProjectFromTask': '从任务创建项目',
         'task.duplicateFailed': '复制任务失败',
         'task.promoteToProjectFailed': '无法从任务创建项目',
+        'task.promoteToProjectCreated': '已从任务创建项目',
+        'task.promoteToProjectMoved': '已将任务移至现有项目',
         'taskEdit.duplicateTask': '复制任务',
         'taskEdit.duplicateDoneTitle': '已复制任务',
         'taskEdit.duplicateDoneBody': '已在收集箱创建一份新的副本。',

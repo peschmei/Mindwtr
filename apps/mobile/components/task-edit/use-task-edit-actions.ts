@@ -480,6 +480,13 @@ export function useTaskEditActions({
                 });
                 return;
             }
+            showToast({
+                title: tFallback(t, 'common.success', 'Success'),
+                message: result.reused
+                    ? t('task.promoteToProjectMoved')
+                    : t('task.promoteToProjectCreated'),
+                tone: 'success',
+            });
             onClose();
             openProjectScreen(result.id);
         } catch (error) {

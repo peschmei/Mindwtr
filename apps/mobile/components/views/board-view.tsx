@@ -1,12 +1,13 @@
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from 'react-native';
-import { isTaskInActiveProject, sortTasksByBoardOrder, useTaskStore, taskMatchesFilterCriteria, taskMatchesAreaFilter, hasActiveFilterCriteria, getUsedTaskTokens } from '@mindwtr/core';
+import { isTaskInActiveProject, sortTasksByBoardOrder, useTaskStore, taskMatchesFilterCriteria, taskMatchesAreaFilter, hasActiveFilterCriteria, getUsedTaskTokens, tFallback } from '@mindwtr/core';
 import type { Task, TaskStatus, FilterCriteria } from '@mindwtr/core';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/theme-context';
 import { useLanguage } from '../../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
-import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
+import { openContextsScreen, openProjectScreen, openTaskScreen } from '@/lib/task-meta-navigation';
+import { useToast } from '@/contexts/toast-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture, Swipeable } from 'react-native-gesture-handler';
 import { Filter } from 'lucide-react-native';
@@ -346,6 +347,7 @@ export function BoardView() {
   const { isDark } = useTheme();
   const tc = useThemeColors();
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const timeEstimatesEnabled = useTaskStore((state) => state.settings?.features?.timeEstimates !== false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [dragSourceColumnIndex, setDragSourceColumnIndex] = useState<number | null>(null);
@@ -532,9 +534,26 @@ export function BoardView() {
     deleteTask(taskId);
   }, [deleteTask]);
 
-  const handleDuplicate = useCallback((task: Task) => {
-    duplicateTask(task.id, false);
-  }, [duplicateTask]);
+  const handleDuplicate = useCallback(async (task: Task) => {
+    try {
+      const result = await duplicateTask(task.id, false);
+      if (!result.success || !result.id) {
+        showToast({
+          title: tFallback(t, 'common.error', 'Error'),
+          message: result.error || t('task.duplicateFailed'),
+          tone: 'error',
+        });
+        return;
+      }
+      openTaskScreen(result.id, task.projectId, 'task');
+    } catch {
+      showToast({
+        title: tFallback(t, 'common.error', 'Error'),
+        message: t('task.duplicateFailed'),
+        tone: 'error',
+      });
+    }
+  }, [duplicateTask, showToast, t]);
 
   const stopAutoScroll = useCallback(() => {
     autoScrollDirectionRef.current = 0;

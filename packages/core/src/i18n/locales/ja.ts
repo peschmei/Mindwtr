@@ -163,6 +163,8 @@ export const jaOverrides: Record<string, string> = {
         'task.createProjectFromTask': 'タスクからプロジェクトを作成',
         'task.duplicateFailed': 'タスクを複製できませんでした',
         'task.promoteToProjectFailed': 'タスクからプロジェクトを作成できませんでした',
+        'task.promoteToProjectCreated': 'タスクからプロジェクトを作成しました',
+        'task.promoteToProjectMoved': '既存のプロジェクトにタスクを移動しました',
         'taskEdit.duplicateTask': 'タスクの重複',
         'taskEdit.duplicateDoneTitle': 'タスクが複製されました',
         'taskEdit.duplicateDoneBody': '新しいコピーが受信トレイに作成されました。',

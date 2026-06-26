@@ -864,6 +864,10 @@ export const TaskItem = memo(function TaskItem({
                 showToast(result.error || t('task.promoteToProjectFailed'), 'error');
                 return;
             }
+            showToast(
+                result.reused ? t('task.promoteToProjectMoved') : t('task.promoteToProjectCreated'),
+                'success',
+            );
             setHighlightTask(task.id);
             setSelectedProjectId(result.id);
             setEditingTaskId(null);
