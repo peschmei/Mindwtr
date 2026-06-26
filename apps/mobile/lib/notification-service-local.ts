@@ -1066,7 +1066,11 @@ export async function scheduleLocalPomodoroCompletionNotification(
 
 export async function startLocalMobileNotifications(): Promise<void> {
   if (started) {
-    logNotificationInfo('Start skipped; service already running');
+    logNotificationInfo('Start requested while service is already running; rescheduling current reminders');
+    const api = await loadAlarmApi();
+    if (api) {
+      await runRescheduleCycle(api);
+    }
     return;
   }
   started = true;

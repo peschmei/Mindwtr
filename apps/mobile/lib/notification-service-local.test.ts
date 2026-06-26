@@ -509,6 +509,41 @@ describe('notification-service-local', () => {
     );
   });
 
+  it('reschedules current task reminders when startup is requested while already running', async () => {
+    const firstFireAt = new Date(Date.now() + 5 * 60 * 1000);
+    const recurringFollowUpFireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    mockStoreState.tasks = [
+      { id: 'recurring-original', title: 'Daily standup', description: '' },
+    ];
+    mockGetNextScheduledAt.mockImplementation((task) => {
+      const id = String((task as { id?: string }).id);
+      if (id === 'recurring-original') return firstFireAt;
+      if (id === 'recurring-follow-up') return recurringFollowUpFireAt;
+      return null;
+    });
+
+    await startLocalMobileNotifications();
+
+    expect(mockAlarmScheduleAlarm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ taskId: 'recurring-original' }),
+      })
+    );
+
+    mockAlarmScheduleAlarm.mockClear();
+    mockStoreState.tasks = [
+      { id: 'recurring-follow-up', title: 'Daily standup', description: '' },
+    ];
+
+    await startLocalMobileNotifications();
+
+    expect(mockAlarmScheduleAlarm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ taskId: 'recurring-follow-up' }),
+      })
+    );
+  });
+
   it('does not reschedule unchanged persisted daily digest alarms on startup', async () => {
     const signature = JSON.stringify({
       title: 'Morning',
