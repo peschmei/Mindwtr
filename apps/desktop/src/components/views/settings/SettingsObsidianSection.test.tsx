@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { SettingsObsidianSection } from './SettingsObsidianSection';
 
 const t = {
-    obsidianVault: 'Obsidian Vault',
-    obsidianVaultDesc: 'Connect a local Obsidian vault.',
+    obsidianVault: 'Obsidian vault import',
+    obsidianVaultDesc: 'Import tasks from a local Obsidian vault.',
     obsidianEnable: 'Enable Obsidian integration',
     obsidianVaultPath: 'Vault folder',
     obsidianVaultPathHint: 'Select the root folder of your vault.',
@@ -81,7 +81,7 @@ describe('SettingsObsidianSection', () => {
     it('starts collapsed and expands on demand', () => {
         const { getByRole, queryByText, getByText } = render(<SettingsObsidianSection {...baseProps} />);
 
-        const toggle = getByRole('button', { name: /Obsidian Vault/i });
+        const toggle = getByRole('button', { name: /Obsidian vault import/i });
         expect(toggle).toHaveAttribute('aria-expanded', 'false');
         expect(queryByText('Vault folder')).not.toBeInTheDocument();
 
@@ -101,7 +101,7 @@ describe('SettingsObsidianSection', () => {
             />
         );
 
-        fireEvent.click(getByRole('button', { name: /Obsidian Vault/i }));
+        fireEvent.click(getByRole('button', { name: /Obsidian vault import/i }));
         fireEvent.click(getAllByRole('switch')[1]);
 
         expect(onChange).toHaveBeenCalledWith(true);

@@ -43,8 +43,8 @@ const reportedZhHantLabels = {
     attachmentsCleanupPendingDeletes: '待處理遠程刪除',
     attachmentsCleanupPendingDeletesClear: '清除待處理刪除',
     calendarChooseLocalFile: '選擇本地 .ics 文件',
-    obsidianVault: 'Obsidian 資料庫',
-    obsidianVaultDesc: '連接本地 Obsidian 資料庫，並將 Markdown 複選框任務作為只讀外部任務導入。',
+    obsidianVault: 'Obsidian 資料庫導入',
+    obsidianVaultDesc: '從本地 Obsidian 資料庫導入任務。Obsidian 保留筆記與捕獲來源，Mindwtr 管理原生承諾事項。',
 } as const;
 
 describe('settings label fallbacks', () => {

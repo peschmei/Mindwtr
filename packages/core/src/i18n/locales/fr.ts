@@ -230,6 +230,9 @@ export const frOverrides: Record<string, string> = {
         'attachments.transferProgress': 'Progression du transfert de la pièce jointe',
         'attachments.linkPlaceholder': 'https://exemple.com',
         'attachments.linkInputHint': 'Astuce : collez une URL ou utilisez "Titre | URL".',
+        'attachments.attachObsidianNote': 'Joindre une note Obsidian',
+        'attachments.obsidianLinkPlaceholder': 'obsidian://open?vault=Vault&file=Note',
+        'attachments.obsidianLinkInputHint': 'Collez un lien de note obsidian:// ou utilisez « Titre | obsidian://... ».',
         'attachments.fileNotSupported': 'Les pièces jointes ne sont prises en charge que dans l’application de bureau.',
         'attachments.fileTooLarge': 'Le fichier est trop volumineux pour être téléversé.',
         'attachments.invalidFileType': 'Type de fichier non pris en charge.',
@@ -1838,4 +1841,10 @@ export const frOverrides: Record<string, string> = {
 'mindSweep.group.workAdmin.p4': 'Voyage, matériel ou accès à organiser',
 'mindSweep.group.workAdmin.p5': 'Quelque chose que votre futur vous-même aurait préféré avoir classé aujourd’hui',
 
+        'obsidian.title': 'Tâches Obsidian',
+        'obsidian.description': 'Importez les tâches de votre coffre Obsidian, gardez la note source visible et transférez les vrais engagements dans Mindwtr au besoin.',
+        'obsidian.bringIntoMindwtr': 'Importer dans Mindwtr',
+        'obsidian.bringIntoMindwtrSuccess': 'Tâche ajoutée à Mindwtr.',
+        'obsidian.bringIntoMindwtrFailed': 'Impossible d’ajouter la tâche à Mindwtr.',
+        'obsidian.sourceAttachmentTitle': 'Source Obsidian',
 };

@@ -23,6 +23,7 @@ describe('AttachmentsField', () => {
                 visibleEditAttachments={[attachment]}
                 addFileAttachment={vi.fn()}
                 addLinkAttachment={vi.fn()}
+                addObsidianNoteAttachment={vi.fn()}
                 editLinkAttachment={vi.fn()}
                 openAttachment={openAttachment}
                 removeAttachment={vi.fn()}
@@ -54,6 +55,7 @@ describe('AttachmentsField', () => {
                 visibleEditAttachments={[attachment]}
                 addFileAttachment={vi.fn()}
                 addLinkAttachment={vi.fn()}
+                addObsidianNoteAttachment={vi.fn()}
                 editLinkAttachment={editLinkAttachment}
                 openAttachment={vi.fn()}
                 removeAttachment={vi.fn()}
@@ -64,4 +66,27 @@ describe('AttachmentsField', () => {
 
         expect(editLinkAttachment).toHaveBeenCalledWith(attachment);
     });
+
+    it('surfaces an Obsidian note attachment action', () => {
+        const addObsidianNoteAttachment = vi.fn();
+
+        const { getByRole } = render(
+            <AttachmentsField
+                t={(key) => key}
+                attachmentError={null}
+                visibleEditAttachments={[]}
+                addFileAttachment={vi.fn()}
+                addLinkAttachment={vi.fn()}
+                addObsidianNoteAttachment={addObsidianNoteAttachment}
+                editLinkAttachment={vi.fn()}
+                openAttachment={vi.fn()}
+                removeAttachment={vi.fn()}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: 'attachments.attachObsidianNote' }));
+
+        expect(addObsidianNoteAttachment).toHaveBeenCalledTimes(1);
+    });
+
 });

@@ -1,4 +1,4 @@
-import { Edit3, Link2, Paperclip } from 'lucide-react';
+import { BookOpen, Edit3, Link2, Paperclip } from 'lucide-react';
 import type { Attachment } from '@mindwtr/core';
 import { getAttachmentDisplayTitle } from '../../../lib/attachment-utils';
 import { isImageAttachment } from '../task-item-attachment-utils';
@@ -11,6 +11,7 @@ type AttachmentsFieldProps = {
     visibleEditAttachments: Attachment[];
     addFileAttachment: () => void;
     addLinkAttachment: () => void;
+    addObsidianNoteAttachment: () => void;
     editLinkAttachment: (attachment: Attachment) => void;
     openAttachment: (attachment: Attachment) => void;
     removeAttachment: (id: string) => void;
@@ -22,6 +23,7 @@ export function AttachmentsField({
     visibleEditAttachments,
     addFileAttachment,
     addLinkAttachment,
+    addObsidianNoteAttachment,
     editLinkAttachment,
     openAttachment,
     removeAttachment,
@@ -58,6 +60,14 @@ export function AttachmentsField({
                     >
                         <Link2 className="w-3 h-3" />
                         {t('attachments.addLink')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={addObsidianNoteAttachment}
+                        className="text-xs px-2 py-1 rounded bg-muted/50 hover:bg-muted transition-colors flex items-center gap-1"
+                    >
+                        <BookOpen className="w-3 h-3" />
+                        {t('attachments.attachObsidianNote')}
                     </button>
                 </div>
             </div>

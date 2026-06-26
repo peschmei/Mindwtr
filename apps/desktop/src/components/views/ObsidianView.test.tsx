@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 
 import { LanguageProvider } from '../../contexts/language-context';
+import { useTaskStore } from '@mindwtr/core';
+import { ObsidianService } from '../../lib/obsidian-service';
 import { useObsidianStore } from '../../store/obsidian-store';
 import { ObsidianView } from './ObsidianView';
 
 const initialState = useObsidianStore.getState();
+const initialTaskState = useTaskStore.getState();
 
 const renderWithProviders = () => render(
     <LanguageProvider>
@@ -16,6 +19,7 @@ const renderWithProviders = () => render(
 const resetObsidianStore = () => {
     act(() => {
         useObsidianStore.setState(initialState, true);
+        useTaskStore.setState(initialTaskState, true);
     });
 };
 
@@ -53,12 +57,14 @@ beforeEach(() => {
             clearError: vi.fn(),
         }));
     });
+
 });
 
 afterEach(() => {
     cleanup();
     resetObsidianStore();
     vi.restoreAllMocks();
+
 });
 
 describe('ObsidianView', () => {
@@ -342,4 +348,93 @@ describe('ObsidianView', () => {
         expect(getByText(/Due:/)).toBeInTheDocument();
         expect(getByText(/Scheduled:/)).toBeInTheDocument();
     });
+
+    it('brings an imported Obsidian task into Mindwtr with a source backlink', async () => {
+        const toggleInline = vi.spyOn(ObsidianService, 'toggleTask');
+        const toggleTaskNotes = vi.spyOn(ObsidianService, 'toggleTaskNotesTask');
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                tasks: [],
+                _allTasks: [],
+                _tasksById: new Map(),
+                projects: [],
+                _allProjects: [],
+                _projectsById: new Map(),
+                sections: [],
+                _allSections: [],
+                _sectionsById: new Map(),
+                areas: [],
+                _allAreas: [],
+                _areasById: new Map(),
+            }));
+            useObsidianStore.setState((state) => ({
+                ...state,
+                config: {
+                    vaultPath: '/Vault',
+                    vaultName: 'Vault',
+                    scanFolders: ['/'],
+                    inboxFile: 'Mindwtr/Inbox.md',
+                    taskNotesIncludeArchived: false,
+                    dataviewMetadataEnabled: true,
+                    newTaskFormat: 'auto',
+                    lastScannedAt: '2026-03-14T11:00:00.000Z',
+                    enabled: true,
+                },
+                scannedFileCount: 1,
+                taskNotesDetectedPaths: [],
+                importMode: 'inline',
+                tasks: [{
+                    id: 'obsidian-import-1',
+                    text: 'Draft launch brief',
+                    completed: false,
+                    tags: ['writing'],
+                    wikiLinks: [],
+                    nestingLevel: 0,
+                    source: {
+                        vaultName: 'Vault',
+                        vaultPath: '/Vault',
+                        relativeFilePath: 'Projects/Launch.md',
+                        lineNumber: 8,
+                        fileModifiedAt: '2026-03-14T10:00:00.000Z',
+                        noteTags: [],
+                    },
+                    format: 'inline',
+                    dataviewData: {
+                        priority: 'medium',
+                        dueDate: '2026-05-01',
+                        scheduledDate: '2026-04-28',
+                        contexts: ['desk'],
+                        projects: ['Launch'],
+                        tags: ['strategy'],
+                        timeEstimateMinutes: 45,
+                    },
+                }],
+            }));
+        });
+
+        const { getByRole } = renderWithProviders();
+
+        fireEvent.click(getByRole('button', { name: 'Bring into Mindwtr' }));
+
+        await waitFor(() => {
+            const createdTask = useTaskStore.getState()._allTasks.find((task) => task.title === 'Draft launch brief');
+            expect(createdTask).toMatchObject({
+                status: 'inbox',
+                priority: 'medium',
+                dueDate: '2026-05-01',
+                startTime: '2026-04-28',
+                contexts: ['@desk'],
+                tags: ['writing', 'strategy'],
+            });
+            expect(createdTask?.attachments?.[0]).toMatchObject({
+                kind: 'link',
+                title: 'Obsidian source',
+                uri: 'obsidian://open?vault=Vault&file=Projects%2FLaunch',
+            });
+        });
+        expect(toggleInline).not.toHaveBeenCalled();
+        expect(toggleTaskNotes).not.toHaveBeenCalled();
+    });
+
 });

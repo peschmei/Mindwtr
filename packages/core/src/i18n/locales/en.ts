@@ -238,6 +238,9 @@ export const en: Record<string, string> = {
         'attachments.transferProgress': 'Attachment transfer progress',
         'attachments.linkPlaceholder': 'https://example.com',
         'attachments.linkInputHint': 'Tip: paste a URL, or use "Title | URL".',
+        'attachments.attachObsidianNote': 'Attach Obsidian note',
+        'attachments.obsidianLinkPlaceholder': 'obsidian://open?vault=Vault&file=Note',
+        'attachments.obsidianLinkInputHint': 'Paste an obsidian:// note link, or use "Title | obsidian://...".',
         'attachments.fileNotSupported': 'File attachments are only supported in the desktop app.',
         'attachments.fileTooLarge': 'File is too large to upload.',
         'attachments.invalidFileType': 'Unsupported file type.',
@@ -1842,4 +1845,10 @@ export const en: Record<string, string> = {
         'mindSweep.group.workAdmin.p4': 'Travel, equipment, or access you need to arrange',
         'mindSweep.group.workAdmin.p5': 'Anything your future self will wish you had filed today',
 
+        'obsidian.title': 'Obsidian Tasks',
+        'obsidian.description': 'Import tasks from your Obsidian vault, keep the source note visible, and bring real commitments into Mindwtr when needed.',
+        'obsidian.bringIntoMindwtr': 'Bring into Mindwtr',
+        'obsidian.bringIntoMindwtrSuccess': 'Task added to Mindwtr.',
+        'obsidian.bringIntoMindwtrFailed': 'Could not add the task to Mindwtr.',
+        'obsidian.sourceAttachmentTitle': 'Obsidian source',
 };

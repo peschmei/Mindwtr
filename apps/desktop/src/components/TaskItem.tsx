@@ -188,9 +188,11 @@ export const TaskItem = memo(function TaskItem({
         showLinkPrompt,
         editingLinkAttachmentId,
         linkPromptDefaultValue,
+        linkPromptVariant,
         closeLinkPrompt,
         addFileAttachment,
         addLinkAttachment,
+        addObsidianNoteAttachment,
         editLinkAttachment,
         handleAddLinkAttachment,
         removeAttachment,
@@ -673,6 +675,7 @@ export const TaskItem = memo(function TaskItem({
         setEditDescription: handleSetEditDescription,
         addFileAttachment,
         addLinkAttachment,
+        addObsidianNoteAttachment,
         editLinkAttachment,
         openAttachment,
         removeAttachment,
@@ -702,6 +705,7 @@ export const TaskItem = memo(function TaskItem({
         handleSetEditDescription,
         addFileAttachment,
         addLinkAttachment,
+        addObsidianNoteAttachment,
         editLinkAttachment,
         openAttachment,
         removeAttachment,
@@ -1472,7 +1476,17 @@ export const TaskItem = memo(function TaskItem({
                 openDiscardConfirm={showDiscardConfirm}
                 openLinkPrompt={showLinkPrompt}
                 linkPromptDefaultValue={linkPromptDefaultValue}
-                linkPromptTitle={editingLinkAttachmentId ? t('common.edit') : t('attachments.addLink')}
+                linkPromptTitle={editingLinkAttachmentId
+                    ? t('common.edit')
+                    : linkPromptVariant === 'obsidian'
+                        ? t('attachments.attachObsidianNote')
+                        : t('attachments.addLink')}
+                linkPromptDescription={linkPromptVariant === 'obsidian'
+                    ? t('attachments.obsidianLinkInputHint')
+                    : t('attachments.linkInputHint')}
+                linkPromptPlaceholder={linkPromptVariant === 'obsidian'
+                    ? t('attachments.obsidianLinkPlaceholder')
+                    : t('attachments.linkPlaceholder')}
                 openWaitingAssignmentPrompt={showWaitingAssignmentPrompt}
                 onCancelWaitingAssignmentPrompt={closeWaitingAssignmentPrompt}
                 onConfirmWaitingAssignmentPrompt={applyWaitingAssignment}

@@ -29,6 +29,7 @@ export const allowedEnglishMirrorTerms = [
     'Todoist',
     'TickTick',
     'OmniFocus',
+    'Obsidian',
     'DGT',
     'Vim',
     'Emacs',
@@ -73,7 +74,7 @@ export function isAllowedEnglishMirrorKey(locale: string, key: string): boolean 
 
 export function stripAllowedEnglishTerms(value: string): string {
     let next = value
-        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/[A-Za-z][A-Za-z0-9+.-]*:\/\/\S*/g, '')
         .replace(/\{\{\s*[A-Za-z0-9_]+\s*\}\}/g, '')
         .replace(/\/[A-Za-z][A-Za-z0-9:_-]*/g, '')
         .replace(/[+#@!][A-Za-z][A-Za-z0-9:_-]*/g, '');

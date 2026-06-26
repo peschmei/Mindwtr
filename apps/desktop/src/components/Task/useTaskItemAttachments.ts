@@ -17,6 +17,8 @@ import {
     resolveAttachmentSource,
 } from './task-item-attachment-utils';
 
+type LinkPromptVariant = 'link' | 'obsidian';
+
 type UseTaskItemAttachmentsProps = {
     task: Task;
     t: (key: string) => string;
@@ -39,6 +41,7 @@ export function useTaskItemAttachments({ task, t }: UseTaskItemAttachmentsProps)
     const [showLinkPrompt, setShowLinkPrompt] = useState(false);
     const [editingLinkAttachmentId, setEditingLinkAttachmentId] = useState<string | null>(null);
     const [linkPromptDefaultValue, setLinkPromptDefaultValue] = useState('');
+    const [linkPromptVariant, setLinkPromptVariant] = useState<LinkPromptVariant>('link');
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const audioLoadRequestRef = useRef(0);
     const audioObjectUrlRef = useRef<string | null>(null);
@@ -418,6 +421,15 @@ export function useTaskItemAttachments({ task, t }: UseTaskItemAttachmentsProps)
         setAttachmentError(null);
         setEditingLinkAttachmentId(null);
         setLinkPromptDefaultValue('');
+        setLinkPromptVariant('link');
+        setShowLinkPrompt(true);
+    }, []);
+
+    const addObsidianNoteAttachment = useCallback(() => {
+        setAttachmentError(null);
+        setEditingLinkAttachmentId(null);
+        setLinkPromptDefaultValue('');
+        setLinkPromptVariant('obsidian');
         setShowLinkPrompt(true);
     }, []);
 
@@ -457,6 +469,7 @@ export function useTaskItemAttachments({ task, t }: UseTaskItemAttachmentsProps)
         if (attachment.kind !== 'link') return;
         setAttachmentError(null);
         setEditingLinkAttachmentId(attachment.id);
+        setLinkPromptVariant('link');
         setLinkPromptDefaultValue(
             attachment.title && attachment.title !== attachment.uri
                 ? `${attachment.title} | ${attachment.uri}`
@@ -496,9 +509,11 @@ export function useTaskItemAttachments({ task, t }: UseTaskItemAttachmentsProps)
         setShowLinkPrompt,
         editingLinkAttachmentId,
         linkPromptDefaultValue,
+        linkPromptVariant,
         closeLinkPrompt,
         addFileAttachment,
         addLinkAttachment,
+        addObsidianNoteAttachment,
         editLinkAttachment,
         handleAddLinkAttachment,
         removeAttachment,
