@@ -19,6 +19,8 @@ const hasTimezoneComponent = (value: string): boolean => /Z$|[+-]\d{2}:?\d{2}$/.
 
 const hasOwnField = (value: object, field: PropertyKey): boolean => Object.prototype.hasOwnProperty.call(value, field);
 
+const isSubDayOffset = (offset: RelativeStartOffset): boolean => offset.unit === 'minute' || offset.unit === 'hour';
+
 export const normalizeRelativeStartOffset = (value: unknown): RelativeStartOffset | undefined => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
     const record = value as Record<string, unknown>;
@@ -55,6 +57,7 @@ export const computeRelativeStartTime = (
     if (!dueDate || !offset) return undefined;
     const due = safeParseDate(dueDate);
     if (!due) return undefined;
+    if (!hasTimeComponent(dueDate) && isSubDayOffset(offset)) return undefined;
     const computed = addOffset(due, offset);
     if (hasTimezoneComponent(dueDate)) return computed.toISOString();
     if (!hasTimeComponent(dueDate) && (offset.unit === 'day' || offset.unit === 'week')) {

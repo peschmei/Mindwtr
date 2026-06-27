@@ -1145,14 +1145,33 @@ export function TaskItemFieldRenderer({
                     const datePart = dateValue || safeFormatDate(new Date(), 'yyyy-MM-dd');
                     setEditStartTime(`${datePart}T${value}`);
                 };
+                const dueDateHasTime = hasTimeComponent(editDueDate);
                 const relativeUnit = editRelativeStartOffset?.unit ?? 'day';
+                const relativeUnitForDueDate = !dueDateHasTime && (relativeUnit === 'minute' || relativeUnit === 'hour')
+                    ? 'day'
+                    : relativeUnit;
                 const relativeAmount = editRelativeStartOffset ? Math.abs(editRelativeStartOffset.amount) : 3;
+                const relativeUnitOptions: Array<{ value: NonNullable<Task['relativeStartOffset']>['unit']; label: string }> = dueDateHasTime
+                    ? [
+                        { value: 'minute', label: t('taskEdit.relativeStartMinutes') },
+                        { value: 'hour', label: t('taskEdit.relativeStartHours') },
+                        { value: 'day', label: t('taskEdit.relativeStartDays') },
+                        { value: 'week', label: t('taskEdit.relativeStartWeeks') },
+                    ]
+                    : [
+                        { value: 'day', label: t('taskEdit.relativeStartDays') },
+                        { value: 'week', label: t('taskEdit.relativeStartWeeks') },
+                    ];
                 const applyRelativeStartOffset = (amountValue: number, unitValue: NonNullable<Task['relativeStartOffset']>['unit']) => {
                     if (!editDueDate || !Number.isFinite(amountValue)) return;
                     const offset = { amount: -Math.max(1, Math.floor(amountValue)), unit: unitValue };
-                    setEditRelativeStartOffset(offset);
                     const computedStart = computeRelativeStartTime(editDueDate, offset);
-                    if (computedStart) setEditStartTime(computedStart);
+                    if (!computedStart) {
+                        setEditRelativeStartOffset(undefined);
+                        return;
+                    }
+                    setEditRelativeStartOffset(offset);
+                    setEditStartTime(computedStart);
                 };
                 return (
                     <>
@@ -1194,7 +1213,7 @@ export function TaskItemFieldRenderer({
                                     <button
                                         type="button"
                                         aria-pressed={Boolean(editRelativeStartOffset)}
-                                        onClick={() => applyRelativeStartOffset(relativeAmount, relativeUnit)}
+                                        onClick={() => applyRelativeStartOffset(relativeAmount, relativeUnitForDueDate)}
                                         className={`rounded px-2 py-1 ${editRelativeStartOffset ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >
                                         {t('taskEdit.startModeRelative')}
@@ -1207,20 +1226,19 @@ export function TaskItemFieldRenderer({
                                             min={1}
                                             max={10000}
                                             value={relativeAmount}
-                                            onChange={(event) => applyRelativeStartOffset(Number(event.target.value), relativeUnit)}
+                                            onChange={(event) => applyRelativeStartOffset(Number(event.target.value), relativeUnitForDueDate)}
                                             className="h-8 w-16 rounded-md border border-border bg-background px-2 text-sm text-foreground"
                                             aria-label={t('taskEdit.relativeStartAmount')}
                                         />
                                         <select
-                                            value={relativeUnit}
+                                            value={relativeUnitForDueDate}
                                             onChange={(event) => applyRelativeStartOffset(relativeAmount, event.target.value as NonNullable<Task['relativeStartOffset']>['unit'])}
                                             className="h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground"
                                             aria-label={t('taskEdit.relativeStartUnit')}
                                         >
-                                            <option value="minute">{t('taskEdit.relativeStartMinutes')}</option>
-                                            <option value="hour">{t('taskEdit.relativeStartHours')}</option>
-                                            <option value="day">{t('taskEdit.relativeStartDays')}</option>
-                                            <option value="week">{t('taskEdit.relativeStartWeeks')}</option>
+                                            {relativeUnitOptions.map((option) => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
                                         </select>
                                     </>
                                 )}
@@ -1243,7 +1261,11 @@ export function TaskItemFieldRenderer({
                         return;
                     }
                     const computedStart = computeRelativeStartTime(nextDueDate, editRelativeStartOffset);
-                    if (computedStart) setEditStartTime(computedStart);
+                    if (computedStart) {
+                        setEditStartTime(computedStart);
+                    } else {
+                        setEditRelativeStartOffset(undefined);
+                    }
                 };
                 const handleDateChange = (value: string) => {
                     const normalizedDate = normalizeDateInputValue(value);

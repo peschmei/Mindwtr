@@ -39,6 +39,17 @@ const normalizeRecurrenceIntervalInput = (value: number): number => (
         : 1
 );
 
+const isSubDayRelativeStartUnit = (unit: NonNullable<Task['relativeStartOffset']>['unit']): boolean => (
+    unit === 'minute' || unit === 'hour'
+);
+
+const normalizeRelativeStartUnitForDueDate = (
+    dueDate: string | undefined,
+    unit: NonNullable<Task['relativeStartOffset']>['unit'],
+): NonNullable<Task['relativeStartOffset']>['unit'] => (
+    dueDate && !hasTimeComponent(dueDate) && isSubDayRelativeStartUnit(unit) ? 'day' : unit
+);
+
 export function TaskEditScheduleField({
     applyQuickDate,
     customWeekdays,
@@ -324,12 +335,17 @@ export function TaskEditScheduleField({
 
     const applyRelativeStartOffset = (amountValue: number, unitValue: NonNullable<Task['relativeStartOffset']>['unit']) => {
         if (!editedTask.dueDate || !Number.isFinite(amountValue)) return;
-        const offset = { amount: -Math.max(1, Math.floor(amountValue)), unit: unitValue };
+        const unit = normalizeRelativeStartUnitForDueDate(editedTask.dueDate, unitValue);
+        const offset = { amount: -Math.max(1, Math.floor(amountValue)), unit };
         const computedStart = computeRelativeStartTime(editedTask.dueDate, offset);
+        if (!computedStart) {
+            setEditedTask((prev) => ({ ...prev, relativeStartOffset: undefined }));
+            return;
+        }
         setEditedTask((prev) => ({
             ...prev,
             relativeStartOffset: offset,
-            ...(computedStart ? { startTime: computedStart } : {}),
+            startTime: computedStart,
         }));
     };
 
@@ -341,6 +357,7 @@ export function TaskEditScheduleField({
                 ...prev,
                 dueDate,
                 ...(computedStart ? { startTime: computedStart } : {}),
+                ...(prev.relativeStartOffset && !computedStart ? { relativeStartOffset: undefined } : {}),
             };
         });
     };
@@ -773,18 +790,27 @@ export function TaskEditScheduleField({
                         {renderQuickDateChips('start', parsed)}
                         {renderDateIssue()}
                         {!!editedTask.dueDate && (() => {
-                            const relativeUnit = editedTask.relativeStartOffset?.unit ?? 'day';
+                            const dueDateHasTime = hasTimeComponent(editedTask.dueDate);
+                            const relativeUnit = normalizeRelativeStartUnitForDueDate(
+                                editedTask.dueDate,
+                                editedTask.relativeStartOffset?.unit ?? 'day'
+                            );
                             const relativeAmount = editedTask.relativeStartOffset ? Math.abs(editedTask.relativeStartOffset.amount) : 3;
                             const modeOptions = [
                                 { label: t('taskEdit.startModeAbsolute'), active: !editedTask.relativeStartOffset, onPress: () => setEditedTask((prev) => ({ ...prev, relativeStartOffset: undefined })) },
                                 { label: t('taskEdit.startModeRelative'), active: Boolean(editedTask.relativeStartOffset), onPress: () => applyRelativeStartOffset(relativeAmount, relativeUnit) },
                             ];
-                            const unitOptions: Array<{ value: NonNullable<Task['relativeStartOffset']>['unit']; label: string }> = [
-                                { value: 'minute', label: t('taskEdit.relativeStartMinutesShort') },
-                                { value: 'hour', label: t('taskEdit.relativeStartHoursShort') },
-                                { value: 'day', label: t('taskEdit.relativeStartDaysShort') },
-                                { value: 'week', label: t('taskEdit.relativeStartWeeksShort') },
-                            ];
+                            const unitOptions: Array<{ value: NonNullable<Task['relativeStartOffset']>['unit']; label: string }> = dueDateHasTime
+                                ? [
+                                    { value: 'minute', label: t('taskEdit.relativeStartMinutesShort') },
+                                    { value: 'hour', label: t('taskEdit.relativeStartHoursShort') },
+                                    { value: 'day', label: t('taskEdit.relativeStartDaysShort') },
+                                    { value: 'week', label: t('taskEdit.relativeStartWeeksShort') },
+                                ]
+                                : [
+                                    { value: 'day', label: t('taskEdit.relativeStartDaysShort') },
+                                    { value: 'week', label: t('taskEdit.relativeStartWeeksShort') },
+                                ];
                             return (
                                 <View style={{ marginTop: 10, gap: 8 }}>
                                     <View style={{ flexDirection: 'row', gap: 8 }}>
