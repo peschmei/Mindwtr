@@ -51,6 +51,7 @@ import {
     saveCloudKitAttachmentAsset,
     type CloudKitAttachmentMetadata,
 } from './cloudkit-sync';
+import { normalizeAttachmentPathForUrl } from './attachment-paths';
 
 export type WebDavConfig = {
     url: string;
@@ -97,6 +98,8 @@ const WEBDAV_ATTACHMENT_MAX_DOWNLOADS_PER_SYNC = 10;
 const WEBDAV_ATTACHMENT_MAX_UPLOADS_PER_SYNC = 10;
 const WEBDAV_ATTACHMENT_MISSING_BACKOFF_MS = 15 * 60_000;
 const WEBDAV_ATTACHMENT_ERROR_BACKOFF_MS = 2 * 60_000;
+
+const normalizeAttachmentFsPath = (path: string): string => normalizeAttachmentPathForUrl(path.trim());
 
 const webdavDownloadBackoff = createWebdavDownloadBackoff({
     missingBackoffMs: WEBDAV_ATTACHMENT_MISSING_BACKOFF_MS,
@@ -290,7 +293,7 @@ export async function syncWebdavAttachments(
             const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
             return await readFile(relative, { baseDir: BaseDirectory.Data });
         }
-        return await readFile(path);
+        return await readFile(normalizeAttachmentFsPath(path));
     };
 
     const localFileExists = async (path: string): Promise<boolean> => {
@@ -299,7 +302,7 @@ export async function syncWebdavAttachments(
                 const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
                 return await exists(relative, { baseDir: BaseDirectory.Data });
             }
-            return await exists(path);
+            return await exists(normalizeAttachmentFsPath(path));
         } catch (error) {
             deps.logSyncWarning('Failed to check attachment file', error);
             return false;
@@ -580,7 +583,7 @@ export async function syncCloudAttachments(
             const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
             return await readFile(relative, { baseDir: BaseDirectory.Data });
         }
-        return await readFile(path);
+        return await readFile(normalizeAttachmentFsPath(path));
     };
 
     const localFileExists = async (path: string): Promise<boolean> => {
@@ -589,7 +592,7 @@ export async function syncCloudAttachments(
                 const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
                 return await exists(relative, { baseDir: BaseDirectory.Data });
             }
-            return await exists(path);
+            return await exists(normalizeAttachmentFsPath(path));
         } catch (error) {
             deps.logSyncWarning('Failed to check attachment file', error);
             return false;
@@ -756,7 +759,7 @@ export async function syncDropboxAttachments(
             const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
             return await readFile(relative, { baseDir: BaseDirectory.Data });
         }
-        return await readFile(path);
+        return await readFile(normalizeAttachmentFsPath(path));
     };
 
     const localFileExists = async (path: string): Promise<boolean> => {
@@ -765,7 +768,7 @@ export async function syncDropboxAttachments(
                 const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
                 return await exists(relative, { baseDir: BaseDirectory.Data });
             }
-            return await exists(path);
+            return await exists(normalizeAttachmentFsPath(path));
         } catch (error) {
             deps.logSyncWarning('Failed to check attachment file', error);
             return false;
@@ -908,7 +911,7 @@ export async function syncCloudKitAttachments(appData: AppData, deps: Attachment
             const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
             return await readFile(relative, { baseDir: BaseDirectory.Data });
         }
-        return await readFile(path);
+        return await readFile(normalizeAttachmentFsPath(path));
     };
 
     const localFileExists = async (path: string): Promise<boolean> => {
@@ -917,7 +920,7 @@ export async function syncCloudKitAttachments(appData: AppData, deps: Attachment
                 const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
                 return await exists(relative, { baseDir: BaseDirectory.Data });
             }
-            return await exists(path);
+            return await exists(normalizeAttachmentFsPath(path));
         } catch (error) {
             deps.logSyncWarning('Failed to check CloudKit attachment file', error);
             return false;
@@ -1060,7 +1063,7 @@ export async function syncFileAttachments(
             const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
             return await readFile(relative, { baseDir: BaseDirectory.Data });
         }
-        return await readFile(path);
+        return await readFile(normalizeAttachmentFsPath(path));
     };
 
     const localFileExists = async (path: string): Promise<boolean> => {
@@ -1069,7 +1072,7 @@ export async function syncFileAttachments(
                 const relative = path.slice(baseDataDir.length).replace(/^[\\/]/, '');
                 return await exists(relative, { baseDir: BaseDirectory.Data });
             }
-            return await exists(path);
+            return await exists(normalizeAttachmentFsPath(path));
         } catch (error) {
             deps.logSyncWarning('Failed to check attachment file', error);
             return false;

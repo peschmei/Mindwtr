@@ -134,6 +134,78 @@ describe('desktop sync attachment backends', () => {
         );
     });
 
+    it('uploads self-hosted cloud attachments selected from Windows paths', async () => {
+        const bytes = new Uint8Array([1, 2, 3]);
+        const fetcher = vi.fn(async () => new Response(null, { status: 200 }));
+        const logSyncWarning = vi.fn();
+        const appData: AppData = {
+            tasks: [
+                {
+                    id: 'task-1',
+                    title: 'Task',
+                    status: 'next',
+                    tags: [],
+                    contexts: [],
+                    attachments: [
+                        {
+                            id: 'attachment-1',
+                            kind: 'file',
+                            title: 'mindwtr-upload-test.txt',
+                            uri: 'C:\\Temp\\mindwtr-upload-test.txt',
+                            localStatus: 'available',
+                            createdAt: '2026-06-27T00:00:00.000Z',
+                            updatedAt: '2026-06-27T00:00:00.000Z',
+                        },
+                    ],
+                    createdAt: '2026-06-27T00:00:00.000Z',
+                    updatedAt: '2026-06-27T00:00:00.000Z',
+                },
+            ],
+            projects: [],
+            sections: [],
+            areas: [],
+            settings: {},
+        };
+        const deps: AttachmentBackendDeps = {
+            getTauriFetch: async () => fetcher as unknown as typeof fetch,
+            isTauriRuntimeEnv: () => true,
+            logSyncInfo: vi.fn(),
+            logSyncWarning,
+            resolveWebdavPassword: vi.fn(),
+        };
+
+        fsMocks.exists.mockImplementation(async (path: string) => path === 'C:/Temp/mindwtr-upload-test.txt');
+        fsMocks.readFile.mockImplementation(async (path: string) => {
+            if (path !== 'C:/Temp/mindwtr-upload-test.txt') {
+                throw new Error('unexpected path ' + path);
+            }
+            return bytes;
+        });
+
+        await expect(
+            syncCloudAttachments(
+                appData,
+                { url: 'http://cloud.local/v1/data', token: 'token', allowInsecureHttp: true },
+                'http://cloud.local/v1',
+                deps,
+            ),
+        ).resolves.toBe(true);
+
+        const attachment = appData.tasks[0].attachments?.[0];
+        expect(fsMocks.exists).toHaveBeenCalledWith('C:/Temp/mindwtr-upload-test.txt');
+        expect(fsMocks.readFile).toHaveBeenCalledWith('C:/Temp/mindwtr-upload-test.txt');
+        expect(fetcher).toHaveBeenCalledWith(
+            'http://cloud.local/v1/attachments/attachment-1.txt',
+            expect.objectContaining({ method: 'PUT' }),
+        );
+        expect(attachment?.cloudKey).toBe('attachments/attachment-1.txt');
+        expect(attachment?.localStatus).toBe('available');
+        expect(logSyncWarning).not.toHaveBeenCalledWith(
+            expect.stringContaining('Failed to upload attachment'),
+            expect.anything(),
+        );
+    });
+
     it('keeps WebDAV attachment sync in cooldown across repeated sync runs after rate limiting', async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2026-06-12T00:00:00.000Z'));
