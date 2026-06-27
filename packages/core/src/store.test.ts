@@ -534,6 +534,28 @@ describe('TaskStore', () => {
         expect(useTaskStore.getState()._tasksById.get(addResult.id!)?.projectId).toBe(existing!.id);
     });
 
+    it('does not reuse an archived same-named project when promoting', async () => {
+        const { addProject, addTask, promoteTaskToProject } = useTaskStore.getState();
+        const archived = await addProject('Plan launch', '#123456', { status: 'archived' });
+        expect(archived).toBeTruthy();
+
+        const addResult = await addTask('plan launch', { status: 'next' });
+        expect(addResult.success).toBe(true);
+
+        const promoteResult = await promoteTaskToProject(addResult.id!);
+        expect(promoteResult.success).toBe(true);
+        expect(promoteResult.reused).toBe(false);
+        expect(promoteResult.id).toBeTruthy();
+        expect(promoteResult.id).not.toBe(archived!.id);
+
+        const project = useTaskStore.getState()._allProjects.find((candidate) => candidate.id === promoteResult.id);
+        expect(project).toMatchObject({
+            title: 'plan launch',
+            status: 'active',
+        });
+        expect(useTaskStore.getState()._tasksById.get(addResult.id!)?.projectId).toBe(promoteResult.id);
+    });
+
     it('rejects promoting a fourth task into today focus', async () => {
         const { addTask, updateTask } = useTaskStore.getState();
 

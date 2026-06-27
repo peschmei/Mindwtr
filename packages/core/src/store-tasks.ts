@@ -1002,6 +1002,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             const existingProject = state._allProjects.find(
                 (project) =>
                     !project.deletedAt &&
+                    project.status !== 'archived' &&
                     typeof project.title === 'string' &&
                     project.title.trim().toLowerCase() === normalizedTitle
             );
