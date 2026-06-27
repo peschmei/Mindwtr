@@ -275,7 +275,7 @@ export function DateField({
         startOfCalendarMonth(selectedDate ?? parseDateInputDate(dateValue) ?? new Date(), calendarSystem)
     );
     const clearText = tFallback(t, 'common.clear', 'Clear');
-    const dateOnlyText = tFallback(t, 'taskEdit.dateOnly', 'Date only');
+    const dateOnlyText = t('taskEdit.dateOnly');
     const dateInputOrder = calendarSystem === 'jalali'
         ? 'ymd'
         : getDateInputOrder(dateFormatSetting, nativeDateInputLocale);
@@ -1182,14 +1182,14 @@ export function TaskItemFieldRenderer({
                         })}
                         {editDueDate && (
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5" aria-label={tFallback(t, 'taskEdit.startModeLabel', 'Start mode')}>
+                                <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5" aria-label={t('taskEdit.startModeLabel')}>
                                     <button
                                         type="button"
                                         aria-pressed={!editRelativeStartOffset}
                                         onClick={() => setEditRelativeStartOffset(undefined)}
                                         className={`rounded px-2 py-1 ${!editRelativeStartOffset ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >
-                                        {tFallback(t, 'taskEdit.startModeAbsolute', 'Absolute')}
+                                        {t('taskEdit.startModeAbsolute')}
                                     </button>
                                     <button
                                         type="button"
@@ -1197,7 +1197,7 @@ export function TaskItemFieldRenderer({
                                         onClick={() => applyRelativeStartOffset(relativeAmount, relativeUnit)}
                                         className={`rounded px-2 py-1 ${editRelativeStartOffset ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >
-                                        {tFallback(t, 'taskEdit.startModeRelative', 'Relative')}
+                                        {t('taskEdit.startModeRelative')}
                                     </button>
                                 </div>
                                 {editRelativeStartOffset && (
@@ -1209,18 +1209,18 @@ export function TaskItemFieldRenderer({
                                             value={relativeAmount}
                                             onChange={(event) => applyRelativeStartOffset(Number(event.target.value), relativeUnit)}
                                             className="h-8 w-16 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-                                            aria-label={tFallback(t, 'taskEdit.relativeStartAmount', 'Start lead time')}
+                                            aria-label={t('taskEdit.relativeStartAmount')}
                                         />
                                         <select
                                             value={relativeUnit}
                                             onChange={(event) => applyRelativeStartOffset(relativeAmount, event.target.value as NonNullable<Task['relativeStartOffset']>['unit'])}
                                             className="h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-                                            aria-label={tFallback(t, 'taskEdit.relativeStartUnit', 'Start lead time unit')}
+                                            aria-label={t('taskEdit.relativeStartUnit')}
                                         >
-                                            <option value="minute">{tFallback(t, 'taskEdit.relativeStartMinutes', 'minutes before due')}</option>
-                                            <option value="hour">{tFallback(t, 'taskEdit.relativeStartHours', 'hours before due')}</option>
-                                            <option value="day">{tFallback(t, 'taskEdit.relativeStartDays', 'days before due')}</option>
-                                            <option value="week">{tFallback(t, 'taskEdit.relativeStartWeeks', 'weeks before due')}</option>
+                                            <option value="minute">{t('taskEdit.relativeStartMinutes')}</option>
+                                            <option value="hour">{t('taskEdit.relativeStartHours')}</option>
+                                            <option value="day">{t('taskEdit.relativeStartDays')}</option>
+                                            <option value="week">{t('taskEdit.relativeStartWeeks')}</option>
                                         </select>
                                     </>
                                 )}

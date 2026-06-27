@@ -575,7 +575,7 @@ export default function CaptureScreen() {
               }}
               style={[styles.button, styles.editAfterSave, { borderColor: tc.border }]}
             >
-              <Text style={{ color: tc.text }}>{tFallback(t, 'quickAdd.saveAndEdit', 'Save & edit')}</Text>
+                                <Text style={{ color: tc.text }}>{t('quickAdd.saveAndEdit')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {

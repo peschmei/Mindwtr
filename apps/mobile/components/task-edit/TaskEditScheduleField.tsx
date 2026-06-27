@@ -188,7 +188,7 @@ export function TaskEditScheduleField({
             t('common.notSet')
         ) || t('common.notSet');
     };
-    const dateOnlyLabel = tFallback(t, 'taskEdit.dateOnly', 'Date only');
+    const dateOnlyLabel = t('taskEdit.dateOnly');
     const dateIssueLabel = getTaskDateCoherenceIssues({
         startTime: editedTask.startTime,
         dueDate: editedTask.dueDate,
@@ -776,14 +776,14 @@ export function TaskEditScheduleField({
                             const relativeUnit = editedTask.relativeStartOffset?.unit ?? 'day';
                             const relativeAmount = editedTask.relativeStartOffset ? Math.abs(editedTask.relativeStartOffset.amount) : 3;
                             const modeOptions = [
-                                { label: tFallback(t, 'taskEdit.startModeAbsolute', 'Absolute'), active: !editedTask.relativeStartOffset, onPress: () => setEditedTask((prev) => ({ ...prev, relativeStartOffset: undefined })) },
-                                { label: tFallback(t, 'taskEdit.startModeRelative', 'Relative'), active: Boolean(editedTask.relativeStartOffset), onPress: () => applyRelativeStartOffset(relativeAmount, relativeUnit) },
+                                { label: t('taskEdit.startModeAbsolute'), active: !editedTask.relativeStartOffset, onPress: () => setEditedTask((prev) => ({ ...prev, relativeStartOffset: undefined })) },
+                                { label: t('taskEdit.startModeRelative'), active: Boolean(editedTask.relativeStartOffset), onPress: () => applyRelativeStartOffset(relativeAmount, relativeUnit) },
                             ];
                             const unitOptions: Array<{ value: NonNullable<Task['relativeStartOffset']>['unit']; label: string }> = [
-                                { value: 'minute', label: tFallback(t, 'taskEdit.relativeStartMinutesShort', 'Min') },
-                                { value: 'hour', label: tFallback(t, 'taskEdit.relativeStartHoursShort', 'Hr') },
-                                { value: 'day', label: tFallback(t, 'taskEdit.relativeStartDaysShort', 'Day') },
-                                { value: 'week', label: tFallback(t, 'taskEdit.relativeStartWeeksShort', 'Wk') },
+                                { value: 'minute', label: t('taskEdit.relativeStartMinutesShort') },
+                                { value: 'hour', label: t('taskEdit.relativeStartHoursShort') },
+                                { value: 'day', label: t('taskEdit.relativeStartDaysShort') },
+                                { value: 'week', label: t('taskEdit.relativeStartWeeksShort') },
                             ];
                             return (
                                 <View style={{ marginTop: 10, gap: 8 }}>
@@ -811,10 +811,10 @@ export function TaskEditScheduleField({
                                                     keyboardType="number-pad"
                                                     onChangeText={(text) => applyRelativeStartOffset(Number(text), relativeUnit)}
                                                     style={[styles.input, { width: 74, color: tc.text, backgroundColor: tc.inputBg, borderColor: tc.border }]}
-                                                    accessibilityLabel={tFallback(t, 'taskEdit.relativeStartAmount', 'Start lead time')}
+                                                    accessibilityLabel={t('taskEdit.relativeStartAmount')}
                                                 />
                                                 <Text style={{ color: tc.secondaryText }}>
-                                                    {tFallback(t, 'taskEdit.relativeStartBeforeDue', 'before due')}
+                                                    {t('taskEdit.relativeStartBeforeDue')}
                                                 </Text>
                                             </View>
                                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

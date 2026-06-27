@@ -477,7 +477,7 @@ export function QuickCaptureSheetBody({
                     ]}
                     disabled={!value.trim()}
                     accessibilityRole="button"
-                    accessibilityLabel={tFallback(t, 'quickAdd.saveAndEdit', 'Save & edit')}
+                    accessibilityLabel={t('quickAdd.saveAndEdit')}
                   >
                     <Text
                       style={[styles.saveAndEditText, { color: tc.text }]}
@@ -486,7 +486,7 @@ export function QuickCaptureSheetBody({
                       minimumFontScale={0.75}
                       maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                     >
-                      {tFallback(t, 'quickAdd.saveAndEdit', 'Save & edit')}
+                      {t('quickAdd.saveAndEdit')}
                     </Text>
                   </TouchableOpacity>
                 ) : null}

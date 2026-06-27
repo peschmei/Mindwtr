@@ -1200,7 +1200,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
                                         saveDisabled && 'opacity-50 cursor-not-allowed hover:bg-background',
                                     )}
                                 >
-                                    {tFallback(t, 'quickAdd.saveAndEdit', 'Save & edit')}
+                                    {t('quickAdd.saveAndEdit')}
                                 </button>
                             )}
                             <button

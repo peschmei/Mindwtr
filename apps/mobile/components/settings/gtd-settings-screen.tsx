@@ -360,18 +360,14 @@ export function GtdSettingsScreen({
         'settings.defaultProjectFlowModeDesc',
         'Applies only when creating new projects.'
     );
-    const defaultAreaLabel = tFallback(t, 'settings.defaultArea', 'Default area for new tasks');
-    const defaultAreaDesc = tFallback(
-        t,
-        'settings.defaultAreaDesc',
-        'Applies to new tasks, including Inbox captures. You can still change or clear the area per task.'
-    );
-    const defaultAreaNoneLabel = tFallback(t, 'settings.defaultAreaNone', 'No area');
+    const defaultAreaLabel = t('settings.defaultArea');
+    const defaultAreaDesc = t('settings.defaultAreaDesc');
+    const defaultAreaNoneLabel = t('settings.defaultAreaNone');
     const captureSettingsTitle = tFallback(t, 'settings.captureSettings', tr('settings.gtdMobile.captureDefaults'));
-    const quickAddAutoCleanLabel = tFallback(t, 'settings.quickAddAutoClean', 'Clean up quick add text');
-    const quickAddAutoCleanDesc = tFallback(t, 'settings.quickAddAutoCleanDesc', 'Remove recognized dates, tags, and contexts from the title after applying them. Off keeps your text exactly as typed.');
-    const markdownEditorAssistLabel = tFallback(t, 'settings.markdownEditorAssist', 'Editor typing help');
-    const markdownEditorAssistDesc = tFallback(t, 'settings.markdownEditorAssistDesc', 'Auto-pair brackets, continue lists, link pasted URLs, and suggest references while editing descriptions. Off makes them plain-text fields with nothing inserted.');
+    const quickAddAutoCleanLabel = t('settings.quickAddAutoClean');
+    const quickAddAutoCleanDesc = t('settings.quickAddAutoCleanDesc');
+    const markdownEditorAssistLabel = t('settings.markdownEditorAssist');
+    const markdownEditorAssistDesc = t('settings.markdownEditorAssistDesc');
     const reviewSettingsTitle = tFallback(t, 'settings.reviewSettings', tr('settings.gtdMobile.reviewSteps'));
     const inboxSettingsTitle = tFallback(t, 'settings.inboxProcessing', tr('settings.inboxProcessing'));
     const projectFlowModeOptions: Array<{ id: DefaultProjectFlowMode; label: string }> = [

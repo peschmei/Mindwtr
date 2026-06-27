@@ -159,7 +159,7 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
   const aiWorkingText = aiWorkingLabel === 'ai.working' ? 'Working...' : aiWorkingLabel;
   const laterLabel = tFallback(t, 'process.later', 'Later');
   const laterHint = tFallback(t, 'process.laterHint', 'Set a start date and move this to Next.');
-  const dateOnlyLabel = tFallback(t, 'taskEdit.dateOnly', 'Date only');
+    const dateOnlyLabel = t('taskEdit.dateOnly');
   const androidKeyboardInset = useAndroidKeyboardInset(visible);
 
   if (!visible) return null;

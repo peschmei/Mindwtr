@@ -56,7 +56,7 @@ export function InboxProcessingScheduleFields({
 }: InboxProcessingScheduleFieldsProps) {
     const compact = variant === 'quick';
     const clearText = tFallback(t, 'common.clear', 'Clear');
-    const dateOnlyText = tFallback(t, 'taskEdit.dateOnly', 'Date only');
+    const dateOnlyText = t('taskEdit.dateOnly');
     const renderedFieldConfig = visibleFieldKeys?.length
         ? FIELD_CONFIG.filter(({ key }) => visibleFieldKeys.includes(key))
         : FIELD_CONFIG;
