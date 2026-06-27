@@ -13,6 +13,7 @@ import {
 
 import { TaskEditAreaPicker } from '../task-edit/TaskEditAreaPicker';
 import { TaskEditProjectPicker } from '../task-edit/TaskEditProjectPicker';
+import { useAndroidKeyboardInset } from '../../lib/use-android-keyboard-inset';
 import { styles } from './task-list.styles';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 
@@ -56,6 +57,7 @@ export function TaskListBulkOrganizeModal({
   visible,
 }: TaskListBulkOrganizeModalProps) {
   const filledButton = useFilledButtonColors();
+  const keyboardInset = useAndroidKeyboardInset(visible);
   const [status, setStatus] = useState<BulkOrganizeStatus>('next');
   const [projectChoice, setProjectChoice] = useState(KEEP_VALUE);
   const [areaChoice, setAreaChoice] = useState(KEEP_VALUE);
@@ -209,7 +211,10 @@ export function TaskListBulkOrganizeModal({
         animationType="fade"
         onRequestClose={onClose}
       >
-        <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable
+          style={keyboardInset > 0 ? [styles.modalOverlay, { paddingBottom: keyboardInset }] : styles.modalOverlay}
+          onPress={onClose}
+        >
           <Pressable
             style={[styles.bulkOrganizeCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.border }]}
             onPress={(event) => event.stopPropagation()}
