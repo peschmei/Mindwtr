@@ -164,6 +164,20 @@ jobs:
           fi
           scripts/ci/resolve-release-version.sh "$INPUT_TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Verify release tag points at this commit
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.release_version.outputs.tag }}"
+          TAG_SHA="$(git rev-list -n 1 "$TAG")"
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if [ "$TAG_SHA" != "$HEAD_SHA" ]; then
+            echo "Release workflow must run from the commit pointed to by $TAG." >&2
+            echo "$TAG -> $TAG_SHA" >&2
+            echo "workflow HEAD -> $HEAD_SHA" >&2
+            exit 1
+          fi
+          echo "Verified $TAG points at $HEAD_SHA."
+
       - name: Download build artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -283,10 +297,8 @@ jobs:
           NOTES_FILE="${{ steps.release_notes.outputs.body_path }}"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" \
-              --draft=false \
-              --notes-file "$NOTES_FILE"
-            gh release upload "$TAG" ./release-assets/* --clobber
+            echo "Release $TAG already exists; stable release assets are immutable. Publish fixes under a new tag." >&2
+            exit 1
           else
             if [[ "$TAG" == *-* ]]; then
               gh release create "$TAG" ./release-assets/* \
