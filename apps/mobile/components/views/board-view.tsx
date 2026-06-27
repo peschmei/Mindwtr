@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from 'react-native';
-import { isTaskInActiveProject, sortTasksByBoardOrder, useTaskStore, taskMatchesFilterCriteria, taskMatchesAreaFilter, hasActiveFilterCriteria, getUsedTaskTokens, tFallback } from '@mindwtr/core';
+import { isTaskInActiveProject, shallow, sortTasksByBoardOrder, useTaskStore, taskMatchesFilterCriteria, taskMatchesAreaFilter, hasActiveFilterCriteria, getUsedTaskTokens, tFallback } from '@mindwtr/core';
 import type { Task, TaskStatus, FilterCriteria } from '@mindwtr/core';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/theme-context';
@@ -343,12 +343,20 @@ function Column({
 }
 
 export function BoardView() {
-  const { tasks, projects, areas, updateTask, deleteTask, duplicateTask, reorderBoardTasks } = useTaskStore();
+  const { tasks, projects, areas, updateTask, deleteTask, duplicateTask, reorderBoardTasks, timeEstimatesEnabled } = useTaskStore((state) => ({
+    tasks: state.tasks,
+    projects: state.projects,
+    areas: state.areas,
+    updateTask: state.updateTask,
+    deleteTask: state.deleteTask,
+    duplicateTask: state.duplicateTask,
+    reorderBoardTasks: state.reorderBoardTasks,
+    timeEstimatesEnabled: state.settings?.features?.timeEstimates !== false,
+  }), shallow);
   const { isDark } = useTheme();
   const tc = useThemeColors();
   const { t } = useLanguage();
   const { showToast } = useToast();
-  const timeEstimatesEnabled = useTaskStore((state) => state.settings?.features?.timeEstimates !== false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [dragSourceColumnIndex, setDragSourceColumnIndex] = useState<number | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
