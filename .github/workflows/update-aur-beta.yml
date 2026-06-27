@@ -122,6 +122,28 @@ jobs:
           Path('aur-mindwtr-bin-beta/PKGBUILD').write_text(text, encoding='utf-8')
           PY
 
+      - name: Wait for release assets
+        shell: bash
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          URL_DEB="https://github.com/${{ github.repository }}/releases/download/${TAG}/mindwtr_${VERSION}_amd64.deb"
+          echo "Waiting for release assets to become available..."
+          for attempt in $(seq 1 10); do
+            if curl -fsI "$URL_DEB" >/dev/null; then
+              echo "Release assets are available."
+              exit 0
+            fi
+            if [ "$attempt" -eq 10 ]; then
+              echo "Release asset not available after waiting: $URL_DEB" >&2
+              exit 1
+            fi
+            echo "Release asset not available yet (attempt ${attempt}/10); retrying..." >&2
+            sleep 15
+          done
+
       - name: Update .SRCINFO and smoke package
         shell: bash
         run: |

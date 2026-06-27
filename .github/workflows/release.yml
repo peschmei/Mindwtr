@@ -806,7 +806,7 @@ jobs:
         shell: bash
         run: cp aur/PKGBUILD aur-mindwtr-bin/PKGBUILD
 
-      - name: Update .SRCINFO
+      - name: Update .SRCINFO and smoke package
         run: |
           HOST_UID="$(id -u)"
           HOST_GID="$(id -g)"
@@ -823,6 +823,8 @@ jobs:
               id -u builder >/dev/null 2>&1 || useradd -m -u "$HOST_UID" -g "$HOST_GID" builder
               chown -R builder:builder /aur
               su builder -c "updpkgsums"
+              su builder -c "makepkg --verifysource --noconfirm"
+              su builder -c "makepkg --cleanbuild --clean --nodeps --noconfirm"
               su builder -c "makepkg --printsrcinfo > /aur/.SRCINFO"
             '
         shell: bash
