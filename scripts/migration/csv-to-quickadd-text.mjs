@@ -131,11 +131,15 @@ function quoteQuickAddToken(token, prefix) {
   return `${prefix}"${clean.replace(/(["\\])/g, '\\$1')}"`;
 }
 
+function escapeQuickAddLiteral(value) {
+  return value.replace(/([@#+/!])/gu, '\\$1');
+}
+
 function buildLine(row, headerIndex, options) {
   const title = columnValue(row, headerIndex, options.title);
   if (!title) return '';
 
-  const parts = [title];
+  const parts = [escapeQuickAddLiteral(title)];
   const project = columnValue(row, headerIndex, options.project);
   if (project) parts.push(`+${project}`);
 
@@ -153,7 +157,7 @@ function buildLine(row, headerIndex, options) {
   if (due) parts.push(`/due:${due}`);
 
   const note = columnValue(row, headerIndex, options.note);
-  if (note) parts.push(`/note:${note}`);
+  if (note) parts.push(`/note:${escapeQuickAddLiteral(note)}`);
 
   return parts.join(' ');
 }

@@ -60,6 +60,20 @@ describe('csv-to-quickadd-text', () => {
     ].join('\n'));
   });
 
+  it('escapes quick-add tokens that appear in the source title', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'mindwtr-csv-quickadd-'));
+    const input = join(dir, 'tasks.csv');
+    await writeFile(input, [
+      'Title,Project,Due',
+      '"Email +Work #client @computer /due:tomorrow !Area","Work","2026-06-20"',
+      '',
+    ].join('\n'));
+
+    const { stdout } = await runScript([input]);
+
+    assert.equal(stdout, 'Email \\+Work \\#client \\@computer \\/due:tomorrow \\!Area +Work /due:2026-06-20\n');
+  });
+
   it('reports missing required columns', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'mindwtr-csv-quickadd-'));
     const input = join(dir, 'tasks.csv');
