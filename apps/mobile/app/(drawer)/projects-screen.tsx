@@ -46,7 +46,7 @@ import { ListSectionHeader, defaultListContentStyle } from '@/components/list-la
 import { logError, logWarn } from '../../lib/app-log';
 import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '@mindwtr/core';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText, CompactTextInput } from '@/components/compact-text';
 
 type ProjectTaskSortBy = TaskSortBy;
 const EMPTY_PROJECT_TASKS: Task[] = [];
@@ -740,7 +740,7 @@ export default function ProjectsScreen() {
       <View style={[styles.container, { backgroundColor: tc.bg }]}>
       <View style={[styles.inputContainer, { borderBottomColor: tc.border }]}>
         <View style={styles.addProjectRow}>
-          <TextInput
+          <CompactTextInput
             style={[styles.input, styles.addProjectInput, { borderColor: tc.border, backgroundColor: tc.inputBg, color: tc.text }]}
             placeholder={t('projects.addPlaceholder')}
             placeholderTextColor={tc.secondaryText}
@@ -748,7 +748,6 @@ export default function ProjectsScreen() {
             onChangeText={setNewProjectTitle}
             onSubmitEditing={handleAddProject}
             returnKeyType="done"
-            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             accessibilityLabel={t('projects.addPlaceholder')}
           />
           <TouchableOpacity
@@ -773,22 +772,20 @@ export default function ProjectsScreen() {
             accessibilityLabel={`${t('projects.tagFilter')}: ${showTagFilter ? t('filters.hide') : t('filters.show')}`}
             accessibilityState={{ expanded: showTagFilter }}
           >
-            <Text
+            <CompactText
               style={[styles.tagFilterLabel, { color: tc.text }]}
               numberOfLines={1}
-              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {t('projects.tagFilter')}
-            </Text>
-            <Text
+            </CompactText>
+            <CompactText
               style={[styles.filterToggleText, { color: tc.secondaryText }]}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.78}
-              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {showTagFilter ? t('filters.hide') : t('filters.show')}
-            </Text>
+            </CompactText>
           </TouchableOpacity>
           {showTagFilter && (
             <View style={styles.tagFilterChips}>

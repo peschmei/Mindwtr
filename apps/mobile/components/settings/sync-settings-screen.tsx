@@ -12,7 +12,7 @@ import {
 import { useMobileSyncBadge } from '@/hooks/use-mobile-sync-badge';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useToast } from '@/contexts/toast-context';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { isCloudKitAvailable } from '@/lib/cloudkit-sync';
 import {
     listLocalDataSnapshots,
@@ -651,16 +651,15 @@ function SyncSettingsView({
                                                     handleSelectVisibleBackend(backend);
                                                 }}
                                             >
-                                                <Text
+                                                <CompactText
                                                     style={[
                                                         styles.backendOptionText,
                                                         { color: selected ? tc.tint : tc.secondaryText },
                                                     ]}
                                                     numberOfLines={2}
-                                                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                                 >
                                                     {getBackendOptionLabel(backend)}
-                                                </Text>
+                                                </CompactText>
                                             </TouchableOpacity>
                                         );
                                     })}
@@ -853,13 +852,12 @@ function SyncSettingsView({
                                     onPress={handleClearPendingRemoteDeletes}
                                     style={{ opacity: pendingRemoteDeleteCount === 0 ? 0.45 : 1 }}
                                 >
-                                    <Text
+                                    <CompactText
                                         style={[styles.linkText, { color: pendingRemoteDeleteCount === 0 ? tc.secondaryText : tc.tint }]}
                                         numberOfLines={2}
-                                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                     >
                                         {tr('filters.clear')}
-                                    </Text>
+                                    </CompactText>
                                 </TouchableOpacity>
                             </View>
                         </View>

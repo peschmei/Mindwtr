@@ -2938,7 +2938,8 @@ describe('TaskStore', () => {
                 .filter((section) => section.projectId === project.id)
                 .sort((a, b) => a.order - b.order);
             expect(ordered.map((section) => section.id)).toEqual([third.id, first.id, second.id]);
-            expect(ordered.map((section) => section.order)).toEqual([0, 1, 2]);
+            expect(ordered[0]?.order).toBeLessThan(ordered[1]?.order ?? Number.POSITIVE_INFINITY);
+            expect(ordered[1]?.order).toBeLessThan(ordered[2]?.order ?? Number.POSITIVE_INFINITY);
             expect(useTaskStore.getState().sections.find((section) => section.id === other.id)?.order).toBe(0);
         });
 

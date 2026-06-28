@@ -1,4 +1,4 @@
-import { Text, Pressable, Alert } from 'react-native';
+import { Pressable, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import {
     formatFocusTaskLimitText,
@@ -26,7 +26,7 @@ import { SwipeableTaskItemContent } from './swipeable-task-item/SwipeableTaskIte
 import { ProjectNextActionPromptModal } from './swipeable-task-item/ProjectNextActionPromptModal';
 import { SwipeableTaskItemStatusMenu } from './swipeable-task-item/SwipeableTaskItemStatusMenu';
 import { styles } from './swipeable-task-item/swipeable-task-item.styles';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { useSwipeableChecklist } from './swipeable-task-item/useSwipeableChecklist';
 
 export interface SwipeableTaskItemProps {
@@ -341,9 +341,9 @@ export function SwipeableTaskItem({
                 accessibilityRole="button"
             >
                 <LeftIcon size={20} color="#FFFFFF" />
-                <Text style={styles.swipeActionText} numberOfLines={1} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>
+                <CompactText style={styles.swipeActionText} numberOfLines={1}>
                     {leftAction.label}
-                </Text>
+                </CompactText>
             </Pressable>
         );
     };
@@ -359,9 +359,9 @@ export function SwipeableTaskItem({
             accessibilityRole="button"
         >
             <Trash2 size={20} color="#FFFFFF" />
-            <Text style={styles.swipeActionText} numberOfLines={1} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>
+            <CompactText style={styles.swipeActionText} numberOfLines={1}>
                 {t('common.delete')}
-            </Text>
+            </CompactText>
         </Pressable>
     );
 

@@ -524,6 +524,56 @@ describe('ProjectWorkspace Select mode', () => {
         });
     });
 
+
+    it('clears project search from an inline clear button and refocuses the field', () => {
+        const { getByLabelText, getByPlaceholderText, queryByLabelText } = renderWorkspace();
+        const input = getByPlaceholderText('Search...') as HTMLInputElement;
+
+        expect(queryByLabelText('Clear search')).toBeNull();
+
+        fireEvent.change(input, { target: { value: 'first' } });
+        const clearButton = getByLabelText('Clear search');
+        fireEvent.click(clearButton);
+
+        expect(input.value).toBe('');
+        expect(document.activeElement).toBe(input);
+        expect(queryByLabelText('Clear search')).toBeNull();
+    });
+
+    it('keeps select grouped with project task controls instead of the search row', () => {
+        const { container, getByRole } = renderWorkspace();
+        const selectButton = getByRole('button', { name: 'Select' });
+        const searchRow = container.querySelector('[data-project-search-row]');
+        const toolbar = container.querySelector('[data-project-task-toolbar]');
+
+        expect(searchRow).not.toBeNull();
+        expect(toolbar).not.toBeNull();
+        expect(searchRow).not.toContainElement(selectButton);
+        expect(toolbar).toContainElement(selectButton);
+    });
+
+    it('condenses the project task toolbar while scrolled down and expands at the top', () => {
+        const allTasks = Array.from({ length: 120 }, (_, index) => task(`task-${index}`, `Task ${index}`));
+        const { container } = renderWorkspace({ allTasks });
+        const scrollContainer = container.querySelector('[data-project-scroll-container]') as HTMLDivElement;
+        const toolbar = container.querySelector('[data-project-task-toolbar]');
+
+        expect(scrollContainer).toBeTruthy();
+        expect(toolbar).toHaveAttribute('data-compact', 'false');
+
+        scrollContainer.scrollTop = 140;
+        fireEvent.scroll(scrollContainer);
+        expect(toolbar).toHaveAttribute('data-compact', 'true');
+
+        scrollContainer.scrollTop = 64;
+        fireEvent.scroll(scrollContainer);
+        expect(toolbar).toHaveAttribute('data-compact', 'true');
+
+        scrollContainer.scrollTop = 0;
+        fireEvent.scroll(scrollContainer);
+        expect(toolbar).toHaveAttribute('data-compact', 'false');
+    });
+
     it('sorts visible project tasks by due date when selected', () => {
         const allTasks = [
             task('task-no-due', 'No due', { createdAt: '2026-05-01T00:00:00.000Z', order: 0 }),

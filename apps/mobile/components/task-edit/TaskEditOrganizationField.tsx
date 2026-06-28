@@ -11,7 +11,7 @@ import {
 
 import type { TaskEditFieldRendererProps } from './TaskEditFieldRenderer.types';
 import { getAreaIdForClearedProject, getEditedTaskValue } from './task-edit-modal.utils';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 
 type OrganizationFieldId =
     | 'status'
@@ -110,19 +110,17 @@ export function TaskEditOrganizationField({
                 accessibilityRole="button"
                 accessibilityLabel={`${label}: ${value}`}
             >
-                <Text
+                <CompactText
                     style={[styles.compactFieldLabel, { color: tc.secondaryText }]}
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
                     {label}
-                </Text>
-                <Text
+                </CompactText>
+                <CompactText
                     style={[styles.compactFieldValue, { color: tc.tint }]}
                     numberOfLines={2}
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
                     {value}
-                </Text>
+                </CompactText>
             </TouchableOpacity>
         </View>
     );

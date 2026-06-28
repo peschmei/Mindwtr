@@ -19,7 +19,7 @@ import {
 } from '@/components/task-edit/task-edit-modal.utils';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { dispatchMobileOnboardingEvent } from '@/lib/mobile-onboarding-events';
 import { logSettingsError } from '@/lib/settings-utils';
 import { useToast } from '@/contexts/toast-context';
@@ -488,13 +488,12 @@ export function GtdSettingsScreen({
                                             onPress={() => updateGtdSettings({ focusTaskLimit: option })}
                                             activeOpacity={0.8}
                                         >
-                                            <Text
+                                            <CompactText
                                                 style={[styles.gtdSegmentedOptionText, { color: selected ? tc.tint : tc.secondaryText }]}
                                                 numberOfLines={2}
-                                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                             >
                                                 {option}
-                                            </Text>
+                                            </CompactText>
                                         </TouchableOpacity>
                                     );
                                 })}
@@ -520,13 +519,12 @@ export function GtdSettingsScreen({
                                             onPress={() => updateGtdSettings({ defaultProjectFlowMode: option.id })}
                                             activeOpacity={0.8}
                                         >
-                                            <Text
+                                            <CompactText
                                                 style={[styles.gtdSegmentedOptionText, { color: selected ? tc.tint : tc.secondaryText }]}
                                                 numberOfLines={2}
-                                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                             >
                                                 {option.label}
-                                            </Text>
+                                            </CompactText>
                                         </TouchableOpacity>
                                     );
                                 })}
@@ -729,13 +727,12 @@ export function GtdSettingsScreen({
                                                 size={16}
                                                 color={selected ? tc.tint : tc.secondaryText}
                                             />
-                                            <Text
+                                            <CompactText
                                                 style={[styles.gtdSegmentedOptionText, { color: selected ? tc.tint : tc.secondaryText }]}
                                                 numberOfLines={2}
-                                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                             >
                                                 {option.label}
-                                            </Text>
+                                            </CompactText>
                                         </TouchableOpacity>
                                     );
                                 })}
@@ -754,13 +751,12 @@ export function GtdSettingsScreen({
                                 <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{defaultAreaDesc}</Text>
                             </View>
                             <View style={[styles.menuRight, { flexShrink: 1, maxWidth: '42%' }]}>
-                            <Text
+                            <CompactText
                                 style={[styles.settingValue, { color: tc.secondaryText }]}
                                 numberOfLines={2}
-                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                             >
                                 {defaultAreaSelectedLabel}
-                            </Text>
+                            </CompactText>
                                 <Ionicons name="chevron-forward" size={18} color={tc.secondaryText} />
                             </View>
                         </TouchableOpacity>
@@ -843,13 +839,12 @@ export function GtdSettingsScreen({
                                             onPress={() => selectDefaultArea(option.id)}
                                             activeOpacity={0.8}
                                         >
-                                            <Text
+                                            <CompactText
                                                 style={[styles.pickerOptionText, { color: selected ? tc.tint : tc.text }]}
                                                 numberOfLines={2}
-                                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                             >
                                                 {option.label}
-                                            </Text>
+                                            </CompactText>
                                             {selected ? <Ionicons name="checkmark" size={18} color={tc.tint} /> : null}
                                         </TouchableOpacity>
                                     );
@@ -1064,13 +1059,12 @@ export function GtdSettingsScreen({
                                     style={[styles.settingRow, idx > 0 && { borderTopWidth: 1, borderTopColor: tc.border }]}
                                     onPress={() => togglePreset(value)}
                                 >
-                                    <Text
+                                    <CompactText
                                         style={[styles.settingLabel, { color: tc.text }]}
                                         numberOfLines={2}
-                                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                     >
                                         {formatTimeEstimateLabel(value)}
-                                    </Text>
+                                    </CompactText>
                                     {selected && <Text style={{ color: '#3B82F6', fontSize: 20 }}>✓</Text>}
                                 </TouchableOpacity>
                             );
@@ -1081,13 +1075,12 @@ export function GtdSettingsScreen({
                         onPress={resetToDefault}
                     >
                         <View style={styles.settingRow}>
-                            <Text
+                            <CompactText
                                 style={[styles.settingLabel, { color: tc.text }]}
                                 numberOfLines={2}
-                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                             >
                                 {t('settings.resetToDefault')}
-                            </Text>
+                            </CompactText>
                         </View>
                     </TouchableOpacity>
                 </ScrollView>
@@ -1377,13 +1370,12 @@ export function GtdSettingsScreen({
                                         saveTaskEditor(preset);
                                     }}
                                 >
-                                    <Text
+                                    <CompactText
                                         style={[styles.taskEditorPresetButtonText, { color: selected ? tc.tint : tc.secondaryText }]}
                                         numberOfLines={1}
-                                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                     >
                                         {option.label}
-                                    </Text>
+                                    </CompactText>
                                 </TouchableOpacity>
                             );
                         })}
@@ -1407,13 +1399,12 @@ export function GtdSettingsScreen({
                                 activeOpacity={0.8}
                             >
                                 <View style={styles.taskEditorSectionHeaderMain}>
-                                    <Text
+                                    <CompactText
                                         style={[styles.settingLabel, { color: tc.text }]}
                                         numberOfLines={2}
-                                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                                     >
                                         {group.title}
-                                    </Text>
+                                    </CompactText>
                                     <View style={[styles.taskEditorSectionCountBadge, { backgroundColor: tc.filterBg }]}>
                                         <Text style={[styles.taskEditorSectionCountText, { color: tc.tint }]}>{groupOrder.length}</Text>
                                     </View>
@@ -1467,13 +1458,12 @@ export function GtdSettingsScreen({
                     }}
                 >
                     <View style={styles.settingRow}>
-                        <Text
+                        <CompactText
                             style={[styles.settingLabel, { color: tc.text }]}
                             numberOfLines={2}
-                            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                         >
                             {t('settings.resetToDefault')}
-                        </Text>
+                        </CompactText>
                     </View>
                 </TouchableOpacity>
             </ScrollView>

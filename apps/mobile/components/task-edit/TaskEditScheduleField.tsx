@@ -21,7 +21,7 @@ import {
 } from '@mindwtr/core';
 
 import { QuickDateChips } from '../QuickDateChips';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { buildRecurrenceValue } from './recurrence-utils';
 import type {
     ShowDatePickerMode,
@@ -887,19 +887,17 @@ export function TaskEditScheduleField({
                             accessibilityRole="button"
                             accessibilityLabel={`${t('taskEdit.dueDateLabel')}: ${notSetLabel}`}
                         >
-                            <Text
+                            <CompactText
                                 style={[styles.compactFieldLabel, { color: tc.secondaryText }]}
-                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                             >
                                 {t('taskEdit.dueDateLabel')}
-                            </Text>
-                            <Text
+                            </CompactText>
+                            <CompactText
                                 style={[styles.compactFieldValue, { color: tc.tint }]}
                                 numberOfLines={2}
-                                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                             >
                                 {notSetLabel}
-                            </Text>
+                            </CompactText>
                         </TouchableOpacity>
                         {renderQuickDateChips('due', parsed)}
                         {renderInlineIOSDatePicker(['due'])}

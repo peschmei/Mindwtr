@@ -1,10 +1,10 @@
 import React from 'react';
 import type { RefObject } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 import { AtSign, CalendarDays, ChevronDown, ChevronUp, Clock, FileText, Flag, Folder, Mic, SlidersHorizontal, Square, X } from 'lucide-react-native';
 import { tFallback } from '@mindwtr/core';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText, CompactTextInput } from '@/components/compact-text';
 import { QuickDateChips } from '../QuickDateChips';
 import { styles } from './quick-capture-sheet.styles';
 
@@ -163,20 +163,19 @@ export function QuickCaptureSheetBody({
             ]}
           >
             <View style={styles.headerRow}>
-              <Text
+              <CompactText
                 style={[styles.title, { color: tc.text }]}
                 numberOfLines={2}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
               >
                 {t('nav.addTask')}
-              </Text>
+              </CompactText>
               <TouchableOpacity onPress={handleClose} accessibilityLabel={t('common.close')}>
                 <X size={18} color={tc.secondaryText} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputRow}>
-              <TextInput
+              <CompactTextInput
                 ref={inputRef}
                 style={[styles.input, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
                 placeholder={t('quickAdd.inputLabel')}
@@ -195,7 +194,6 @@ export function QuickCaptureSheetBody({
                 blurOnSubmit={!addAnother}
                 numberOfLines={1}
                 textAlignVertical="center"
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
               />
               <TouchableOpacity
                 onPress={onToggleRecording}
@@ -222,13 +220,12 @@ export function QuickCaptureSheetBody({
             {recordingReady && (
               <View style={styles.recordingRow}>
                 <View style={[styles.recordingDot, { backgroundColor: tc.danger }]} />
-                <Text
+                <CompactText
                   style={[styles.recordingText, { color: tc.danger }]}
                   numberOfLines={1}
-                  maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
                   {t('quickAdd.audioRecording')}
-                </Text>
+                </CompactText>
               </View>
             )}
 
@@ -242,14 +239,13 @@ export function QuickCaptureSheetBody({
                   accessibilityLabel={`${defaultProjectLabel}: ${projectLabel}`}
                 >
                   <Folder size={16} color={tc.text} />
-                  <Text
+                  <CompactText
                     style={[styles.collapsedProjectText, { color: tc.text }]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                   >
                     {projectLabel}
-                  </Text>
+                  </CompactText>
                 </TouchableOpacity>
               ) : null}
               {!optionsExpanded && !projectSelected ? (
@@ -261,14 +257,13 @@ export function QuickCaptureSheetBody({
                   accessibilityLabel={`${t('taskEdit.contextsLabel')}: ${contextLabel}`}
                 >
                   <AtSign size={16} color={tc.text} />
-                  <Text
+                  <CompactText
                     style={[styles.collapsedContextText, { color: tc.text }]}
                     numberOfLines={2}
                     ellipsizeMode="tail"
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                   >
                     {contextLabel}
-                  </Text>
+                  </CompactText>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity
@@ -279,15 +274,14 @@ export function QuickCaptureSheetBody({
                 accessibilityState={{ expanded: optionsExpanded }}
               >
                 <SlidersHorizontal size={16} color={tc.text} />
-                <Text
+                <CompactText
                   style={[styles.optionsToggleText, { color: tc.text }]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.8}
-                  maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
                   {optionsToggleLabel}
-                </Text>
+                </CompactText>
                 {optionsExpanded ? (
                   <ChevronUp size={16} color={tc.secondaryText} />
                 ) : (
@@ -308,14 +302,13 @@ export function QuickCaptureSheetBody({
                       accessibilityLabel={`${t('task.aria.dueTime')}: ${dueTimeLabel}`}
                     >
                       <Clock size={16} color={tc.text} />
-                      <Text
+                      <CompactText
                         style={[styles.optionText, { color: tc.text }]}
                         numberOfLines={2}
                         ellipsizeMode="tail"
-                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                       >
                         {dueTimeLabel}
-                      </Text>
+                      </CompactText>
                     </TouchableOpacity>
                   )}
 
@@ -327,14 +320,13 @@ export function QuickCaptureSheetBody({
                     accessibilityLabel={`${t('taskEdit.contextsLabel')}: ${contextLabel}`}
                   >
                     <AtSign size={16} color={tc.text} />
-                    <Text
+                    <CompactText
                       style={[styles.optionText, { color: tc.text }]}
                       numberOfLines={2}
                       ellipsizeMode="tail"
-                      maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                     >
                       {contextLabel}
-                    </Text>
+                    </CompactText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -344,14 +336,13 @@ export function QuickCaptureSheetBody({
                     accessibilityRole="button"
                     accessibilityLabel={`${t('taskEdit.areaLabel')}: ${areaLabel}`}
                   >
-                    <Text
+                    <CompactText
                       style={[styles.optionText, { color: tc.text }]}
                       numberOfLines={2}
                       ellipsizeMode="tail"
-                      maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                     >
                       {areaLabel}
-                    </Text>
+                    </CompactText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -362,14 +353,13 @@ export function QuickCaptureSheetBody({
                     accessibilityLabel={`${t('taskEdit.projectLabel')}: ${projectLabel}`}
                   >
                     <Folder size={16} color={tc.text} />
-                    <Text
+                    <CompactText
                       style={[styles.optionText, { color: tc.text }]}
                       numberOfLines={2}
                       ellipsizeMode="tail"
-                      maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                     >
                       {projectLabel}
-                    </Text>
+                    </CompactText>
                   </TouchableOpacity>
 
                   {prioritiesEnabled && (
@@ -381,26 +371,24 @@ export function QuickCaptureSheetBody({
                       accessibilityLabel={`${t('taskEdit.priorityLabel')}: ${priorityLabel}`}
                     >
                       <Flag size={16} color={tc.text} />
-                      <Text
+                      <CompactText
                         style={[styles.optionText, { color: tc.text }]}
                         numberOfLines={2}
                         ellipsizeMode="tail"
-                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                       >
                         {priorityLabel}
-                      </Text>
+                      </CompactText>
                     </TouchableOpacity>
                   )}
                 </View>
 
-                <Text
+                <CompactText
                   style={[styles.syntaxHint, { color: tc.secondaryText }]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
-                  maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
                   {t('quickAdd.placeholder')}
-                </Text>
+                </CompactText>
 
                 {handleImportTextFile ? (
                   <TouchableOpacity
@@ -410,13 +398,12 @@ export function QuickCaptureSheetBody({
                     accessibilityLabel={tFallback(t, 'quickAdd.bulkImportTextFileLabel', 'Import text file')}
                   >
                     <FileText size={16} color={tc.text} />
-                    <Text
+                    <CompactText
                       style={[styles.importTextButtonText, { color: tc.text }]}
                       numberOfLines={2}
-                      maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                     >
                       {tFallback(t, 'quickAdd.bulkImportTextFile', 'Import .txt')}
-                    </Text>
+                    </CompactText>
                   </TouchableOpacity>
                 ) : null}
 
@@ -435,14 +422,13 @@ export function QuickCaptureSheetBody({
                       accessibilityLabel={`${t('taskEdit.dueDateLabel')}: ${dueLabel}`}
                     >
                       <CalendarDays size={14} color={tc.secondaryText} />
-                      <Text
+                      <CompactText
                         style={[styles.customDateButtonText, { color: tc.secondaryText }]}
                         numberOfLines={2}
                         ellipsizeMode="tail"
-                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                       >
                         {customDateLabel}
-                      </Text>
+                      </CompactText>
                     </TouchableOpacity>
                   }
                 />
@@ -458,13 +444,12 @@ export function QuickCaptureSheetBody({
                   trackColor={{ false: tc.border, true: `${tc.tint}55` }}
                   accessibilityLabel={t('quickAdd.addAnother')}
                 />
-                <Text
+                <CompactText
                   style={[styles.toggleText, { color: tc.text }]}
                   numberOfLines={2}
-                  maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                 >
                   {t('quickAdd.addAnother')}
-                </Text>
+                </CompactText>
               </View>
               <View style={styles.saveActions}>
                 {handleSaveAndEdit ? (
@@ -479,15 +464,14 @@ export function QuickCaptureSheetBody({
                     accessibilityRole="button"
                     accessibilityLabel={t('quickAdd.saveAndEdit')}
                   >
-                    <Text
+                    <CompactText
                       style={[styles.saveAndEditText, { color: tc.text }]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.75}
-                      maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                     >
                       {t('quickAdd.saveAndEdit')}
-                    </Text>
+                    </CompactText>
                   </TouchableOpacity>
                 ) : null}
                 <TouchableOpacity
@@ -497,15 +481,14 @@ export function QuickCaptureSheetBody({
                   accessibilityRole="button"
                   accessibilityLabel={t('common.save')}
                 >
-                  <Text
+                  <CompactText
                     style={[styles.saveText, saveButtonTextColor ? { color: saveButtonTextColor } : null]}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.8}
-                    maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                   >
                     {t('common.save')}
-                  </Text>
+                  </CompactText>
                 </TouchableOpacity>
               </View>
             </View>

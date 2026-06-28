@@ -57,7 +57,7 @@ import {
 import { SwipeableTaskItem } from '@/components/swipeable-task-item';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { useTheme } from '../../../contexts/theme-context';
 import { useLanguage } from '../../../contexts/language-context';
 import { useToast } from '../../../contexts/toast-context';
@@ -1300,13 +1300,12 @@ export default function FocusScreen() {
     ];
     const textColor = isAdvanced ? tc.tint : selected ? tc.onTint : tc.text;
     const chipText = (
-      <Text
+      <CompactText
         style={[styles.filterChipText, { color: textColor }]}
         numberOfLines={2}
-        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
       >
         {label}
-      </Text>
+      </CompactText>
     );
 
     if (!onPress) {
@@ -1558,13 +1557,12 @@ export default function FocusScreen() {
                           },
                         ]}
                       >
-                        <Text
+                        <CompactText
                           style={[styles.savedFilterChipText, { color: selected ? tc.onTint : tc.text }]}
                           numberOfLines={2}
-                          maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                         >
                           {filter.icon ? `${filter.icon} ` : ''}{filter.name}
-                        </Text>
+                        </CompactText>
                       </TouchableOpacity>
                       {selected ? (
                         <TouchableOpacity
@@ -1641,19 +1639,17 @@ export default function FocusScreen() {
               <Text style={[styles.sectionChevron, { color: tc.secondaryText }]}>
                 {section.expanded ? '▾' : '▸'}
               </Text>
-              <Text
+              <CompactText
                 style={[styles.sectionTitle, { color: tc.tint }]}
                 numberOfLines={2}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
               >
                 {section.title}
-              </Text>
-              <Text
+              </CompactText>
+              <CompactText
                 style={[styles.sectionCount, { color: tc.secondaryText }]}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
               >
                 ({section.totalCount})
-              </Text>
+              </CompactText>
               <View style={[styles.sectionLine, { backgroundColor: tc.border }]} />
             </Pressable>
           ) : null
@@ -1661,20 +1657,18 @@ export default function FocusScreen() {
         renderItem={renderItem}
         ListEmptyComponent={!hasTasks ? (
           <View style={styles.emptyState}>
-            <Text
+            <CompactText
               style={[styles.emptyTitle, { color: tc.text }]}
               numberOfLines={2}
-              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {emptyTitle}
-            </Text>
-            <Text
+            </CompactText>
+            <CompactText
               style={[styles.emptySubtitle, { color: tc.secondaryText }]}
               numberOfLines={3}
-              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {emptySubtitle}
-            </Text>
+            </CompactText>
           </View>
         ) : null}
         removeClippedSubviews={false}

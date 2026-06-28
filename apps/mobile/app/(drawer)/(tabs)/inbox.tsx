@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Brain, ListChecks } from 'lucide-react-native';
 
@@ -11,7 +11,7 @@ import { ErrorBoundary } from '../../../components/ErrorBoundary';
 import { useLanguage } from '../../../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { taskMatchesAreaFilter } from '@mindwtr/core';
 import { useQuickCapture } from '../../../contexts/quick-capture-context';
@@ -63,13 +63,12 @@ export default function InboxScreen() {
       accessibilityLabel={t('mindSweep.launchButton')}
     >
       <Brain size={18} color={tc.tint} strokeWidth={2.2} />
-      <Text
+      <CompactText
         style={[styles.mindSweepLabel, { color: tc.tint }]}
         numberOfLines={2}
-        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
       >
         {t('mindSweep.launchButton')}
-      </Text>
+      </CompactText>
     </TouchableOpacity>
   );
 
@@ -85,13 +84,12 @@ export default function InboxScreen() {
           accessibilityLabel={`${t('inbox.processButton')} (${inboxTasks.length})`}
         >
           <ListChecks size={18} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.2} />
-          <Text
+          <CompactText
             style={[styles.actionLabel, { color: filledButton.textColor ?? tc.onTint }]}
             numberOfLines={2}
-            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           >
             {t('inbox.processButton')} ({processCount})
-          </Text>
+          </CompactText>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
@@ -101,13 +99,12 @@ export default function InboxScreen() {
           accessibilityLabel={t('mindSweep.launchButton')}
         >
           <Brain size={18} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.2} />
-          <Text
+          <CompactText
             style={[styles.actionLabel, { color: filledButton.textColor ?? tc.onTint }]}
             numberOfLines={2}
-            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           >
             {t('mindSweep.launchButton')}
-          </Text>
+          </CompactText>
         </TouchableOpacity>
       )}
     </View>

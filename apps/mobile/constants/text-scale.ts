@@ -8,9 +8,9 @@
  * them inside their boxes while still letting body/content text scale freely for
  * accessibility.
  *
- * Apply via `maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}` on the relevant
- * `<Text>`. Do NOT apply to task titles, descriptions, notes, or other reading
- * content — those should keep scaling.
+ * Apply via `CompactText` / `CompactTextInput` for the relevant controls. Do
+ * NOT apply to task titles, descriptions, notes, or other reading content —
+ * those should keep scaling.
  */
 export const COMPACT_TEXT_MAX_SCALE = 1.2;
 

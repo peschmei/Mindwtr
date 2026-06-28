@@ -22,7 +22,7 @@ import {
 } from '@mindwtr/core';
 import { DndContext, PointerSensor, MeasuringStrategy, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ChevronRight, FileText, Folder, PanelLeftOpen, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ChevronRight, FileText, Folder, PanelLeftOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
 
 import { PromptModal } from '../../PromptModal';
 import { TokenPickerModal } from '../../TokenPickerModal';
@@ -63,6 +63,8 @@ const PROJECT_TASK_VIRTUALIZATION_THRESHOLD = 80;
 const PROJECT_TASK_ROW_ESTIMATE = 88;
 const PROJECT_TASK_VIRTUAL_OVERSCAN = 8;
 const PROJECT_TASK_VIRTUAL_INITIAL_HEIGHT = 720;
+const PROJECT_TASK_TOOLBAR_COLLAPSE_SCROLL_Y = 96;
+const PROJECT_TASK_TOOLBAR_EXPAND_SCROLL_Y = 8;
 
 type ProjectTaskRowsProps = {
     tasks: readonly Task[];
@@ -347,9 +349,12 @@ export function ProjectWorkspace({
     const [isBulkOrganizing, setIsBulkOrganizing] = useState(false);
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const [completedTasksCollapsed, setCompletedTasksCollapsed] = useState(true);
+    const [projectTaskToolbarCompact, setProjectTaskToolbarCompact] = useState(false);
     const editingTaskId = useUiStore((state) => state.editingTaskId);
     const multiSelectAnchorIdRef = useRef<string | null>(null);
     const projectScrollRef = useRef<HTMLDivElement | null>(null);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const lastProjectScrollTopRef = useRef(0);
     const selectedProjectIdRef = useRef<string | null>(selectedProjectId);
     const isArchivedProject = selectedProject?.status === 'archived';
     const shouldGroupCompletedTasks = Boolean(selectedProject && !isArchivedProject && showCompletedTasks);
@@ -385,6 +390,31 @@ export function ProjectWorkspace({
         }
 
         window.setTimeout(restoreScroll, 0);
+    }, []);
+
+    const handleProjectScroll = useCallback(() => {
+        const scrollElement = projectScrollRef.current;
+        if (!scrollElement) return;
+        const scrollTop = scrollElement.scrollTop;
+        const previousScrollTop = lastProjectScrollTopRef.current;
+
+        setProjectTaskToolbarCompact((current) => {
+            if (scrollTop <= PROJECT_TASK_TOOLBAR_EXPAND_SCROLL_Y) return false;
+            if (current) return true;
+            if (scrollTop > previousScrollTop && scrollTop >= PROJECT_TASK_TOOLBAR_COLLAPSE_SCROLL_Y) return true;
+            return current;
+        });
+        lastProjectScrollTopRef.current = scrollTop;
+    }, []);
+
+    useEffect(() => {
+        setProjectTaskToolbarCompact(false);
+        lastProjectScrollTopRef.current = 0;
+    }, [selectedProjectId]);
+
+    const handleClearProjectSearch = useCallback(() => {
+        setSearchQuery('');
+        searchInputRef.current?.focus();
     }, []);
 
     const openProjectQuickAdd = useCallback((sectionId?: string | null) => {
@@ -1339,12 +1369,46 @@ export function ProjectWorkspace({
         ? t('taskEdit.tagsPlaceholder')
         : t('taskEdit.contextsPlaceholder');
 
+    const clearSearchLabel = resolveText('common.clearSearch', 'Clear search');
+    const projectAddTaskButton = !isArchivedProject ? (
+        <button
+            type="button"
+            data-add-task-trigger
+            onClick={() => openProjectQuickAdd()}
+            className={cn(
+                'inline-flex h-8 items-center gap-2 rounded-md bg-primary font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                projectTaskToolbarCompact ? 'px-3 text-xs' : 'mb-3 px-4 text-sm',
+            )}
+        >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('projects.addTask')}
+        </button>
+    ) : null;
+    const selectProjectTasksButton = selectedProject ? (
+        <button
+            type="button"
+            onClick={() => {
+                restoreProjectScrollAfterRender();
+                if (selectionMode) exitSelectionMode();
+                else setSelectionMode(true);
+            }}
+            className={cn(
+                'h-8 whitespace-nowrap rounded-md border px-2.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40',
+                selectionMode
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+            )}
+        >
+            {selectionMode ? t('bulk.exitSelect') : t('bulk.select')}
+        </button>
+    ) : null;
+
     return (
         <>
             <div className="flex-1 min-w-0 h-full flex">
                 <div className="flex h-full min-h-0 w-full max-w-none flex-col">
                     <div className="mb-4">
-                        <div className="flex flex-col gap-2 sm:flex-row">
+                        <div data-project-search-row className="flex flex-col gap-2 sm:flex-row">
                             {showProjectsSidebarToggle && (
                                 <button
                                     type="button"
@@ -1357,36 +1421,39 @@ export function ProjectWorkspace({
                                     <PanelLeftOpen className="h-4 w-4" />
                                 </button>
                             )}
-                            <input
-                                type="text"
-                                data-view-filter-input
-                                placeholder={t('common.search')}
-                                value={searchQuery}
-                                onChange={(event) => setSearchQuery(event.target.value)}
-                                className="min-w-0 flex-1 rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            />
-                            {selectedProject && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        restoreProjectScrollAfterRender();
-                                        if (selectionMode) exitSelectionMode();
-                                        else setSelectionMode(true);
-                                    }}
+                            <div className="relative min-w-0 flex-1">
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    data-view-filter-input
+                                    placeholder={t('common.search')}
+                                    value={searchQuery}
+                                    onChange={(event) => setSearchQuery(event.target.value)}
                                     className={cn(
-                                        "h-9 rounded-lg border px-3 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40",
-                                        selectionMode
-                                            ? "border-primary bg-primary/10 text-primary"
-                                            : "border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        'w-full min-w-0 rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30',
+                                        searchQuery && 'pr-9',
                                     )}
-                                >
-                                    {selectionMode ? t('bulk.exitSelect') : t('bulk.select')}
-                                </button>
-                            )}
+                                />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearProjectSearch}
+                                        aria-label={clearSearchLabel}
+                                        className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                    >
+                                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                     {selectedProject ? (
-                        <div ref={projectScrollRef} className="flex-1 min-h-0 overflow-y-auto pr-2">
+                        <div
+                            ref={projectScrollRef}
+                            data-project-scroll-container
+                            onScroll={handleProjectScroll}
+                            className="flex-1 min-h-0 overflow-y-auto pr-2"
+                        >
                             {(isCreatingProject || isProjectDeleting || isAreaCreating) && (
                                 <div className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                                     {t('common.loading') || 'Loading...'}
@@ -1473,23 +1540,26 @@ export function ProjectWorkspace({
                             )}
 
                             <section className="border-t border-border/50 py-5">
-                                <div className="sticky top-0 z-20 -mx-2 mb-4 border-y border-border/60 bg-background/95 px-2 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
-                                    {!isArchivedProject && (
-                                        <button
-                                            type="button"
-                                            data-add-task-trigger
-                                            onClick={() => openProjectQuickAdd()}
-                                            className="mb-3 inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                                        >
-                                            <Plus className="h-4 w-4" aria-hidden="true" />
-                                            {t('projects.addTask')}
-                                        </button>
+                                <div
+                                    data-project-task-toolbar
+                                    data-compact={projectTaskToolbarCompact ? 'true' : 'false'}
+                                    className={cn(
+                                        'sticky top-0 z-20 -mx-2 mb-4 border-y border-border/60 bg-background/95 px-2 shadow-sm backdrop-blur transition-[padding] duration-150 supports-[backdrop-filter]:bg-background/85',
+                                        projectTaskToolbarCompact ? 'py-2' : 'py-3',
                                     )}
-                                    <div className="flex items-center justify-between gap-3">
+                                >
+                                    {!projectTaskToolbarCompact && projectAddTaskButton}
+                                    <div className={cn(
+                                        'flex gap-3',
+                                        projectTaskToolbarCompact
+                                            ? 'flex-wrap items-center justify-between'
+                                            : 'items-center justify-between',
+                                    )}>
                                         <div className="text-xs uppercase tracking-wider text-muted-foreground">
                                             {t('projects.sectionsLabel')}
                                         </div>
                                         <div className="flex flex-wrap items-center justify-end gap-2">
+                                            {projectTaskToolbarCompact && projectAddTaskButton}
                                             <div
                                                 role="group"
                                                 aria-label={resolveText('sort.label', 'Sort')}
@@ -1518,6 +1588,7 @@ export function ProjectWorkspace({
                                                     );
                                                 })}
                                             </div>
+                                            {selectProjectTasksButton}
                                             {!isArchivedProject && (
                                                 <>
                                                     <button

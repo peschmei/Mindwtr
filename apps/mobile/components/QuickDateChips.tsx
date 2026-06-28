@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import {
   getQuickDate,
   isQuickDatePresetSelected,
@@ -9,7 +9,7 @@ import {
 } from '@mindwtr/core';
 
 import type { ThemeColors } from '@/hooks/use-theme-colors';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 
 const QUICK_DATE_LABELS: Record<QuickDatePreset, { key: string; fallback: string }> = {
   today: { key: 'quickDate.today', fallback: 'Today' },
@@ -73,16 +73,15 @@ export function QuickDateChips({
               },
             ]}
           >
-            <Text
+            <CompactText
               style={[
                 styles.chipText,
                 { color: active ? tc.onTint : tc.secondaryText },
               ]}
               numberOfLines={2}
-              maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
               {label}
-            </Text>
+            </CompactText>
           </Pressable>
         );
       })}

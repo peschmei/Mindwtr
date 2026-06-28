@@ -21,7 +21,7 @@ import type { ThemeColors } from '../../hooks/use-theme-colors';
 import { FocusStarIcon } from '../FocusStarIcon';
 import { MarkdownInlineText } from '../markdown-text';
 import { styles } from './swipeable-task-item.styles';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 
 interface SwipeableTaskItemContentProps {
     accessibilityActions: { label: string; name: string }[];
@@ -220,13 +220,12 @@ export function SwipeableTaskItemContent({
                 children: (
                     <>
                         <View style={[styles.projectDot, { backgroundColor: projectColor || tc.tint }]} />
-                        <Text
+                        <CompactText
                             style={[styles.metaText, { color: tc.secondaryText }]}
                             numberOfLines={2}
-                            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                         >
                             {project.title}
-                        </Text>
+                        </CompactText>
                     </>
                 ),
             }),
@@ -236,14 +235,13 @@ export function SwipeableTaskItemContent({
 
     if (projectDeadlineLabel) {
         addMetaPart(
-            <Text
+            <CompactText
                 key="project-deadline"
                 style={[styles.metaText, styles.projectDeadlineText]}
                 numberOfLines={2}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
                 {projectDeadlineLabel}
-            </Text>,
+            </CompactText>,
             'project-deadline'
         );
     }
@@ -258,15 +256,14 @@ export function SwipeableTaskItemContent({
                 accessibilityLabel: `Open context ${context}`,
                 children: (
                     <>
-                        <Text
+                        <CompactText
                             style={[styles.metaText, styles.contextText]}
                             numberOfLines={2}
-                            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                         >
                             {context}
-                        </Text>
+                        </CompactText>
                         {moreContexts > 0 && (
-                            <Text style={[styles.metaText, { color: tc.secondaryText }]} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>+{moreContexts}</Text>
+                            <CompactText style={[styles.metaText, { color: tc.secondaryText }]}>+{moreContexts}</CompactText>
                         )}
                     </>
                 ),
@@ -285,15 +282,14 @@ export function SwipeableTaskItemContent({
                 accessibilityLabel: `Open tag ${tag}`,
                 children: (
                     <>
-                        <Text
+                        <CompactText
                             style={[styles.metaText, styles.tagText]}
                             numberOfLines={2}
-                            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                         >
                             {tag}
-                        </Text>
+                        </CompactText>
                         {moreTags > 0 && (
-                            <Text style={[styles.metaText, { color: tc.secondaryText }]} maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}>+{moreTags}</Text>
+                            <CompactText style={[styles.metaText, { color: tc.secondaryText }]}>+{moreTags}</CompactText>
                         )}
                     </>
                 ),
@@ -304,53 +300,49 @@ export function SwipeableTaskItemContent({
 
     if (completionLabel) {
         addMetaPart(
-            <Text
+            <CompactText
                 key="completed"
                 style={[styles.metaText, { color: tc.secondaryText }]}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
                 {`${t('list.done') || 'Completed'}: ${completionLabel}`}
-            </Text>,
+            </CompactText>,
             'completed'
         );
     }
 
     if (dueLabel) {
         addMetaPart(
-            <Text
+            <CompactText
                 key="due"
                 style={[styles.metaText, styles.dueText, { color: dueColor }]}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
                 {dueLabel}
-            </Text>,
+            </CompactText>,
             'due'
         );
     }
 
     if (startLabel) {
         addMetaPart(
-            <Text
+            <CompactText
                 key="start"
                 style={[styles.metaText, { color: tc.secondaryText }]}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
                 {`${startDateLabel}: ${startLabel}`}
-            </Text>,
+            </CompactText>,
             'start'
         );
     }
 
     if (dateIssueLabel) {
         addMetaPart(
-            <Text
+            <CompactText
                 key="date-issue"
                 style={[styles.metaText, styles.dateIssueText]}
                 numberOfLines={1}
-                maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
             >
                 {dateIssueLabel}
-            </Text>,
+            </CompactText>,
             'date-issue'
         );
     }
@@ -362,14 +354,13 @@ export function SwipeableTaskItemContent({
                 children: (
                     <>
                         <Repeat size={12} color={tc.secondaryText} strokeWidth={2} />
-                        <Text
+                        <CompactText
                             key="recurrence-label"
                             style={[styles.metaText, { color: tc.secondaryText }]}
                             numberOfLines={2}
-                            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                         >
                             {recurrenceLabel}
-                        </Text>
+                        </CompactText>
                     </>
                 ),
             }),

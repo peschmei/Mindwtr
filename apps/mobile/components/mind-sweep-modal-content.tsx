@@ -15,7 +15,7 @@ import { getMindSweepGroups, shallow, useTaskStore, type MindSweepScope } from '
 import { useLanguage } from '../contexts/language-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 
 const INTRO_STEP = -1;
 
@@ -104,13 +104,12 @@ export function MindSweepModalContent({ onClose }: MindSweepModalContentProps) {
                         selected && { backgroundColor: tc.tint, borderColor: tc.tint },
                       ]}
                     >
-                      <Text
+                      <CompactText
                         style={[styles.scopeButtonText, { color: selected ? tc.onTint : tc.text }]}
                         numberOfLines={2}
-                        maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                       >
                         {option.label}
-                      </Text>
+                      </CompactText>
                     </TouchableOpacity>
                   );
                 })}

@@ -19,7 +19,7 @@ import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { ReviewModal } from '../../components/review-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronRight, ChevronsDown, ChevronsUp } from 'lucide-react-native';
@@ -440,31 +440,28 @@ export default function ReviewScreen() {
                     <View style={styles.reviewAreaSummaryRow}>
                       {areaGroup.projectCount > 0 && (
                         <View style={[styles.reviewSummaryPill, { backgroundColor: tc.filterBg }]}>
-                          <Text
+                          <CompactText
                             style={[styles.reviewSummaryPillText, { color: tc.secondaryText }]}
-                            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                           >
                             {areaGroup.projectCount} {projectsLabel}
-                          </Text>
+                          </CompactText>
                         </View>
                       )}
                       {areaGroup.needsActionCount > 0 && (
                         <View style={[styles.reviewSummaryPill, styles.reviewNeedsSummaryPill]}>
-                          <Text
+                          <CompactText
                             style={[styles.reviewSummaryPillText, styles.reviewNeedsSummaryText]}
-                            maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                           >
                             {areaGroup.needsActionCount} {needsActionLabel}
-                          </Text>
+                          </CompactText>
                         </View>
                       )}
                       <View style={[styles.reviewSummaryPill, { backgroundColor: tc.filterBg }]}>
-                        <Text
+                        <CompactText
                           style={[styles.reviewSummaryPillText, { color: tc.secondaryText }]}
-                          maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
                         >
                           {taskSummary}
-                        </Text>
+                        </CompactText>
                       </View>
                     </View>
                   </View>

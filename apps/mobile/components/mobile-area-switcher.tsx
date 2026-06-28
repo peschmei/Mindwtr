@@ -15,7 +15,7 @@ import { useLanguage } from '../contexts/language-context';
 import { useToast } from '../contexts/toast-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
-import { COMPACT_TEXT_MAX_SCALE } from '@/constants/text-scale';
+import { CompactText } from '@/components/compact-text';
 import { AREA_FILTER_ALL, AREA_FILTER_NONE } from '@mindwtr/core';
 
 export function MobileAreaSwitcher() {
@@ -82,16 +82,15 @@ export function MobileAreaSwitcher() {
           pressed ? styles.triggerPressed : null,
         ]}
       >
-        <Text
+        <CompactText
           numberOfLines={2}
-          maxFontSizeMultiplier={COMPACT_TEXT_MAX_SCALE}
           style={[
             styles.triggerText,
             { color: isDefaultScope ? tc.secondaryText : tc.tint },
           ]}
         >
           {triggerLabel}
-        </Text>
+        </CompactText>
         <ChevronDown color={isDefaultScope ? tc.secondaryText : tc.tint} size={13} strokeWidth={2.1} />
       </Pressable>
 
