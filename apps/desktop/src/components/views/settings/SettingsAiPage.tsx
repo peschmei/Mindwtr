@@ -48,14 +48,23 @@ type Labels = {
     speechEnable: string;
     speechProvider: string;
     speechProviderOffline: string;
+    speechProviderParakeet: string;
     speechModel: string;
     speechOfflineModel: string;
     speechOfflineModelDesc: string;
+    speechParakeetModelDesc: string;
+    speechParakeetModelPath: string;
+    speechParakeetModelPathPlaceholder: string;
     speechOfflineReady: string;
     speechOfflineNotDownloaded: string;
+    speechOfflineEstimatedSize: string;
+    speechOfflinePathSet: string;
     speechOfflineDownload: string;
     speechOfflineDownloadSuccess: string;
     speechOfflineDelete: string;
+    speechOfflineDownloadRuntime: string;
+    speechOfflineDownloadModel: string;
+    speechOfflineInstalling: string;
     speechOfflineDownloadError: string;
     speechLanguage: string;
     speechLanguageHint: string;
@@ -72,6 +81,13 @@ type Labels = {
 };
 
 type SpeechToTextSettings = NonNullable<AiSettings['speechToText']>;
+type SpeechProvider = NonNullable<SpeechToTextSettings['provider']>;
+type SpeechDownloadProgress = {
+    stage: string;
+    loaded: number;
+    total?: number | null;
+    percent?: number | null;
+};
 
 const looksLikeOfficialOpenAIModel = (model: string, knownModels: string[]): boolean => {
     const trimmed = model.trim();
@@ -106,7 +122,7 @@ type SettingsAiPageProps = {
     anthropicThinkingOptions: ThinkingOption[];
     aiApiKey: string;
     speechEnabled: boolean;
-    speechProvider: 'openai' | 'gemini' | 'whisper';
+    speechProvider: SpeechProvider;
     speechModel: string;
     speechModelOptions: string[];
     speechLanguage: string;
@@ -114,13 +130,16 @@ type SettingsAiPageProps = {
     speechFieldStrategy: 'smart' | 'title_only' | 'description_only';
     speechApiKey: string;
     speechOfflineReady: boolean;
+    speechOfflineModelPath: string;
+    speechOfflineEstimatedSize: number | null;
     speechOfflineSize: number | null;
     speechDownloadState: 'idle' | 'downloading' | 'success' | 'error';
     speechDownloadError: string | null;
+    speechDownloadProgress: SpeechDownloadProgress | null;
     onUpdateAISettings: (next: Partial<AiSettings>) => void;
     onUpdateSpeechSettings: (next: Partial<SpeechToTextSettings>) => void;
     onProviderChange: (provider: AIProviderId) => void;
-    onSpeechProviderChange: (provider: 'openai' | 'gemini' | 'whisper') => void;
+    onSpeechProviderChange: (provider: SpeechProvider) => void;
     onToggleAnthropicThinking: () => void;
     onAiApiKeyChange: (value: string) => void;
     onSpeechApiKeyChange: (value: string) => void;
@@ -152,9 +171,12 @@ export function SettingsAiPage({
     speechFieldStrategy,
     speechApiKey,
     speechOfflineReady,
+    speechOfflineModelPath,
+    speechOfflineEstimatedSize,
     speechOfflineSize,
     speechDownloadState,
     speechDownloadError,
+    speechDownloadProgress,
     onUpdateAISettings,
     onUpdateSpeechSettings,
     onProviderChange,
@@ -180,6 +202,35 @@ export function SettingsAiPage({
     const showCustomBaseUrlModelHint = aiProvider === 'openai'
         && !aiBaseUrl.trim()
         && !looksLikeOfficialOpenAIModel(aiModel, aiModelOptions);
+    const speechDownloadPercent = speechDownloadProgress?.percent == null
+        ? null
+        : Math.max(0, Math.min(100, Math.round(speechDownloadProgress.percent)));
+    const speechDownloadProgressLabel = speechDownloadProgress?.stage === 'runtime_download'
+        ? t.speechOfflineDownloadRuntime
+        : speechDownloadProgress?.stage === 'model_download'
+            ? t.speechOfflineDownloadModel
+            : speechDownloadProgress?.stage === 'install'
+                ? t.speechOfflineInstalling
+                : null;
+    const speechDownloadProgressView = speechDownloadState === 'downloading' && speechDownloadProgressLabel ? (
+        <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">
+                {speechDownloadProgressLabel}{speechDownloadPercent == null ? '' : ` ${speechDownloadPercent}%`}
+            </div>
+            <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={speechDownloadPercent ?? undefined}
+                className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+            >
+                <div
+                    className="h-full bg-primary transition-[width]"
+                    style={{ width: `${speechDownloadPercent ?? 12}%` }}
+                />
+            </div>
+        </div>
+    ) : null;
 
     useEffect(() => {
         setOpenAIExtraDraft(formatOpenAIExtraBodyParams(aiOpenAIExtraBodyParams));
@@ -497,12 +548,13 @@ export function SettingsAiPage({
                             <div className="text-sm font-medium">{t.speechProvider}</div>
                             <select
                                 value={speechProvider}
-                                onChange={(e) => onSpeechProviderChange(e.target.value as 'openai' | 'gemini' | 'whisper')}
+                                onChange={(e) => onSpeechProviderChange(e.target.value as SpeechProvider)}
                                 className="text-sm bg-muted/50 text-foreground border border-border rounded px-2 py-1 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
                             >
                                 <option value="openai">{t.aiProviderOpenAI}</option>
                                 <option value="gemini">{t.aiProviderGemini}</option>
                                 <option value="whisper">{t.speechProviderOffline}</option>
+                                <option value="parakeet">{t.speechProviderParakeet}</option>
                             </select>
                         </div>
 
@@ -528,7 +580,11 @@ export function SettingsAiPage({
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="text-xs text-muted-foreground">
                                         {speechOfflineReady ? t.speechOfflineReady : t.speechOfflineNotDownloaded}
-                                        {speechOfflineSize ? ` · ${(speechOfflineSize / (1024 * 1024)).toFixed(1)} MB` : ''}
+                                        {speechOfflineSize
+                                            ? ` · ${(speechOfflineSize / (1024 * 1024)).toFixed(1)} MB`
+                                            : speechOfflineEstimatedSize
+                                                ? ` · ${t.speechOfflineEstimatedSize}: ${(speechOfflineEstimatedSize / (1024 * 1024)).toFixed(1)} MB`
+                                                : ''}
                                         {speechDownloadState === 'success' ? ` · ${t.speechOfflineDownloadSuccess}` : ''}
                                     </div>
                                     {speechOfflineReady ? (
@@ -555,6 +611,57 @@ export function SettingsAiPage({
                                 {speechDownloadError ? (
                                     <div className="text-xs text-red-500">{t.speechOfflineDownloadError}: {speechDownloadError}</div>
                                 ) : null}
+                                {speechDownloadProgressView}
+                            </div>
+                        ) : speechProvider === 'parakeet' ? (
+                            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                                <div className="text-sm font-medium">{t.speechOfflineModel}</div>
+                                <div className="text-xs text-muted-foreground">{t.speechParakeetModelDesc}</div>
+                                <label className="block space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground">{t.speechParakeetModelPath}</span>
+                                    <input
+                                        type="text"
+                                        value={speechOfflineModelPath}
+                                        readOnly
+                                        placeholder={t.speechParakeetModelPathPlaceholder}
+                                        className="w-full cursor-default text-sm bg-muted/50 text-foreground border border-border rounded px-2 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                    />
+                                </label>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="text-xs text-muted-foreground">
+                                        {speechOfflineReady ? t.speechOfflineReady : t.speechOfflineNotDownloaded}
+                                        {speechOfflineSize
+                                            ? ` · ${(speechOfflineSize / (1024 * 1024)).toFixed(1)} MB`
+                                            : speechOfflineEstimatedSize
+                                                ? ` · ${t.speechOfflineEstimatedSize}: ${(speechOfflineEstimatedSize / (1024 * 1024)).toFixed(1)} MB`
+                                                : ''}
+                                        {speechDownloadState === 'success' ? ` · ${t.speechOfflineDownloadSuccess}` : ''}
+                                    </div>
+                                    {speechOfflineReady ? (
+                                        <button
+                                            type="button"
+                                            onClick={onDeleteWhisperModel}
+                                            className="px-2 py-1 text-xs rounded border border-border hover:bg-muted"
+                                        >
+                                            {t.speechOfflineDelete}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={onDownloadWhisperModel}
+                                            className="px-2 py-1 text-xs rounded border border-border hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed"
+                                            disabled={speechDownloadState === 'downloading'}
+                                        >
+                                            {speechDownloadState === 'downloading'
+                                                ? `${t.speechOfflineDownload}...`
+                                                : t.speechOfflineDownload}
+                                        </button>
+                                    )}
+                                </div>
+                                {speechDownloadError ? (
+                                    <div className="text-xs text-red-500">{t.speechOfflineDownloadError}: {speechDownloadError}</div>
+                                ) : null}
+                                {speechDownloadProgressView}
                             </div>
                         ) : (
                             <div className="space-y-2">

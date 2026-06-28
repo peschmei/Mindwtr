@@ -292,7 +292,6 @@ fn detect_install_source() -> String {
     }
 }
 
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct MicrosoftStoreUpdateInfo {

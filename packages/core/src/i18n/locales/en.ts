@@ -201,6 +201,8 @@ export const en: Record<string, string> = {
         'taskEdit.recurrenceLabel': 'Recurrence',
         'taskEdit.descriptionLabel': 'Description',
         'taskEdit.descriptionPlaceholder': 'Add notes...',
+        'taskEdit.descriptionAudio': 'Dictate description',
+        'taskEdit.descriptionAudioStop': 'Stop dictation',
         'taskEdit.textDirectionLabel': 'Text direction',
         'taskEdit.textDirection.auto': 'Auto',
         'taskEdit.textDirection.ltr': 'Left to right',

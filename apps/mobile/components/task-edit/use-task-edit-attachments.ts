@@ -392,7 +392,11 @@ export function useTaskEditAttachments({
                 throw new Error(resolveText('attachments.transcriptionUnavailable', 'Speech-to-text is not ready. Check your AI settings and try again.'));
             }
 
-            const provider = speech.provider ?? 'gemini';
+            const configuredProvider = speech.provider ?? 'gemini';
+            if (configuredProvider === 'parakeet') {
+                throw new Error(resolveText('attachments.transcriptionUnavailable', 'Speech-to-text is not ready. Check your AI settings and try again.'));
+            }
+            const provider = configuredProvider;
             const model = speech.model ?? (provider === 'openai' ? 'gpt-4o-transcribe' : provider === 'gemini' ? 'gemini-2.5-flash' : 'whisper-tiny');
             const apiKey = provider === 'whisper' ? '' : await loadAIKey(provider).catch(() => '');
             const modelPath = provider === 'whisper' ? speech.offlineModelPath : undefined;

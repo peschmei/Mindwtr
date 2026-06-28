@@ -56,7 +56,10 @@ mod storage;
 mod sync;
 mod ui;
 
-use audio::{start_audio_recording, stop_audio_recording, transcribe_whisper};
+use audio::{
+    download_parakeet_model, download_whisper_model, start_audio_recording, stop_audio_recording,
+    transcribe_parakeet, transcribe_whisper,
+};
 use autostart::{get_launch_at_startup_enabled, set_launch_at_startup_enabled};
 use config::{
     check_obsidian_vault_marker, expand_external_calendar_file_scopes, expand_obsidian_vault_scope,
@@ -1515,6 +1518,9 @@ pub fn run() {
             start_audio_recording,
             stop_audio_recording,
             transcribe_whisper,
+            transcribe_parakeet,
+            download_parakeet_model,
+            download_whisper_model,
             log_ai_debug,
             append_log_line,
             clear_log_file,

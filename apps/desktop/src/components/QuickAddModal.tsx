@@ -30,7 +30,7 @@ import { loadAIKey } from '../lib/ai-config';
 import { encodeWav, resampleAudio } from '../lib/audio-utils';
 import { getPreferredDesktopAudioCaptureBackend } from '../lib/audio-capture-backend';
 import { processAudioCapture, type SpeechToTextResult } from '../lib/speech-to-text';
-import { DEFAULT_WHISPER_MODEL } from '../lib/speech-models';
+import { DEFAULT_PARAKEET_MODEL, DEFAULT_WHISPER_MODEL } from '../lib/speech-models';
 import { dispatchNavigateEvent } from '../lib/navigation-events';
 import { ModalPortal } from './ModalPortal';
 import { useUiStore } from '../store/ui-store';
@@ -653,14 +653,16 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             const model = speech?.model ?? (
                 provider === 'openai' ? 'gpt-4o-transcribe'
                     : provider === 'gemini' ? 'gemini-2.5-flash'
-                        : DEFAULT_WHISPER_MODEL
+                        : provider === 'parakeet' ? DEFAULT_PARAKEET_MODEL
+                            : DEFAULT_WHISPER_MODEL
             );
-            const apiKey = provider === 'whisper' ? '' : await loadAIKey(provider).catch(() => '');
-            const modelPath = provider === 'whisper' ? speech?.offlineModelPath : undefined;
+            const apiSpeechProvider = provider === 'openai' || provider === 'gemini' ? provider : null;
+            const apiKey = apiSpeechProvider ? await loadAIKey(apiSpeechProvider).catch(() => '') : '';
+            const modelPath = apiSpeechProvider ? undefined : speech?.offlineModelPath;
             const speechReady = speech?.enabled
-                ? provider === 'whisper'
-                    ? Boolean(modelPath)
-                    : Boolean(apiKey)
+                ? apiSpeechProvider
+                    ? Boolean(apiKey)
+                    : Boolean(modelPath)
                 : false;
             const saveAudioAttachments = settings.gtd?.saveAudioAttachments !== false || !speechReady;
 

@@ -74,7 +74,8 @@ export function AISettingsScreen() {
     const anthropicThinkingEnabled = aiProvider === 'anthropic' && aiThinkingBudget > 0;
     const speechSettings = settings.ai?.speechToText ?? {};
     const speechEnabled = speechSettings.enabled === true;
-    const speechProvider = (isFossBuild ? 'whisper' : (speechSettings.provider ?? 'gemini')) as 'openai' | 'gemini' | 'whisper';
+    const configuredSpeechProvider = isFossBuild ? 'whisper' : (speechSettings.provider ?? 'gemini');
+    const speechProvider = (configuredSpeechProvider === 'parakeet' ? 'whisper' : configuredSpeechProvider) as 'openai' | 'gemini' | 'whisper';
     const speechModel = speechSettings.model ?? (
         speechProvider === 'openai'
             ? 'gpt-4o-transcribe'

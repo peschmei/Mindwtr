@@ -1,6 +1,7 @@
 import { Profiler } from 'react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { act, render, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TaskItem } from '../components/TaskItem';
 import { Area, Project, Task, configureDateFormatting, safeFormatDate, useTaskStore } from '@mindwtr/core';
 import { LanguageProvider } from '../contexts/language-context';
@@ -38,6 +39,27 @@ describe('TaskItem', () => {
             </LanguageProvider>
         );
         expect(getByText('Test Task')).toBeInTheDocument();
+    });
+
+    it('opens the quick action menu after the task details are expanded', async () => {
+        const user = userEvent.setup();
+        const taskWithDescription: Task = {
+            ...mockTask,
+            description: 'Expanded task note',
+        };
+        const { findByRole, getByRole } = render(
+            <LanguageProvider>
+                <TaskItem task={taskWithDescription} />
+            </LanguageProvider>
+        );
+
+        await user.click(getByRole('button', { name: /toggle task details/i }));
+        expect(await findByRole('button', { name: /more options/i })).toBeInTheDocument();
+        await waitFor(() => expect(document.body).toHaveTextContent('Expanded task note'));
+
+        await user.click(getByRole('button', { name: /more options/i }));
+
+        expect(await findByRole('menu', { name: /more options/i })).toBeInTheDocument();
     });
 
     it('hides the default status selector when the task editor layout hides status', () => {

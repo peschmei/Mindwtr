@@ -99,6 +99,7 @@ export function TaskQuickActionMenu({
 }: TaskQuickActionMenuProps) {
     const menuRef = useRef<HTMLDivElement | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
+    const initialLayoutScrollSettledRef = useRef(false);
     const startButtonRef = useRef<HTMLButtonElement | null>(null);
     const dueButtonRef = useRef<HTMLButtonElement | null>(null);
     const reviewButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -173,6 +174,13 @@ export function TaskQuickActionMenu({
     }, []);
 
     useEffect(() => {
+        const timer = window.setTimeout(() => {
+            initialLayoutScrollSettledRef.current = true;
+        }, 120);
+        return () => window.clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
         const isInsideMenuSurface = (target: Node | null) => {
             if (!target) return false;
             if (menuRef.current?.contains(target) || panelRef.current?.contains(target)) return true;
@@ -184,7 +192,10 @@ export function TaskQuickActionMenu({
             if (isInsideMenuSurface(target)) return;
             onClose();
         };
-        const handleScrollOrResize = () => onClose();
+        const handleScrollOrResize = (event: Event) => {
+            if (event.type === 'scroll' && !initialLayoutScrollSettledRef.current) return;
+            onClose();
+        };
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key !== 'Escape') return;
             event.preventDefault();

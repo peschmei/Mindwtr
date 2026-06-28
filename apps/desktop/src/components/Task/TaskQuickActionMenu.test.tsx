@@ -140,6 +140,23 @@ describe('TaskQuickActionMenu', () => {
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
+    it('ignores the initial layout scroll after opening but closes on later scrolls', () => {
+        vi.useFakeTimers();
+        try {
+            const props = renderMenu();
+
+            fireEvent.scroll(window);
+            expect(props.onClose).not.toHaveBeenCalled();
+
+            vi.advanceTimersByTime(160);
+            fireEvent.scroll(window);
+
+            expect(props.onClose).toHaveBeenCalledTimes(1);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('closes the due date mini calendar when clicking elsewhere in the quick panel', () => {
         const props = renderMenu({ task: { ...task, dueDate: '2026-04-12' } });
         fireEvent.click(screen.getByRole('menuitem', { name: 'Due Date…' }));

@@ -168,6 +168,8 @@ export const zhHans: Record<string, string> = {
         'taskEdit.recurrenceLabel': '重复',
         'taskEdit.descriptionLabel': '描述',
         'taskEdit.descriptionPlaceholder': '添加备注...',
+        'taskEdit.descriptionAudio': '语音输入描述',
+        'taskEdit.descriptionAudioStop': '停止语音输入',
         'taskEdit.textDirectionLabel': '文字方向',
         'taskEdit.textDirection.auto': '自动',
         'taskEdit.textDirection.ltr': '从左到右',

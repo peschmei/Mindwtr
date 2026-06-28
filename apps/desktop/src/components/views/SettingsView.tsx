@@ -396,9 +396,12 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
     speechFieldStrategy,
     speechApiKey,
     speechOfflineReady,
+    speechOfflineModelPath,
+    speechOfflineEstimatedSize,
     speechOfflineSize,
     speechDownloadState,
     speechDownloadError,
+    speechDownloadProgress,
     onUpdateAISettings,
     onUpdateSpeechSettings,
     onProviderChange,
@@ -1191,9 +1194,12 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
           speechFieldStrategy={speechFieldStrategy}
           speechApiKey={speechApiKey}
           speechOfflineReady={speechOfflineReady}
+          speechOfflineModelPath={speechOfflineModelPath}
+          speechOfflineEstimatedSize={speechOfflineEstimatedSize}
           speechOfflineSize={speechOfflineSize}
           speechDownloadState={speechDownloadState}
           speechDownloadError={speechDownloadError}
+          speechDownloadProgress={speechDownloadProgress}
           onUpdateAISettings={onUpdateAISettings}
           onUpdateSpeechSettings={onUpdateSpeechSettings}
           onProviderChange={onProviderChange}

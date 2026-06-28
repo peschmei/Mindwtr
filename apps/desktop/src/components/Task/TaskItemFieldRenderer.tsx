@@ -44,6 +44,7 @@ import {
     type TaskStatus,
     type TimeEstimate,
 } from '@mindwtr/core';
+import { BaseDirectory, readFile, remove } from '@tauri-apps/plugin-fs';
 
 import { useMarkdownReferenceAutocomplete } from '../MarkdownReferenceAutocomplete';
 import { AttachmentsField } from './TaskForm/AttachmentsField';
@@ -68,11 +69,26 @@ import {
     keepTextareaSelectionVisible,
     restoreScrollSnapshotSoon,
 } from '../../lib/scroll-preservation';
+import { loadAIKey } from '../../lib/ai-config';
+import { logWarn } from '../../lib/app-log';
+import { isTauriRuntime } from '../../lib/runtime';
+import { processAudioCapture } from '../../lib/speech-to-text';
+import { DEFAULT_PARAKEET_MODEL, DEFAULT_WHISPER_MODEL } from '../../lib/speech-models';
 
 const DATE_INPUT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_POPOVER_WIDTH = 288;
 const DATE_POPOVER_APPROX_HEIGHT = 340;
 const DATE_POPOVER_MARGIN = 8;
+
+type DescriptionAudioState = 'idle' | 'recording' | 'transcribing';
+
+type NativeAudioCaptureResult = {
+    path: string;
+    relativePath: string;
+    sampleRate: number;
+    channels: number;
+    size: number;
+};
 
 const isRangeSelection = (selection: MarkdownSelection | null | undefined): selection is MarkdownSelection => (
     selection != null && selection.start !== selection.end
@@ -670,12 +686,33 @@ export function TaskItemFieldRenderer({
     });
     const descriptionUndoRef = useRef<Array<{ value: string; selection: MarkdownSelection }>>([]);
     const [descriptionUndoDepth, setDescriptionUndoDepth] = useState(0);
+    const [descriptionAudioState, setDescriptionAudioState] = useState<DescriptionAudioState>('idle');
+    const [descriptionAudioError, setDescriptionAudioError] = useState<string | null>(null);
+    const descriptionAudioStateRef = useRef<DescriptionAudioState>('idle');
     useEffect(() => {
         const parsed = editReviewAt ? safeParseDate(editReviewAt) : null;
         const hasTime = hasTimeComponent(editReviewAt);
         const next = hasTime && parsed ? safeFormatDate(parsed, 'HH:mm') : '';
         setReviewTimeDraft(next);
     }, [editReviewAt]);
+    useEffect(() => {
+        descriptionAudioStateRef.current = descriptionAudioState;
+    }, [descriptionAudioState]);
+    useEffect(() => () => {
+        if (descriptionAudioStateRef.current !== 'recording' || !isTauriRuntime()) return;
+        void import('@tauri-apps/api/core')
+            .then(({ invoke }) => invoke<NativeAudioCaptureResult>('stop_audio_recording'))
+            .then((result) => {
+                if (!result.relativePath) return;
+                return remove(result.relativePath, { baseDir: BaseDirectory.Data });
+            })
+            .catch((error) => {
+                void logWarn('Description audio cleanup failed', {
+                    scope: 'audio',
+                    extra: { error: error instanceof Error ? error.message : String(error) },
+                });
+            });
+    }, []);
     useEffect(() => {
         descriptionSelectionRef.current = {
             start: editDescription.length,
@@ -684,6 +721,7 @@ export function TaskItemFieldRenderer({
         lastDescriptionPairSelectionRef.current = null;
         descriptionUndoRef.current = [];
         setDescriptionUndoDepth(0);
+        setDescriptionAudioError(null);
     }, [taskId]);
     const {
         toggleDescriptionPreview,
@@ -998,6 +1036,126 @@ export function TaskItemFieldRenderer({
         applyDescriptionValue(value);
         descriptionSelectionRef.current = selection;
     };
+    const insertDescriptionTranscript = useCallback((transcript: string) => {
+        const trimmedTranscript = transcript.trim();
+        if (!trimmedTranscript) return;
+
+        const currentValue = editDescription;
+        const rawSelection = descriptionSelectionRef.current;
+        const start = Math.max(0, Math.min(rawSelection.start, currentValue.length));
+        const end = Math.max(start, Math.min(rawSelection.end, currentValue.length));
+        const before = currentValue.slice(0, start);
+        const after = currentValue.slice(end);
+        const prefix = before.length > 0 && !/\s$/.test(before) ? '\n' : '';
+        const suffix = after.length > 0 && !/^\s/.test(after) ? '\n' : '';
+        const insertion = `${prefix}${trimmedTranscript}${suffix}`;
+        const nextValue = `${before}${insertion}${after}`;
+        const nextCursor = before.length + insertion.length;
+        const nextSelection = { start: nextCursor, end: nextCursor };
+
+        lastDescriptionPairSelectionRef.current = null;
+        applyDescriptionValue(nextValue, {
+            baseSelection: rawSelection,
+            nextSelection,
+        });
+        descriptionSelectionRef.current = nextSelection;
+
+        const textarea = descriptionTextareaRef.current;
+        if (textarea) restoreDescriptionTextareaSelection(textarea, nextSelection);
+    }, [editDescription]);
+    const handleDescriptionAudioInput = useCallback(async () => {
+        if (descriptionAudioState === 'transcribing') return;
+        if (!isTauriRuntime()) {
+            setDescriptionAudioError(tFallback(t, 'attachments.fileNotSupported', 'File not supported.'));
+            return;
+        }
+
+        const { invoke } = await import('@tauri-apps/api/core');
+
+        if (descriptionAudioState !== 'recording') {
+            setDescriptionAudioError(null);
+            try {
+                await invoke('start_audio_recording');
+                setDescriptionAudioState('recording');
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                setDescriptionAudioError(message || tFallback(t, 'quickAdd.audioErrorBody', 'Could not start audio recording.'));
+            }
+            return;
+        }
+
+        let capture: NativeAudioCaptureResult | null = null;
+        setDescriptionAudioError(null);
+        try {
+            capture = await invoke<NativeAudioCaptureResult>('stop_audio_recording');
+            setDescriptionAudioState('transcribing');
+
+            const currentSettings = useTaskStore.getState().settings;
+            const speech = currentSettings.ai?.speechToText;
+            if (!speech?.enabled) {
+                throw new Error(tFallback(t, 'attachments.transcriptionUnavailable', 'Speech-to-text is not ready. Check your AI settings and try again.'));
+            }
+
+            const provider = speech.provider ?? 'gemini';
+            const model = speech.model ?? (
+                provider === 'openai' ? 'gpt-4o-transcribe'
+                    : provider === 'gemini' ? 'gemini-2.5-flash'
+                        : provider === 'parakeet' ? DEFAULT_PARAKEET_MODEL
+                            : DEFAULT_WHISPER_MODEL
+            );
+            const apiSpeechProvider = provider === 'openai' || provider === 'gemini' ? provider : null;
+            const apiKey = apiSpeechProvider ? await loadAIKey(apiSpeechProvider).catch(() => '') : '';
+            const modelPath = apiSpeechProvider ? undefined : speech.offlineModelPath;
+            const speechReady = apiSpeechProvider ? Boolean(apiKey) : Boolean(modelPath);
+            if (!speechReady) {
+                throw new Error(tFallback(t, 'attachments.transcriptionUnavailable', 'Speech-to-text is not ready. Check your AI settings and try again.'));
+            }
+
+            const bytes = await readFile(capture.relativePath, { baseDir: BaseDirectory.Data });
+            const audioBytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+            const timeZone = typeof Intl === 'object' && typeof Intl.DateTimeFormat === 'function'
+                ? Intl.DateTimeFormat().resolvedOptions().timeZone
+                : undefined;
+            const result = await processAudioCapture(
+                {
+                    bytes: audioBytes,
+                    mimeType: 'audio/wav',
+                    name: 'description-audio.wav',
+                    path: capture.path,
+                },
+                {
+                    provider,
+                    apiKey,
+                    model,
+                    modelPath,
+                    language: speech.language,
+                    mode: 'transcribe_only',
+                    fieldStrategy: 'description_only',
+                    parseModel: provider === 'openai' && currentSettings.ai?.provider === 'openai' ? currentSettings.ai?.model : undefined,
+                    now: new Date(),
+                    timeZone,
+                },
+            );
+            const transcript = (result.description || result.transcript || '').trim();
+            if (!transcript) {
+                throw new Error(tFallback(t, 'attachments.transcriptionFailed', 'Transcription failed. Please try again.'));
+            }
+            insertDescriptionTranscript(transcript);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            setDescriptionAudioError(message || tFallback(t, 'attachments.transcriptionFailed', 'Transcription failed. Please try again.'));
+        } finally {
+            if (capture?.relativePath) {
+                remove(capture.relativePath, { baseDir: BaseDirectory.Data }).catch((error) => {
+                    void logWarn('Description audio cleanup failed', {
+                        scope: 'audio',
+                        extra: { error: error instanceof Error ? error.message : String(error) },
+                    });
+                });
+            }
+            setDescriptionAudioState('idle');
+        }
+    }, [descriptionAudioState, insertDescriptionTranscript, t]);
     const handleEditDescriptionFromPreview = (source?: HTMLElement) => {
         const scrollSnapshot = captureScrollSnapshot(source);
         editDescriptionFromPreview();
@@ -1080,6 +1238,8 @@ export function TaskItemFieldRenderer({
                     descriptionTextareaRef={descriptionTextareaRef}
                     descriptionSelection={descriptionSelectionRef.current}
                     descriptionAutocomplete={descriptionAutocomplete}
+                    descriptionAudioState={descriptionAudioState}
+                    descriptionAudioError={descriptionAudioError}
                     onTogglePreview={toggleDescriptionPreview}
                     onEditFromPreview={handleEditDescriptionFromPreview}
                     onExpand={() => setDescriptionExpanded(true)}
@@ -1096,6 +1256,7 @@ export function TaskItemFieldRenderer({
                     onApplyAction={handleDescriptionApplyAction}
                     onKeyDown={handleDescriptionKeyDown}
                     onPaste={handleDescriptionPaste}
+                    onDescriptionAudioInput={handleDescriptionAudioInput}
                 />
             );
         case 'attachments':

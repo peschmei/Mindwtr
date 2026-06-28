@@ -9,7 +9,7 @@ import { openAttachmentTarget } from '../../lib/open-attachment-target';
 import { isTauriRuntime } from '../../lib/runtime';
 import { logWarn } from '../../lib/app-log';
 import { processAudioCapture } from '../../lib/speech-to-text';
-import { DEFAULT_WHISPER_MODEL } from '../../lib/speech-models';
+import { DEFAULT_PARAKEET_MODEL, DEFAULT_WHISPER_MODEL } from '../../lib/speech-models';
 import {
     isAudioAttachment,
     isImageAttachment,
@@ -212,11 +212,13 @@ export function useTaskItemAttachments({ task, t }: UseTaskItemAttachmentsProps)
             const model = speech.model ?? (
                 provider === 'openai' ? 'gpt-4o-transcribe'
                     : provider === 'gemini' ? 'gemini-2.5-flash'
-                        : DEFAULT_WHISPER_MODEL
+                        : provider === 'parakeet' ? DEFAULT_PARAKEET_MODEL
+                            : DEFAULT_WHISPER_MODEL
             );
-            const apiKey = provider === 'whisper' ? '' : await loadAIKey(provider).catch(() => '');
-            const modelPath = provider === 'whisper' ? speech.offlineModelPath : undefined;
-            const speechReady = provider === 'whisper' ? Boolean(modelPath) : Boolean(apiKey);
+            const apiSpeechProvider = provider === 'openai' || provider === 'gemini' ? provider : null;
+            const apiKey = apiSpeechProvider ? await loadAIKey(apiSpeechProvider).catch(() => '') : '';
+            const modelPath = apiSpeechProvider ? undefined : speech.offlineModelPath;
+            const speechReady = apiSpeechProvider ? Boolean(apiKey) : Boolean(modelPath);
             if (!speechReady) {
                 throw new Error(resolveText('attachments.transcriptionUnavailable', 'Speech-to-text is not ready. Check your AI settings and try again.'));
             }

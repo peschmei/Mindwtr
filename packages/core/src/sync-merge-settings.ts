@@ -116,9 +116,13 @@ const sanitizeAiForSync = (
         apiKey: undefined,
     };
     if (sanitized.speechToText) {
+        const localSpeechToText = localAi?.speechToText;
+        const keepLocalOfflineModelPath = Boolean(localSpeechToText?.offlineModelPath)
+            && sanitized.speechToText.provider === localSpeechToText?.provider
+            && sanitized.speechToText.model === localSpeechToText?.model;
         sanitized.speechToText = {
             ...sanitized.speechToText,
-            offlineModelPath: localAi?.speechToText?.offlineModelPath,
+            offlineModelPath: keepLocalOfflineModelPath ? localSpeechToText?.offlineModelPath : undefined,
         };
     }
     return sanitized;

@@ -97,6 +97,7 @@ const STT_PROVIDER_VALUE_FLAGS: Record<SpeechToTextProviderValue, true> = {
     openai: true,
     gemini: true,
     whisper: true,
+    parakeet: true,
 };
 
 const STT_MODE_VALUE_FLAGS: Record<SpeechToTextModeValue, true> = {

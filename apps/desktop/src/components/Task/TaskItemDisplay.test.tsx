@@ -770,6 +770,45 @@ describe('TaskItemDisplay', () => {
         expect(trigger).toHaveClass('focus-visible:ring-2');
     });
 
+    it('keeps quick actions above expanded task details', () => {
+        const { getByRole } = render(
+            <LanguageProvider>
+                <TaskItemDisplay
+                    task={{
+                        ...baseTask,
+                        description: 'Expanded task note',
+                    }}
+                    language="en"
+                    selectionMode={false}
+                    isViewOpen
+                    quickActionsOpen={false}
+                    actions={{
+                        onToggleView: vi.fn(),
+                        onEdit: vi.fn(),
+                        onDelete: vi.fn(),
+                        onDuplicate: vi.fn(),
+                        onStatusChange: vi.fn(),
+                        onOpenQuickActions: vi.fn(),
+                        openAttachment: vi.fn(),
+                    }}
+                    visibleAttachments={[]}
+                    recurrenceRule=""
+                    recurrenceStrategy="strict"
+                    prioritiesEnabled={false}
+                    timeEstimatesEnabled={false}
+                    isStagnant={false}
+                    showQuickDone={false}
+                    readOnly={false}
+                    t={(key: string) => key}
+                />
+            </LanguageProvider>
+        );
+
+        const actions = getByRole('button', { name: 'More options' }).closest('.task-item-display__actions');
+
+        expect(actions).toHaveClass('z-20');
+    });
+
     it('keeps secondary active task actions off the row', () => {
         const { getByRole, queryByRole } = render(
             <LanguageProvider>

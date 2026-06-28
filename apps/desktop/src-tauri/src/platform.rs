@@ -21,7 +21,9 @@ fn strip_file_scheme(raw: &str) -> Result<String, String> {
 }
 
 fn canonical_existing_dir(path: PathBuf) -> Option<PathBuf> {
-    path.canonicalize().ok().filter(|candidate| candidate.is_dir())
+    path.canonicalize()
+        .ok()
+        .filter(|candidate| candidate.is_dir())
 }
 
 fn configured_obsidian_vault_path(config: &AppConfigToml) -> Option<PathBuf> {
@@ -65,15 +67,15 @@ fn allowed_open_roots(app: &tauri::AppHandle) -> Vec<PathBuf> {
         roots.push(PathBuf::from(runtime_dir).join("doc"));
     }
 
-    roots
-        .into_iter()
-        .filter_map(canonical_existing_dir)
-        .fold(Vec::<PathBuf>::new(), |mut unique_roots, root| {
+    roots.into_iter().filter_map(canonical_existing_dir).fold(
+        Vec::<PathBuf>::new(),
+        |mut unique_roots, root| {
             if !unique_roots.iter().any(|existing| existing == &root) {
                 unique_roots.push(root);
             }
             unique_roots
-        })
+        },
+    )
 }
 
 fn normalize_open_path(raw: &str) -> Result<PathBuf, String> {
@@ -92,7 +94,9 @@ fn normalize_open_path(raw: &str) -> Result<PathBuf, String> {
 }
 
 fn path_is_under_allowed_root(path: &Path, allowed_roots: &[PathBuf]) -> bool {
-    allowed_roots.iter().any(|root| path == root || path.starts_with(root))
+    allowed_roots
+        .iter()
+        .any(|root| path == root || path.starts_with(root))
 }
 
 fn path_is_openable(path: &Path, allowed_roots: &[PathBuf]) -> bool {
@@ -188,8 +192,7 @@ pub(crate) fn get_macos_calendar_events(
 pub(crate) fn get_macos_writable_calendars() -> Result<Vec<MacOsCalendarPushTarget>, String> {
     #[cfg(target_os = "macos")]
     {
-        let value =
-            parse_macos_eventkit_json(unsafe { mindwtr_macos_writable_calendars_json() })?;
+        let value = parse_macos_eventkit_json(unsafe { mindwtr_macos_writable_calendars_json() })?;
         let parsed = serde_json::from_value::<Vec<MacOsCalendarPushTarget>>(value)
             .map_err(|error| format!("Failed to decode writable EventKit calendars: {error}"))?;
         return Ok(parsed);
@@ -602,8 +605,14 @@ mod tests {
     #[test]
     fn path_is_under_allowed_root_respects_boundaries() {
         let root = PathBuf::from("/tmp/mindwtr");
-        assert!(path_is_under_allowed_root(Path::new("/tmp/mindwtr/attachments/a.pdf"), &[root.clone()]));
-        assert!(!path_is_under_allowed_root(Path::new("/tmp/mindwtr-other/a.pdf"), &[root]));
+        assert!(path_is_under_allowed_root(
+            Path::new("/tmp/mindwtr/attachments/a.pdf"),
+            &[root.clone()]
+        ));
+        assert!(!path_is_under_allowed_root(
+            Path::new("/tmp/mindwtr-other/a.pdf"),
+            &[root]
+        ));
     }
 
     #[test]

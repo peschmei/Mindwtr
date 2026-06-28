@@ -1,6 +1,6 @@
 import { type ClipboardEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
-import { Maximize2 } from 'lucide-react';
-import type { MarkdownSelection, MarkdownToolbarActionId, MarkdownToolbarResult } from '@mindwtr/core';
+import { Loader2, Maximize2, Mic, Square } from 'lucide-react';
+import { tFallback, type MarkdownSelection, type MarkdownToolbarActionId, type MarkdownToolbarResult } from '@mindwtr/core';
 
 import { cn } from '../../../lib/utils';
 import { ExpandedMarkdownEditor } from '../../ExpandedMarkdownEditor';
@@ -9,6 +9,8 @@ import { MarkdownReferenceAutocompleteMenu, useMarkdownReferenceAutocomplete } f
 import { RichMarkdown } from '../../RichMarkdown';
 import { AutosizeTextarea } from '../../ui/AutosizeTextarea';
 import { taskEditorLabelClassName } from '../task-editor-label';
+
+type DescriptionAudioState = 'idle' | 'recording' | 'transcribing';
 
 type DescriptionFieldProps = {
     t: (key: string) => string;
@@ -23,6 +25,8 @@ type DescriptionFieldProps = {
     descriptionTextareaRef: RefObject<HTMLTextAreaElement | null>;
     descriptionSelection: MarkdownSelection;
     descriptionAutocomplete: ReturnType<typeof useMarkdownReferenceAutocomplete>;
+    descriptionAudioState: DescriptionAudioState;
+    descriptionAudioError: string | null;
     onTogglePreview: () => void;
     onEditFromPreview: (source?: HTMLElement) => void;
     onExpand: () => void;
@@ -41,6 +45,7 @@ type DescriptionFieldProps = {
     onApplyAction: (actionId: MarkdownToolbarActionId, selection: MarkdownSelection) => MarkdownToolbarResult;
     onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
     onPaste: (event: ClipboardEvent<HTMLTextAreaElement>) => void;
+    onDescriptionAudioInput: () => void;
 };
 
 export function DescriptionField({
@@ -56,6 +61,8 @@ export function DescriptionField({
     descriptionTextareaRef,
     descriptionSelection,
     descriptionAutocomplete,
+    descriptionAudioState,
+    descriptionAudioError,
     onTogglePreview,
     onEditFromPreview,
     onExpand,
@@ -67,6 +74,7 @@ export function DescriptionField({
     onApplyAction,
     onKeyDown,
     onPaste,
+    onDescriptionAudioInput,
 }: DescriptionFieldProps) {
     const handlePreviewClick = (event: MouseEvent<HTMLDivElement>) => {
         const target = event.target instanceof HTMLElement ? event.target : null;
@@ -78,12 +86,34 @@ export function DescriptionField({
         event.preventDefault();
         onEditFromPreview(event.currentTarget);
     };
+    const descriptionAudioLabel = descriptionAudioState === 'recording'
+        ? tFallback(t, 'taskEdit.descriptionAudioStop', 'Stop dictation')
+        : tFallback(t, 'taskEdit.descriptionAudio', 'Dictate description');
 
     return (
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
                 <label className={taskEditorLabelClassName}>{t('taskEdit.descriptionLabel')}</label>
                 <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={onDescriptionAudioInput}
+                        disabled={descriptionAudioState === 'transcribing'}
+                        className={cn(
+                            'rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60',
+                            descriptionAudioState === 'recording' && 'text-red-500 hover:text-red-500'
+                        )}
+                        aria-label={descriptionAudioLabel}
+                        title={descriptionAudioLabel}
+                    >
+                        {descriptionAudioState === 'transcribing' ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : descriptionAudioState === 'recording' ? (
+                            <Square className="h-4 w-4 fill-current" />
+                        ) : (
+                            <Mic className="h-4 w-4" />
+                        )}
+                    </button>
                     <button
                         type="button"
                         onClick={onTogglePreview}
@@ -165,6 +195,9 @@ export function DescriptionField({
                     />
                 </div>
             )}
+            {descriptionAudioError ? (
+                <p className="text-xs text-red-500">{descriptionAudioError}</p>
+            ) : null}
             <ExpandedMarkdownEditor
                 isOpen={descriptionExpanded}
                 onClose={onCloseExpanded}

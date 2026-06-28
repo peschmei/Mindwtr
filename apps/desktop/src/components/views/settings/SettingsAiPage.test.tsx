@@ -45,14 +45,23 @@ const t = {
     speechEnable: 'Enable speech to text',
     speechProvider: 'Speech provider',
     speechProviderOffline: 'On-device (Whisper)',
+    speechProviderParakeet: 'Parakeet v3 experimental',
     speechModel: 'Speech model',
     speechOfflineModel: 'Offline model',
     speechOfflineModelDesc: 'Download once to transcribe fully offline.',
+    speechParakeetModelDesc: 'Download once to install the Parakeet ASR model for local transcription. Model weights are not bundled with Mindwtr.',
+    speechParakeetModelPath: 'Install folder',
+    speechParakeetModelPathPlaceholder: 'App data folder',
     speechOfflineReady: 'Model downloaded',
     speechOfflineNotDownloaded: 'Model not downloaded',
+    speechOfflineEstimatedSize: 'Estimated download size',
+    speechOfflinePathSet: 'Model path set',
     speechOfflineDownload: 'Download',
     speechOfflineDownloadSuccess: 'Download complete',
     speechOfflineDelete: 'Delete',
+    speechOfflineDownloadRuntime: 'Downloading runtime',
+    speechOfflineDownloadModel: 'Downloading model',
+    speechOfflineInstalling: 'Installing',
     speechOfflineDownloadError: 'Offline model download failed',
     speechLanguage: 'Audio language',
     speechLanguageHint: 'Use a language name or code, or leave blank to auto-detect.',
@@ -92,9 +101,12 @@ const baseProps: Parameters<typeof SettingsAiPage>[0] = {
     speechFieldStrategy: 'smart',
     speechApiKey: '',
     speechOfflineReady: false,
+    speechOfflineModelPath: '',
+    speechOfflineEstimatedSize: null,
     speechOfflineSize: null,
     speechDownloadState: 'idle',
     speechDownloadError: null,
+    speechDownloadProgress: null,
     onUpdateAISettings: vi.fn(),
     onUpdateSpeechSettings: vi.fn(),
     onProviderChange: vi.fn(),
@@ -139,5 +151,107 @@ describe('SettingsAiPage', () => {
                 thinking: { type: 'disabled' },
             },
         });
+    });
+
+
+    it('offers Parakeet as an experimental desktop speech provider', () => {
+        const onSpeechProviderChange = vi.fn();
+        const { getByRole, getByDisplayValue } = render(
+            <SettingsAiPage
+                {...baseProps}
+                speechProvider="whisper"
+                speechModel="whisper-tiny"
+                speechModelOptions={["whisper-tiny"]}
+                onSpeechProviderChange={onSpeechProviderChange}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /Speech to text/i }));
+        fireEvent.change(getByDisplayValue('On-device (Whisper)'), {
+            target: { value: 'parakeet' },
+        });
+
+        expect(onSpeechProviderChange).toHaveBeenCalledWith('parakeet');
+    });
+
+
+
+
+    it('shows Parakeet download progress while installing the local model', () => {
+        const { getByRole, getByText } = render(
+            <SettingsAiPage
+                {...baseProps}
+                speechProvider="parakeet"
+                speechModel="parakeet-tdt-0.6b-v3-int8"
+                speechModelOptions={["parakeet-tdt-0.6b-v3-int8"]}
+                speechOfflineModelPath="/home/dd/.local/share/mindwtr/parakeet-model"
+                speechOfflineEstimatedSize={670478772}
+                speechDownloadState="downloading"
+                speechDownloadProgress={{ stage: 'model_download', loaded: 335239386, total: 670478772, percent: 50 }}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /Speech to text/i }));
+
+        expect(getByText('Downloading model 50%')).toBeInTheDocument();
+        expect(getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+    });
+
+    it('shows Whisper download progress while downloading the local model', () => {
+        const { getByRole, getByText } = render(
+            <SettingsAiPage
+                {...baseProps}
+                speechProvider="whisper"
+                speechModel="whisper-tiny"
+                speechModelOptions={["whisper-tiny"]}
+                speechOfflineEstimatedSize={77691713}
+                speechDownloadState="downloading"
+                speechDownloadProgress={{ stage: 'model_download', loaded: 38845856, total: 77691713, percent: 50 }}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /Speech to text/i }));
+
+        expect(getByText('Downloading model 50%')).toBeInTheDocument();
+        expect(getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+    });
+
+    it('offers one-click Parakeet model download from the offline model card', () => {
+        const onDownloadWhisperModel = vi.fn();
+        const { getByDisplayValue, getByRole, getByText } = render(
+            <SettingsAiPage
+                {...baseProps}
+                speechProvider="parakeet"
+                speechModel="parakeet-tdt-0.6b-v3-int8"
+                speechModelOptions={["parakeet-tdt-0.6b-v3-int8"]}
+                speechOfflineModelPath="/home/dd/.local/share/mindwtr/parakeet-model"
+                speechOfflineEstimatedSize={670478772}
+                onDownloadWhisperModel={onDownloadWhisperModel}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /Speech to text/i }));
+        expect(getByDisplayValue('/home/dd/.local/share/mindwtr/parakeet-model')).toBeInTheDocument();
+        expect(getByText(/Estimated download size: 639\.4 MB/)).toBeInTheDocument();
+
+        fireEvent.click(getByRole('button', { name: 'Download' }));
+
+        expect(onDownloadWhisperModel).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the selected local speech model estimated size before download', () => {
+        const { getByRole, getByText } = render(
+            <SettingsAiPage
+                {...baseProps}
+                speechProvider="whisper"
+                speechModel="whisper-tiny"
+                speechModelOptions={["whisper-tiny", "whisper-large-v3-turbo"]}
+                speechOfflineEstimatedSize={77691713}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /Speech to text/i }));
+
+        expect(getByText(/Estimated download size: 74\.1 MB/)).toBeInTheDocument();
     });
 });

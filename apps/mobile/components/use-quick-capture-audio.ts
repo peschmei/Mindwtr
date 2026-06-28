@@ -246,7 +246,9 @@ export function useQuickCaptureAudio({
         interruptionModeAndroid: 'duckOthers',
       });
       const speech = settings.ai?.speechToText;
-      const provider = speech?.provider ?? 'gemini';
+      const configuredProvider = speech?.provider ?? 'gemini';
+      const provider = configuredProvider === 'parakeet' ? 'whisper' : configuredProvider;
+      const speechEnabled = speech?.enabled === true && configuredProvider !== 'parakeet';
       const model = speech?.model ?? (provider === 'openai' ? 'gpt-4o-transcribe' : provider === 'gemini' ? 'gemini-2.5-flash' : 'whisper-tiny');
       const modelPath = provider === 'whisper' ? speech?.offlineModelPath : undefined;
       const whisperResolved = provider === 'whisper'
@@ -256,14 +258,14 @@ export function useQuickCaptureAudio({
       const resolvedModelPath = provider === 'whisper'
         ? (whisperResolved?.exists ? whisperResolved.path : modelPath)
         : undefined;
-      const useWhisperRealtime = speech?.enabled
+      const useWhisperRealtime = speechEnabled
         && provider === 'whisper'
         && whisperModelReady;
       if (provider === 'whisper') {
         logSpeechCaptureInfo('Quick capture Whisper start resolved', {
           platform: Platform.OS,
           model,
-          speechEnabled: String(speech?.enabled === true),
+          speechEnabled: String(speechEnabled),
           modelReady: String(whisperModelReady),
           resolvedModelPath: resolvedModelPath ?? '',
           resolvedModelSize: String(whisperResolved?.size ?? 0),
@@ -388,7 +390,9 @@ export function useQuickCaptureAudio({
         const nowIso = now.toISOString();
         const displayTitle = `${t('quickAdd.audioNoteTitle')} ${safeFormatDate(now, 'Pp')}`;
         const speech = settings.ai?.speechToText;
-        const provider = speech?.provider ?? 'gemini';
+        const configuredProvider = speech?.provider ?? 'gemini';
+        const provider = configuredProvider === 'parakeet' ? 'whisper' : configuredProvider;
+        const speechEnabled = speech?.enabled === true && configuredProvider !== 'parakeet';
         const model = speech?.model ?? (provider === 'openai' ? 'gpt-4o-transcribe' : provider === 'gemini' ? 'gemini-2.5-flash' : 'whisper-tiny');
         const apiKey = provider === 'whisper' ? '' : await loadAIKey(provider).catch(() => '');
         const modelPath = provider === 'whisper' ? speech?.offlineModelPath : undefined;
@@ -401,7 +405,7 @@ export function useQuickCaptureAudio({
           : undefined;
 
         const speechReady = isQuickCaptureSpeechReady({
-          speechEnabled: speech?.enabled === true,
+          speechEnabled: speechEnabled,
           provider,
           apiKey,
           whisperModelReady,
@@ -526,7 +530,7 @@ export function useQuickCaptureAudio({
               platform: Platform.OS,
               model,
               modelReady: String(whisperModelReady),
-              speechEnabled: String(speech?.enabled === true),
+              speechEnabled: String(speechEnabled),
               localWhisperInputReady: String(Boolean(localWhisperInput)),
             });
           }
@@ -586,7 +590,9 @@ export function useQuickCaptureAudio({
       const nowIso = now.toISOString();
       const displayTitle = `${t('quickAdd.audioNoteTitle')} ${safeFormatDate(now, 'Pp')}`;
       const speech = settings.ai?.speechToText;
-      const provider = speech?.provider ?? 'gemini';
+      const configuredProvider = speech?.provider ?? 'gemini';
+      const provider = configuredProvider === 'parakeet' ? 'whisper' : configuredProvider;
+      const speechEnabled = speech?.enabled === true && configuredProvider !== 'parakeet';
       const model = speech?.model ?? (provider === 'openai' ? 'gpt-4o-transcribe' : provider === 'gemini' ? 'gemini-2.5-flash' : 'whisper-tiny');
       const apiKey = provider === 'whisper' ? '' : await loadAIKey(provider).catch(() => '');
       const modelPath = provider === 'whisper' ? speech?.offlineModelPath : undefined;
@@ -599,7 +605,7 @@ export function useQuickCaptureAudio({
         : undefined;
 
       const speechReady = isQuickCaptureSpeechReady({
-        speechEnabled: speech?.enabled === true,
+        speechEnabled,
         provider,
         apiKey,
         whisperModelReady,
@@ -706,7 +712,7 @@ export function useQuickCaptureAudio({
             platform: Platform.OS,
             model,
             modelReady: String(whisperModelReady),
-            speechEnabled: String(speech?.enabled === true),
+            speechEnabled: String(speechEnabled),
             localWhisperInputReady: String(Boolean(localWhisperInput)),
           });
         }

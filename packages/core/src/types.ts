@@ -412,7 +412,7 @@ export interface AiSettings {
 
 export interface SpeechToTextSettings {
     enabled?: boolean;
-    provider?: 'openai' | 'gemini' | 'whisper';
+    provider?: 'openai' | 'gemini' | 'whisper' | 'parakeet';
     model?: string;
     language?: string;
     mode?: 'smart_parse' | 'transcribe_only';

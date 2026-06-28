@@ -978,6 +978,30 @@ const normalizeSpeechTranscriptForTask = (transcript: string | null | undefined)
     const trimmed = transcript?.trim();
     if (!trimmed) return undefined;
 
+    const parseStructuredTranscript = (candidate: string): string | undefined | null => {
+        try {
+            const parsed = JSON.parse(candidate) as unknown;
+            if (!parsed || typeof parsed !== 'object') return null;
+            const text = (parsed as { text?: unknown; transcript?: unknown }).text
+                ?? (parsed as { transcript?: unknown }).transcript;
+            if (typeof text !== 'string') return null;
+            const normalized = text.trim();
+            return normalized || undefined;
+        } catch {
+            return null;
+        }
+    };
+
+    const direct = parseStructuredTranscript(trimmed);
+    if (direct !== null) return direct;
+
+    const objectStart = trimmed.indexOf('{');
+    const objectEnd = trimmed.lastIndexOf('}');
+    if (objectStart >= 0 && objectEnd > objectStart) {
+        const embedded = parseStructuredTranscript(trimmed.slice(objectStart, objectEnd + 1));
+        if (embedded !== null) return embedded;
+    }
+
     if (/^(?:\[\s*[^\]]+?\s*\]\s*)+$/.test(trimmed)) {
         return undefined;
     }

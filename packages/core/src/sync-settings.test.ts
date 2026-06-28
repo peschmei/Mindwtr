@@ -852,6 +852,45 @@ describe('Sync Logic', () => {
             expect(merged.settings.syncPreferences).toEqual(local.settings.syncPreferences);
         });
 
+        it('keeps Parakeet as a valid synced speech-to-text provider', () => {
+            const local: AppData = {
+                ...mockAppData(),
+                settings: {
+                    syncPreferences: { ai: true },
+                    syncPreferencesUpdatedAt: { ai: '2024-01-01T00:00:00.000Z' },
+                    ai: {
+                        speechToText: {
+                            enabled: true,
+                            provider: 'whisper',
+                            model: 'whisper-base',
+                            offlineModelPath: '/local/whisper.bin',
+                        },
+                    },
+                },
+            };
+            const incoming: AppData = {
+                ...mockAppData(),
+                settings: {
+                    syncPreferences: { ai: true },
+                    syncPreferencesUpdatedAt: { ai: '2024-01-02T00:00:00.000Z' },
+                    ai: {
+                        speechToText: {
+                            enabled: true,
+                            provider: 'parakeet',
+                            model: 'parakeet-tdt-0.6b-v3-int8',
+                            offlineModelPath: '/remote/parakeet',
+                        },
+                    },
+                },
+            };
+
+            const merged = mergeAppData(local, incoming);
+
+            expect(merged.settings.ai?.speechToText?.provider).toBe('parakeet');
+            expect(merged.settings.ai?.speechToText?.model).toBe('parakeet-tdt-0.6b-v3-int8');
+            expect(merged.settings.ai?.speechToText?.offlineModelPath).toBeUndefined();
+        });
+
         it('keeps area tombstones so deletions sync across devices', () => {
             const local: AppData = {
                 ...mockAppData(),

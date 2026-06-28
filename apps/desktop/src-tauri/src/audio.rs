@@ -1,4 +1,250 @@
 use crate::*;
+use bzip2::read::BzDecoder;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use tar::Archive;
+
+const PARAKEET_MODEL_ID: &str = "parakeet-tdt-0.6b-v3-int8";
+const PARAKEET_ARCHIVE_ROOT: &str = "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8";
+const PARAKEET_MODEL_URL: &str = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2";
+const PARAKEET_INSTALL_DIR_NAME: &str = "parakeet-model";
+const WHISPER_MODEL_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main";
+const WHISPER_INSTALL_DIR_NAME: &str = "whisper-models";
+const SHERPA_RELEASE_VERSION: &str = "v1.13.2";
+const SHERPA_INSTALL_DIR_NAME: &str = "sherpa-onnx";
+#[cfg(windows)]
+const SHERPA_BINARY_NAME: &str = "sherpa-onnx-offline.exe";
+#[cfg(not(windows))]
+const SHERPA_BINARY_NAME: &str = "sherpa-onnx-offline";
+const PARAKEET_REQUIRED_FILES: [&str; 4] = [
+    "encoder.int8.onnx",
+    "decoder.int8.onnx",
+    "joiner.int8.onnx",
+    "tokens.txt",
+];
+const PARAKEET_PROGRESS_EVENT: &str = "parakeet-model-download-progress";
+const WHISPER_PROGRESS_EVENT: &str = "whisper-model-download-progress";
+const DOWNLOAD_PROGRESS_CHUNK_BYTES: u64 = 1024 * 1024;
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelDownloadProgress<'a> {
+    stage: &'a str,
+    loaded: u64,
+    total: Option<u64>,
+    percent: Option<f64>,
+}
+
+fn parakeet_model_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join(PARAKEET_INSTALL_DIR_NAME)
+}
+
+fn whisper_model_file_name(model: &str) -> Option<&'static str> {
+    match model {
+        "whisper-tiny" => Some("ggml-tiny.bin"),
+        "whisper-tiny.en" => Some("ggml-tiny.en.bin"),
+        "whisper-base" => Some("ggml-base.bin"),
+        "whisper-base.en" => Some("ggml-base.en.bin"),
+        "whisper-large-v3-turbo" => Some("ggml-large-v3-turbo.bin"),
+        _ => None,
+    }
+}
+
+fn whisper_model_path(data_dir: &Path, model: &str) -> Option<PathBuf> {
+    whisper_model_file_name(model)
+        .map(|file_name| data_dir.join(WHISPER_INSTALL_DIR_NAME).join(file_name))
+}
+
+fn parakeet_model_ready(model_dir: &Path) -> bool {
+    model_dir.is_dir()
+        && PARAKEET_REQUIRED_FILES
+            .iter()
+            .all(|file_name| model_dir.join(file_name).is_file())
+}
+
+fn sherpa_sidecar_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join(SHERPA_INSTALL_DIR_NAME)
+}
+
+fn sherpa_sidecar_archive_name() -> Result<&'static str, String> {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("linux", "x86_64") => Ok("sherpa-onnx-v1.13.2-linux-x64-static-no-tts.tar.bz2"),
+        ("linux", "aarch64") => Ok("sherpa-onnx-v1.13.2-linux-aarch64-static.tar.bz2"),
+        ("macos", "x86_64") => Ok("sherpa-onnx-v1.13.2-osx-x64-static-no-tts.tar.bz2"),
+        ("macos", "aarch64") => Ok("sherpa-onnx-v1.13.2-osx-arm64-static-no-tts.tar.bz2"),
+        ("windows", "x86_64") => Ok("sherpa-onnx-v1.13.2-win-x64-static-MT-Release-no-tts.tar.bz2"),
+        ("windows", "aarch64") => {
+            Ok("sherpa-onnx-v1.13.2-win-arm64-static-MT-Release-no-tts.tar.bz2")
+        }
+        (os, arch) => Err(format!(
+            "Parakeet runtime download is not available for {os}/{arch}"
+        )),
+    }
+}
+
+fn find_file_recursive(root: &Path, file_name: &str) -> Option<PathBuf> {
+    let entries = fs::read_dir(root).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file()
+            && path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name == file_name)
+        {
+            return Some(path);
+        }
+        if path.is_dir() {
+            if let Some(found) = find_file_recursive(&path, file_name) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+fn managed_sherpa_binary(data_dir: &Path) -> Option<PathBuf> {
+    find_file_recursive(&sherpa_sidecar_dir(data_dir), SHERPA_BINARY_NAME)
+}
+
+#[cfg(unix)]
+fn ensure_executable(path: &Path) -> Result<(), String> {
+    let metadata = fs::metadata(path).map_err(|error| error.to_string())?;
+    let mut permissions = metadata.permissions();
+    permissions.set_mode(permissions.mode() | 0o755);
+    fs::set_permissions(path, permissions).map_err(|error| error.to_string())
+}
+
+#[cfg(not(unix))]
+fn ensure_executable(_path: &Path) -> Result<(), String> {
+    Ok(())
+}
+
+fn emit_download_progress(
+    app: &tauri::AppHandle,
+    event_name: &'static str,
+    stage: &'static str,
+    loaded: u64,
+    total: Option<u64>,
+) {
+    let percent = total.and_then(|value| {
+        if value == 0 {
+            None
+        } else {
+            Some(((loaded as f64 / value as f64) * 100.0).clamp(0.0, 100.0))
+        }
+    });
+    let payload = ModelDownloadProgress {
+        stage,
+        loaded,
+        total,
+        percent,
+    };
+    let _ = tauri::Emitter::emit(app, event_name, payload);
+}
+
+fn download_to_file(
+    app: &tauri::AppHandle,
+    event_name: &'static str,
+    stage: &'static str,
+    url: &str,
+    destination: &Path,
+    label: &str,
+) -> Result<(), String> {
+    let mut response = reqwest::blocking::get(url)
+        .map_err(|error| format!("Failed to download {label}: {error}"))?;
+    if !response.status().is_success() {
+        return Err(format!("{label} download failed ({})", response.status()));
+    }
+
+    let total = response.content_length();
+    emit_download_progress(app, event_name, stage, 0, total);
+
+    let mut file = File::create(destination).map_err(|error| error.to_string())?;
+    let mut buffer = [0u8; 64 * 1024];
+    let mut loaded = 0u64;
+    let mut last_emitted = 0u64;
+    loop {
+        let bytes_read = response
+            .read(&mut buffer)
+            .map_err(|error| error.to_string())?;
+        if bytes_read == 0 {
+            break;
+        }
+        file.write_all(&buffer[..bytes_read])
+            .map_err(|error| error.to_string())?;
+        loaded = loaded.saturating_add(bytes_read as u64);
+        if loaded.saturating_sub(last_emitted) >= DOWNLOAD_PROGRESS_CHUNK_BYTES {
+            emit_download_progress(app, event_name, stage, loaded, total);
+            last_emitted = loaded;
+        }
+    }
+    file.flush().map_err(|error| error.to_string())?;
+    emit_download_progress(app, event_name, stage, loaded, total);
+    Ok(())
+}
+
+fn ensure_sherpa_sidecar(data_dir: &Path, app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    if let Some(binary) = managed_sherpa_binary(data_dir) {
+        ensure_executable(&binary)?;
+        return Ok(binary);
+    }
+
+    let archive_name = sherpa_sidecar_archive_name()?;
+    let url = format!(
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/{SHERPA_RELEASE_VERSION}/{archive_name}"
+    );
+    let temp_dir = tempfile::Builder::new()
+        .prefix("sherpa-onnx-")
+        .tempdir_in(data_dir)
+        .map_err(|error| error.to_string())?;
+    let archive_path = temp_dir.path().join(archive_name);
+    let extract_dir = temp_dir.path().join("extract");
+    fs::create_dir_all(&extract_dir).map_err(|error| error.to_string())?;
+
+    download_to_file(
+        app,
+        PARAKEET_PROGRESS_EVENT,
+        "runtime_download",
+        &url,
+        &archive_path,
+        "sherpa-onnx runtime",
+    )?;
+    unpack_tar_bz2(&archive_path, &extract_dir)?;
+    let binary = find_file_recursive(&extract_dir, SHERPA_BINARY_NAME).ok_or_else(|| {
+        "Downloaded sherpa-onnx runtime is missing sherpa-onnx-offline".to_string()
+    })?;
+    ensure_executable(&binary)?;
+
+    let install_dir = sherpa_sidecar_dir(data_dir);
+    if install_dir.exists() {
+        if install_dir.is_dir() {
+            fs::remove_dir_all(&install_dir).map_err(|error| error.to_string())?;
+        } else {
+            fs::remove_file(&install_dir).map_err(|error| error.to_string())?;
+        }
+    }
+    fs::rename(&extract_dir, &install_dir).map_err(|error| error.to_string())?;
+    let installed_binary = managed_sherpa_binary(data_dir).ok_or_else(|| {
+        "Installed sherpa-onnx runtime is missing sherpa-onnx-offline".to_string()
+    })?;
+    ensure_executable(&installed_binary)?;
+    Ok(installed_binary)
+}
+
+fn unpack_tar_bz2(archive_path: &Path, destination: &Path) -> Result<(), String> {
+    let file = File::open(archive_path).map_err(|error| error.to_string())?;
+    let decoder = BzDecoder::new(file);
+    let mut archive = Archive::new(decoder);
+    let entries = archive.entries().map_err(|error| error.to_string())?;
+    for entry in entries {
+        let mut entry = entry.map_err(|error| error.to_string())?;
+        entry
+            .unpack_in(destination)
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
 
 #[tauri::command]
 pub(crate) fn start_audio_recording(
@@ -271,6 +517,204 @@ pub(crate) fn transcribe_whisper(
     Ok(text.trim().to_string())
 }
 
+#[tauri::command]
+pub(crate) async fn download_parakeet_model(
+    app: tauri::AppHandle,
+    model: String,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || download_parakeet_model_blocking(app, model))
+        .await
+        .map_err(|error| format!("Parakeet download task failed: {error}"))?
+}
+
+fn download_parakeet_model_blocking(
+    app: tauri::AppHandle,
+    model: String,
+) -> Result<String, String> {
+    if model != PARAKEET_MODEL_ID {
+        return Err("Unsupported Parakeet model".into());
+    }
+
+    let data_dir = get_data_dir(&app);
+    fs::create_dir_all(&data_dir).map_err(|error| error.to_string())?;
+    let target_dir = parakeet_model_dir(&data_dir);
+    ensure_sherpa_sidecar(&data_dir, &app)?;
+    if parakeet_model_ready(&target_dir) {
+        return Ok(target_dir.to_string_lossy().to_string());
+    }
+
+    let temp_dir = tempfile::Builder::new()
+        .prefix("parakeet-model-")
+        .tempdir_in(&data_dir)
+        .map_err(|error| error.to_string())?;
+    let archive_path = temp_dir.path().join("model.tar.bz2");
+    let extract_dir = temp_dir.path().join("extract");
+    fs::create_dir_all(&extract_dir).map_err(|error| error.to_string())?;
+
+    download_to_file(
+        &app,
+        PARAKEET_PROGRESS_EVENT,
+        "model_download",
+        PARAKEET_MODEL_URL,
+        &archive_path,
+        "Parakeet model",
+    )?;
+
+    emit_download_progress(&app, PARAKEET_PROGRESS_EVENT, "install", 0, None);
+    unpack_tar_bz2(&archive_path, &extract_dir)?;
+    let extracted_model_dir = extract_dir.join(PARAKEET_ARCHIVE_ROOT);
+    if !parakeet_model_ready(&extracted_model_dir) {
+        return Err("Downloaded Parakeet archive is missing required model files".into());
+    }
+
+    if target_dir.exists() {
+        if target_dir.is_dir() {
+            fs::remove_dir_all(&target_dir).map_err(|error| error.to_string())?;
+        } else {
+            fs::remove_file(&target_dir).map_err(|error| error.to_string())?;
+        }
+    }
+    fs::rename(&extracted_model_dir, &target_dir).map_err(|error| error.to_string())?;
+    emit_download_progress(&app, PARAKEET_PROGRESS_EVENT, "install", 100, Some(100));
+
+    Ok(target_dir.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub(crate) async fn download_whisper_model(
+    app: tauri::AppHandle,
+    model: String,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || download_whisper_model_blocking(app, model))
+        .await
+        .map_err(|error| format!("Whisper download task failed: {error}"))?
+}
+
+fn download_whisper_model_blocking(app: tauri::AppHandle, model: String) -> Result<String, String> {
+    let file_name =
+        whisper_model_file_name(&model).ok_or_else(|| "Unsupported Whisper model".to_string())?;
+    let data_dir = get_data_dir(&app);
+    let target_path = whisper_model_path(&data_dir, &model)
+        .ok_or_else(|| "Unsupported Whisper model".to_string())?;
+    if target_path.is_file() {
+        return Ok(target_path.to_string_lossy().to_string());
+    }
+
+    let target_dir = data_dir.join(WHISPER_INSTALL_DIR_NAME);
+    fs::create_dir_all(&target_dir).map_err(|error| error.to_string())?;
+    let temp_dir = tempfile::Builder::new()
+        .prefix("whisper-model-")
+        .tempdir_in(&data_dir)
+        .map_err(|error| error.to_string())?;
+    let temp_path = temp_dir.path().join(file_name);
+    let url = format!("{WHISPER_MODEL_BASE_URL}/{file_name}");
+
+    download_to_file(
+        &app,
+        WHISPER_PROGRESS_EVENT,
+        "model_download",
+        &url,
+        &temp_path,
+        "Whisper model",
+    )?;
+
+    fs::rename(&temp_path, &target_path).map_err(|error| error.to_string())?;
+    Ok(target_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub(crate) fn transcribe_parakeet(
+    model_path: String,
+    audio_path: String,
+    language: Option<String>,
+) -> Result<String, String> {
+    let model_dir = Path::new(&model_path);
+    if !model_dir.is_dir() {
+        return Err("Parakeet model directory not found".into());
+    }
+    let audio_file = Path::new(&audio_path);
+    if !audio_file.is_file() {
+        return Err("Audio file not found".into());
+    }
+
+    let encoder = model_dir.join("encoder.int8.onnx");
+    let decoder = model_dir.join("decoder.int8.onnx");
+    let joiner = model_dir.join("joiner.int8.onnx");
+    let tokens = model_dir.join("tokens.txt");
+    for required in [&encoder, &decoder, &joiner, &tokens] {
+        if !required.is_file() {
+            return Err(format!(
+                "Parakeet model file missing: {}",
+                required
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("unknown")
+            ));
+        }
+    }
+
+    let managed_binary = model_dir.parent().and_then(managed_sherpa_binary);
+    let mut command = Command::new(
+        managed_binary
+            .as_deref()
+            .unwrap_or_else(|| Path::new(SHERPA_BINARY_NAME)),
+    );
+    if let Some(binary) = managed_binary.as_deref() {
+        if let Some(parent) = binary.parent() {
+            command.current_dir(parent);
+        }
+    }
+    command
+        .arg(format!("--encoder={}", encoder.to_string_lossy()))
+        .arg(format!("--decoder={}", decoder.to_string_lossy()))
+        .arg(format!("--joiner={}", joiner.to_string_lossy()))
+        .arg(format!("--tokens={}", tokens.to_string_lossy()))
+        .arg("--model-type=nemo_transducer")
+        .arg(audio_file);
+
+    let language_hint = language.and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("auto") {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+    if let Some(lang) = language_hint {
+        command.arg("--decoding-method").arg("greedy_search");
+        log::debug!("Parakeet language hint ignored by sherpa-onnx sidecar: {lang}");
+    }
+
+    let output = command
+        .output()
+        .map_err(|error| format!("Failed to run sherpa-onnx-offline: {error}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            format!("sherpa-onnx-offline exited with status {}", output.status)
+        } else {
+            stderr
+        });
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(extract_sherpa_transcript(&stdout))
+}
+
+fn extract_sherpa_transcript(output: &str) -> String {
+    output
+        .lines()
+        .rev()
+        .map(str::trim)
+        .find(|line| {
+            !line.is_empty() && !line.starts_with("Started!") && !line.starts_with("Done!")
+        })
+        .unwrap_or("")
+        .trim_matches('"')
+        .trim()
+        .to_string()
+}
+
 fn resample_linear(input: &[f32], input_rate: u32, target_rate: u32) -> Vec<f32> {
     if input_rate == target_rate || input.is_empty() {
         return input.to_vec();
@@ -287,4 +731,49 @@ fn resample_linear(input: &[f32], input_rate: u32, target_rate: u32) -> Vec<f32>
         output.push(sample);
     }
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parakeet_model_dir_uses_app_data_install_folder() {
+        let data_dir = Path::new("/home/dd/.local/share/mindwtr");
+
+        assert_eq!(
+            parakeet_model_dir(data_dir),
+            PathBuf::from("/home/dd/.local/share/mindwtr/parakeet-model")
+        );
+    }
+
+    #[test]
+    fn parakeet_model_ready_requires_all_model_files() {
+        let temp_dir = tempfile::tempdir().expect("should create temp dir");
+        let model_dir = temp_dir.path().join("parakeet-model");
+        fs::create_dir_all(&model_dir).expect("should create model dir");
+
+        assert!(!parakeet_model_ready(&model_dir));
+
+        for file_name in PARAKEET_REQUIRED_FILES {
+            File::create(model_dir.join(file_name)).expect("should create required model file");
+        }
+
+        assert!(parakeet_model_ready(&model_dir));
+    }
+
+    #[test]
+    fn managed_sherpa_binary_finds_installed_sidecar_recursively() {
+        let temp_dir = tempfile::tempdir().expect("should create temp dir");
+        let binary_dir = temp_dir
+            .path()
+            .join("sherpa-onnx")
+            .join("sherpa-onnx-v1.13.2-linux-x64-static-no-tts")
+            .join("bin");
+        fs::create_dir_all(&binary_dir).expect("should create binary dir");
+        let binary = binary_dir.join(SHERPA_BINARY_NAME);
+        File::create(&binary).expect("should create sidecar binary");
+
+        assert_eq!(managed_sherpa_binary(temp_dir.path()), Some(binary));
+    }
 }

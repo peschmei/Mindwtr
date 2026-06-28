@@ -705,10 +705,11 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
             {!selectionMode && (
                 <div
                     className={cn(
-                        "task-item-display__actions relative flex items-center gap-2",
+                        "task-item-display__actions relative z-20 flex shrink-0 items-center gap-2",
                         actionsOverlay && "absolute top-1 right-1 z-10"
                     )}
                     onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                 >
                     {showActionTags && (
                         <div className="flex items-center gap-1 max-w-[240px] overflow-hidden">
