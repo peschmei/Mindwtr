@@ -675,7 +675,10 @@ struct QuickAddPending(Mutex<Option<String>>);
 struct CloseRequestHandled(AtomicBool);
 struct GlobalQuickAddShortcutState(Mutex<Option<String>>);
 
-struct AudioRecorderState(Mutex<Option<AudioRecorderHandle>>);
+struct AudioRecorderState {
+    recorder: Mutex<Option<AudioRecorderHandle>>,
+    starting: AtomicBool,
+}
 
 #[derive(Clone, Debug)]
 struct RecorderInfo {
@@ -1438,7 +1441,10 @@ pub fn run() {
             }
             Ok(())
         })
-        .manage(AudioRecorderState(Mutex::new(None)))
+        .manage(AudioRecorderState {
+            recorder: Mutex::new(None),
+            starting: AtomicBool::new(false),
+        })
         .manage(ObsidianWatcherState::default())
         .invoke_handler(tauri::generate_handler![
             check_microsoft_store_update,

@@ -359,18 +359,43 @@ fn unpack_tar_bz2(archive_path: &Path, destination: &Path) -> Result<(), String>
 }
 
 #[tauri::command]
-pub(crate) fn start_audio_recording(
+pub(crate) async fn start_audio_recording(
     state: tauri::State<'_, AudioRecorderState>,
 ) -> Result<(), String> {
-    let mut guard = state
-        .inner()
-        .0
+    let recorder_state = state.inner();
+    if recorder_state.starting.swap(true, Ordering::SeqCst) {
+        return Err("Recording already in progress".into());
+    }
+    {
+        let guard = recorder_state
+            .recorder
+            .lock()
+            .map_err(|_| "Recorder lock poisoned".to_string())?;
+        if guard.is_some() {
+            recorder_state.starting.store(false, Ordering::SeqCst);
+            return Err("Recording already in progress".into());
+        }
+    }
+
+    let start_result = tauri::async_runtime::spawn_blocking(start_audio_recording_blocking)
+        .await
+        .map_err(|error| format!("Audio start task failed: {error}"));
+    recorder_state.starting.store(false, Ordering::SeqCst);
+    let recorder = start_result??;
+
+    let mut guard = recorder_state
+        .recorder
         .lock()
         .map_err(|_| "Recorder lock poisoned".to_string())?;
     if guard.is_some() {
+        cleanup_started_audio_recorder(recorder);
         return Err("Recording already in progress".into());
     }
+    *guard = Some(recorder);
+    Ok(())
+}
 
+fn start_audio_recording_blocking() -> Result<AudioRecorderHandle, String> {
     let samples: Arc<Mutex<Vec<i16>>> = Arc::new(Mutex::new(Vec::new()));
     let info: Arc<Mutex<Option<RecorderInfo>>> = Arc::new(Mutex::new(None));
     let limit_hit = Arc::new(AtomicBool::new(false));
@@ -509,19 +534,34 @@ pub(crate) fn start_audio_recording(
     });
 
     match ready_rx.recv_timeout(Duration::from_secs(2)) {
-        Ok(Ok(())) => {
-            *guard = Some(AudioRecorderHandle {
-                stop_tx,
-                samples,
-                info,
-                limit_hit,
-                join: Some(join),
-            });
-            Ok(())
+        Ok(Ok(())) => Ok(AudioRecorderHandle {
+            stop_tx,
+            samples,
+            info,
+            limit_hit,
+            join: Some(join),
+        }),
+        Ok(Err(err)) => {
+            let _ = join.join();
+            Err(err)
         }
-        Ok(Err(err)) => Err(err),
-        Err(_) => Err("Audio device did not respond".into()),
+        Err(_) => {
+            cleanup_timed_out_audio_start(stop_tx, join);
+            Err("Audio device did not respond".into())
+        }
     }
+}
+
+fn cleanup_started_audio_recorder(mut recorder: AudioRecorderHandle) {
+    let _ = recorder.stop_tx.send(());
+    if let Some(join) = recorder.join.take() {
+        let _ = join.join();
+    }
+}
+
+fn cleanup_timed_out_audio_start(stop_tx: mpsc::Sender<()>, join: std::thread::JoinHandle<()>) {
+    let _ = stop_tx.send(());
+    let _ = join.join();
 }
 
 #[tauri::command]
@@ -532,7 +572,7 @@ pub(crate) async fn stop_audio_recording(
     let recorder = {
         let mut guard = state
             .inner()
-            .0
+            .recorder
             .lock()
             .map_err(|_| "Recorder lock poisoned".to_string())?;
         guard
@@ -1120,5 +1160,20 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()
             .expect("should decode samples");
         assert_eq!(decoded, samples);
+    }
+
+    #[test]
+    fn cleanup_timed_out_audio_start_signals_and_joins_capture_thread() {
+        let completed = Arc::new(AtomicBool::new(false));
+        let completed_clone = completed.clone();
+        let (stop_tx, stop_rx) = mpsc::channel();
+        let join = std::thread::spawn(move || {
+            let _ = stop_rx.recv();
+            completed_clone.store(true, Ordering::SeqCst);
+        });
+
+        cleanup_timed_out_audio_start(stop_tx, join);
+
+        assert!(completed.load(Ordering::SeqCst));
     }
 }
