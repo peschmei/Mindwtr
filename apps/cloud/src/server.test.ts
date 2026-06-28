@@ -399,14 +399,37 @@ describe('cloud server utils', () => {
         expect(invalid.error).toContain('arbitrary');
     });
 
-    test('accepts repeatReminderMinutes on task creation and patch', () => {
+    test('validates schedule task prop values before REST writes', () => {
         expect(__cloudTestUtils.validateTaskCreationProps({
             status: 'next',
             repeatReminderMinutes: 15,
+            relativeStartOffset: { amount: -3, unit: 'day' },
+            recurrence: { rule: 'weekly', byDay: ['MO'] },
         }).ok).toBe(true);
         expect(__cloudTestUtils.validateTaskPatchProps({
             repeatReminderMinutes: 0,
+            recurrence: 'FREQ=DAILY;INTERVAL=2',
         }).ok).toBe(true);
+
+        const invalidRepeat = __cloudTestUtils.validateTaskCreationProps({ repeatReminderMinutes: 7 });
+        expect(invalidRepeat.ok).toBe(false);
+        if (invalidRepeat.ok) throw new Error('Expected invalid repeatReminderMinutes');
+        expect(invalidRepeat.error).toContain('repeatReminderMinutes');
+
+        const invalidOffset = __cloudTestUtils.validateTaskPatchProps({ relativeStartOffset: { amount: 3, unit: 'day' } });
+        expect(invalidOffset.ok).toBe(false);
+        if (invalidOffset.ok) throw new Error('Expected invalid relativeStartOffset');
+        expect(invalidOffset.error).toContain('relativeStartOffset');
+
+        const invalidRecurrence = __cloudTestUtils.validateTaskPatchProps({ recurrence: { rule: 'daily', arbitrary: true } });
+        expect(invalidRecurrence.ok).toBe(false);
+        if (invalidRecurrence.ok) throw new Error('Expected invalid recurrence');
+        expect(invalidRecurrence.error).toContain('recurrence');
+
+        const invalidRecurrenceValue = __cloudTestUtils.validateTaskPatchProps({ recurrence: { rule: 'weekly', byDay: ['NOPE'] } });
+        expect(invalidRecurrenceValue.ok).toBe(false);
+        if (invalidRecurrenceValue.ok) throw new Error('Expected invalid recurrence value');
+        expect(invalidRecurrenceValue.error).toContain('recurrence');
     });
 
     test('validates settings.attachments.pendingRemoteDeletes structure', () => {
@@ -1741,6 +1764,52 @@ describe('cloud server api', () => {
         expect(createResponse.status).toBe(400);
         const payload = await createResponse.json();
         expect(payload.error).toContain('Unsupported task props');
+    });
+
+    test('rejects invalid task prop values on REST writes', async () => {
+        const invalidCreate = await fetch(`${baseUrl}/v1/tasks`, {
+            method: 'POST',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ title: 'Cloud Task', props: { repeatReminderMinutes: 7 } }),
+        });
+        expect(invalidCreate.status).toBe(400);
+        expect((await invalidCreate.json()).error).toContain('repeatReminderMinutes');
+
+        const createResponse = await fetch(`${baseUrl}/v1/tasks`, {
+            method: 'POST',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ title: 'Cloud Task' }),
+        });
+        expect(createResponse.status).toBe(201);
+        const created = (await createResponse.json()).task as Task;
+
+        const invalidOffsetPatch = await fetch(`${baseUrl}/v1/tasks/${encodeURIComponent(created.id)}`, {
+            method: 'PATCH',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ relativeStartOffset: { amount: 1, unit: 'day' } }),
+        });
+        expect(invalidOffsetPatch.status).toBe(400);
+        expect((await invalidOffsetPatch.json()).error).toContain('relativeStartOffset');
+
+        const invalidRecurrencePatch = await fetch(`${baseUrl}/v1/tasks/${encodeURIComponent(created.id)}`, {
+            method: 'PATCH',
+            headers: {
+                ...authHeaders,
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ recurrence: { rule: 'daily', arbitrary: true } }),
+        });
+        expect(invalidRecurrencePatch.status).toBe(400);
+        expect((await invalidRecurrencePatch.json()).error).toContain('recurrence');
     });
 
     test('accepts quick-add input longer than the task title limit when the parsed title stays short', async () => {

@@ -1,5 +1,8 @@
 import {
     filterNotDeleted,
+    normalizeRecurrenceForLoad,
+    normalizeRelativeStartOffset,
+    normalizeRepeatReminderMinutes,
     searchAll,
     type Area,
     type AppData,
@@ -24,6 +27,77 @@ import { normalizeAttachmentRelativePath } from './server-storage';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const hasOwnField = (value: object, field: PropertyKey): boolean => (
+    Object.prototype.hasOwnProperty.call(value, field)
+);
+
+const CLOUD_RECURRENCE_ALLOWED_KEYS = new Set([
+    'rule',
+    'strategy',
+    'byDay',
+    'byMonthDay',
+    'weekStart',
+    'count',
+    'until',
+    'completedOccurrences',
+    'anchorDay',
+    'startAnchorDay',
+    'dueAnchorDay',
+    'reviewAnchorDay',
+    'rrule',
+]);
+
+function validateTaskRepeatReminderMinutes(value: Record<string, unknown>): string | null {
+    if (!hasOwnField(value, 'repeatReminderMinutes')) return null;
+    const minutes = value.repeatReminderMinutes;
+    if (minutes === undefined || minutes === null || minutes === 0) return null;
+    if (normalizeRepeatReminderMinutes(minutes) === minutes) return null;
+    return 'Invalid task repeatReminderMinutes';
+}
+
+function validateTaskRelativeStartOffset(value: Record<string, unknown>): string | null {
+    if (!hasOwnField(value, 'relativeStartOffset')) return null;
+    const offset = value.relativeStartOffset;
+    if (offset === undefined || offset === null) return null;
+    if (!isRecord(offset)) return 'Invalid task relativeStartOffset';
+    const invalidKeys = Object.keys(offset).filter((key) => key !== 'amount' && key !== 'unit');
+    if (invalidKeys.length > 0) return `Unsupported task relativeStartOffset fields: ${invalidKeys.slice(0, 10).join(', ')}`;
+    const normalized = normalizeRelativeStartOffset(offset);
+    if (!normalized || normalized.amount !== offset.amount || normalized.unit !== offset.unit) {
+        return 'Invalid task relativeStartOffset';
+    }
+    return null;
+}
+
+function isSameJsonValue(left: unknown, right: unknown): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function validateTaskRecurrence(value: Record<string, unknown>): string | null {
+    if (!hasOwnField(value, 'recurrence')) return null;
+    const recurrence = value.recurrence;
+    if (recurrence === undefined || recurrence === null) return null;
+    if (typeof recurrence === 'string') {
+        return normalizeRecurrenceForLoad(recurrence) ? null : 'Invalid task recurrence';
+    }
+    if (!isRecord(recurrence)) return 'Invalid task recurrence';
+    const invalidKeys = Object.keys(recurrence).filter((key) => !CLOUD_RECURRENCE_ALLOWED_KEYS.has(key));
+    if (invalidKeys.length > 0) return `Unsupported task recurrence fields: ${invalidKeys.slice(0, 10).join(', ')}`;
+    const normalized = normalizeRecurrenceForLoad(recurrence);
+    if (!normalized) return 'Invalid task recurrence';
+    const normalizedRecord = normalized as unknown as Record<string, unknown>;
+    for (const key of Object.keys(recurrence)) {
+        if (!isSameJsonValue(recurrence[key], normalizedRecord[key])) return 'Invalid task recurrence';
+    }
+    return null;
+}
+
+function validateTaskPropValues(value: Record<string, unknown>): string | null {
+    return validateTaskRepeatReminderMinutes(value)
+        ?? validateTaskRelativeStartOffset(value)
+        ?? validateTaskRecurrence(value);
 }
 
 function isValidIsoTimestamp(value: unknown): boolean {
@@ -290,6 +364,8 @@ export function validateTaskCreationProps(
             error: `Unsupported task props: ${invalidKeys.slice(0, 10).join(', ')}`,
         };
     }
+    const valueError = validateTaskPropValues(value);
+    if (valueError) return { ok: false, error: valueError };
     return { ok: true, props: value as Partial<Task> };
 }
 
@@ -304,6 +380,8 @@ export function validateTaskPatchProps(
             error: `Unsupported task updates: ${invalidKeys.slice(0, 10).join(', ')}`,
         };
     }
+    const valueError = validateTaskPropValues(value);
+    if (valueError) return { ok: false, error: valueError };
     return { ok: true, props: value as Partial<Task> };
 }
 
