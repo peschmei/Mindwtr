@@ -21,7 +21,8 @@ export function buildTaskListMeasuredHeightKey(
 }
 
 export function buildTaskListVirtualizedItemKey(itemKey: string, index: number): string {
-  return `${index}:${itemKey}`;
+  void index;
+  return itemKey;
 }
 
 type BuildTaskListItemLayoutsOptions<T extends TaskListLayoutItem> = {

@@ -872,6 +872,7 @@ function TaskListComponent({
   const getVirtualizedListItemKey = useCallback((item: ListItem, index: number) => (
     buildTaskListVirtualizedItemKey(getListItemKey(item), index)
   ), [getListItemKey]);
+  const wasPullRefreshingRef = useRef(false);
   const registerItemHeight = useCallback((itemKey: string, height: number) => {
     const rounded = Math.round(height);
     if (!Number.isFinite(rounded) || rounded <= 0) return;
@@ -879,6 +880,13 @@ function TaskListComponent({
     itemHeightsRef.current[itemKey] = rounded;
     setItemLayoutVersion((prev) => prev + 1);
   }, []);
+  useEffect(() => {
+    if (wasPullRefreshingRef.current && !pullSync.refreshing) {
+      itemHeightsRef.current = {};
+      setItemLayoutVersion((prev) => prev + 1);
+    }
+    wasPullRefreshingRef.current = pullSync.refreshing;
+  }, [pullSync.refreshing]);
   const itemLayouts = useMemo(() => {
     // itemLayoutVersion invalidates memoized offsets when ref-backed row heights change.
     void itemLayoutVersion;
@@ -1873,7 +1881,7 @@ function TaskListComponent({
           maxToRenderPerBatch={12}
           windowSize={5}
           updateCellsBatchingPeriod={50}
-          removeClippedSubviews={false}
+          removeClippedSubviews={listItems.length >= REMOVE_CLIPPED_SUBVIEWS_MIN_ITEMS}
           refreshControl={
             <RefreshControl
               refreshing={pullSync.refreshing}

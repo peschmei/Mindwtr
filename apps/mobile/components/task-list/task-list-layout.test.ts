@@ -48,8 +48,8 @@ describe('task-list-layout', () => {
     ]);
   });
 
-  it('changes virtualization keys when a surviving row moves after refresh', () => {
-    expect(buildTaskListVirtualizedItemKey('task-a', 8)).not.toBe(
+  it('keeps virtualization keys stable when a surviving row moves', () => {
+    expect(buildTaskListVirtualizedItemKey('task-a', 8)).toBe(
       buildTaskListVirtualizedItemKey('task-a', 0),
     );
   });
