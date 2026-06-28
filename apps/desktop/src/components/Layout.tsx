@@ -562,7 +562,7 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                 <button
                     onClick={triggerInboxCapture}
                     className={cn(
-                        "w-full flex h-9 items-center gap-2.5 px-2.5 mb-6 rounded-md border border-primary/25 bg-primary/15 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/40",
+                        "w-full flex h-9 items-center gap-2.5 px-2.5 mb-6 rounded-md border border-primary/40 bg-primary/5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 hover:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/40",
                         isCollapsed && "h-10 justify-center px-2"
                     )}
                     title={inboxCaptureLabel}
