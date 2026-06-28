@@ -513,9 +513,9 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
             {!isFocusMode && (
                 <aside className={cn(
                     "border-r border-border bg-card flex flex-col transition-all duration-150",
-                    isCollapsed ? "w-16 p-2" : "w-64 px-3 pt-4 pb-3"
+                    isCollapsed ? "w-16 p-2" : "w-64 px-3 pt-5 pb-3"
                 )}>
-                <div className={cn("flex items-center gap-2 px-1.5 mb-4", isCollapsed && "justify-center")}>
+                <div className={cn("flex items-center gap-2 px-1.5 mb-6", isCollapsed && "justify-center")}>
                     {!isCollapsed && (
                         <img
                             src="/logo.png"
