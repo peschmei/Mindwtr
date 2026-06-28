@@ -260,6 +260,25 @@ describe('ProjectWorkspace Select mode', () => {
         window.removeEventListener('mindwtr:quick-add', quickAddListener);
     });
 
+    it('renders an offscreen task when an external edit request targets it in a virtualized project list', () => {
+        const tasks = Array.from({ length: 130 }, (_, index) => (
+            task(`task-${index}`, `Task ${index}`, {
+                createdAt: `2026-05-12T00:${String(index).padStart(2, '0')}:00.000Z`,
+                updatedAt: `2026-05-12T00:${String(index).padStart(2, '0')}:00.000Z`,
+            })
+        ));
+        act(() => {
+            useUiStore.setState({ editingTaskId: 'task-129' });
+        });
+
+        const { container, getByText } = renderWorkspace({
+            allTasks: tasks,
+        });
+
+        expect(container.querySelector('[data-virtualized-task-list="true"]')).toBeInTheDocument();
+        expect(getByText('Task 129')).toBeInTheDocument();
+    });
+
     it('sorts completed project tasks by most recent completion first', () => {
         const { container, getByRole } = renderWorkspace({
             showCompletedTasks: true,

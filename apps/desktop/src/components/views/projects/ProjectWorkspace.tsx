@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef, useLayoutEffect, type ReactNode, type RefObject } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, useLayoutEffect, type Key, type ReactNode, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
     Attachment,
@@ -27,6 +27,7 @@ import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ChevronRight, FileText, 
 import { PromptModal } from '../../PromptModal';
 import { TokenPickerModal } from '../../TokenPickerModal';
 import { TaskItem } from '../../TaskItem';
+import { useUiStore } from '../../../store/ui-store';
 import { BulkSelectionToolbar } from '../list/BulkSelectionToolbar';
 import { sortDoneTasksForListView } from '../list/done-sort';
 import { ListBulkActions } from '../list/ListBulkActions';
@@ -67,9 +68,16 @@ type ProjectTaskRowsProps = {
     tasks: readonly Task[];
     renderTask: (task: Task) => ReactNode;
     scrollRef: RefObject<HTMLDivElement | null>;
+    pinnedTaskId?: string | null;
 };
 
-function ProjectTaskRows({ tasks, renderTask, scrollRef }: ProjectTaskRowsProps) {
+type ProjectTaskVirtualRow = {
+    index: number;
+    key: Key;
+    start: number;
+};
+
+function ProjectTaskRows({ tasks, renderTask, scrollRef, pinnedTaskId }: ProjectTaskRowsProps) {
     const shouldVirtualize = tasks.length > PROJECT_TASK_VIRTUALIZATION_THRESHOLD;
     const listRef = useRef<HTMLDivElement | null>(null);
     const [scrollMargin, setScrollMargin] = useState(0);
@@ -130,8 +138,12 @@ function ProjectTaskRows({ tasks, renderTask, scrollRef }: ProjectTaskRowsProps)
     }
 
     const virtualRows = rowVirtualizer.getVirtualItems();
-    const rowsToRender = virtualRows.length > 0
-        ? virtualRows
+    let rowsToRender: ProjectTaskVirtualRow[] = virtualRows.length > 0
+        ? virtualRows.map((row) => ({
+            index: row.index,
+            key: row.key,
+            start: row.start,
+        }))
         : Array.from({
             length: Math.min(
                 tasks.length,
@@ -143,6 +155,19 @@ function ProjectTaskRows({ tasks, renderTask, scrollRef }: ProjectTaskRowsProps)
             key: tasks[index]?.id ?? index,
             start: index * PROJECT_TASK_ROW_ESTIMATE,
         }));
+    const pinnedTaskIndex = pinnedTaskId
+        ? tasks.findIndex((task) => task.id === pinnedTaskId)
+        : -1;
+    if (pinnedTaskIndex >= 0 && !rowsToRender.some((row) => row.index === pinnedTaskIndex)) {
+        rowsToRender = [
+            ...rowsToRender,
+            {
+                index: pinnedTaskIndex,
+                key: tasks[pinnedTaskIndex]?.id ?? pinnedTaskIndex,
+                start: pinnedTaskIndex * PROJECT_TASK_ROW_ESTIMATE,
+            },
+        ].sort((a, b) => a.index - b.index);
+    }
     const totalSize = rowVirtualizer.getTotalSize() || tasks.length * PROJECT_TASK_ROW_ESTIMATE;
 
     return (
@@ -322,6 +347,7 @@ export function ProjectWorkspace({
     const [isBulkOrganizing, setIsBulkOrganizing] = useState(false);
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const [completedTasksCollapsed, setCompletedTasksCollapsed] = useState(true);
+    const editingTaskId = useUiStore((state) => state.editingTaskId);
     const multiSelectAnchorIdRef = useRef<string | null>(null);
     const projectScrollRef = useRef<HTMLDivElement | null>(null);
     const selectedProjectIdRef = useRef<string | null>(selectedProjectId);
@@ -878,6 +904,7 @@ export function ProjectWorkspace({
             <ProjectTaskRows
                 tasks={list}
                 scrollRef={projectScrollRef}
+                pinnedTaskId={editingTaskId ?? highlightTaskId}
                 renderTask={(task) => (
                     <SortableProjectTaskRow
                         key={task.id}
@@ -895,6 +922,7 @@ export function ProjectWorkspace({
         <ProjectTaskRows
             tasks={list}
             scrollRef={projectScrollRef}
+            pinnedTaskId={editingTaskId ?? highlightTaskId}
             renderTask={(task) => (
                 <TaskItem
                     key={task.id}
@@ -915,6 +943,7 @@ export function ProjectWorkspace({
         <ProjectTaskRows
             tasks={list}
             scrollRef={projectScrollRef}
+            pinnedTaskId={editingTaskId ?? highlightTaskId}
             renderTask={(task) => (
                 <TaskItem
                     key={task.id}
