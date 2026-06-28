@@ -27,6 +27,16 @@ on:
         required: false
         default: '14'
         type: string
+    outputs:
+      version_code:
+        description: Resolved Android versionCode used by release builds
+        value: ${{ jobs.preflight.outputs.version_code }}
+      local_version_code:
+        description: Android versionCode from apps/mobile/app.json before CI override
+        value: ${{ jobs.preflight.outputs.local_version_code }}
+      remote_max_version_code:
+        description: Highest versionCode found in Google Play tracks during preflight
+        value: ${{ jobs.preflight.outputs.remote_max_version_code }}
   workflow_dispatch:
     inputs:
       tag:

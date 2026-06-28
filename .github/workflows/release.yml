@@ -83,6 +83,7 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  REQUIRE_STABLE_RELEASE_TAG: "1"
 
 jobs:
   linux:
@@ -111,8 +112,11 @@ jobs:
     secrets: inherit
 
   android-foss:
-    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_android_foss) }}
+    needs: android
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_android_foss) && (needs.android.result == 'success' || needs.android.result == 'skipped') }}
     uses: ./.github/workflows/release-android-foss.yml
+    with:
+      version_code: ${{ needs.android.outputs.version_code }}
     secrets: inherit
 
   ios-appstore:
@@ -144,6 +148,7 @@ jobs:
     name: Create Release
     timeout-minutes: 60
     permissions:
+      actions: read
       contents: write
 
     steps:
@@ -158,7 +163,7 @@ jobs:
           INPUT_TAG: ${{ github.event.inputs.tag }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
+          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "Invalid tag format" >&2
             exit 1
           fi
@@ -339,7 +344,7 @@ jobs:
           INPUT_TAG: ${{ github.event.inputs.tag }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
+          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "Invalid tag format" >&2
             exit 1
           fi
@@ -736,7 +741,7 @@ jobs:
           INPUT_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
+          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "Invalid tag format" >&2
             exit 1
           fi
@@ -857,15 +862,6 @@ jobs:
           echo "Failed to push mindwtr-bin to AUR after 3 attempts." >&2
           exit 1
 
-  update-aur-beta:
-    needs: release
-    name: Update AUR Beta (mindwtr-bin-beta)
-    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_aur && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
-    uses: ./.github/workflows/update-aur-beta.yml
-    with:
-      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-    secrets: inherit
-
   update-aur-source:
     needs: release
     runs-on: ubuntu-latest
@@ -936,7 +932,7 @@ jobs:
           INPUT_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
+          if [ -n "${INPUT_TAG:-}" ] && ! echo "${INPUT_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "Invalid tag format" >&2
             exit 1
           fi

@@ -214,11 +214,12 @@ jobs:
     secrets: inherit
 
   android-foss:
-    if: ${{ needs.validate.outputs.retag_recovery != 'true' }}
-    needs: validate
+    if: ${{ always() && needs.validate.outputs.retag_recovery != 'true' && needs.validate.result == 'success' && needs.android.result == 'success' }}
+    needs: [validate, android]
     uses: ./.github/workflows/release-android-foss.yml
     with:
       tag: ${{ needs.validate.outputs.tag }}
+      version_code: ${{ needs.android.outputs.version_code }}
     secrets: inherit
 
   ios-appstore:
@@ -267,6 +268,7 @@ jobs:
     name: Create GitHub Prerelease
     timeout-minutes: 60
     permissions:
+      actions: read
       contents: write
     steps:
       - name: Checkout code

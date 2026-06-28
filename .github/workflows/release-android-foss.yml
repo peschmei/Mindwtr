@@ -7,6 +7,10 @@ on:
         description: 'Release tag (e.g., v0.2.3)'
         required: false
         type: string
+      version_code:
+        description: 'Android versionCode to apply before building, usually from the standard Android release preflight'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       tag:
@@ -73,6 +77,28 @@ jobs:
           INPUT_TAG="${{ inputs.tag || github.event.inputs.tag }}"
           GITHUB_EVENT_INPUTS_TAG="${{ github.event.inputs.tag }}"
           scripts/ci/resolve-release-version.sh "$INPUT_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Apply resolved Android versionCode
+        if: ${{ inputs.version_code != '' }}
+        env:
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = 'apps/mobile/app.json';
+          const versionCode = Number(process.env.VERSION_CODE);
+          if (!Number.isInteger(versionCode) || versionCode <= 0) {
+            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
+          }
+          const json = JSON.parse(fs.readFileSync(path, 'utf8'));
+          json.expo = json.expo || {};
+          json.expo.android = json.expo.android || {};
+          const previous = json.expo.android.versionCode;
+          json.expo.android.versionCode = versionCode;
+          fs.writeFileSync(path, `${JSON.stringify(json, null, 2)}\\n`);
+          console.log(`FOSS Android versionCode: ${previous} -> ${versionCode}`);
+          NODE
 
       - name: Build FOSS Android APK (Gradle, arm64-v8a only)
         timeout-minutes: 30
