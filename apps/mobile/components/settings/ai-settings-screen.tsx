@@ -27,7 +27,7 @@ import { logSettingsError, logSettingsWarn } from '@/lib/settings-utils';
 
 import { AiSettingsAssistantCard } from './ai-settings-assistant-card';
 import { AiSettingsSpeechCard } from './ai-settings-speech-card';
-import { isWhisperModelFileReady, isWhisperModelSafeDeleteTarget } from './ai-settings-whisper-model';
+import { isWhisperModelFileReady, isWhisperModelSafeDeleteTarget, verifyWhisperModelFileHash } from './ai-settings-whisper-model';
 import {
     AI_PROVIDER_CONSENT_KEY,
     DEFAULT_WHISPER_MODEL,
@@ -40,6 +40,36 @@ import {
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
 import { SettingsTopBar } from './settings.shell';
 import { styles } from './settings.styles';
+
+type RNFSModule = typeof import('react-native-fs');
+let rnfsHashModuleCache: RNFSModule | null | undefined;
+
+const getRNFSHashModule = (): RNFSModule | null => {
+    if (rnfsHashModuleCache !== undefined) return rnfsHashModuleCache;
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const mod = require('react-native-fs') as RNFSModule;
+        rnfsHashModuleCache = typeof mod?.hash === 'function' ? mod : null;
+        return rnfsHashModuleCache;
+    } catch {
+        rnfsHashModuleCache = null;
+        return null;
+    }
+};
+
+const toNativeHashPath = (uri: string): string => {
+    if (uri.startsWith('file://')) return uri.replace(/^file:\/\//u, '');
+    if (uri.startsWith('file:/')) return uri.replace(/^file:\//u, '/');
+    return uri;
+};
+
+const hashWhisperModelFile = async (uri: string): Promise<string> => {
+    const rnfs = getRNFSHashModule();
+    if (!rnfs) {
+        throw new Error('Whisper model hashing is unavailable in this build. Use a dev build or production build.');
+    }
+    return rnfs.hash(toNativeHashPath(uri), 'sha256');
+};
 
 export function AISettingsScreen() {
     const tc = useThemeColors();
@@ -533,10 +563,15 @@ export function AISettingsScreen() {
                     const existingInfo = safePathInfo(targetFile.uri);
                     if (existingInfo?.exists && existingInfo.isDirectory === false) {
                         if (isWhisperModelFileReady(selectedWhisperModel, existingInfo)) {
-                            updateSpeechSettings({ offlineModelPath: targetFile.uri, model: selectedWhisperModel.id });
-                            setWhisperDownloadState('success');
-                            clearSuccess();
-                            return;
+                            try {
+                                await verifyWhisperModelFileHash(selectedWhisperModel, targetFile.uri, hashWhisperModelFile);
+                                updateSpeechSettings({ offlineModelPath: targetFile.uri, model: selectedWhisperModel.id });
+                                setWhisperDownloadState('success');
+                                clearSuccess();
+                                return;
+                            } catch (error) {
+                                logSettingsWarn('Whisper existing model hash verification failed', error);
+                            }
                         }
                         try {
                             targetFile.delete();
@@ -554,6 +589,16 @@ export function AISettingsScreen() {
                                 logSettingsWarn('Whisper incomplete download cleanup failed', error);
                             }
                             throw new Error('Downloaded Whisper model file looks incomplete. Please retry on Wi-Fi.');
+                        }
+                        try {
+                            await verifyWhisperModelFileHash(selectedWhisperModel, file.uri, hashWhisperModelFile);
+                        } catch (error) {
+                            try {
+                                file.delete();
+                            } catch (cleanupError) {
+                                logSettingsWarn('Whisper failed integrity cleanup failed', cleanupError);
+                            }
+                            throw error;
                         }
                         updateSpeechSettings({ offlineModelPath: file.uri, model: selectedWhisperModel.id });
                     } catch (downloadError) {

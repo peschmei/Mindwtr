@@ -8,6 +8,8 @@ use tar::Archive;
 const PARAKEET_MODEL_ID: &str = "parakeet-tdt-0.6b-v3-int8";
 const PARAKEET_ARCHIVE_ROOT: &str = "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8";
 const PARAKEET_MODEL_URL: &str = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2";
+const PARAKEET_MODEL_ARCHIVE_SHA256: &str =
+    "5793d0fd397c5778d2cf2126994d58e9d56b1be7c04d13c7a15bb1b4eafb16bf";
 const PARAKEET_INSTALL_DIR_NAME: &str = "parakeet-model";
 const WHISPER_MODEL_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main";
 const WHISPER_INSTALL_DIR_NAME: &str = "whisper-models";
@@ -47,6 +49,30 @@ fn whisper_model_file_name(model: &str) -> Option<&'static str> {
         "whisper-base" => Some("ggml-base.bin"),
         "whisper-base.en" => Some("ggml-base.en.bin"),
         "whisper-large-v3-turbo" => Some("ggml-large-v3-turbo.bin"),
+        _ => None,
+    }
+}
+
+fn whisper_model_sha256(model: &str) -> Option<&'static str> {
+    match model {
+        "whisper-tiny" => Some("be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"),
+        "whisper-tiny.en" => {
+            Some("921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f")
+        }
+        "whisper-base" => Some("60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"),
+        "whisper-base.en" => {
+            Some("a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002")
+        }
+        "whisper-large-v3-turbo" => {
+            Some("1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69")
+        }
+        _ => None,
+    }
+}
+
+fn parakeet_model_archive_sha256(model: &str) -> Option<&'static str> {
+    match model {
+        PARAKEET_MODEL_ID => Some(PARAKEET_MODEL_ARCHIVE_SHA256),
         _ => None,
     }
 }
@@ -621,6 +647,9 @@ fn download_parakeet_model_blocking(
         &archive_path,
         "Parakeet model",
     )?;
+    let expected_sha256 = parakeet_model_archive_sha256(&model)
+        .ok_or_else(|| format!("No pinned SHA-256 digest for Parakeet model {model}"))?;
+    verify_file_sha256(&archive_path, "Parakeet model", expected_sha256)?;
 
     emit_download_progress(&app, PARAKEET_PROGRESS_EVENT, "install", 0, None);
     unpack_tar_bz2(&archive_path, &extract_dir)?;
@@ -655,11 +684,16 @@ pub(crate) async fn download_whisper_model(
 fn download_whisper_model_blocking(app: tauri::AppHandle, model: String) -> Result<String, String> {
     let file_name =
         whisper_model_file_name(&model).ok_or_else(|| "Unsupported Whisper model".to_string())?;
+    let expected_sha256 =
+        whisper_model_sha256(&model).ok_or_else(|| "Unsupported Whisper model".to_string())?;
     let data_dir = get_data_dir(&app);
     let target_path = whisper_model_path(&data_dir, &model)
         .ok_or_else(|| "Unsupported Whisper model".to_string())?;
     if target_path.is_file() {
-        return Ok(target_path.to_string_lossy().to_string());
+        if verify_file_sha256(&target_path, "Whisper model", expected_sha256).is_ok() {
+            return Ok(target_path.to_string_lossy().to_string());
+        }
+        fs::remove_file(&target_path).map_err(|error| error.to_string())?;
     }
 
     let target_dir = data_dir.join(WHISPER_INSTALL_DIR_NAME);
@@ -679,6 +713,7 @@ fn download_whisper_model_blocking(app: tauri::AppHandle, model: String) -> Resu
         &temp_path,
         "Whisper model",
     )?;
+    verify_file_sha256(&temp_path, "Whisper model", expected_sha256)?;
 
     fs::rename(&temp_path, &target_path).map_err(|error| error.to_string())?;
     Ok(target_path.to_string_lossy().to_string())
@@ -903,5 +938,43 @@ mod tests {
         assert!(error.contains("expected 10 bytes, got 9"));
         assert!(validate_download_size("Whisper model", Some(10), 10).is_ok());
         assert!(validate_download_size("Whisper model", None, 9).is_ok());
+    }
+
+    #[test]
+    fn whisper_model_hashes_are_pinned() {
+        let models = [
+            (
+                "whisper-tiny",
+                "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+            ),
+            (
+                "whisper-tiny.en",
+                "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f",
+            ),
+            (
+                "whisper-base",
+                "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+            ),
+            (
+                "whisper-base.en",
+                "a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002",
+            ),
+            (
+                "whisper-large-v3-turbo",
+                "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+            ),
+        ];
+
+        for (model, expected_digest) in models {
+            assert_eq!(whisper_model_sha256(model), Some(expected_digest));
+        }
+    }
+
+    #[test]
+    fn parakeet_model_archive_hash_is_pinned() {
+        assert_eq!(
+            parakeet_model_archive_sha256(PARAKEET_MODEL_ID),
+            Some("5793d0fd397c5778d2cf2126994d58e9d56b1be7c04d13c7a15bb1b4eafb16bf")
+        );
     }
 }
