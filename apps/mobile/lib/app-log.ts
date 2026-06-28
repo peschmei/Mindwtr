@@ -80,6 +80,21 @@ const logInternalFailure = (phase: string, error?: unknown): void => {
   console.warn(`[Mindwtr diagnostics] ${phase} failed: ${message}`);
 };
 
+const logEntryToDevConsole = (entry: LogEntry): void => {
+  if (!__DEV__) return;
+  const context = entry.context && Object.keys(entry.context).length > 0
+    ? ` ${JSON.stringify(entry.context)}`
+    : '';
+  const line = `[Mindwtr ${entry.scope}] ${entry.message}${context}`;
+  if (entry.level === 'error') {
+    console.error(line);
+  } else if (entry.level === 'warn') {
+    console.warn(line);
+  } else {
+    console.info(line);
+  }
+};
+
 const buildLegacyTargets = (documentDirectory?: string | null): { dirUri: string; fileUri: string } | null => {
   if (!documentDirectory) return null;
   const baseUri = documentDirectory.endsWith('/') ? documentDirectory : `${documentDirectory}/`;
@@ -302,11 +317,13 @@ async function appendLogLine(entry: LogEntry, options?: { force?: boolean }): Pr
     logWriteCount += 1;
     return LOG_FILE.uri;
   } catch (error) {
-    logInternalFailure('append log line', error);
     try {
       const fs = await getLegacyFileSystem();
       const path = await ensureLegacyLogFilePath();
-      if (!fs || !path) return null;
+      if (!fs || !path) {
+        logEntryToDevConsole(entry);
+        return null;
+      }
       const info = await fs.getInfoAsync(path);
       const current = info.exists ? await fs.readAsStringAsync(path, { encoding: UTF8_ENCODING }).catch(() => '') : '';
       let next = current + line;
@@ -316,8 +333,8 @@ async function appendLogLine(entry: LogEntry, options?: { force?: boolean }): Pr
       await fs.writeAsStringAsync(path, next, { encoding: UTF8_ENCODING });
       logWriteCount += 1;
       return path;
-    } catch (fallbackError) {
-      logInternalFailure('legacy append log line', fallbackError);
+    } catch {
+      logEntryToDevConsole(entry);
       return null;
     }
   }

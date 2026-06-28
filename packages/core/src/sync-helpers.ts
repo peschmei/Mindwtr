@@ -22,10 +22,27 @@ export type PendingAttachmentUpload = {
 };
 
 export const normalizeWebdavUrl = (rawUrl: string): string => {
-    const trimmed = rawUrl.replace(/\/+$/, '');
-    return trimmed.toLowerCase().endsWith(`/${SYNC_FILE_NAME}`) || trimmed.toLowerCase().endsWith('.json')
-        ? trimmed
-        : `${trimmed}/${SYNC_FILE_NAME}`;
+    const splitIndex = rawUrl.search(/[?#]/);
+    const pathEnd = splitIndex >= 0 ? splitIndex : rawUrl.length;
+    const path = rawUrl.slice(0, pathEnd).replace(/\/+$/, '');
+    const suffix = rawUrl.slice(pathEnd);
+    const lowerPath = path.toLowerCase();
+    const normalizedPath = lowerPath.endsWith(`/${SYNC_FILE_NAME}`) || lowerPath.endsWith('.json')
+        ? path
+        : `${path}/${SYNC_FILE_NAME}`;
+
+    if (!suffix) return normalizedPath;
+    const hashIndex = suffix.indexOf('#');
+    const queryPart = suffix.startsWith('?')
+        ? suffix.slice(0, hashIndex >= 0 ? hashIndex : suffix.length)
+        : '';
+    const hashPart = hashIndex >= 0 ? suffix.slice(hashIndex) : (suffix.startsWith('#') ? suffix : '');
+    if (!queryPart) return `${normalizedPath}${hashPart}`;
+
+    const params = new URLSearchParams(queryPart.slice(1));
+    params.delete('_');
+    const query = params.toString();
+    return `${normalizedPath}${query ? `?${query}` : ''}${hashPart}`;
 };
 
 export const normalizeCloudUrl = (rawUrl: string): string => {

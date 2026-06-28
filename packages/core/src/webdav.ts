@@ -100,7 +100,6 @@ function buildReadRequestInit(options: WebDavOptions, method: 'GET' | 'HEAD'): R
     const init: RequestInit = {
         method,
         headers: buildReadHeaders(options),
-        cache: 'no-store',
     };
     if (options.signal) {
         init.signal = options.signal;

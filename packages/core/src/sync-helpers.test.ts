@@ -6,6 +6,7 @@ import {
     findPendingAttachmentUploads,
     hasPendingSyncSideEffects,
     normalizeCloudUrl,
+    normalizeWebdavUrl,
     sanitizeAppDataForRemote,
 } from './sync-helpers';
 import type { AppData, Attachment } from './types';
@@ -55,6 +56,23 @@ describe('sync-helpers normalizeCloudUrl', () => {
     it('preserves full data endpoints for compatibility', () => {
         expect(normalizeCloudUrl('https://example.com/v1/data')).toBe('https://example.com/v1/data');
         expect(normalizeCloudUrl('https://example.com/data/')).toBe('https://example.com/data');
+    });
+});
+
+describe('sync-helpers normalizeWebdavUrl', () => {
+    it('strips cache-busting query strings before appending data.json', () => {
+        expect(normalizeWebdavUrl('https://dav.example.com/mindwtr?_=1782668355219')).toBe(
+            'https://dav.example.com/mindwtr/data.json'
+        );
+        expect(normalizeWebdavUrl('https://dav.example.com/mindwtr/#sync')).toBe(
+            'https://dav.example.com/mindwtr/data.json#sync'
+        );
+    });
+
+    it('strips cache-busting query strings from existing WebDAV data file URLs', () => {
+        expect(normalizeWebdavUrl('https://dav.example.com/mindwtr/data.json?_=1782668355219')).toBe(
+            'https://dav.example.com/mindwtr/data.json'
+        );
     });
 });
 

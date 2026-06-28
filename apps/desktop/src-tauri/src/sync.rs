@@ -722,14 +722,57 @@ pub(crate) fn set_sync_path(
 }
 
 fn normalize_webdav_url(raw: &str) -> String {
-    let trimmed = raw.trim().trim_end_matches('/');
+    let trimmed = raw.trim();
     if trimmed.is_empty() {
         return String::new();
     }
-    if trimmed.to_lowercase().ends_with(".json") {
-        trimmed.to_string()
+    let path_end = [trimmed.find('?'), trimmed.find('#')]
+        .into_iter()
+        .flatten()
+        .min()
+        .unwrap_or(trimmed.len());
+    let path = trimmed[..path_end].trim_end_matches('/');
+    let suffix = &trimmed[path_end..];
+    let normalized_path = if path.to_lowercase().ends_with(".json") {
+        path.to_string()
     } else {
-        format!("{}/{}", trimmed, DATA_FILE_NAME)
+        format!("{}/{}", path, DATA_FILE_NAME)
+    };
+
+    if suffix.is_empty() {
+        return normalized_path;
+    }
+
+    let hash_index = suffix.find('#');
+    let query_part = if suffix.starts_with('?') {
+        &suffix[..hash_index.unwrap_or(suffix.len())]
+    } else {
+        ""
+    };
+    let hash_part = if let Some(index) = hash_index {
+        &suffix[index..]
+    } else if suffix.starts_with('#') {
+        suffix
+    } else {
+        ""
+    };
+    if query_part.is_empty() {
+        return format!("{normalized_path}{hash_part}");
+    }
+
+    let query = query_part
+        .trim_start_matches('?')
+        .split('&')
+        .filter(|part| {
+            let key = part.split_once('=').map(|(key, _)| key).unwrap_or(part);
+            key != "_"
+        })
+        .collect::<Vec<_>>()
+        .join("&");
+    if query.is_empty() {
+        format!("{normalized_path}{hash_part}")
+    } else {
+        format!("{normalized_path}?{query}{hash_part}")
     }
 }
 
@@ -1146,6 +1189,22 @@ mod tests {
         assert_eq!(
             normalize_cloud_url("https://example.com/data/"),
             "https://example.com/data"
+        );
+    }
+
+    #[test]
+    fn normalize_webdav_url_strips_cache_busting_query() {
+        assert_eq!(
+            normalize_webdav_url("https://dav.example.com/mindwtr?_=1782668355219"),
+            "https://dav.example.com/mindwtr/data.json"
+        );
+        assert_eq!(
+            normalize_webdav_url("https://dav.example.com/mindwtr/data.json?_=1782668355219"),
+            "https://dav.example.com/mindwtr/data.json"
+        );
+        assert_eq!(
+            normalize_webdav_url("https://dav.example.com/mindwtr/#sync"),
+            "https://dav.example.com/mindwtr/data.json#sync"
         );
     }
 

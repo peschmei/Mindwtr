@@ -574,17 +574,26 @@ export function useSyncSettingsBackupActions({
             });
             return;
         }
-        const Sharing = await import('expo-sharing');
-        const canShare = await Sharing.isAvailableAsync();
-        if (!canShare) {
+        try {
+            const Sharing = await import('expo-sharing');
+            const canShare = await Sharing.isAvailableAsync();
+            if (!canShare) {
+                showToast({
+                    title: t('settings.debugLogging'),
+                    message: t('settings.shareUnavailable'),
+                    tone: 'warning',
+                });
+                return;
+            }
+            await Sharing.shareAsync(path, { mimeType: 'text/plain' });
+        } catch (error) {
+            logSettingsError(error);
             showToast({
                 title: t('settings.debugLogging'),
                 message: t('settings.shareUnavailable'),
                 tone: 'warning',
             });
-            return;
         }
-        await Sharing.shareAsync(path, { mimeType: 'text/plain' });
     }, [showToast, t]);
 
     const handleClearLog = useCallback(async () => {

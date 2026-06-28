@@ -98,7 +98,7 @@ describe('webdav http helpers', () => {
         await expect(webdavGetJson<{ ok: boolean }>('https://example.com/data.json', { fetcher })).resolves.toEqual({ ok: true });
     });
 
-    it('bypasses HTTP caches for JSON and metadata reads', async () => {
+    it('bypasses HTTP caches for JSON and metadata reads without URL cache busting', async () => {
         const getFetcher = vi.fn(
             async () =>
                 ({
@@ -112,12 +112,12 @@ describe('webdav http helpers', () => {
         await expect(webdavGetJson<{ ok: boolean }>('https://example.com/data.json', { fetcher: getFetcher })).resolves.toEqual({ ok: true });
         expect(getFetcher.mock.calls[0]?.[1]).toMatchObject({
             method: 'GET',
-            cache: 'no-store',
             headers: {
                 'Cache-Control': 'no-cache',
                 Pragma: 'no-cache',
             },
         });
+        expect(getFetcher.mock.calls[0]?.[1]).not.toHaveProperty('cache');
 
         const headFetcher = vi.fn(
             async () =>
@@ -140,12 +140,12 @@ describe('webdav http helpers', () => {
         });
         expect(headFetcher.mock.calls[0]?.[1]).toMatchObject({
             method: 'HEAD',
-            cache: 'no-store',
             headers: {
                 'Cache-Control': 'no-cache',
                 Pragma: 'no-cache',
             },
         });
+        expect(headFetcher.mock.calls[0]?.[1]).not.toHaveProperty('cache');
     });
 
     it('reads HEAD metadata for fast sync checks', async () => {
