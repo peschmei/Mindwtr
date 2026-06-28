@@ -63,11 +63,14 @@ export const LANGUAGES: { id: Language; native: string }[] = [
 ];
 
 export const WHISPER_MODEL_BASE_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main';
-export const WHISPER_MODELS: { id: string; fileName: string; label: string }[] = [
-    { id: 'whisper-tiny', fileName: 'ggml-tiny.bin', label: 'whisper-tiny' },
-    { id: 'whisper-tiny.en', fileName: 'ggml-tiny.en.bin', label: 'whisper-tiny.en' },
-    { id: 'whisper-base', fileName: 'ggml-base.bin', label: 'whisper-base' },
-    { id: 'whisper-base.en', fileName: 'ggml-base.en.bin', label: 'whisper-base.en' },
+const WHISPER_TINY_MIN_BYTES = 50 * 1024 * 1024;
+const WHISPER_BASE_MIN_BYTES = 100 * 1024 * 1024;
+
+export const WHISPER_MODELS: { id: string; fileName: string; label: string; minBytes: number }[] = [
+    { id: 'whisper-tiny', fileName: 'ggml-tiny.bin', label: 'whisper-tiny', minBytes: WHISPER_TINY_MIN_BYTES },
+    { id: 'whisper-tiny.en', fileName: 'ggml-tiny.en.bin', label: 'whisper-tiny.en', minBytes: WHISPER_TINY_MIN_BYTES },
+    { id: 'whisper-base', fileName: 'ggml-base.bin', label: 'whisper-base', minBytes: WHISPER_BASE_MIN_BYTES },
+    { id: 'whisper-base.en', fileName: 'ggml-base.en.bin', label: 'whisper-base.en', minBytes: WHISPER_BASE_MIN_BYTES },
 ];
 export const DEFAULT_WHISPER_MODEL = WHISPER_MODELS[0]?.id ?? 'whisper-tiny';
 

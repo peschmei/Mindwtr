@@ -27,6 +27,7 @@ import { logSettingsError, logSettingsWarn } from '@/lib/settings-utils';
 
 import { AiSettingsAssistantCard } from './ai-settings-assistant-card';
 import { AiSettingsSpeechCard } from './ai-settings-speech-card';
+import { isWhisperModelFileReady, isWhisperModelSafeDeleteTarget } from './ai-settings-whisper-model';
 import {
     AI_PROVIDER_CONSENT_KEY,
     DEFAULT_WHISPER_MODEL,
@@ -379,7 +380,7 @@ export function AISettingsScreen() {
         for (const candidate of candidates) {
             try {
                 const info = safePathInfo(candidate);
-                if (info?.exists && !info.isDirectory) {
+                if (isWhisperModelFileReady(model, info)) {
                     return candidate;
                 }
             } catch {
@@ -394,10 +395,27 @@ export function AISettingsScreen() {
         return Boolean(baseName && baseName.endsWith('.bin'));
     };
 
-    const isWhisperTargetPath = (uri: string, fileName: string) => {
-        const baseName = Paths.basename(uri);
-        if (baseName !== fileName) return false;
-        return uri.includes('/whisper-models/') || uri.includes('\\whisper-models\\');
+    const getWhisperTargetUris = (fileName: string) => getWhisperDirectories().map((directory) => {
+        const dirUri = directory.uri.endsWith('/') ? directory.uri : `${directory.uri}/`;
+        return `${dirUri}${fileName}`;
+    });
+
+    const isSafeWhisperModelTarget = (uri: string, model: (typeof WHISPER_MODELS)[number]) => isWhisperModelSafeDeleteTarget({
+        uri: normalizeWhisperPath(uri),
+        fileName: model.fileName,
+        allowedUris: getWhisperTargetUris(model.fileName).map(normalizeWhisperPath),
+    });
+
+    const getWhisperPathInfoSize = (info: ReturnType<typeof safePathInfo>): number => (
+        info && 'size' in info && typeof info.size === 'number' ? info.size : 0
+    );
+
+    const getWhisperReadiness = (model: (typeof WHISPER_MODELS)[number], uri: string) => {
+        const info = safePathInfo(uri);
+        return {
+            info,
+            ready: isWhisperModelFileReady(model, info),
+        };
     };
 
     const applyWhisperModel = (modelId: string) => {
@@ -460,20 +478,15 @@ export function AISettingsScreen() {
         : undefined;
     let whisperDownloaded = false;
     let whisperSizeLabel = '';
-    if (whisperModelPath) {
-        const info = safePathInfo(whisperModelPath);
-        if (info?.exists && info.isDirectory === false) {
-            try {
-                const file = new File(normalizeWhisperPath(whisperModelPath));
-                whisperDownloaded = (file.size ?? 0) > 0;
-                if (whisperDownloaded && file.size) {
-                    whisperSizeLabel = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-                }
-            } catch (error) {
-                logSettingsWarn('Whisper file info failed', error);
-            }
+    if (whisperModelPath && selectedWhisperModel) {
+        const { info, ready } = getWhisperReadiness(selectedWhisperModel, whisperModelPath);
+        whisperDownloaded = ready;
+        const size = getWhisperPathInfoSize(info);
+        if (ready && size > 0) {
+            whisperSizeLabel = `${(size / (1024 * 1024)).toFixed(1)} MB`;
         }
     }
+
 
     const handleDownloadWhisperModel = async () => {
         if (!selectedWhisperModel) return;
@@ -512,30 +525,36 @@ export function AISettingsScreen() {
                     const targetFile = new File(`${dirUri}${fileName}`);
                     const conflictInfo = safePathInfo(targetFile.uri);
                     if (conflictInfo?.exists && conflictInfo.isDirectory) {
-                        if (!isWhisperTargetPath(targetFile.uri, fileName)) {
-                            throw new Error(tr('settings.aiMobile.offlineModelPathIsUnsafe', { path: targetFile.uri }));
-                        }
-                    }
-                    const postCleanupInfo = safePathInfo(targetFile.uri);
-                    if (postCleanupInfo?.exists && postCleanupInfo.isDirectory) {
                         throw new Error(tr('settings.aiMobile.offlineModelPathIsFolder', { path: targetFile.uri }));
+                    }
+                    if (!isSafeWhisperModelTarget(targetFile.uri, selectedWhisperModel)) {
+                        throw new Error(tr('settings.aiMobile.offlineModelPathIsUnsafe', { path: targetFile.uri }));
                     }
                     const existingInfo = safePathInfo(targetFile.uri);
                     if (existingInfo?.exists && existingInfo.isDirectory === false) {
+                        if (isWhisperModelFileReady(selectedWhisperModel, existingInfo)) {
+                            updateSpeechSettings({ offlineModelPath: targetFile.uri, model: selectedWhisperModel.id });
+                            setWhisperDownloadState('success');
+                            clearSuccess();
+                            return;
+                        }
                         try {
-                            const existingFile = new File(targetFile.uri);
-                            if ((existingFile.size ?? 0) > 0) {
-                                updateSpeechSettings({ offlineModelPath: targetFile.uri, model: selectedWhisperModel.id });
-                                setWhisperDownloadState('success');
-                                clearSuccess();
-                                return;
-                            }
+                            targetFile.delete();
                         } catch (error) {
-                            logSettingsWarn('Whisper existing file check failed', error);
+                            logSettingsWarn('Whisper incomplete file cleanup failed', error);
                         }
                     }
                     try {
                         const file = await File.downloadFileAsync(url, targetFile, { idempotent: true });
+                        const downloadedInfo = safePathInfo(file.uri);
+                        if (!isWhisperModelFileReady(selectedWhisperModel, downloadedInfo)) {
+                            try {
+                                file.delete();
+                            } catch (error) {
+                                logSettingsWarn('Whisper incomplete download cleanup failed', error);
+                            }
+                            throw new Error('Downloaded Whisper model file looks incomplete. Please retry on Wi-Fi.');
+                        }
                         updateSpeechSettings({ offlineModelPath: file.uri, model: selectedWhisperModel.id });
                     } catch (downloadError) {
                         const fallbackMessage = tr('settings.aiMobile.downloadFailedPleaseRetryOnWiFiLargeModelsCannot');
@@ -568,17 +587,13 @@ export function AISettingsScreen() {
 
     const handleDeleteWhisperModel = () => {
         try {
-            if (whisperModelPath) {
+            if (whisperModelPath && selectedWhisperModel) {
                 const info = safePathInfo(whisperModelPath);
-                const basename = Paths.basename(whisperModelPath);
-                if (basename && basename.endsWith('.bin') && info?.exists) {
-                    if (info.isDirectory) {
-                        const dir = new Directory(normalizeWhisperPath(whisperModelPath));
-                        dir.delete();
-                    } else {
-                        const file = new File(normalizeWhisperPath(whisperModelPath));
-                        file.delete();
-                    }
+                if (info?.exists && info.isDirectory === false && isSafeWhisperModelTarget(whisperModelPath, selectedWhisperModel)) {
+                    const file = new File(normalizeWhisperPath(whisperModelPath));
+                    file.delete();
+                } else if (info?.exists) {
+                    logSettingsWarn('Refusing to delete unsafe Whisper model target', new Error(whisperModelPath));
                 }
             }
             updateSpeechSettings({ offlineModelPath: undefined });
