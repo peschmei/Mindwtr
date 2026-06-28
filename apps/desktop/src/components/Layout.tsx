@@ -513,9 +513,9 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
             {!isFocusMode && (
                 <aside className={cn(
                     "border-r border-border bg-card flex flex-col transition-all duration-150",
-                    isCollapsed ? "w-16 p-2" : "w-64 px-3 py-3"
+                    isCollapsed ? "w-16 p-2" : "w-64 px-3 pt-4 pb-3"
                 )}>
-                <div className={cn("flex items-center gap-2 px-1.5 mb-3", isCollapsed && "justify-center")}>
+                <div className={cn("flex items-center gap-2 px-1.5 mb-4", isCollapsed && "justify-center")}>
                     {!isCollapsed && (
                         <img
                             src="/logo.png"
@@ -541,7 +541,7 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                 <button
                     onClick={triggerSearch}
                     className={cn(
-                        "w-full flex items-center gap-2.5 px-2.5 py-2 mb-3 rounded-md border border-border/70 bg-background/60 text-[13px] font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
+                        "w-full flex items-center gap-2.5 px-2.5 py-2 mb-4 rounded-md border border-border/70 bg-background/60 text-[13px] font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
                         isCollapsed && "justify-center px-2"
                     )}
                     title={`${searchTitleLabel} (${searchShortcutHint})`}
@@ -562,7 +562,7 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                 <button
                     onClick={triggerInboxCapture}
                     className={cn(
-                        "w-full flex h-9 items-center gap-2.5 px-2.5 mb-3 rounded-md border border-primary/25 bg-primary/15 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/40",
+                        "w-full flex h-9 items-center gap-2.5 px-2.5 mb-6 rounded-md border border-primary/25 bg-primary/15 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/40",
                         isCollapsed && "h-10 justify-center px-2"
                     )}
                     title={inboxCaptureLabel}
