@@ -8,6 +8,7 @@ import Index from '../app/index';
 import TabLayout from '../app/(drawer)/(tabs)/_layout';
 
 const mockRouterPush = vi.hoisted(() => vi.fn());
+const selectedAreaIdForNewTasksMock = vi.hoisted(() => ({ current: null as string | null | undefined }));
 const mockTaskSettings = vi.hoisted(() => ({
   appearance: {} as Record<string, unknown>,
   gtd: {
@@ -108,7 +109,7 @@ vi.mock('@/components/quick-capture-sheet', () => ({
 }));
 
 vi.mock('@/hooks/use-mobile-area-filter', () => ({
-  useMobileAreaFilter: () => ({ selectedAreaIdForNewTasks: null }),
+  useMobileAreaFilter: () => ({ selectedAreaIdForNewTasks: selectedAreaIdForNewTasksMock.current }),
 }));
 
 vi.mock('@/hooks/use-mobile-sync-badge', () => ({
@@ -332,6 +333,7 @@ describe('mobile tab quick capture', () => {
     mockTaskSettings.appearance = {};
     mockTaskSettings.gtd.defaultCaptureMethod = 'text';
     mockTaskSettings.savedSearches = [];
+    selectedAreaIdForNewTasksMock.current = null;
     mockThemeTokens.value = { isMaterial: false, roles: null, shape: { large: 16 } };
   });
 
@@ -365,6 +367,23 @@ describe('mobile tab quick capture', () => {
     sheets = getQuickCaptureSheets(tree);
     expect(sheets).toHaveLength(1);
     expect(sheets[0]?.props.visible).toBe(true);
+  });
+
+  it('passes the selected area filter into quick capture initial props', () => {
+    selectedAreaIdForNewTasksMock.current = 'area-work';
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<TabLayout />);
+    });
+
+    act(() => {
+      getAddTaskButton(tree).props.onPress();
+    });
+
+    const sheets = getQuickCaptureSheets(tree);
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0]?.props.initialProps).toEqual({ areaId: 'area-work' });
   });
 
   it('defaults cold tab startup to Focus', () => {

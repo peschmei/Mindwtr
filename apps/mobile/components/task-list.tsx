@@ -396,8 +396,11 @@ function TaskListComponent({
   const canBulkOrganizeProject = enableProjectBulkOrganize && Boolean(projectId);
   const canBulkOrganizeSelection = canBulkOrganizeInbox || canBulkOrganizeProject;
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
-  const { areaById, resolvedAreaFilter } = useMobileAreaFilter();
+  const { areaById, resolvedAreaFilter, selectedAreaIdForNewTasks } = useMobileAreaFilter();
   const defaultNewTaskAreaId = resolveDefaultNewTaskAreaId(settings, areas);
+  const quickAddNewTaskAreaId = selectedAreaIdForNewTasks === undefined
+    ? defaultNewTaskAreaId
+    : selectedAreaIdForNewTasks ?? undefined;
 
   // Track the last-seen signal so a remount (e.g. toggling reorder mode swaps the
   // scroll container component type) doesn't re-open the sheet from a stale value.
@@ -1297,10 +1300,13 @@ function TaskListComponent({
       const created = await addProject(
         projectTitle,
         DEFAULT_PROJECT_COLOR,
-        getQuickAddProjectInitialProps(initialProps, defaultNewTaskAreaId)
+        getQuickAddProjectInitialProps(initialProps, quickAddNewTaskAreaId)
       );
       if (!created) return;
       initialProps.projectId = created.id;
+    }
+    if (!initialProps.projectId && !props.areaId) {
+      initialProps.areaId = quickAddNewTaskAreaId;
     }
     if (initialProps.projectId) {
       initialProps.areaId = undefined;

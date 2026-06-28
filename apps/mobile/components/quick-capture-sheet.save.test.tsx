@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { QuickCaptureSheet } from './quick-capture-sheet';
 
+const selectedAreaIdForNewTasksMock = vi.hoisted(() => ({ current: undefined as string | null | undefined }));
+
 const {
   addTask,
   addProject,
@@ -152,7 +154,7 @@ vi.mock('@/contexts/toast-context', () => ({
 }));
 
 vi.mock('@/hooks/use-mobile-area-filter', () => ({
-  useMobileAreaFilter: () => ({ selectedAreaIdForNewTasks: null }),
+  useMobileAreaFilter: () => ({ selectedAreaIdForNewTasks: selectedAreaIdForNewTasksMock.current }),
 }));
 
 vi.mock('@/hooks/use-theme-colors', () => ({
@@ -229,6 +231,8 @@ describe('QuickCaptureSheet save handling', () => {
     selectStore.getState().areas = [];
     selectStore.getState().projects = [];
     selectStore.getState().tasks = [];
+    selectStore.getState().settings = {};
+    selectedAreaIdForNewTasksMock.current = undefined;
     getUsedTaskTokens.mockClear();
     getUsedTaskTokens.mockReturnValue([]);
     documentPickerGetDocumentAsync.mockReset();
@@ -657,6 +661,75 @@ describe('QuickCaptureSheet save handling', () => {
     }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(openTaskScreen).toHaveBeenCalledWith('task-new', 'project-1', 'task');
+  });
+
+  it('uses the selected area filter for new captures before the GTD default area', async () => {
+    selectedAreaIdForNewTasksMock.current = 'area-work';
+    selectStore.getState().areas = [
+      { id: 'area-home', name: 'Home', order: 0, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
+      { id: 'area-work', name: 'Work', order: 1, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
+    ];
+    selectStore.getState().settings = { gtd: { defaultAreaId: 'area-home' } };
+    addTask.mockResolvedValue({ success: true, id: 'task-1' });
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet
+          visible
+          openRequestId={1}
+          initialValue="Area-filtered task"
+          onClose={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+
+    await act(async () => {
+      body.props.handleSave();
+      await Promise.resolve();
+    });
+
+    expect(addTask).toHaveBeenCalledWith('Area-filtered task', expect.objectContaining({
+      areaId: 'area-work',
+      status: 'inbox',
+    }));
+  });
+
+  it('does not apply the GTD default area while the no-area filter is active', async () => {
+    selectedAreaIdForNewTasksMock.current = null;
+    selectStore.getState().areas = [
+      { id: 'area-home', name: 'Home', order: 0, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
+    ];
+    selectStore.getState().settings = { gtd: { defaultAreaId: 'area-home' } };
+    addTask.mockResolvedValue({ success: true, id: 'task-1' });
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet
+          visible
+          openRequestId={1}
+          initialValue="No-area task"
+          onClose={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+
+    await act(async () => {
+      body.props.handleSave();
+      await Promise.resolve();
+    });
+
+    const savedProps = addTask.mock.calls[0]?.[1] as { areaId?: string } | undefined;
+    expect(savedProps?.areaId).toBeUndefined();
   });
 
   it('saves picker due dates as date-only values', async () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Project, Task } from '@mindwtr/core';
+import type { Area, Project, Task } from '@mindwtr/core';
 
 const addTaskMock = vi.hoisted(() => vi.fn());
 const addProjectMock = vi.hoisted(() => vi.fn());
@@ -9,6 +9,7 @@ const updateTaskMock = vi.hoisted(() => vi.fn());
 const setHighlightTaskMock = vi.hoisted(() => vi.fn());
 const quickAddPropsSpy = vi.hoisted(() => vi.fn());
 const quickAddFocusMock = vi.hoisted(() => vi.fn());
+const selectedAreaIdForNewTasksMock = vi.hoisted(() => ({ current: undefined as string | null | undefined }));
 const taskEditModalPropsSpy = vi.hoisted(() => vi.fn());
 const bulkOrganizeModalPropsSpy = vi.hoisted(() => vi.fn());
 const parseQuickAddMock = vi.hoisted(() => vi.fn());
@@ -65,7 +66,7 @@ const storeState = vi.hoisted(() => ({
   _allTasks: [] as Task[],
   projects: [projectFixture as Project],
   sections: [],
-  areas: [],
+  areas: [] as Area[],
   addTask: addTaskMock,
   addProject: addProjectMock,
   updateTask: updateTaskMock,
@@ -215,7 +216,7 @@ vi.mock('@/hooks/use-mobile-area-filter', () => ({
   useMobileAreaFilter: () => ({
     areaById: new Map(),
     resolvedAreaFilter: null,
-    selectedAreaIdForNewTasks: undefined,
+    selectedAreaIdForNewTasks: selectedAreaIdForNewTasksMock.current,
   }),
 }));
 
@@ -332,7 +333,9 @@ describe('TaskList project quick add', () => {
     resetTaskListSelectionState();
     storeState.tasks = [];
     storeState._allTasks = [];
+    storeState.areas = [];
     storeState.highlightTaskId = null;
+    selectedAreaIdForNewTasksMock.current = undefined;
     addTaskMock.mockResolvedValue({ success: true, id: 'created-task' });
     parseQuickAddMock.mockImplementation((input: string) => ({ title: input, props: {} }));
     vi.stubGlobal('requestAnimationFrame', (callback: (time: number) => void) => {
@@ -353,6 +356,16 @@ describe('TaskList project quick add', () => {
       statusFilter="all"
       taskSource={[]}
       title={project.title}
+    />,
+  );
+
+  const renderInboxList = () => create(
+    <TaskList
+      allowAdd
+      showHeader={false}
+      statusFilter="inbox"
+      taskSource={[]}
+      title="Inbox"
     />,
   );
 
@@ -425,6 +438,39 @@ describe('TaskList project quick add', () => {
 
     const bulkBarProps = tree.root.findAll((node) => String(node.type) === 'TaskListBulkBar')[0]?.props;
     expect(bulkBarProps.statusOptions).toEqual(['next', 'waiting', 'someday', 'done', 'reference']);
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('assigns standalone quick-add tasks to the selected area filter', async () => {
+    selectedAreaIdForNewTasksMock.current = 'area-work';
+    storeState.areas = [{
+      id: 'area-work',
+      name: 'Work',
+      order: 0,
+      createdAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
+    }];
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = renderInboxList();
+    });
+
+    await act(async () => {
+      latestQuickAddProps().onChangeText('Capture work task');
+    });
+
+    await act(async () => {
+      await latestQuickAddProps().handleAddTask();
+    });
+
+    expect(addTaskMock).toHaveBeenCalledWith('Capture work task', expect.objectContaining({
+      areaId: 'area-work',
+      status: 'inbox',
+    }));
 
     act(() => {
       tree.unmount();

@@ -63,10 +63,17 @@ export function useMobileAreaFilter() {
     });
   }, [filterSettings, updateSettings]);
 
+  const selectedAreaIdForNewTasks = useMemo(() => {
+    if (resolvedAreaFilter === AREA_FILTER_ALL) return undefined;
+    if (resolvedAreaFilter === AREA_FILTER_NONE) return null;
+    return resolvedAreaFilter;
+  }, [resolvedAreaFilter]);
+
   return {
     areaById,
     didResetDeletedAreaFilter,
     resolvedAreaFilter,
+    selectedAreaIdForNewTasks,
     setAreaFilter,
     sortedAreas,
   };

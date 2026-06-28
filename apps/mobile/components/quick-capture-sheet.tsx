@@ -27,6 +27,7 @@ import {
   useTaskStore,
 } from '@mindwtr/core';
 import { useLanguage } from '../contexts/language-context';
+import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useThemeTokens } from '@/hooks/use-theme-tokens';
 import { useToast } from '@/contexts/toast-context';
@@ -115,7 +116,10 @@ export function QuickCaptureSheet({
   const contextInputRef = useRef<TextInput>(null);
   const isSavingRef = useRef(false);
   const prioritiesEnabled = settings?.features?.priorities !== false;
-  const defaultAreaId = resolveDefaultNewTaskAreaId(settings, areas) ?? null;
+  const { selectedAreaIdForNewTasks } = useMobileAreaFilter();
+  const defaultAreaId = selectedAreaIdForNewTasks === undefined
+    ? resolveDefaultNewTaskAreaId(settings, areas) ?? null
+    : selectedAreaIdForNewTasks;
 
   const updateSpeechSettings = useCallback(
     (next: Partial<NonNullable<NonNullable<typeof settings.ai>['speechToText']>>) => {

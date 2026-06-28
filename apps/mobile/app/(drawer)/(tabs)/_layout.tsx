@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MobileAreaSwitcher } from '@/components/mobile-area-switcher';
+import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useMobileSyncBadge } from '@/hooks/use-mobile-sync-badge';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useThemeTokens } from '@/hooks/use-theme-tokens';
@@ -528,6 +529,7 @@ export default function TabLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings } = useTaskStore();
+  const { selectedAreaIdForNewTasks } = useMobileAreaFilter();
   const androidNavInset = Platform.OS === 'android' && insets.bottom >= 20
     ? Math.max(0, insets.bottom - 12)
     : 0;
@@ -557,8 +559,13 @@ export default function TabLayout() {
   const longPressRef = useRef(false);
   const withSelectedArea = useCallback((initialProps?: Partial<Task> | null): Partial<Task> | undefined => {
     const nextInitialProps = initialProps ? { ...initialProps } : {};
+    const hasProject = typeof nextInitialProps.projectId === 'string' && nextInitialProps.projectId.trim().length > 0;
+    const hasArea = Object.prototype.hasOwnProperty.call(nextInitialProps, 'areaId');
+    if (!hasProject && !hasArea && selectedAreaIdForNewTasks) {
+      nextInitialProps.areaId = selectedAreaIdForNewTasks;
+    }
     return Object.keys(nextInitialProps).length > 0 ? nextInitialProps : undefined;
-  }, []);
+  }, [selectedAreaIdForNewTasks]);
 
   const openQuickCapture = useCallback((options?: { initialValue?: string; initialProps?: Partial<Task>; autoRecord?: boolean }) => {
     setCaptureState((prev) => ({
