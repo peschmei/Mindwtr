@@ -525,19 +525,30 @@ pub(crate) fn start_audio_recording(
 }
 
 #[tauri::command]
-pub(crate) fn stop_audio_recording(
+pub(crate) async fn stop_audio_recording(
     app: tauri::AppHandle,
     state: tauri::State<'_, AudioRecorderState>,
 ) -> Result<AudioCaptureResult, String> {
-    let mut guard = state
-        .inner()
-        .0
-        .lock()
-        .map_err(|_| "Recorder lock poisoned".to_string())?;
-    let mut recorder = guard
-        .take()
-        .ok_or_else(|| "No active recording".to_string())?;
+    let recorder = {
+        let mut guard = state
+            .inner()
+            .0
+            .lock()
+            .map_err(|_| "Recorder lock poisoned".to_string())?;
+        guard
+            .take()
+            .ok_or_else(|| "No active recording".to_string())?
+    };
 
+    tauri::async_runtime::spawn_blocking(move || stop_audio_recording_blocking(app, recorder))
+        .await
+        .map_err(|error| format!("Audio stop task failed: {error}"))?
+}
+
+fn stop_audio_recording_blocking(
+    app: tauri::AppHandle,
+    mut recorder: AudioRecorderHandle,
+) -> Result<AudioCaptureResult, String> {
     let _ = recorder.stop_tx.send(());
     if let Some(join) = recorder.join.take() {
         let _ = join.join();
@@ -572,17 +583,7 @@ pub(crate) fn stop_audio_recording(
     fs::create_dir_all(&target_dir).map_err(|e| e.to_string())?;
     let target_path = target_dir.join(&file_name);
 
-    let spec = hound::WavSpec {
-        channels: info.channels,
-        sample_rate: info.sample_rate,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-    let mut writer = hound::WavWriter::create(&target_path, spec).map_err(|e| e.to_string())?;
-    for sample in samples.iter() {
-        writer.write_sample(*sample).map_err(|e| e.to_string())?;
-    }
-    writer.finalize().map_err(|e| e.to_string())?;
+    write_audio_capture_wav(&target_path, &info, &samples)?;
 
     Ok(AudioCaptureResult {
         path: target_path.to_string_lossy().to_string(),
@@ -593,8 +594,38 @@ pub(crate) fn stop_audio_recording(
     })
 }
 
+fn write_audio_capture_wav(
+    path: &Path,
+    info: &RecorderInfo,
+    samples: &[i16],
+) -> Result<(), String> {
+    let spec = hound::WavSpec {
+        channels: info.channels,
+        sample_rate: info.sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(path, spec).map_err(|e| e.to_string())?;
+    for sample in samples {
+        writer.write_sample(*sample).map_err(|e| e.to_string())?;
+    }
+    writer.finalize().map_err(|e| e.to_string())
+}
+
 #[tauri::command]
-pub(crate) fn transcribe_whisper(
+pub(crate) async fn transcribe_whisper(
+    model_path: String,
+    audio_path: String,
+    language: Option<String>,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        transcribe_whisper_blocking(model_path, audio_path, language)
+    })
+    .await
+    .map_err(|error| format!("Whisper transcription task failed: {error}"))?
+}
+
+fn transcribe_whisper_blocking(
     model_path: String,
     audio_path: String,
     language: Option<String>,
@@ -784,7 +815,19 @@ fn download_whisper_model_blocking(app: tauri::AppHandle, model: String) -> Resu
 }
 
 #[tauri::command]
-pub(crate) fn transcribe_parakeet(
+pub(crate) async fn transcribe_parakeet(
+    model_path: String,
+    audio_path: String,
+    language: Option<String>,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        transcribe_parakeet_blocking(model_path, audio_path, language)
+    })
+    .await
+    .map_err(|error| format!("Parakeet transcription task failed: {error}"))?
+}
+
+fn transcribe_parakeet_blocking(
     model_path: String,
     audio_path: String,
     language: Option<String>,
@@ -1055,5 +1098,27 @@ mod tests {
     #[test]
     fn max_audio_sample_count_scales_by_channels() {
         assert_eq!(max_audio_sample_count(16_000, 2), 19_200_000);
+    }
+
+    #[test]
+    fn write_audio_capture_wav_round_trips_samples() {
+        let temp_dir = tempfile::tempdir().expect("should create temp dir");
+        let wav_path = temp_dir.path().join("capture.wav");
+        let info = RecorderInfo {
+            sample_rate: 16_000,
+            channels: 1,
+        };
+        let samples = vec![0, i16::MAX, i16::MIN, 42];
+
+        write_audio_capture_wav(&wav_path, &info, &samples).expect("should write wav");
+
+        let mut reader = hound::WavReader::open(&wav_path).expect("should open wav");
+        assert_eq!(reader.spec().sample_rate, 16_000);
+        assert_eq!(reader.spec().channels, 1);
+        let decoded = reader
+            .samples::<i16>()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("should decode samples");
+        assert_eq!(decoded, samples);
     }
 }
