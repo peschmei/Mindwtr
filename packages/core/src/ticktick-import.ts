@@ -749,6 +749,10 @@ const resolveTimestamp = (value: string | undefined, fallback: string): string =
     return parsed ? parsed.toISOString() : fallback;
 };
 
+const resolveImportedTaskStatus = (status: TaskStatus, projectId: string | undefined): TaskStatus => (
+    status === 'inbox' && projectId ? 'next' : status
+);
+
 export const applyTickTickImport = (
     currentData: AppData,
     parsedData: ParsedTickTickImportData,
@@ -882,10 +886,11 @@ export const applyTickTickImport = (
         const completedAt = task.status === 'done' || task.status === 'archived'
             ? task.completedAt ?? updatedAt
             : undefined;
+        const status = resolveImportedTaskStatus(task.status, projectId);
         const nextTask: Task = {
             id: uuidv4(),
             title: task.title,
-            status: task.status,
+            status,
             taskMode: checklist ? 'list' : 'task',
             priority: task.priority,
             contexts: [],

@@ -182,7 +182,7 @@ describe('todoist import', () => {
         const importedTask = result.data.tasks[0];
         expect(importedTask).toMatchObject({
             title: 'Plan launch',
-            status: 'inbox',
+            status: 'next',
             taskMode: 'list',
             projectId: importedProject?.id,
             sectionId: importedSection?.id,

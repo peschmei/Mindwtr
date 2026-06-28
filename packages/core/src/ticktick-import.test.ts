@@ -282,7 +282,7 @@ describe('ticktick import', () => {
 
         const importedTask = result.data.tasks.find((task) => task.title === 'Plan release');
         expect(importedTask).toMatchObject({
-            status: 'inbox',
+            status: 'next',
             taskMode: 'list',
             projectId: importedProject?.id,
             priority: 'high',

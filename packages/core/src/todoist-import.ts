@@ -815,7 +815,7 @@ export const applyTodoistImport = (
             const task: Task = {
                 id: uuidv4(),
                 title: parsedTask.title,
-                status: 'inbox',
+                status: 'next',
                 taskMode: checklist.length > 0 ? 'list' : 'task',
                 tags: Array.from(new Set(parsedTask.tags)),
                 contexts: [],
