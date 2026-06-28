@@ -29,6 +29,7 @@ import { reportError } from '../lib/report-error';
 import { logWarn } from '../lib/app-log';
 import { loadAIKey } from '../lib/ai-config';
 import { encodeWav, resampleAudio } from '../lib/audio-utils';
+import { appendAudioChunkWithLimit, getMaxAudioSamples, MAX_AUDIO_RECORDING_SECONDS } from '../lib/audio-capture-buffer';
 import { getPreferredDesktopAudioCaptureBackend } from '../lib/audio-capture-backend';
 import { processAudioCapture, type SpeechToTextResult } from '../lib/speech-to-text';
 import { DEFAULT_PARAKEET_MODEL, DEFAULT_WHISPER_MODEL } from '../lib/speech-models';
@@ -175,6 +176,8 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
     const audioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
     const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
     const audioChunksRef = useRef<Float32Array[]>([]);
+    const audioSampleCountRef = useRef(0);
+    const audioDurationLimitHitRef = useRef(false);
     const inputSampleRateRef = useRef<number>(16_000);
     const isOpenRef = useRef(false);
     const openRequestInFlightRef = useRef(false);
@@ -548,10 +551,20 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             const zeroGain = context.createGain();
             zeroGain.gain.value = 0;
             audioChunksRef.current = [];
+            audioSampleCountRef.current = 0;
+            audioDurationLimitHitRef.current = false;
             inputSampleRateRef.current = context.sampleRate;
             processor.onaudioprocess = (event) => {
+                if (audioDurationLimitHitRef.current) return;
                 const channel = event.inputBuffer.getChannelData(0);
-                audioChunksRef.current.push(new Float32Array(channel));
+                const result = appendAudioChunkWithLimit({
+                    chunks: audioChunksRef.current,
+                    chunk: channel,
+                    maxSamples: getMaxAudioSamples(inputSampleRateRef.current),
+                    sampleCount: audioSampleCountRef.current,
+                });
+                audioSampleCountRef.current = result.sampleCount;
+                audioDurationLimitHitRef.current = result.limitHit;
             };
             source.connect(processor);
             processor.connect(zeroGain);
@@ -617,6 +630,8 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
 
                 const chunks = audioChunksRef.current;
                 audioChunksRef.current = [];
+                audioSampleCountRef.current = 0;
+                audioDurationLimitHitRef.current = false;
                 if (!saveTask) return;
                 if (!chunks.length) {
                     throw new Error('No audio data captured');
@@ -800,6 +815,14 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         settings.gtd?.saveAudioAttachments,
         t,
     ]);
+
+    useEffect(() => {
+        if (!isRecording) return undefined;
+        const timeout = window.setTimeout(() => {
+            void stopRecording({ saveTask: true });
+        }, MAX_AUDIO_RECORDING_SECONDS * 1000);
+        return () => window.clearTimeout(timeout);
+    }, [isRecording, stopRecording]);
 
     const handleClose = () => {
         if (isRecording && !recordingBusy) {

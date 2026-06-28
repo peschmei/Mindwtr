@@ -687,6 +687,7 @@ struct AudioRecorderHandle {
     stop_tx: mpsc::Sender<()>,
     samples: Arc<Mutex<Vec<i16>>>,
     info: Arc<Mutex<Option<RecorderInfo>>>,
+    limit_hit: Arc<AtomicBool>,
     join: Option<std::thread::JoinHandle<()>>,
 }
 

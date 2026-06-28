@@ -28,6 +28,7 @@ const PARAKEET_REQUIRED_FILES: [&str; 4] = [
 const PARAKEET_PROGRESS_EVENT: &str = "parakeet-model-download-progress";
 const WHISPER_PROGRESS_EVENT: &str = "whisper-model-download-progress";
 const DOWNLOAD_PROGRESS_CHUNK_BYTES: u64 = 1024 * 1024;
+const MAX_AUDIO_RECORDING_SECONDS: usize = 10 * 60;
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -226,6 +227,29 @@ fn validate_download_size(label: &str, total: Option<u64>, loaded: u64) -> Resul
     Ok(())
 }
 
+fn max_audio_sample_count(sample_rate: u32, channels: u16) -> usize {
+    (sample_rate as usize)
+        .saturating_mul(usize::from(channels.max(1)))
+        .saturating_mul(MAX_AUDIO_RECORDING_SECONDS)
+}
+
+fn append_samples_capped<I>(
+    buffer: &mut Vec<i16>,
+    samples: I,
+    sample_count: usize,
+    max_samples: usize,
+) -> bool
+where
+    I: IntoIterator<Item = i16>,
+{
+    let remaining = max_samples.saturating_sub(buffer.len());
+    if remaining == 0 {
+        return true;
+    }
+    buffer.extend(samples.into_iter().take(remaining));
+    sample_count >= remaining || buffer.len() >= max_samples
+}
+
 fn download_to_file(
     app: &tauri::AppHandle,
     event_name: &'static str,
@@ -349,11 +373,13 @@ pub(crate) fn start_audio_recording(
 
     let samples: Arc<Mutex<Vec<i16>>> = Arc::new(Mutex::new(Vec::new()));
     let info: Arc<Mutex<Option<RecorderInfo>>> = Arc::new(Mutex::new(None));
+    let limit_hit = Arc::new(AtomicBool::new(false));
     let (stop_tx, stop_rx) = mpsc::channel();
     let (ready_tx, ready_rx) = mpsc::channel();
 
     let samples_clone = samples.clone();
     let info_clone = info.clone();
+    let limit_hit_clone = limit_hit.clone();
     let join = std::thread::spawn(move || {
         let host = cpal::default_host();
         let device = match host.default_input_device().or_else(|| {
@@ -376,6 +402,7 @@ pub(crate) fn start_audio_recording(
         };
         let sample_rate = config.sample_rate().0;
         let channels = config.channels();
+        let max_samples = max_audio_sample_count(sample_rate, channels);
 
         let err_fn = |err| {
             eprintln!("[audio] stream error: {err}");
@@ -386,13 +413,24 @@ pub(crate) fn start_audio_recording(
             cpal::SampleFormat::F32 => device.build_input_stream(
                 &stream_config,
                 move |data: &[f32], _| {
+                    if limit_hit_clone.load(Ordering::Relaxed) {
+                        return;
+                    }
                     let Ok(mut buffer) = samples_clone.lock() else {
                         return;
                     };
-                    buffer.extend(data.iter().map(|sample| {
-                        let clamped = sample.clamp(-1.0, 1.0);
-                        (clamped * i16::MAX as f32) as i16
-                    }));
+                    let reached_limit = append_samples_capped(
+                        &mut buffer,
+                        data.iter().map(|sample| {
+                            let clamped = sample.clamp(-1.0, 1.0);
+                            (clamped * i16::MAX as f32) as i16
+                        }),
+                        data.len(),
+                        max_samples,
+                    );
+                    if reached_limit {
+                        limit_hit_clone.store(true, Ordering::Relaxed);
+                    }
                 },
                 err_fn,
                 None,
@@ -400,10 +438,21 @@ pub(crate) fn start_audio_recording(
             cpal::SampleFormat::I16 => device.build_input_stream(
                 &stream_config,
                 move |data: &[i16], _| {
+                    if limit_hit_clone.load(Ordering::Relaxed) {
+                        return;
+                    }
                     let Ok(mut buffer) = samples_clone.lock() else {
                         return;
                     };
-                    buffer.extend_from_slice(data);
+                    let reached_limit = append_samples_capped(
+                        &mut buffer,
+                        data.iter().copied(),
+                        data.len(),
+                        max_samples,
+                    );
+                    if reached_limit {
+                        limit_hit_clone.store(true, Ordering::Relaxed);
+                    }
                 },
                 err_fn,
                 None,
@@ -411,10 +460,21 @@ pub(crate) fn start_audio_recording(
             cpal::SampleFormat::U16 => device.build_input_stream(
                 &stream_config,
                 move |data: &[u16], _| {
+                    if limit_hit_clone.load(Ordering::Relaxed) {
+                        return;
+                    }
                     let Ok(mut buffer) = samples_clone.lock() else {
                         return;
                     };
-                    buffer.extend(data.iter().map(|sample| (*sample as i32 - 32768) as i16));
+                    let reached_limit = append_samples_capped(
+                        &mut buffer,
+                        data.iter().map(|sample| (*sample as i32 - 32768) as i16),
+                        data.len(),
+                        max_samples,
+                    );
+                    if reached_limit {
+                        limit_hit_clone.store(true, Ordering::Relaxed);
+                    }
                 },
                 err_fn,
                 None,
@@ -454,6 +514,7 @@ pub(crate) fn start_audio_recording(
                 stop_tx,
                 samples,
                 info,
+                limit_hit,
                 join: Some(join),
             });
             Ok(())
@@ -495,6 +556,9 @@ pub(crate) fn stop_audio_recording(
         .map_err(|_| "Recorder buffer lock poisoned".to_string())?;
     if samples.is_empty() {
         return Err("No audio captured".into());
+    }
+    if recorder.limit_hit.load(Ordering::Relaxed) {
+        log::warn!("Audio recording reached the maximum duration; saved capped capture");
     }
 
     let timestamp = SystemTime::now()
@@ -976,5 +1040,20 @@ mod tests {
             parakeet_model_archive_sha256(PARAKEET_MODEL_ID),
             Some("5793d0fd397c5778d2cf2126994d58e9d56b1be7c04d13c7a15bb1b4eafb16bf")
         );
+    }
+
+    #[test]
+    fn append_samples_capped_stops_at_max_samples() {
+        let mut samples = vec![1, 2];
+
+        let limit_hit = append_samples_capped(&mut samples, [3, 4, 5], 3, 4);
+
+        assert!(limit_hit);
+        assert_eq!(samples, vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn max_audio_sample_count_scales_by_channels() {
+        assert_eq!(max_audio_sample_count(16_000, 2), 19_200_000);
     }
 }
