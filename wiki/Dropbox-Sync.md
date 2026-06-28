@@ -97,4 +97,4 @@ Use **Test connection** first. If successful, run **Sync** and check logs in [[D
 See:
 
 - [[Data and Sync]]
-- `docs/PRIVACY.md` in the repository
+- https://mindwtr.app/privacy
