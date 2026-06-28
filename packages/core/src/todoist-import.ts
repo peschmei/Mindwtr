@@ -305,6 +305,10 @@ const parseTodoistDate = (
         return { recurringText: text };
     }
 
+    if (/^\d{4}-\d{2}-\d{2}$/u.test(text)) {
+        return { dueDate: text };
+    }
+
     const isoCandidate = text.match(/^\d{4}-\d{2}-\d{2}(?:[T\s].+)?$/u) ? new Date(text) : null;
     if (isoCandidate && Number.isFinite(isoCandidate.getTime())) {
         return { dueDate: isoCandidate.toISOString() };

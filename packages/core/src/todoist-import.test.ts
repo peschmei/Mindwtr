@@ -47,11 +47,11 @@ describe('todoist import', () => {
             checklist: ['Follow up'],
             sectionName: 'Planning',
             priority: 'urgent',
-            dueDate: '2026-04-02T00:00:00.000Z',
+            dueDate: '2026-04-02',
         });
         expect(project.tasks[0].description).toContain('Write launch brief');
         expect(project.tasks[0].description).toContain('Share with leadership');
-        expect(project.tasks[0].description).toContain('Subtask "Follow up": Check dependencies | Due: 2026-04-03T00:00:00.000Z');
+        expect(project.tasks[0].description).toContain('Subtask "Follow up": Check dependencies | Due: 2026-04-03');
         expect(project.tasks[1]).toMatchObject({
             title: 'Weekly review',
             tags: ['#home'],
@@ -135,7 +135,7 @@ describe('todoist import', () => {
                         checklist: ['Call vendor'],
                         sectionName: 'Planning',
                         priority: 'high',
-                        dueDate: '2026-04-02T00:00:00.000Z',
+                        dueDate: '2026-04-02',
                         description: 'Brief the team.',
                     },
                 ],
@@ -187,7 +187,7 @@ describe('todoist import', () => {
             projectId: importedProject?.id,
             sectionId: importedSection?.id,
             priority: 'high',
-            dueDate: '2026-04-02T00:00:00.000Z',
+            dueDate: '2026-04-02',
             description: 'Brief the team.',
             tags: ['#work'],
         });
