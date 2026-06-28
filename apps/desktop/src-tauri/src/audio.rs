@@ -189,6 +189,17 @@ fn emit_download_progress(
     let _ = tauri::Emitter::emit(app, event_name, payload);
 }
 
+fn validate_download_size(label: &str, total: Option<u64>, loaded: u64) -> Result<(), String> {
+    if let Some(expected) = total {
+        if loaded != expected {
+            return Err(format!(
+                "{label} download incomplete: expected {expected} bytes, got {loaded}"
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn download_to_file(
     app: &tauri::AppHandle,
     event_name: &'static str,
@@ -226,6 +237,7 @@ fn download_to_file(
         }
     }
     file.flush().map_err(|error| error.to_string())?;
+    validate_download_size(label, total, loaded)?;
     emit_download_progress(app, event_name, stage, loaded, total);
     Ok(())
 }
@@ -880,5 +892,16 @@ mod tests {
         assert!(error.contains("sherpa-onnx runtime SHA-256 mismatch"));
         assert!(error
             .contains("expected 0000000000000000000000000000000000000000000000000000000000000000"));
+    }
+
+    #[test]
+    fn validate_download_size_rejects_truncated_content_length() {
+        let error = validate_download_size("Whisper model", Some(10), 9)
+            .expect_err("short download should fail");
+
+        assert!(error.contains("Whisper model download incomplete"));
+        assert!(error.contains("expected 10 bytes, got 9"));
+        assert!(validate_download_size("Whisper model", Some(10), 10).is_ok());
+        assert!(validate_download_size("Whisper model", None, 9).is_ok());
     }
 }
