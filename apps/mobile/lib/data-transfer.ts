@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import {
     addBreadcrumb,
     createBackupFileName,
+    ensureFreshLocalSyncSnapshot,
     flushPendingSave,
     prepareRestoredBackupDataForSync,
     serializeBackupData,
@@ -61,6 +62,11 @@ type SnapshotApplyResult = {
     snapshotName: string;
 };
 
+type TransferWriteGuard = {
+    localSnapshotChangeAt: number;
+    operation: string;
+};
+
 const countActiveRecords = (data: AppData) => ({
     tasks: data.tasks.filter((task) => !task.deletedAt).length,
     projects: data.projects.filter((project) => !project.deletedAt).length,
@@ -76,6 +82,26 @@ const toCountExtra = (data: AppData): Record<string, string> => {
         sections: String(counts.sections),
         areas: String(counts.areas),
     };
+};
+
+const getLocalChangeAt = (): number => useTaskStore.getState().lastDataChangeAt;
+
+const assertNoConcurrentTransferWrite = ({ localSnapshotChangeAt, operation }: TransferWriteGuard): void => {
+    ensureFreshLocalSyncSnapshot({
+        localSnapshotChangeAt,
+        getCurrentChangeAt: getLocalChangeAt,
+        requestFollowUp: () => undefined,
+        onStale: ({ localSnapshotChangeAt: snapshotChangeAt, currentChangeAt }) => {
+            void logInfo('Data transfer aborted after local data changed', {
+                scope: 'transfer',
+                extra: {
+                    operation,
+                    snapshotChangeAt: String(snapshotChangeAt),
+                    currentChangeAt: String(currentChangeAt),
+                },
+            });
+        },
+    });
 };
 
 const normalizeBaseUri = (value?: string | null): string | null => {
@@ -222,9 +248,19 @@ const saveCurrentDataSnapshot = async (data: AppData): Promise<string> => {
     return fileName;
 };
 
-const applyImportedData = async (data: AppData): Promise<void> => {
+const applyImportedData = async (data: AppData, guard?: TransferWriteGuard): Promise<void> => {
+    if (guard) {
+        assertNoConcurrentTransferWrite(guard);
+    }
     await mobileStorage.saveData(data);
     await useTaskStore.getState().fetchData({ silent: true });
+};
+
+const readCurrentDataForTransfer = async (): Promise<{ currentData: AppData; localSnapshotChangeAt: number }> => {
+    await flushPendingSave();
+    const localSnapshotChangeAt = getLocalChangeAt();
+    const currentData = await mobileStorage.getData();
+    return { currentData, localSnapshotChangeAt };
 };
 
 export const pickBackupDocument = async (): Promise<TransferDocument | null> =>
@@ -328,10 +364,12 @@ export const restoreDataFromBackup = async (backupData: AppData): Promise<Snapsh
         },
     });
     try {
-        await flushPendingSave();
-        const currentData = await mobileStorage.getData();
+        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
         const snapshotName = await saveCurrentDataSnapshot(currentData);
-        await applyImportedData(prepareRestoredBackupDataForSync(backupData));
+        await applyImportedData(prepareRestoredBackupDataForSync(backupData), {
+            localSnapshotChangeAt,
+            operation: 'restoreBackup',
+        });
         void logInfo('Backup restore complete', {
             scope: 'transfer',
             extra: {
@@ -359,11 +397,13 @@ export const importTodoistData = async (
         },
     });
     try {
-        await flushPendingSave();
-        const currentData = await mobileStorage.getData();
+        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
         const snapshotName = await saveCurrentDataSnapshot(currentData);
         const result = applyTodoistImport(currentData, parsedProjects);
-        await applyImportedData(result.data);
+        await applyImportedData(result.data, {
+            localSnapshotChangeAt,
+            operation: 'importTodoist',
+        });
         void logInfo('Todoist import complete', {
             scope: 'transfer',
             extra: {
@@ -397,11 +437,13 @@ export const importTickTickData = async (
         },
     });
     try {
-        await flushPendingSave();
-        const currentData = await mobileStorage.getData();
+        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
         const snapshotName = await saveCurrentDataSnapshot(currentData);
         const result = applyTickTickImport(currentData, parsedData);
-        await applyImportedData(result.data);
+        await applyImportedData(result.data, {
+            localSnapshotChangeAt,
+            operation: 'importTickTick',
+        });
         void logInfo('TickTick import complete', {
             scope: 'transfer',
             extra: {
@@ -435,11 +477,13 @@ export const importDgtData = async (
         },
     });
     try {
-        await flushPendingSave();
-        const currentData = await mobileStorage.getData();
+        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
         const snapshotName = await saveCurrentDataSnapshot(currentData);
         const result = applyDgtImport(currentData, parsedData);
-        await applyImportedData(result.data);
+        await applyImportedData(result.data, {
+            localSnapshotChangeAt,
+            operation: 'importDgt',
+        });
         void logInfo('DGT import complete', {
             scope: 'transfer',
             extra: {
@@ -473,11 +517,13 @@ export const importOmniFocusData = async (
         },
     });
     try {
-        await flushPendingSave();
-        const currentData = await mobileStorage.getData();
+        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
         const snapshotName = await saveCurrentDataSnapshot(currentData);
         const result = applyOmniFocusImport(currentData, parsedData);
-        await applyImportedData(result.data);
+        await applyImportedData(result.data, {
+            localSnapshotChangeAt,
+            operation: 'importOmniFocus',
+        });
         void logInfo('OmniFocus import complete', {
             scope: 'transfer',
             extra: {
