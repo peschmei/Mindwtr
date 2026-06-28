@@ -61,10 +61,10 @@ const createMergeStats = (conflictIds: string[] = []): MergeStats => {
     };
 };
 
-const renderLayout = () => render(
+const renderLayout = (currentView = 'inbox', onViewChange = vi.fn()) => render(
     <LanguageProvider>
-        <KeybindingProvider currentView="inbox" onNavigate={onNavigate}>
-            <Layout currentView="inbox" onViewChange={vi.fn()}>
+        <KeybindingProvider currentView={currentView} onNavigate={onNavigate}>
+            <Layout currentView={currentView} onViewChange={onViewChange}>
                 <div>Main content</div>
             </Layout>
         </KeybindingProvider>
@@ -80,6 +80,7 @@ const resetStores = () => {
 };
 
 beforeEach(() => {
+    window.localStorage.clear();
     resetStores();
     act(() => {
         useTaskStore.setState((state) => ({
@@ -119,6 +120,46 @@ afterEach(() => {
     vi.clearAllMocks();
 });
 
+describe('Layout sidebar archive section', () => {
+    it('keeps archive visible by default on a fresh sidebar', () => {
+        const { container, getByRole } = renderLayout();
+
+        expect(getByRole('button', { name: 'Archive' })).toHaveAttribute('aria-expanded', 'true');
+        expect(container.querySelector('#sidebar-section-archive')).not.toHaveClass('hidden');
+        expect(getByRole('button', { name: 'Done' })).toBeInTheDocument();
+    });
+
+    it('expands archive when the active view lives in archive', async () => {
+        const { container, getByRole } = renderLayout('trash');
+
+        await waitFor(() => {
+            expect(getByRole('button', { name: 'Archive' })).toHaveAttribute('aria-expanded', 'true');
+            expect(container.querySelector('#sidebar-section-archive')).not.toHaveClass('hidden');
+        });
+        expect(getByRole('button', { name: 'Trash' })).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('respects a stored collapsed archive preference', () => {
+        window.localStorage.setItem('mindwtr:sidebar:collapsedSections', JSON.stringify(['archive']));
+
+        const { container, getByRole } = renderLayout();
+
+        expect(getByRole('button', { name: 'Archive' })).toHaveAttribute('aria-expanded', 'false');
+        expect(container.querySelector('#sidebar-section-archive')).toHaveClass('hidden');
+    });
+
+    it('uses the full archive header row as the collapse target', () => {
+        const { container, getByRole } = renderLayout();
+        const archiveHeader = getByRole('button', { name: 'Archive' });
+
+        expect(archiveHeader).toHaveAttribute('aria-controls', 'sidebar-section-archive');
+        fireEvent.click(archiveHeader);
+
+        expect(archiveHeader).toHaveAttribute('aria-expanded', 'false');
+        expect(container.querySelector('#sidebar-section-archive')).toHaveClass('hidden');
+    });
+});
+
 describe('Layout Obsidian nav visibility', () => {
     it('opens global inbox capture from the visible Add Task button', () => {
         const quickAddListener = vi.fn();
@@ -127,8 +168,8 @@ describe('Layout Obsidian nav visibility', () => {
         const addTaskButton = getByRole('button', { name: 'Add Task (Inbox)' });
 
         expect(addTaskButton).toHaveAttribute('title', 'Add Task (Inbox)');
-        expect(addTaskButton).toHaveClass('border');
-        expect(addTaskButton).not.toHaveClass('bg-primary');
+        expect(addTaskButton).toHaveClass('bg-primary');
+        expect(addTaskButton).toHaveClass('text-primary-foreground');
 
         fireEvent.click(addTaskButton);
 

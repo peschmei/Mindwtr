@@ -48,6 +48,7 @@ type NavItem = {
     fallbackLabel?: string;
     icon: LucideIcon;
     count?: number;
+    tone?: 'primary' | 'normal' | 'recessed';
 };
 
 type NavSection = {
@@ -57,16 +58,21 @@ type NavSection = {
 };
 
 const SECTION_COLLAPSE_STORAGE_KEY = 'mindwtr:sidebar:collapsedSections';
+const DEFAULT_COLLAPSED_SECTION_KEYS: string[] = [];
+
+function createDefaultCollapsedSections(): Set<string> {
+    return new Set(DEFAULT_COLLAPSED_SECTION_KEYS);
+}
 
 function loadCollapsedSections(): Set<string> {
     if (typeof window === 'undefined') return new Set();
     try {
         const raw = window.localStorage.getItem(SECTION_COLLAPSE_STORAGE_KEY);
-        if (!raw) return new Set();
+        if (!raw) return createDefaultCollapsedSections();
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? new Set(parsed.filter((v): v is string => typeof v === 'string')) : new Set();
+        return Array.isArray(parsed) ? new Set(parsed.filter((v): v is string => typeof v === 'string')) : createDefaultCollapsedSections();
     } catch {
-        return new Set();
+        return createDefaultCollapsedSections();
     }
 }
 
@@ -275,15 +281,15 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
             key: 'focus',
             label: t('nav.sectionFocus') || 'Focus',
             items: [
-                { id: 'agenda', labelKey: 'nav.agenda', icon: Target },
-                { id: 'inbox', labelKey: 'nav.inbox', icon: Inbox, count: inboxCount },
+                { id: 'agenda', labelKey: 'nav.agenda', icon: Target, tone: 'primary' },
+                { id: 'inbox', labelKey: 'nav.inbox', icon: Inbox, count: inboxCount, tone: 'primary' },
             ],
         },
         {
             key: 'lists',
             label: t('nav.sectionLists') || 'Lists',
             items: [
-                { id: 'projects', labelKey: 'nav.projects', icon: Folder },
+                { id: 'projects', labelKey: 'nav.projects', icon: Folder, tone: 'primary' },
                 { id: 'someday', labelKey: 'nav.someday', icon: Clock3 },
                 { id: 'waiting', labelKey: 'nav.waiting', icon: PauseCircle },
                 { id: 'reference', labelKey: 'nav.reference', icon: Book },
@@ -306,9 +312,9 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
             key: 'archive',
             label: t('nav.sectionArchive') || 'Archive',
             items: [
-                { id: 'done', labelKey: 'nav.done', icon: CheckSquare },
-                { id: 'archived', labelKey: 'nav.archived', icon: Archive },
-                { id: 'trash', labelKey: 'nav.trash', icon: Trash2 },
+                { id: 'done', labelKey: 'nav.done', icon: CheckSquare, tone: 'recessed' },
+                { id: 'archived', labelKey: 'nav.archived', icon: Archive, tone: 'recessed' },
+                { id: 'trash', labelKey: 'nav.trash', icon: Trash2, tone: 'recessed' },
             ],
         },
     ]), [inboxCount, isObsidianEnabled, t]);
@@ -507,21 +513,21 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
             {!isFocusMode && (
                 <aside className={cn(
                     "border-r border-border bg-card flex flex-col transition-all duration-150",
-                    isCollapsed ? "w-16 p-2" : "w-64 p-4"
+                    isCollapsed ? "w-16 p-2" : "w-64 px-3 py-3"
                 )}>
-                <div className={cn("flex items-center gap-2 px-2 mb-4", isCollapsed && "justify-center")}>
+                <div className={cn("flex items-center gap-2 px-1.5 mb-3", isCollapsed && "justify-center")}>
                     {!isCollapsed && (
                         <img
                             src="/logo.png"
                             alt="Mindwtr"
-                            className="w-8 h-8 rounded-lg"
+                            className="w-7 h-7 rounded-md"
                         />
                     )}
-                    {!isCollapsed && <h1 className="text-xl font-bold">{t('app.name')}</h1>}
+                    {!isCollapsed && <h1 className="text-base font-semibold tracking-tight">{t('app.name')}</h1>}
                     <button
                         onClick={toggleSidebar}
                         className={cn(
-                            "ml-auto p-1 rounded hover:bg-accent transition-colors text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
+                            "ml-auto p-1 rounded-md hover:bg-accent transition-colors text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
                             isCollapsed && "ml-0"
                         )}
                         title={t('keybindings.toggleSidebar')}
@@ -535,20 +541,20 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                 <button
                     onClick={triggerSearch}
                     className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 mb-3 rounded-lg border border-border/80 bg-background/60 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
+                        "w-full flex items-center gap-2.5 px-2.5 py-2 mb-3 rounded-md border border-border/70 bg-background/60 text-[13px] font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
                         isCollapsed && "justify-center px-2"
                     )}
                     title={`${searchTitleLabel} (${searchShortcutHint})`}
                     aria-label={searchTitleLabel}
                 >
-                    <Search className="w-4 h-4 text-primary" />
+                    <Search className="w-3.5 h-3.5 text-primary" />
                     {!isCollapsed && (
                         <>
                             <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
                                 <span>{searchTitleLabel}</span>
                                 <span className="truncate text-[11px] font-normal text-muted-foreground">{searchScopeLabel}</span>
                             </span>
-                            <span className="rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">{searchShortcutHint}</span>
+                            <span className="rounded border border-border/70 bg-muted/35 px-1.5 py-0.5 text-[10px] text-muted-foreground">{searchShortcutHint}</span>
                         </>
                     )}
                 </button>
@@ -556,8 +562,8 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                 <button
                     onClick={triggerInboxCapture}
                     className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2 mb-4 rounded-md border border-border/80 bg-background/40 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
-                        isCollapsed && "justify-center px-2"
+                        "w-full flex h-9 items-center gap-2.5 px-2.5 mb-3 rounded-md border border-primary/80 bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-primary/40",
+                        isCollapsed && "h-10 justify-center px-2"
                     )}
                     title={inboxCaptureLabel}
                     aria-label={inboxCaptureLabel}
@@ -570,9 +576,9 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
 
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                     {savedSearches.length > 0 && (
-                        <div className={cn("mb-4 space-y-1", isCollapsed && "mb-2")}>
+                        <div className={cn("mb-2 space-y-1", isCollapsed && "mb-2")}>
                             {!isCollapsed && (
-                                <div className="px-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                <div className="px-2 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.16em]">
                                     {t('search.savedSearches')}
                                 </div>
                             )}
@@ -581,7 +587,7 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                                     key={search.id}
                                     onClick={() => onViewChange(`savedSearch:${search.id}`)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
+                                        "w-full flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
                                         currentView === `savedSearch:${search.id}`
                                             ? "bg-primary/5 text-primary"
                                             : "hover:bg-accent text-muted-foreground",
@@ -596,31 +602,52 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                         </div>
                     )}
 
-                    <nav className="space-y-4 pb-4" data-sidebar-nav>
+                    <nav className="space-y-3.5 pb-2" data-sidebar-nav>
                         {navSections.map((section) => {
                             const isSectionCollapsed = !isCollapsed && collapsedSections.has(section.key);
                             const sectionId = `sidebar-section-${section.key}`;
                             return (
-                            <div key={section.key} className="space-y-0.5">
+                            <div key={section.key} className="space-y-1">
                                 {!isCollapsed && (
                                     <button
                                         type="button"
                                         onClick={() => toggleSection(section.key)}
                                         aria-expanded={!isSectionCollapsed}
                                         aria-controls={sectionId}
-                                        className="group w-full flex items-center gap-1 px-3 pt-2 pb-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded cursor-pointer"
+                                        className="group w-full flex h-7 items-center gap-1 rounded-md px-2.5 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-[0.16em] transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
                                     >
                                         <ChevronDown
                                             className={cn(
-                                                "w-3 h-3 transition-transform duration-150",
+                                                "w-3 h-3 transition-transform duration-150 opacity-70",
                                                 isSectionCollapsed && "-rotate-90"
                                             )}
                                         />
                                         <span>{section.label}</span>
                                     </button>
                                 )}
-                                <div id={sectionId} className={cn("space-y-0.5", isSectionCollapsed && "hidden")}>
-                                {section.items.map((item) => (
+                                <div id={sectionId} className={cn("space-y-1", isSectionCollapsed && "hidden")}>
+                                {section.items.map((item) => {
+                                    const itemLabel = item.labelKey ? tFallback(t, item.labelKey, item.fallbackLabel ?? item.id) : (item.fallbackLabel ?? item.id);
+                                    const isActiveItem = currentView === item.id;
+                                    const tone = item.tone ?? 'normal';
+                                    const inactiveItemClass = tone === 'primary'
+                                        ? 'text-foreground hover:bg-accent/80 hover:text-foreground'
+                                        : tone === 'recessed'
+                                            ? 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                                            : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground';
+                                    const inactiveIconClass = tone === 'primary'
+                                        ? 'text-primary/80'
+                                        : tone === 'recessed'
+                                            ? 'text-muted-foreground/80'
+                                            : 'text-muted-foreground';
+                                    const itemWeightClass = isActiveItem
+                                        ? 'font-medium'
+                                        : tone === 'primary'
+                                            ? 'font-semibold'
+                                            : tone === 'recessed'
+                                                ? 'font-normal'
+                                                : 'font-medium';
+                                    return (
                                     <button
                                         key={item.id}
                                         onClick={() => onViewChange(item.id)}
@@ -631,23 +658,22 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                                         data-sidebar-item
                                         data-view={item.id}
                                         className={cn(
-                                            "w-full flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
-                                            currentView === item.id
-                                                ? "bg-primary/5 text-primary"
-                                                : "hover:bg-accent text-muted-foreground",
-                                            isCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"
+                                            "w-full flex items-center rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
+                                            itemWeightClass,
+                                            isActiveItem ? "bg-primary/10 text-primary" : inactiveItemClass,
+                                            isCollapsed ? "h-10 justify-center px-2" : "h-9 justify-between px-2.5"
                                         )}
-                                        aria-current={currentView === item.id ? 'page' : undefined}
-                                    title={item.labelKey ? tFallback(t, item.labelKey, item.fallbackLabel ?? item.id) : (item.fallbackLabel ?? item.id)}
+                                        aria-current={isActiveItem ? 'page' : undefined}
+                                        title={itemLabel}
                                     >
-                                        <div className={cn("flex items-center gap-3", isCollapsed && "gap-0")}>
-                                            <item.icon className={cn("w-4 h-4", currentView === item.id && "text-primary")} />
-                                            {!isCollapsed && (item.labelKey ? tFallback(t, item.labelKey, item.fallbackLabel ?? item.id) : (item.fallbackLabel ?? item.id))}
+                                        <div className={cn("flex min-w-0 items-center gap-2.5", isCollapsed && "gap-0")}>
+                                            <item.icon className={cn("w-4 h-4 shrink-0", isActiveItem ? "text-primary" : inactiveIconClass)} />
+                                            {!isCollapsed && <span className="truncate">{itemLabel}</span>}
                                         </div>
                                         {!isCollapsed && item.count !== undefined && item.count > 0 && (
                                             <span className={cn(
-                                                "text-xs px-2 py-0.5 rounded-full font-medium",
-                                                currentView === item.id
+                                                "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
+                                                isActiveItem
                                                     ? "bg-primary text-primary-foreground"
                                                     : "bg-muted text-muted-foreground"
                                             )}>
@@ -655,7 +681,8 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                                             </span>
                                         )}
                                     </button>
-                                ))}
+                                    );
+                                })}
                                 </div>
                             </div>
                             );
@@ -663,8 +690,8 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                     </nav>
                 </div>
 
-                <div className="mt-auto border-t border-border/60 px-3 pb-3 pt-3">
-                    <div className={cn("pb-3", isCollapsed && "flex justify-center")}>
+                <div className="mt-auto border-t border-border/60 px-2 pb-2 pt-2">
+                    <div className={cn("pb-2", isCollapsed && "flex justify-center")}>
                         <SidebarAreaFilter
                             areas={sortedAreas}
                             value={resolvedAreaFilter}
@@ -675,13 +702,13 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                             collapsed={isCollapsed}
                         />
                     </div>
-                    <div className={cn(!isCollapsed && "border-t border-border/50 pt-3")}>
+                    <div className={cn(!isCollapsed && "border-t border-border/50 pt-2")}>
                         <div className={cn("flex gap-1.5", isCollapsed ? "flex-col items-center" : "items-stretch")}>
                             <button
                                 onClick={() => onViewChange('settings')}
                                 className={cn(
-                                    "group relative w-full rounded-lg text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
-                                    isCollapsed ? "flex h-10 items-center justify-center px-0" : "min-w-0 flex-1 px-2.5 py-2",
+                                    "group relative w-full rounded-md text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
+                                    isCollapsed ? "flex h-10 items-center justify-center px-0" : "min-w-0 flex-1 px-2 py-1.5",
                                     currentView === 'settings'
                                         ? "bg-primary/5 text-primary"
                                         : "text-muted-foreground hover:bg-accent/70 hover:text-accent-foreground"
@@ -746,7 +773,7 @@ export function Layout({ children, currentView, onViewChange }: LayoutProps) {
                                 onClick={handleManualSyncNow}
                                 disabled={manualSyncBusy}
                                 className={cn(
-                                    "inline-flex shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60",
+                                    "inline-flex shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60",
                                     "hover:bg-accent/70 hover:text-accent-foreground",
                                     isCollapsed ? "h-10 w-10" : "w-10"
                                 )}
