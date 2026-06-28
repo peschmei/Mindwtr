@@ -29,6 +29,8 @@ const PARAKEET_PROGRESS_EVENT: &str = "parakeet-model-download-progress";
 const WHISPER_PROGRESS_EVENT: &str = "whisper-model-download-progress";
 const DOWNLOAD_PROGRESS_CHUNK_BYTES: u64 = 1024 * 1024;
 const MAX_AUDIO_RECORDING_SECONDS: usize = 10 * 60;
+const MAX_ARCHIVE_UNPACKED_BYTES: u64 = 4 * 1024 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRY_COUNT: usize = 20_000;
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -227,6 +229,40 @@ fn validate_download_size(label: &str, total: Option<u64>, loaded: u64) -> Resul
     Ok(())
 }
 
+fn validate_archive_entry_limits(
+    unpacked_bytes: &mut u64,
+    entry_count: &mut usize,
+    entry_size: u64,
+) -> Result<(), String> {
+    *entry_count = entry_count
+        .checked_add(1)
+        .ok_or_else(|| "Archive entry count overflow".to_string())?;
+    if *entry_count > MAX_ARCHIVE_ENTRY_COUNT {
+        return Err(format!(
+            "Archive contains too many entries (limit {MAX_ARCHIVE_ENTRY_COUNT})"
+        ));
+    }
+
+    *unpacked_bytes = unpacked_bytes
+        .checked_add(entry_size)
+        .ok_or_else(|| "Archive unpacked size overflow".to_string())?;
+    if *unpacked_bytes > MAX_ARCHIVE_UNPACKED_BYTES {
+        return Err(format!(
+            "Archive unpacked size exceeds {} bytes",
+            MAX_ARCHIVE_UNPACKED_BYTES
+        ));
+    }
+    Ok(())
+}
+
+fn audio_capture_file_name(now: SystemTime) -> Result<String, String> {
+    let timestamp = now
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_nanos();
+    Ok(format!("mindwtr-audio-{timestamp}.wav"))
+}
+
 fn max_audio_sample_count(sample_rate: u32, channels: u16) -> usize {
     (sample_rate as usize)
         .saturating_mul(usize::from(channels.max(1)))
@@ -349,8 +385,12 @@ fn unpack_tar_bz2(archive_path: &Path, destination: &Path) -> Result<(), String>
     let decoder = BzDecoder::new(file);
     let mut archive = Archive::new(decoder);
     let entries = archive.entries().map_err(|error| error.to_string())?;
+    let mut unpacked_bytes = 0u64;
+    let mut entry_count = 0usize;
     for entry in entries {
         let mut entry = entry.map_err(|error| error.to_string())?;
+        let entry_size = entry.header().size().map_err(|error| error.to_string())?;
+        validate_archive_entry_limits(&mut unpacked_bytes, &mut entry_count, entry_size)?;
         entry
             .unpack_in(destination)
             .map_err(|error| error.to_string())?;
@@ -612,11 +652,7 @@ fn stop_audio_recording_blocking(
         log::warn!("Audio recording reached the maximum duration; saved capped capture");
     }
 
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|e| e.to_string())?
-        .as_secs();
-    let file_name = format!("mindwtr-audio-{timestamp}.wav");
+    let file_name = audio_capture_file_name(SystemTime::now())?;
     let relative_path = format!("{}/audio-captures/{}", APP_NAME, file_name);
 
     let target_dir = get_data_dir(&app).join("audio-captures");
@@ -1085,6 +1121,36 @@ mod tests {
         assert!(error.contains("expected 10 bytes, got 9"));
         assert!(validate_download_size("Whisper model", Some(10), 10).is_ok());
         assert!(validate_download_size("Whisper model", None, 9).is_ok());
+    }
+
+    #[test]
+    fn audio_capture_file_name_uses_subsecond_precision() {
+        let first = audio_capture_file_name(UNIX_EPOCH + Duration::from_secs(1))
+            .expect("should format first capture name");
+        let second =
+            audio_capture_file_name(UNIX_EPOCH + Duration::from_secs(1) + Duration::from_nanos(1))
+                .expect("should format second capture name");
+
+        assert_ne!(first, second);
+        assert_eq!(first, "mindwtr-audio-1000000000.wav");
+        assert_eq!(second, "mindwtr-audio-1000000001.wav");
+    }
+
+    #[test]
+    fn archive_entry_limits_reject_excess_unpacked_bytes() {
+        let mut unpacked_bytes = 0;
+        let mut entry_count = 0;
+
+        validate_archive_entry_limits(
+            &mut unpacked_bytes,
+            &mut entry_count,
+            MAX_ARCHIVE_UNPACKED_BYTES,
+        )
+        .expect("entry at size limit should pass");
+
+        let error = validate_archive_entry_limits(&mut unpacked_bytes, &mut entry_count, 1)
+            .expect_err("entry beyond size limit should fail");
+        assert!(error.contains("Archive unpacked size exceeds"));
     }
 
     #[test]
