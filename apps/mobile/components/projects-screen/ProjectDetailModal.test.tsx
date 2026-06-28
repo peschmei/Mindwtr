@@ -37,9 +37,12 @@ vi.mock('@react-native-community/datetimepicker', () => ({
     default: () => null,
 }));
 
-vi.mock('@expo/vector-icons', () => ({
-    Ionicons: () => null,
-}));
+vi.mock('@expo/vector-icons', async () => {
+    const ReactModule = await import('react');
+    return {
+        Ionicons: (props: any) => ReactModule.createElement('Ionicons', props),
+    };
+});
 
 vi.mock('lucide-react-native', () => ({
     CheckCircle2: () => null,
@@ -525,6 +528,29 @@ describe('ProjectDetailModal task sorting', () => {
         expect(onProjectTaskSortByChange).toHaveBeenCalledWith('due');
         expect(onToggleShowCompletedTasks).toHaveBeenCalledTimes(1);
         expect(tree.root.findByProps({ testID: 'project-task-reorder-toggle' }).props.accessibilityState).toEqual({ selected: true });
+    });
+
+    it('uses compact visibility icons for the completed-task toggle', () => {
+        let tree!: ReturnType<typeof create>;
+
+        act(() => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps()} />);
+        });
+
+        const hiddenToggle = tree.root.findByProps({ testID: 'project-pinned-show-completed-toggle' });
+        expect(hiddenToggle.props.accessibilityRole).toBe('switch');
+        expect(hiddenToggle.props.accessibilityLabel).toBe('Show completed');
+        expect(hiddenToggle.props.accessibilityState).toEqual({ checked: false });
+        expect(hiddenToggle.findByProps({ name: 'eye-off-outline' }).props.name).toBe('eye-off-outline');
+
+        act(() => {
+            tree.update(<ProjectDetailModal {...createProjectDetailModalProps({ showCompletedTasks: true })} />);
+        });
+
+        const visibleToggle = tree.root.findByProps({ testID: 'project-pinned-show-completed-toggle' });
+        expect(visibleToggle.props.accessibilityLabel).toBe('Hide completed');
+        expect(visibleToggle.props.accessibilityState).toEqual({ checked: true });
+        expect(visibleToggle.findByProps({ name: 'eye-outline' }).props.name).toBe('eye-outline');
     });
 
     it('pins project bulk selection actions above the scrolling task list', () => {

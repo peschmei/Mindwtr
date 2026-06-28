@@ -725,7 +725,7 @@ export function ProjectDetailModal({
                 >
                     <View style={styles.projectTaskPinnedControlIcon}>
                         <Ionicons
-                            name={showCompletedTasks ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                            name={showCompletedTasks ? 'eye-outline' : 'eye-off-outline'}
                             size={20}
                             color={showCompletedTasks ? tc.onTint : tc.secondaryText}
                         />
