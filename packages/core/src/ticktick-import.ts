@@ -767,6 +767,7 @@ export const applyTickTickImport = (
         projects: [...currentData.projects],
         sections: [...currentData.sections],
         areas: [...currentData.areas],
+        people: [...(currentData.people ?? [])],
         settings,
     };
 

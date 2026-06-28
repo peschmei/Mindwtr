@@ -7,7 +7,7 @@ import {
     type ParsedTickTickImportData,
 } from './ticktick-import';
 import { mockAppData } from './sync-test-utils';
-import type { Area, Project } from './types';
+import type { Area, Person, Project } from './types';
 
 const csvRow = (cells: string[]): string => cells
     .map((cell) => `"${cell.replace(/"/gu, '""')}"`)
@@ -237,6 +237,12 @@ describe('ticktick import', () => {
             createdAt: '2026-06-01T00:00:00.000Z',
             updatedAt: '2026-06-01T00:00:00.000Z',
         };
+        const existingPerson: Person = {
+            id: 'person-existing',
+            name: 'Taylor',
+            createdAt: '2026-06-01T00:00:00.000Z',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+        };
         const parsedData = parseTickTickImportSource({
             fileName: 'TickTick-backup.csv',
             text: sampleTickTickCsv,
@@ -244,6 +250,7 @@ describe('ticktick import', () => {
 
         const currentData = mockAppData([], [existingProject], []);
         currentData.areas = [existingArea];
+        currentData.people = [existingPerson];
 
         const result = applyTickTickImport(currentData, parsedData, { now: '2026-06-17T12:00:00.000Z' });
 
@@ -254,6 +261,7 @@ describe('ticktick import', () => {
         expect(result.warnings).toContain('Imported area "Work" was renamed to "Work (TickTick)" to avoid a name conflict.');
         expect(result.warnings).toContain('Imported project "Launch" was renamed to "Launch (TickTick)" to avoid a title conflict.');
         expect(result.data.settings.deviceId).toBeTruthy();
+        expect(result.data.people).toEqual([existingPerson]);
 
         const importedArea = result.data.areas.find((area) => area.id !== existingArea.id);
         expect(importedArea).toMatchObject({

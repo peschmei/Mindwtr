@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { applyTodoistImport, parseTodoistImportSource, type ParsedTodoistProject } from './todoist-import';
 import { mockAppData } from './sync-test-utils';
-import type { Project } from './types';
+import type { Person, Project } from './types';
 
 describe('todoist import', () => {
     it('parses a CSV export with sections, labels, notes, subtasks, and recurring tasks', () => {
@@ -142,8 +142,17 @@ describe('todoist import', () => {
             },
         ];
 
+        const existingPerson: Person = {
+            id: 'person-existing',
+            name: 'Alex',
+            createdAt: '2026-03-01T00:00:00.000Z',
+            updatedAt: '2026-03-01T00:00:00.000Z',
+        };
+        const currentData = mockAppData([], [existingProject], []);
+        currentData.people = [existingPerson];
+
         const result = applyTodoistImport(
-            mockAppData([], [existingProject], []),
+            currentData,
             parsedProjects,
             { now: '2026-03-30T12:00:00.000Z' }
         );
@@ -154,6 +163,7 @@ describe('todoist import', () => {
         expect(result.importedChecklistItemCount).toBe(1);
         expect(result.warnings).toContain('Imported project "Launch" was renamed to "Launch (Todoist)" to avoid a title conflict.');
         expect(result.data.settings.deviceId).toBeTruthy();
+        expect(result.data.people).toEqual([existingPerson]);
 
         const importedProject = result.data.projects.find((project) => project.id !== existingProject.id);
         expect(importedProject).toMatchObject({
