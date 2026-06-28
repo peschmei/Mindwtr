@@ -514,7 +514,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const activeGroupBy: TaskListGroupBy = statusFilter === 'reference' ? activeReferenceGroupBy : activeNextGroupBy;
     const groupByOptions: TaskListGroupBy[] = statusFilter === 'reference'
         ? ['none', 'context', 'area', 'project', 'tag']
-        : ['none', 'context', 'area', 'project', 'energy', 'priority', 'person'];
+        : ['none', 'context', 'area', 'project', 'tag', 'energy', 'priority', 'person'];
     const isReferenceGrouping = statusFilter === 'reference' && activeReferenceGroupBy !== 'none';
     const isNextGrouping = statusFilter === 'next' && activeNextGroupBy !== 'none';
     const referenceGroups = useMemo(() => {

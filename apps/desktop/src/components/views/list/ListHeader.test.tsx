@@ -63,4 +63,33 @@ describe('ListHeader', () => {
         expect(screen.getByRole('combobox', { name: 'Sort' })).toBeInTheDocument();
         expect(screen.getByRole('combobox', { name: 'Group' })).toBeInTheDocument();
     });
+
+    it('renders supplied group-by options including tags', () => {
+        render(
+            <ListHeader
+                title="Focus"
+                showNextCount={false}
+                nextCount={0}
+                taskCount={3}
+                hasFilters={false}
+                filterSummaryLabel=""
+                filterSummarySuffix=""
+                sortBy="default"
+                onChangeSortBy={vi.fn()}
+                showGroupBy
+                groupBy="none"
+                groupByOptions={['none', 'tag']}
+                onChangeGroupBy={vi.fn()}
+                selectionMode={false}
+                onToggleSelection={vi.fn()}
+                showListDetails
+                onToggleDetails={vi.fn()}
+                densityMode="comfortable"
+                onToggleDensity={vi.fn()}
+                t={t}
+            />
+        );
+
+        expect(screen.getByRole('option', { name: 'Tags' })).toBeInTheDocument();
+    });
 });
