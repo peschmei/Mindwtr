@@ -14,7 +14,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { TaskItem } from '../TaskItem';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { shallow, useTaskStore, sortTasksBy, sortTasksByBoardOrder, safeParseDate, translateWithFallback, isTaskInActiveProject, taskMatchesFilterCriteria, hasActiveFilterCriteria, getUsedTaskTokens, SAVED_FILTER_NO_PROJECT_ID } from '@mindwtr/core';
+import { shallow, useTaskStore, sortTasksBy, sortTasksByBoardOrder, safeParseDate, translateWithFallback, isTaskInActiveProject, createTaskFilterPredicate, hasActiveFilterCriteria, getUsedTaskTokens, SAVED_FILTER_NO_PROJECT_ID } from '@mindwtr/core';
 import { resolveBoardDragEnd } from './board-view-dnd';
 import type { Task, TaskStatus, FilterCriteria } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
@@ -215,6 +215,8 @@ export function BoardView() {
     const criteria = boardFilters.criteria;
     const COLUMNS = getColumns(t);
     const hasFilters = hasActiveFilterCriteria(criteria);
+    const hasSearch = searchQuery.trim().length > 0;
+    const hasBoardFilters = hasFilters || hasSearch;
     const showFiltersPanel = persistedViewState.filtersOpen;
     const selectedContexts = criteria.contexts ?? [];
     const selectedTags = criteria.tags ?? [];
@@ -293,6 +295,7 @@ export function BoardView() {
     };
     const clearFilters = () => {
         updateCriteria({});
+        setSearchQuery('');
     };
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -315,15 +318,17 @@ export function BoardView() {
         () => getUsedTaskTokens(areaFilteredTasks, (task) => [...(task.contexts || []), ...(task.tags || [])]),
         [areaFilteredTasks]
     );
-    const filteredTasks = React.useMemo(() => {
-        const normalizedQuery = searchQuery.trim().toLowerCase();
+    const criteriaFilteredTasks = React.useMemo(() => {
         const now = new Date();
-        const criteriaFiltered = hasActiveFilterCriteria(criteria)
-            ? areaFilteredTasks.filter((task) => taskMatchesFilterCriteria(task, criteria, { projects, now }))
+        return hasFilters
+            ? areaFilteredTasks.filter(createTaskFilterPredicate(criteria, { projects, now }))
             : areaFilteredTasks;
-        if (!normalizedQuery) return criteriaFiltered;
-        return criteriaFiltered.filter((task) => task.title.toLowerCase().includes(normalizedQuery));
-    }, [areaFilteredTasks, criteria, searchQuery, projects]);
+    }, [areaFilteredTasks, criteria, hasFilters, projects]);
+    const normalizedSearchQuery = React.useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
+    const filteredTasks = React.useMemo(() => {
+        if (!normalizedSearchQuery) return criteriaFilteredTasks;
+        return criteriaFilteredTasks.filter((task) => task.title.toLowerCase().includes(normalizedSearchQuery));
+    }, [criteriaFilteredTasks, normalizedSearchQuery]);
 
     const sequentialProjectIds = React.useMemo(() => {
         return new Set(projects.filter((p) => p.isSequential && !p.deletedAt).map((p) => p.id));
@@ -496,7 +501,7 @@ export function BoardView() {
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
-                            {hasFilters && (
+                            {hasBoardFilters && (
                                 <button
                                     type="button"
                                     onClick={clearFilters}
@@ -520,6 +525,7 @@ export function BoardView() {
                             type="text"
                             data-view-filter-input
                             placeholder={t('common.search')}
+                            aria-label={t('common.search')}
                             value={searchQuery}
                             onChange={(event) => setSearchQuery(event.target.value)}
                             className="w-full text-sm px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"

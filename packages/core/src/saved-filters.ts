@@ -380,13 +380,20 @@ export function taskMatchesFilterCriteria(
     return taskMatchesPreparedFilterCriteria(task, prepareFilterContext(criteria, options));
 }
 
+export function createTaskFilterPredicate(
+    criteria: FilterCriteria | undefined,
+    options: ApplyFilterOptions = {}
+): (task: Task) => boolean {
+    const context = prepareFilterContext(criteria, options);
+    return (task: Task) => taskMatchesPreparedFilterCriteria(task, context);
+}
+
 export function applyFilter<T extends Task>(
     tasks: readonly T[],
     criteria: FilterCriteria | undefined,
     options: ApplyFilterOptions = {}
 ): T[] {
-    const context = prepareFilterContext(criteria, options);
-    return tasks.filter((task) => taskMatchesPreparedFilterCriteria(task, context));
+    return tasks.filter(createTaskFilterPredicate(criteria, options));
 }
 
 export function normalizeSavedFilter(value: unknown): SavedFilter | null {

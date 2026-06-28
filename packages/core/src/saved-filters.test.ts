@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     applyFilter,
+    createTaskFilterPredicate,
     hasActiveFilterCriteria,
     markSavedFilterDeleted,
     normalizeSavedFilters,
@@ -154,6 +155,43 @@ describe('saved filters', () => {
             });
 
             expect(filtered.map((item) => item.id)).toEqual(['work-a', 'work-b']);
+            expect(mapConstructions).toBe(1);
+        } finally {
+            setGlobalMap(OriginalMap);
+        }
+    });
+
+    it('creates a reusable predicate without rebuilding project lookup per task', () => {
+        const OriginalMap = globalThis.Map;
+        const setGlobalMap = (value: MapConstructor) => {
+            (globalThis as typeof globalThis & { Map: MapConstructor }).Map = value;
+        };
+        let mapConstructions = 0;
+        class CountingMap<K, V> extends OriginalMap<K, V> {
+            constructor(entries?: Iterable<readonly [K, V]> | null) {
+                mapConstructions += 1;
+                super(entries);
+            }
+        }
+        setGlobalMap(CountingMap as unknown as MapConstructor);
+
+        try {
+            const tasks = [
+                task({ id: 'work-a', projectId: 'project-work' }),
+                task({ id: 'work-b', projectId: 'project-work' }),
+                task({ id: 'home', projectId: 'project-home' }),
+            ];
+            const predicate = createTaskFilterPredicate({
+                areas: ['area-work'],
+            }, {
+                projects: [
+                    { id: 'project-work', title: 'Work', status: 'active', areaId: 'area-work', createdAt: '2026-05-01T00:00:00.000Z', updatedAt: '2026-05-01T00:00:00.000Z' },
+                    { id: 'project-home', title: 'Home', status: 'active', areaId: 'area-home', createdAt: '2026-05-01T00:00:00.000Z', updatedAt: '2026-05-01T00:00:00.000Z' },
+                ],
+            });
+
+            expect(tasks.filter(predicate).map((item) => item.id)).toEqual(['work-a', 'work-b']);
+            expect(tasks.filter(predicate).map((item) => item.id)).toEqual(['work-a', 'work-b']);
             expect(mapConstructions).toBe(1);
         } finally {
             setGlobalMap(OriginalMap);

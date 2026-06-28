@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable, TextInput } from 'react-native';
-import { isTaskInActiveProject, shallow, sortTasksByBoardOrder, useTaskStore, taskMatchesFilterCriteria, taskMatchesAreaFilter, hasActiveFilterCriteria, getUsedTaskTokens, tFallback, projectMatchesAreaFilter, SAVED_FILTER_NO_PROJECT_ID } from '@mindwtr/core';
+import { isTaskInActiveProject, shallow, sortTasksByBoardOrder, useTaskStore, createTaskFilterPredicate, taskMatchesAreaFilter, hasActiveFilterCriteria, getUsedTaskTokens, tFallback, projectMatchesAreaFilter, SAVED_FILTER_NO_PROJECT_ID } from '@mindwtr/core';
 import type { Task, TaskStatus, FilterCriteria } from '@mindwtr/core';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/theme-context';
@@ -425,13 +425,16 @@ export function BoardView() {
   const boardActiveFilterCount = activeFilterCount + (searchActive ? 1 : 0);
   const selectedProjectIds = criteria.projects ?? [];
 
+  const criteriaFilteredTasks = useMemo(() => {
+    const now = new Date();
+    return filtersActive
+      ? areaActiveTasks.filter(createTaskFilterPredicate(criteria, { projects, now }))
+      : areaActiveTasks;
+  }, [areaActiveTasks, criteria, filtersActive, projects]);
+  const normalizedSearch = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
+
   // Apply the board filter bar (search / contexts / tags / dates / projects) and group by status.
   const tasksByStatus = useMemo(() => {
-    const now = new Date();
-    const criteriaFilteredTasks = filtersActive
-      ? areaActiveTasks.filter((task) => taskMatchesFilterCriteria(task, criteria, { projects, now }))
-      : areaActiveTasks;
-    const normalizedSearch = searchQuery.trim().toLowerCase();
     const visibleTasks = normalizedSearch
       ? criteriaFilteredTasks.filter((task) => task.title.toLowerCase().includes(normalizedSearch))
       : criteriaFilteredTasks;
@@ -440,7 +443,7 @@ export function BoardView() {
       grouped[col.id] = sortTasksByBoardOrder(visibleTasks.filter(t => t.status === col.id));
     });
     return grouped;
-  }, [areaActiveTasks, criteria, filtersActive, projects, searchQuery]);
+  }, [criteriaFilteredTasks, normalizedSearch]);
 
   const handleToggleToken = useCallback((token: string) => {
     setCriteria((prev) => toggleCriteriaToken(prev, token));

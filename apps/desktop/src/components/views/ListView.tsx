@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
 import {
     buildBulkOrganizeTaskUpdates,
+    createTaskFilterPredicate,
     DEFAULT_AREA_COLOR,
     formatTimeEstimateLabel,
     getQuickAddProjectInitialProps,
@@ -14,7 +15,6 @@ import {
     safeParseDate,
     shallow,
     sortTasksBy,
-    taskMatchesFilterCriteria,
     TaskPriority,
     TimeEstimate,
     translateWithFallback as translateTextWithFallback,
@@ -450,6 +450,12 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
             const allowDeferredProjectTasks =
                 deferredFilterInputs.statusFilter === 'done'
                 || deferredFilterInputs.statusFilter === 'archived';
+            const criteriaPredicate = hasActiveFilterCriteria(deferredFilterInputs.filterCriteria)
+                ? createTaskFilterPredicate(deferredFilterInputs.filterCriteria, {
+                    projects: deferredFilterInputs.projects,
+                    tokenMatchMode: 'all',
+                })
+                : null;
             const filtered = deferredFilterInputs.baseTasks.filter(t => {
                 // Always filter out soft-deleted tasks
                 if (t.deletedAt) return false;
@@ -479,13 +485,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 }
 
 
-                if (
-                    hasActiveFilterCriteria(deferredFilterInputs.filterCriteria)
-                    && !taskMatchesFilterCriteria(t, deferredFilterInputs.filterCriteria, {
-                        projects: deferredFilterInputs.projects,
-                        tokenMatchMode: 'all',
-                    })
-                ) return false;
+                if (criteriaPredicate && !criteriaPredicate(t)) return false;
                 if (deferredFilterInputs.statusFilter === 'waiting' && deferredFilterInputs.selectedWaitingPerson) {
                     const person = getWaitingPerson(t);
                     if (!person || person.toLowerCase() !== deferredFilterInputs.selectedWaitingPerson.toLowerCase()) return false;

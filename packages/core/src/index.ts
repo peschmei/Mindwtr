@@ -644,6 +644,7 @@ export type {
 
 export {
     applyFilter,
+    createTaskFilterPredicate,
     hasActiveFilterCriteria,
     normalizeDateRange,
     normalizeFilterCriteria,
