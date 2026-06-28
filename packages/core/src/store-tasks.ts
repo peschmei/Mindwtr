@@ -910,8 +910,11 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 id: uuidv4(),
                 isCompleted: false,
             }));
-            const duplicatedAttachments = (sourceTask.attachments || []).map((attachment) => {
-                const copy = {
+            const duplicatedAttachments = (sourceTask.attachments || []).flatMap((attachment) => {
+                if (attachment.kind === 'file') {
+                    return [];
+                }
+                return [{
                     ...attachment,
                     id: uuidv4(),
                     createdAt: now,
@@ -920,10 +923,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                     cloudKey: undefined,
                     fileHash: undefined,
                     localStatus: undefined,
-                };
-                return attachment.kind === 'file'
-                    ? { ...copy, uri: '', localStatus: 'missing' as const }
-                    : copy;
+                }];
             });
             const projectOrderReserver = createProjectOrderReserver(state._allTasks);
             const duplicatedOrder = sourceTask.projectId

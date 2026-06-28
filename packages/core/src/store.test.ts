@@ -454,14 +454,6 @@ describe('TaskStore', () => {
             localStatus: attachment.localStatus,
         }))).toEqual([
             {
-                id: expect.not.stringMatching(/^a1$/),
-                title: 'Agenda',
-                uri: '',
-                cloudKey: undefined,
-                fileHash: undefined,
-                localStatus: 'missing',
-            },
-            {
                 id: expect.not.stringMatching(/^a2$/),
                 title: 'Spec',
                 uri: 'https://example.com/spec',
