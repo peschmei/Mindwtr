@@ -58,6 +58,8 @@ export const ruOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Начать запись',
         'quickAdd.audioStop': 'Остановить запись',
         'quickAdd.audioRecording': 'Запись...',
+        'quickAdd.audioProcessing': 'Обработка аудиозаписи...',
+        'quickAdd.audioSavingSpeechToText': 'Сохранение записи и преобразование речи в текст.',
         'quickAdd.audioNoteTitle': 'Аудио-заметка',
         'quickAdd.audioPermissionTitle': 'Нужен доступ к микрофону',
         'quickAdd.audioPermissionBody': 'Включите доступ к микрофону для записи аудиозаписей.',

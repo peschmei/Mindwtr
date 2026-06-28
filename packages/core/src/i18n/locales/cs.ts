@@ -35,6 +35,8 @@ export const csOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Spustit nahrávání',
         'quickAdd.audioStop': 'Zastavit nahrávání',
         'quickAdd.audioRecording': 'Nahrávání…',
+        'quickAdd.audioProcessing': 'Zpracování hlasového záznamu…',
+        'quickAdd.audioSavingSpeechToText': 'Ukládání nahrávky a převod řeči na text.',
         'quickAdd.audioNoteTitle': 'Zvuková poznámka',
         'quickAdd.audioPermissionTitle': 'Je potřeba přístup k mikrofonu',
         'quickAdd.audioPermissionBody': 'Povolte přístup k mikrofonu pro nahrávání hlasových záznamů.',

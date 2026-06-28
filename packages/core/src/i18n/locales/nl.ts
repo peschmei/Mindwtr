@@ -66,6 +66,8 @@ export const nlOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Opnemen',
         'quickAdd.audioStop': 'Stop',
         'quickAdd.audioRecording': 'Opnemen...',
+        'quickAdd.audioProcessing': 'Spraakopname verwerken...',
+        'quickAdd.audioSavingSpeechToText': 'Opname opslaan en spraak naar tekst omzetten.',
         'quickAdd.audioNoteTitle': 'Spraaknotitie',
         'quickAdd.invalidDateCommand': 'Ongeldige datumopdracht',
         'quickAdd.saveAndEdit': 'Opslaan en bewerken',

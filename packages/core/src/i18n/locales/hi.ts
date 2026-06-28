@@ -58,6 +58,8 @@ export const hiOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'रिकॉर्डिंग प्रारंभ करें',
         'quickAdd.audioStop': 'रिकॉर्डिंग बंद करें',
         'quickAdd.audioRecording': 'रिकॉर्डिंग...',
+        'quickAdd.audioProcessing': 'ऑडियो कैप्चर संसाधित हो रहा है...',
+        'quickAdd.audioSavingSpeechToText': 'रिकॉर्डिंग सहेजी जा रही है और वाणी को पाठ में बदला जा रहा है.',
         'quickAdd.audioNoteTitle': 'ऑडियो नोट',
         'quickAdd.audioPermissionTitle': 'माइक्रोफ़ोन पहुंच की आवश्यकता है',
         'quickAdd.audioPermissionBody': 'ऑडियो कैप्चर रिकॉर्ड करने के लिए माइक्रोफ़ोन एक्सेस सक्षम करें।',

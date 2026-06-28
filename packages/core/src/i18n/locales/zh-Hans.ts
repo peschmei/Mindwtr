@@ -33,6 +33,8 @@ export const zhHans: Record<string, string> = {
         'quickAdd.audioRecord': '开始录音',
         'quickAdd.audioStop': '停止录音',
         'quickAdd.audioRecording': '正在录音...',
+        'quickAdd.audioProcessing': '正在处理语音记录...',
+        'quickAdd.audioSavingSpeechToText': '正在保存录音并转换为文本。',
         'quickAdd.audioNoteTitle': '语音记录',
         'quickAdd.audioPermissionTitle': '需要麦克风权限',
         'quickAdd.audioPermissionBody': '请允许麦克风权限以录制语音捕捉。',

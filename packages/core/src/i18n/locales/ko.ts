@@ -58,6 +58,8 @@ export const koOverrides: Record<string, string> = {
         'quickAdd.audioRecord': '녹음 시작',
         'quickAdd.audioStop': '녹음 중지',
         'quickAdd.audioRecording': '녹음...',
+        'quickAdd.audioProcessing': '오디오 캡처 처리 중...',
+        'quickAdd.audioSavingSpeechToText': '녹음을 저장하고 음성을 텍스트로 변환하는 중입니다.',
         'quickAdd.audioNoteTitle': '오디오 노트',
         'quickAdd.audioPermissionTitle': '마이크 액세스 필요',
         'quickAdd.audioPermissionBody': '오디오 캡처를 녹음하려면 마이크 액세스를 활성화하세요.',

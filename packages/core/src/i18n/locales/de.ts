@@ -64,6 +64,8 @@ export const deOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Aufnahme starten',
         'quickAdd.audioStop': 'Aufnahme anhalten',
         'quickAdd.audioRecording': 'Aufnahme ...',
+        'quickAdd.audioProcessing': 'Sprachaufnahme wird verarbeitet...',
+        'quickAdd.audioSavingSpeechToText': 'Aufnahme wird gespeichert und Sprache in Text umgewandelt.',
         'quickAdd.audioNoteTitle': 'Sprachnotiz',
         'quickAdd.audioPermissionTitle': 'Zugriff auf Mikrofon ist notwendig',
         'quickAdd.audioPermissionBody': 'Mikrofon-Zugriff erlauben, um Sprachnotizen aufzunehmen.',

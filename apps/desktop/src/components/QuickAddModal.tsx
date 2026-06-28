@@ -1035,7 +1035,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             ? t('quickAdd.audioStop')
             : t('quickAdd.audioRecord');
     const audioStatusLabel = recordingBusy
-        ? 'Processing audio capture...'
+        ? tFallback(t, 'quickAdd.audioProcessing', 'Processing audio capture...')
         : isRecording
             ? t('quickAdd.audioRecording')
             : t('quickAdd.audioCaptureLabel');
@@ -1274,7 +1274,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
                             </div>
                             {recordingBusy ? (
                                 <div className="text-xs text-muted-foreground text-center" aria-live="polite">
-                                    Saving the recording and applying speech-to-text.
+                                    {tFallback(t, 'quickAdd.audioSavingSpeechToText', 'Saving the recording and applying speech-to-text.')}
                                 </div>
                             ) : null}
                             {recordingError ? (

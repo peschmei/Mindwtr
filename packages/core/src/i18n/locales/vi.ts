@@ -37,6 +37,8 @@ export const viOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Bắt đầu ghi âm',
         'quickAdd.audioStop': 'Dừng ghi âm',
         'quickAdd.audioRecording': 'Đang ghi âm...',
+        'quickAdd.audioProcessing': 'Đang xử lý bản ghi âm...',
+        'quickAdd.audioSavingSpeechToText': 'Đang lưu bản ghi và chuyển giọng nói thành văn bản.',
         'quickAdd.audioNoteTitle': 'Ghi chú âm thanh',
         'quickAdd.audioPermissionTitle': 'Cần quyền truy cập micrô',
         'quickAdd.audioPermissionBody': 'Bật quyền truy cập micrô để ghi âm.',

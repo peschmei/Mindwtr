@@ -62,6 +62,8 @@ export const itOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Avvia registrazione',
         'quickAdd.audioStop': 'Interrompi registrazione',
         'quickAdd.audioRecording': 'Registrazione in corso...',
+        'quickAdd.audioProcessing': 'Elaborazione acquisizione audio...',
+        'quickAdd.audioSavingSpeechToText': 'Salvataggio della registrazione e trascrizione vocale.',
         'quickAdd.audioNoteTitle': 'Nota audio',
         'quickAdd.audioPermissionTitle': 'Accesso al microfono necessario',
         'quickAdd.audioPermissionBody': 'Abilita l\'accesso al microfono per registrare audio.',

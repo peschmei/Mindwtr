@@ -59,6 +59,8 @@ export const plOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Rozpocznij nagrywanie',
         'quickAdd.audioStop': 'Zatrzymaj nagrywanie',
         'quickAdd.audioRecording': 'Nagranie...',
+        'quickAdd.audioProcessing': 'Przetwarzanie nagrania głosowego...',
+        'quickAdd.audioSavingSpeechToText': 'Zapisywanie nagrania i zamiana mowy na tekst.',
         'quickAdd.audioNoteTitle': 'Notatka dźwiękowa',
         'quickAdd.audioPermissionTitle': 'Potrzebny dostęp do mikrofonu',
         'quickAdd.audioPermissionBody': 'Włącz dostęp do mikrofonu, aby nagrywać notatki głosowe.',

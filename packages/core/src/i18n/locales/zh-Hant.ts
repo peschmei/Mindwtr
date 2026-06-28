@@ -33,6 +33,8 @@ export const zhHant: Record<string, string> = {
         'quickAdd.audioRecord': '開始錄音',
         'quickAdd.audioStop': '停止錄音',
         'quickAdd.audioRecording': '正在錄音...',
+        'quickAdd.audioProcessing': '正在處理語音記錄...',
+        'quickAdd.audioSavingSpeechToText': '正在儲存錄音並轉換為文字。',
         'quickAdd.audioNoteTitle': '語音記錄',
         'quickAdd.audioPermissionTitle': '需要麥克風權限',
         'quickAdd.audioPermissionBody': '請允許麥克風權限以錄製語音捕捉。',

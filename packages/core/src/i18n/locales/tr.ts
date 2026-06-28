@@ -59,6 +59,8 @@ export const trOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Kaydı başlat',
         'quickAdd.audioStop': 'Kaydı durdur',
         'quickAdd.audioRecording': 'Kayıt...',
+        'quickAdd.audioProcessing': 'Ses kaydı işleniyor...',
+        'quickAdd.audioSavingSpeechToText': 'Kayıt kaydediliyor ve konuşma metne dönüştürülüyor.',
         'quickAdd.audioNoteTitle': 'Sesli Not',
         'quickAdd.audioPermissionTitle': 'Mikrofon erişimi gerekiyor',
         'quickAdd.audioPermissionBody': 'Ses kayıtlarını kaydetmek için mikrofon erişimini etkinleştirin.',

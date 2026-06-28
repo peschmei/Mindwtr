@@ -29,6 +29,8 @@ export const esOverrides: Record<string, string> = {
         'quickAdd.placeholder': 'Añadir a Tarea… use @context +Project #tag',
         'quickAdd.inputLabel': 'Entrada rápida',
         'quickAdd.inputHint': 'Escribe una tarea y pulsa Intro para guardarla.',
+        'quickAdd.audioProcessing': 'Procesando captura de audio...',
+        'quickAdd.audioSavingSpeechToText': 'Guardando la grabación y aplicando voz a texto.',
         'list.groupByArea': 'Área',
         'recurrence.weekUnit': 'Semanas',
         'recurrence.ordinalSelectLabel': 'Orden',

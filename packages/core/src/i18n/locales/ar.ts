@@ -34,6 +34,8 @@ export const arOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'ابدأ التسجيل',
         'quickAdd.audioStop': 'توقف عن التسجيل',
         'quickAdd.audioRecording': 'تسجيل...',
+        'quickAdd.audioProcessing': 'جارٍ معالجة التسجيل الصوتي...',
+        'quickAdd.audioSavingSpeechToText': 'جارٍ حفظ التسجيل وتطبيق تحويل الكلام إلى نص.',
         'quickAdd.audioNoteTitle': 'ملاحظة صوتية',
         'quickAdd.audioPermissionTitle': 'يلزم الوصول إلى الميكروفون',
         'quickAdd.audioPermissionBody': 'تمكين الوصول إلى الميكروفون لتسجيل اللقطات الصوتية.',

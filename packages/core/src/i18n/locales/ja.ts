@@ -58,6 +58,8 @@ export const jaOverrides: Record<string, string> = {
         'quickAdd.audioRecord': '録音を開始する',
         'quickAdd.audioStop': '録音を停止する',
         'quickAdd.audioRecording': '録音中...',
+        'quickAdd.audioProcessing': '音声キャプチャを処理中...',
+        'quickAdd.audioSavingSpeechToText': '録音を保存し、音声をテキストに変換しています。',
         'quickAdd.audioNoteTitle': '音声メモ',
         'quickAdd.audioPermissionTitle': 'マイクへのアクセスが必要です',
         'quickAdd.audioPermissionBody': 'オーディオ キャプチャを録音するためのマイク アクセスを有効にします。',

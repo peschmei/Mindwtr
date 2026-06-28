@@ -40,6 +40,8 @@ export const ptOverrides: Record<string, string> = {
         'quickAdd.audioRecord': 'Comece a gravar',
         'quickAdd.audioStop': 'Pare de gravar',
         'quickAdd.audioRecording': 'Gravação...',
+        'quickAdd.audioProcessing': 'Processando captura de áudio...',
+        'quickAdd.audioSavingSpeechToText': 'Salvando a gravação e aplicando fala para texto.',
         'quickAdd.audioNoteTitle': 'Nota de áudio',
         'quickAdd.audioPermissionTitle': 'Acesso ao microfone necessário',
         'quickAdd.audioPermissionBody': 'Habilite o acesso ao microfone para gravar capturas de áudio.',

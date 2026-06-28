@@ -40,6 +40,8 @@ export const en: Record<string, string> = {
         'quickAdd.audioRecord': 'Start recording',
         'quickAdd.audioStop': 'Stop recording',
         'quickAdd.audioRecording': 'Recording...',
+        'quickAdd.audioProcessing': 'Processing audio capture...',
+        'quickAdd.audioSavingSpeechToText': 'Saving the recording and applying speech-to-text.',
         'quickAdd.audioNoteTitle': 'Audio Note',
         'quickAdd.audioPermissionTitle': 'Microphone access needed',
         'quickAdd.audioPermissionBody': 'Enable microphone access to record audio captures.',
