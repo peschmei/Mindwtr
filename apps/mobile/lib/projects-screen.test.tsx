@@ -122,7 +122,9 @@ vi.mock('../contexts/language-context', () => ({
       'projects.addPlaceholder': 'Add new project...',
       'projects.tagFilter': 'Tag filter',
       'projects.show': 'Show',
+      'projects.empty': 'No projects yet',
       'status.archived': 'Archived',
+      'common.loading': 'Loading...',
       'common.notice': 'Notice',
     }[key] ?? key),
   }),
@@ -260,6 +262,7 @@ describe('ProjectsScreen view state hydration', () => {
 
     const firstList = tree.root.findByType(FlatList);
     expect(firstList.props.data.some((row: { type: string }) => row.type === 'project')).toBe(false);
+    expect(firstList.props.ListEmptyComponent.props.children.props.children).toBe('Loading...');
 
     await act(async () => {
       deferred.resolve(JSON.stringify({

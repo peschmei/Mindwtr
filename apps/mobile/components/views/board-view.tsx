@@ -10,7 +10,7 @@ import { openContextsScreen, openProjectScreen, openTaskScreen } from '@/lib/tas
 import { useToast } from '@/contexts/toast-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture, Swipeable } from 'react-native-gesture-handler';
-import { Filter } from 'lucide-react-native';
+import { Filter, X } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -419,7 +419,10 @@ export function BoardView() {
   );
 
   const filtersActive = hasActiveFilterCriteria(criteria);
+  const searchActive = searchQuery.trim().length > 0;
+  const boardFiltersActive = filtersActive || searchActive;
   const activeFilterCount = countActiveBoardFilters(criteria);
+  const boardActiveFilterCount = activeFilterCount + (searchActive ? 1 : 0);
   const selectedProjectIds = criteria.projects ?? [];
 
   // Apply the board filter bar (search / contexts / tags / dates / projects) and group by status.
@@ -454,7 +457,11 @@ export function BoardView() {
       return { ...prev, projects: next.length > 0 ? next : undefined };
     });
   }, []);
-  const clearFilters = useCallback(() => setCriteria({}), []);
+  const clearFilters = useCallback(() => {
+    setCriteria({});
+    setSearchQuery('');
+  }, []);
+  const clearSearch = useCallback(() => setSearchQuery(''), []);
 
   const getTaskTopInContent = useCallback((taskId: string): number | null => {
     const taskLayout = taskLayoutsRef.current[taskId];
@@ -704,32 +711,53 @@ export function BoardView() {
             style={[
               styles.filterToggle,
               {
-                backgroundColor: filtersActive ? tc.tint : tc.filterBg,
-                borderColor: filtersActive ? tc.tint : tc.border,
+                backgroundColor: boardFiltersActive ? tc.tint : tc.filterBg,
+                borderColor: boardFiltersActive ? tc.tint : tc.border,
               },
             ]}
           >
-            <Filter size={14} color={filtersActive ? tc.onTint : tc.secondaryText} />
-            <Text style={[styles.filterToggleText, { color: filtersActive ? tc.onTint : tc.text }]}>
-              {t('filters.label')}{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            <Filter size={14} color={boardFiltersActive ? tc.onTint : tc.secondaryText} />
+            <Text style={[styles.filterToggleText, { color: boardFiltersActive ? tc.onTint : tc.text }]}>
+              {t('filters.label')}{boardActiveFilterCount > 0 ? ` (${boardActiveFilterCount})` : ''}
             </Text>
           </Pressable>
-          {filtersActive && (
+          {boardFiltersActive && (
             <Pressable onPress={clearFilters} accessibilityRole="button" hitSlop={8}>
               <Text style={[styles.filterClearText, { color: tc.tint }]}>{t('filters.clear')}</Text>
             </Pressable>
           )}
         </View>
-        <TextInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('common.search')}
-          placeholderTextColor={tc.secondaryText}
-          accessibilityLabel={t('common.search')}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
-          style={[styles.searchInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('common.search')}
+            placeholderTextColor={tc.secondaryText}
+            accessibilityLabel={t('common.search')}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+            style={[
+              styles.searchInput,
+              searchActive ? styles.searchInputWithClear : null,
+              {
+                backgroundColor: searchActive ? tc.filterBg : tc.inputBg,
+                borderColor: searchActive ? tc.tint : tc.border,
+                color: tc.text,
+              },
+            ]}
+          />
+          {searchActive && (
+            <Pressable
+              onPress={clearSearch}
+              accessibilityRole="button"
+              accessibilityLabel={t('filters.clear')}
+              hitSlop={8}
+              style={[styles.searchClearButton, { backgroundColor: tc.cardBg }]}
+            >
+              <X size={16} color={tc.secondaryText} />
+            </Pressable>
+          )}
+        </View>
         {filtersOpen && (
           <View style={styles.filterPanel}>
             {allTokens.length > 0 && (
@@ -950,6 +978,9 @@ const styles = StyleSheet.create({
   filterPanel: {
     gap: 12,
   },
+  searchRow: {
+    position: 'relative',
+  },
   searchInput: {
     minHeight: 40,
     paddingHorizontal: 12,
@@ -957,6 +988,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     fontSize: 14,
+  },
+  searchInputWithClear: {
+    paddingRight: 44,
+  },
+  searchClearButton: {
+    position: 'absolute',
+    right: 8,
+    top: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterSection: {
     gap: 6,

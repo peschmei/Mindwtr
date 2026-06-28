@@ -315,6 +315,10 @@ export default function ProjectsScreen() {
     showDeferredProjects,
     t,
   ]);
+  const projectListEmptyLabel = projectListViewStateHydrated
+    ? t('projects.empty')
+    : resolveText('common.loading', 'Loading...');
+
   const selectedProjectTasks = useMemo(
     () => (selectedProject ? tasksByProjectId.get(selectedProject.id) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
     [tasksByProjectId, selectedProject?.id]
@@ -868,7 +872,7 @@ export default function ProjectsScreen() {
         style={{ flex: 1 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('projects.empty')}</Text>
+            <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{projectListEmptyLabel}</Text>
           </View>
         }
         renderItem={renderProjectListRow}
