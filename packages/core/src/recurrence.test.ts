@@ -291,6 +291,28 @@ describe('recurrence', () => {
         expect(next?.checklist?.[0]?.id).not.toBe('c1');
     });
 
+    it('regenerates relative start dates from the next due date across month clamps', () => {
+        const task: Task = {
+            id: 't2-relative-start-month-clamp',
+            title: 'Month-end close prep',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            startTime: '2025-01-30',
+            relativeStartOffset: { amount: -1, unit: 'day' },
+            dueDate: '2025-01-31',
+            recurrence: { rule: 'monthly', strategy: 'strict' },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+        };
+
+        const next = createNextRecurringTask(task, '2025-01-31T12:00:00.000Z', 'done');
+
+        expect(next?.dueDate).toBe('2025-02-28');
+        expect(next?.startTime).toBe('2025-02-27');
+        expect(next?.relativeStartOffset).toEqual({ amount: -1, unit: 'day' });
+    });
+
     it('respects daily interval for strict recurrence', () => {
         const task: Task = {
             id: 't2b',

@@ -2,6 +2,7 @@ import { addDays, addMonths, addWeeks, format } from 'date-fns';
 
 import { safeFormatDate, safeParseDate } from './date';
 import { generateUUID as uuidv4 } from './uuid';
+import { computeRelativeStartTime } from './task-relative-start';
 import type { Recurrence, RecurrenceByDay, RecurrenceRule, RecurrenceStrategy, RecurrenceWeekday, Task, TaskStatus, ChecklistItem, Attachment } from './types';
 
 export const RECURRENCE_RULES: RecurrenceRule[] = ['daily', 'weekly', 'monthly', 'yearly'];
@@ -997,6 +998,19 @@ export function createNextRecurringTask(
             nextStartTime = nextIsoFrom(task.startTime, rule, completedAtDate, byDay, interval, byMonthDay, weekStart, completedAtDate, startAnchorDay);
         }
     }
+    let nextRelativeStartOffset = task.relativeStartOffset ? { ...task.relativeStartOffset } : undefined;
+    if (nextRelativeStartOffset) {
+        if (nextDueDate) {
+            const computedStartTime = computeRelativeStartTime(nextDueDate, nextRelativeStartOffset);
+            if (computedStartTime) {
+                nextStartTime = computedStartTime;
+            } else {
+                nextRelativeStartOffset = undefined;
+            }
+        } else {
+            nextRelativeStartOffset = undefined;
+        }
+    }
     const nextReviewAt = task.reviewAt
         ? preserveDateOnlyFormat(
             nextIsoFrom(
@@ -1082,7 +1096,7 @@ export function createNextRecurringTask(
         assignedTo: task.assignedTo,
         taskMode: task.taskMode,
         startTime: nextStartTime,
-        relativeStartOffset: task.relativeStartOffset ? { ...task.relativeStartOffset } : undefined,
+        relativeStartOffset: nextRelativeStartOffset,
         dueDate: nextDueDate,
         recurrence: nextRecurrence,
         showFutureRecurrence: task.showFutureRecurrence ? true : undefined,
