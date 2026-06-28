@@ -40,7 +40,7 @@ describe('TaskEditViewTab', () => {
     });
   });
 
-  it('shows the task title as a capped field at the top of the read-only preview', () => {
+  it('shows the full task title as a wrapping field at the top of the read-only preview', () => {
     let tree!: renderer.ReactTestRenderer;
     renderer.act(() => {
       tree = renderer.create(
@@ -88,8 +88,7 @@ describe('TaskEditViewTab', () => {
     const titleNode = tree.root.findByProps({
       children: 'A very long task title that would otherwise be truncated in the header',
     });
-    expect(titleNode.props.numberOfLines).toBe(4);
-    expect(titleNode.props.ellipsizeMode).toBe('tail');
+    expect(titleNode.props.numberOfLines).toBeUndefined();
   });
 
   it('renders an interactive status badge and forwards updates', () => {

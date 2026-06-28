@@ -184,11 +184,7 @@ function TaskEditViewTabComponent({
       {title ? (
         <View style={[styles.viewRow, { backgroundColor: tc.inputBg, borderColor: tc.border }]}>
           <Text style={[styles.viewLabel, { color: tc.secondaryText }]}>{t('taskEdit.titleLabel')}</Text>
-          <Text
-            style={[styles.viewTitleValue, { color: tc.text }]}
-            numberOfLines={4}
-            ellipsizeMode="tail"
-          >
+          <Text style={[styles.viewTitleValue, { color: tc.text }]}>
             {title}
           </Text>
         </View>
