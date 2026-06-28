@@ -433,6 +433,15 @@ describe('ObsidianView', () => {
                 uri: 'obsidian://open?vault=Vault&file=Projects%2FLaunch',
             });
         });
+
+        fireEvent.click(getByRole('button', { name: 'Bring into Mindwtr' }));
+
+        await waitFor(() => {
+            const createdTasks = useTaskStore.getState()._allTasks.filter((task) => (
+                task.attachments?.some((attachment) => attachment.uri === 'obsidian://open?vault=Vault&file=Projects%2FLaunch')
+            ));
+            expect(createdTasks).toHaveLength(1);
+        });
         expect(toggleInline).not.toHaveBeenCalled();
         expect(toggleTaskNotes).not.toHaveBeenCalled();
     });

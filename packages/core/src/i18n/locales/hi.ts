@@ -1262,8 +1262,9 @@ export const hiOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick CSV या ZIP बैकअप को Mindwtr क्षेत्रों, प्रोजेक्टों और कार्यों में आयात करें।',
         'obsidian.title': 'Obsidian कार्य',
         'obsidian.description': 'अपने Obsidian वॉल्ट से कार्य आयात करें, स्रोत नोट को दिखता रखें, और ज़रूरत होने पर वास्तविक प्रतिबद्धताओं को Mindwtr में लाएँ।',
-        'obsidian.bringIntoMindwtr': 'Mindwtr में लाएँ',
-        'obsidian.bringIntoMindwtrSuccess': 'कार्य Mindwtr में जोड़ दिया गया।',
-        'obsidian.bringIntoMindwtrFailed': 'कार्य को Mindwtr में नहीं जोड़ा जा सका।',
+    'obsidian.bringIntoMindwtr': 'Mindwtr में लाएँ',
+    'obsidian.bringIntoMindwtrSuccess': 'कार्य Mindwtr में जोड़ दिया गया।',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'कार्य Mindwtr में पहले से मौजूद है।',
+    'obsidian.bringIntoMindwtrFailed': 'कार्य को Mindwtr में नहीं जोड़ा जा सका।',
         'obsidian.sourceAttachmentTitle': 'Obsidian स्रोत',
 };

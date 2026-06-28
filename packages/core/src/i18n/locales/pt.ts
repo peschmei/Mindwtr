@@ -1344,8 +1344,9 @@ export const ptOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'Importe backups CSV ou ZIP do TickTick para áreas, projetos e tarefas do Mindwtr.',
         'obsidian.title': 'Tarefas do Obsidian',
         'obsidian.description': 'Importe tarefas do seu cofre Obsidian, mantenha a nota de origem visível e leve compromissos reais para o Mindwtr quando necessário.',
-        'obsidian.bringIntoMindwtr': 'Trazer para o Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Tarefa adicionada ao Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Não foi possível adicionar a tarefa ao Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Trazer para o Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Tarefa adicionada ao Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'A tarefa já existe no Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Não foi possível adicionar a tarefa ao Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Origem do Obsidian',
 };

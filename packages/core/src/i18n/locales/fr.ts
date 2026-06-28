@@ -1868,8 +1868,9 @@ export const frOverrides: Record<string, string> = {
 
         'obsidian.title': 'Tâches Obsidian',
         'obsidian.description': 'Importez les tâches de votre coffre Obsidian, gardez la note source visible et transférez les vrais engagements dans Mindwtr au besoin.',
-        'obsidian.bringIntoMindwtr': 'Importer dans Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Tâche ajoutée à Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Impossible d’ajouter la tâche à Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Importer dans Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Tâche ajoutée à Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'La tâche existe déjà dans Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Impossible d’ajouter la tâche à Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Source Obsidian',
 };

@@ -125,10 +125,16 @@ const buildMindwtrTaskInitialProps = (task: ObsidianTask, sourceUri: string, sou
     };
 };
 
+const hasObsidianSourceAttachment = (task: Task, sourceUri: string): boolean => (
+    !task.deletedAt
+    && task.attachments?.some((attachment) => !attachment.deletedAt && attachment.kind === 'link' && attachment.uri === sourceUri) === true
+);
+
 export function ObsidianView() {
     const { t } = useLanguage();
     const showToast = useUiStore((state) => state.showToast);
     const addTask = useTaskStore((state) => state.addTask);
+    const mindwtrTasks = useTaskStore((state) => state._allTasks);
     const config = useObsidianStore((state) => state.config);
     const tasks = useObsidianStore((state) => state.tasks);
     const scannedFileCount = useObsidianStore((state) => state.scannedFileCount);
@@ -234,6 +240,10 @@ export function ObsidianView() {
 
     const handleBringIntoMindwtr = useCallback(async (task: typeof tasks[number]) => {
         const sourceUri = ObsidianService.buildObsidianUri(task.source);
+        if (mindwtrTasks.some((existingTask) => hasObsidianSourceAttachment(existingTask, sourceUri))) {
+            showToast(resolveText('obsidian.bringIntoMindwtrAlreadyExists', 'Task already exists in Mindwtr.'), 'info');
+            return;
+        }
         setPendingMindwtrTaskIds((current) => ({ ...current, [task.id]: true }));
         try {
             const result = await addTask(
@@ -263,7 +273,7 @@ export function ObsidianView() {
                 return next;
             });
         }
-    }, [addTask, resolveText, showToast]);
+    }, [addTask, mindwtrTasks, resolveText, showToast]);
 
     const handleToggleTask = useCallback(async (task: typeof tasks[number]) => {
         if (!config.vaultPath) return;

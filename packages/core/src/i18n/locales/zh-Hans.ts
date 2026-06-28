@@ -1812,8 +1812,9 @@ export const zhHans: Record<string, string> = {
         'mindSweep.group.workAdmin.p5': '今天归档好，将来的你会感谢的任何东西',
         'obsidian.title': 'Obsidian 任务',
         'obsidian.description': '从你的 Obsidian 资料库导入任务，保留源笔记可见，并在需要时把真正的承诺事项带入 Mindwtr。',
-        'obsidian.bringIntoMindwtr': '带入 Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': '任务已添加到 Mindwtr。',
-        'obsidian.bringIntoMindwtrFailed': '无法将任务添加到 Mindwtr。',
+    'obsidian.bringIntoMindwtr': '带入 Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': '任务已添加到 Mindwtr。',
+    'obsidian.bringIntoMindwtrAlreadyExists': '任务已在 Mindwtr 中。',
+    'obsidian.bringIntoMindwtrFailed': '无法将任务添加到 Mindwtr。',
         'obsidian.sourceAttachmentTitle': 'Obsidian 来源',
 };

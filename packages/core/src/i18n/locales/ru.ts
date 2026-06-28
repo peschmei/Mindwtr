@@ -1262,8 +1262,9 @@ export const ruOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'Импортируйте CSV- или ZIP-резервные копии TickTick в области, проекты и задачи Mindwtr.',
         'obsidian.title': 'Задачи Obsidian',
         'obsidian.description': 'Импортируйте задачи из хранилища Obsidian, сохраняйте видимой исходную заметку и при необходимости переносите реальные обязательства в Mindwtr.',
-        'obsidian.bringIntoMindwtr': 'Перенести в Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Задача добавлена в Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Не удалось добавить задачу в Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Перенести в Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Задача добавлена в Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Задача уже есть в Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Не удалось добавить задачу в Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Источник Obsidian',
 };

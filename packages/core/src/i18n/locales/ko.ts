@@ -1247,8 +1247,9 @@ export const koOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick CSV 또는 ZIP 백업을 Mindwtr 영역, 프로젝트, 작업으로 가져옵니다.',
         'obsidian.title': 'Obsidian 작업',
         'obsidian.description': 'Obsidian 보관함에서 작업을 가져오고 원본 노트를 보이게 유지한 뒤, 필요할 때 실제 약속을 Mindwtr로 가져옵니다.',
-        'obsidian.bringIntoMindwtr': 'Mindwtr로 가져오기',
-        'obsidian.bringIntoMindwtrSuccess': '작업이 Mindwtr에 추가되었습니다.',
-        'obsidian.bringIntoMindwtrFailed': '작업을 Mindwtr에 추가하지 못했습니다.',
+    'obsidian.bringIntoMindwtr': 'Mindwtr로 가져오기',
+    'obsidian.bringIntoMindwtrSuccess': '작업이 Mindwtr에 추가되었습니다.',
+    'obsidian.bringIntoMindwtrAlreadyExists': '작업이 이미 Mindwtr에 있습니다.',
+    'obsidian.bringIntoMindwtrFailed': '작업을 Mindwtr에 추가하지 못했습니다.',
         'obsidian.sourceAttachmentTitle': 'Obsidian 원본',
 };

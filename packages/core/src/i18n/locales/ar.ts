@@ -1286,8 +1286,9 @@ export const arOverrides: Record<string, string> = {
         'mindSweep.group.workAdmin.p5': 'كل ما سيشكرك عليه مستقبلك إن أنجزته اليوم',
         'obsidian.title': 'مهام Obsidian',
         'obsidian.description': 'استورد المهام من خزنة Obsidian، وأبقِ ملاحظة المصدر ظاهرة، وانقل الالتزامات الفعلية إلى Mindwtr عند الحاجة.',
-        'obsidian.bringIntoMindwtr': 'إحضار إلى Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'تمت إضافة المهمة إلى Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'تعذرت إضافة المهمة إلى Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'إحضار إلى Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'تمت إضافة المهمة إلى Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'المهمة موجودة بالفعل في Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'تعذرت إضافة المهمة إلى Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'مصدر Obsidian',
 };

@@ -196,4 +196,38 @@ describe('todoist import', () => {
         expect(importedTask.rev).toBe(1);
         expect(importedTask.revBy).toBe(result.data.settings.deviceId);
     });
+
+    it('does not duplicate Todoist records when the same import is applied again', () => {
+        const parsedProjects: ParsedTodoistProject[] = [
+            {
+                name: 'Launch',
+                sections: ['Planning'],
+                checklistItemCount: 1,
+                recurringCount: 0,
+                tasks: [
+                    {
+                        title: 'Plan launch',
+                        tags: ['#work'],
+                        checklist: ['Call vendor'],
+                        sectionName: 'Planning',
+                        priority: 'high',
+                        dueDate: '2026-04-02',
+                        description: 'Brief the team.',
+                    },
+                ],
+            },
+        ];
+
+        const first = applyTodoistImport(mockAppData([], [], []), parsedProjects, { now: '2026-03-30T12:00:00.000Z' });
+        const second = applyTodoistImport(first.data, parsedProjects, { now: '2026-03-31T12:00:00.000Z' });
+
+        expect(second.importedProjectCount).toBe(0);
+        expect(second.importedSectionCount).toBe(0);
+        expect(second.importedTaskCount).toBe(0);
+        expect(second.importedChecklistItemCount).toBe(0);
+        expect(second.data.projects).toHaveLength(first.data.projects.length);
+        expect(second.data.sections).toHaveLength(first.data.sections.length);
+        expect(second.data.tasks).toHaveLength(first.data.tasks.length);
+        expect(second.data.tasks.map((task) => task.id)).toEqual(first.data.tasks.map((task) => task.id));
+    });
 });

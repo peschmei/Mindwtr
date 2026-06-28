@@ -5,7 +5,7 @@ import { safeParseDate } from './date';
 import { normalizeRecurrenceForLoad } from './recurrence';
 import { ensureDeviceId, normalizeTagId } from './store-helpers';
 import type { AppData, Area, ChecklistItem, Project, Task, TaskPriority, TaskStatus } from './types';
-import { generateUUID as uuidv4 } from './uuid';
+import { generateDeterministicUUID, generateUUID as uuidv4 } from './uuid';
 
 const TICKTICK_REQUIRED_COLUMNS = ['TITLE', 'LIST NAME'];
 const TICKTICK_DELIMITER = ',';
@@ -14,8 +14,13 @@ const TICKTICK_AREA_FALLBACK = 'TickTick Area';
 const TICKTICK_PROJECT_FALLBACK = 'TickTick Import';
 const TICKTICK_TASK_FALLBACK = 'Imported TickTick Task';
 const TICKTICK_IMPORT_SUFFIX = ' (TickTick)';
+const TICKTICK_IMPORT_ID_NAMESPACE = 'mindwtr:ticktick-import:v1';
 const TICKTICK_CHECKLIST_UNCHECKED = '▫';
 const TICKTICK_CHECKLIST_CHECKED = '▪';
+
+const createTickTickImportId = (kind: 'area' | 'project' | 'task', sourceKey: string): string => (
+    generateDeterministicUUID(`${TICKTICK_IMPORT_ID_NAMESPACE}:${kind}:${sourceKey}`)
+);
 
 type TickTickFileInput = {
     bytes?: ArrayBuffer | Uint8Array | null;
@@ -797,6 +802,9 @@ export const applyTickTickImport = (
     const warnings = [...parsedData.warnings];
     const areaIdBySourceKey = new Map<string, string>();
     const projectIdBySourceKey = new Map<string, string>();
+    const existingAreaById = new Map(nextData.areas.map((area) => [area.id, area]));
+    const existingProjectById = new Map(nextData.projects.map((project) => [project.id, project]));
+    const existingTaskIds = new Set(nextData.tasks.map((task) => task.id));
     let importedAreaCount = 0;
     let importedProjectCount = 0;
     let importedTaskCount = 0;
@@ -810,12 +818,18 @@ export const applyTickTickImport = (
         .slice()
         .sort((left, right) => left.order - right.order || left.sourceKey.localeCompare(right.sourceKey))
         .forEach((area, index) => {
+            const areaId = createTickTickImportId('area', area.sourceKey);
+            const existingArea = existingAreaById.get(areaId);
+            if (existingArea) {
+                if (!existingArea.deletedAt) areaIdBySourceKey.set(area.sourceKey, existingArea.id);
+                return;
+            }
             const areaName = resolveUniqueName(area.name, usedAreaNames, TICKTICK_AREA_FALLBACK);
             if (areaName !== area.name) {
                 warnings.push(`Imported area "${area.name}" was renamed to "${areaName}" to avoid a name conflict.`);
             }
             const nextArea: Area = {
-                id: uuidv4(),
+                id: areaId,
                 name: areaName,
                 color: DEFAULT_AREA_COLOR,
                 order: nextAreaOrder + index,
@@ -833,6 +847,12 @@ export const applyTickTickImport = (
         .slice()
         .sort((left, right) => left.order - right.order || left.sourceKey.localeCompare(right.sourceKey))
         .forEach((project) => {
+            const projectId = createTickTickImportId('project', project.sourceKey);
+            const existingProject = existingProjectById.get(projectId);
+            if (existingProject) {
+                if (!existingProject.deletedAt) projectIdBySourceKey.set(project.sourceKey, existingProject.id);
+                return;
+            }
             const areaId = project.areaSourceKey ? areaIdBySourceKey.get(project.areaSourceKey) : undefined;
             const projectTitle = resolveUniqueName(project.name, usedProjectTitles, TICKTICK_PROJECT_FALLBACK);
             if (projectTitle !== project.name) {
@@ -842,7 +862,7 @@ export const applyTickTickImport = (
                 .filter((item) => !item.deletedAt && (item.areaId ?? undefined) === areaId)
                 .reduce((max, item) => Math.max(max, Number.isFinite(item.order) ? item.order : -1), -1);
             const nextProject: Project = {
-                id: uuidv4(),
+                id: projectId,
                 title: projectTitle,
                 status: 'active',
                 color: DEFAULT_PROJECT_COLOR,
@@ -888,6 +908,8 @@ export const applyTickTickImport = (
     };
 
     parsedData.tasks.forEach((task) => {
+        const taskId = createTickTickImportId('task', `${task.projectSourceKey ?? 'none'}:${task.sourceId}`);
+        if (existingTaskIds.has(taskId)) return;
         const projectId = task.projectSourceKey ? projectIdBySourceKey.get(task.projectSourceKey) : undefined;
         const areaId = !projectId && task.areaSourceKey ? areaIdBySourceKey.get(task.areaSourceKey) : undefined;
         const order = allocateTaskOrder(projectId, areaId);
@@ -905,7 +927,7 @@ export const applyTickTickImport = (
             : undefined;
         const status = resolveImportedTaskStatus(task.status, projectId);
         const nextTask: Task = {
-            id: uuidv4(),
+            id: taskId,
             title: task.title,
             status,
             taskMode: checklist ? 'list' : 'task',
@@ -929,6 +951,7 @@ export const applyTickTickImport = (
             ...(areaId ? { areaId } : {}),
         };
         nextData.tasks.push(nextTask);
+        existingTaskIds.add(taskId);
         importedTaskCount += 1;
         importedChecklistItemCount += checklist?.length ?? 0;
     });

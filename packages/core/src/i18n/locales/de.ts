@@ -1350,8 +1350,9 @@ export const deOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick-CSV- oder ZIP-Backups in Mindwtr-Bereiche, Projekte und Aufgaben importieren.',
         'obsidian.title': 'Obsidian-Aufgaben',
         'obsidian.description': 'Importiere Aufgaben aus deinem Obsidian-Vault, halte die Quellnotiz sichtbar und übernimm echte Verpflichtungen bei Bedarf in Mindwtr.',
-        'obsidian.bringIntoMindwtr': 'In Mindwtr übernehmen',
-        'obsidian.bringIntoMindwtrSuccess': 'Aufgabe zu Mindwtr hinzugefügt.',
-        'obsidian.bringIntoMindwtrFailed': 'Aufgabe konnte nicht zu Mindwtr hinzugefügt werden.',
+    'obsidian.bringIntoMindwtr': 'In Mindwtr übernehmen',
+    'obsidian.bringIntoMindwtrSuccess': 'Aufgabe zu Mindwtr hinzugefügt.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Aufgabe existiert bereits in Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Aufgabe konnte nicht zu Mindwtr hinzugefügt werden.',
         'obsidian.sourceAttachmentTitle': 'Obsidian-Quelle',
 };

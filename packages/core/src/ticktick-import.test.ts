@@ -451,4 +451,23 @@ describe('ticktick import', () => {
             revBy: result.data.settings.deviceId,
         });
     });
+
+    it('does not duplicate TickTick records when the same import is applied again', () => {
+        const parsedData = parseTickTickImportSource({
+            fileName: 'TickTick-backup.csv',
+            text: sampleTickTickCsv,
+        }).parsedData as ParsedTickTickImportData;
+
+        const first = applyTickTickImport(mockAppData([], [], []), parsedData, { now: '2026-06-17T12:00:00.000Z' });
+        const second = applyTickTickImport(first.data, parsedData, { now: '2026-06-18T12:00:00.000Z' });
+
+        expect(second.importedAreaCount).toBe(0);
+        expect(second.importedProjectCount).toBe(0);
+        expect(second.importedTaskCount).toBe(0);
+        expect(second.importedChecklistItemCount).toBe(0);
+        expect(second.data.areas).toHaveLength(first.data.areas.length);
+        expect(second.data.projects).toHaveLength(first.data.projects.length);
+        expect(second.data.tasks).toHaveLength(first.data.tasks.length);
+        expect(second.data.tasks.map((task) => task.id)).toEqual(first.data.tasks.map((task) => task.id));
+    });
 });

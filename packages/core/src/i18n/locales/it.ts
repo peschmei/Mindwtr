@@ -1467,8 +1467,9 @@ export const itOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'Importa backup CSV o ZIP di TickTick in aree, progetti e attività Mindwtr.',
         'obsidian.title': 'Attività Obsidian',
         'obsidian.description': 'Importa le attività dal tuo vault Obsidian, mantieni visibile la nota sorgente e porta in Mindwtr gli impegni reali quando serve.',
-        'obsidian.bringIntoMindwtr': 'Porta in Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Attività aggiunta a Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Impossibile aggiungere l’attività a Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Porta in Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Attività aggiunta a Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'L’attività esiste già in Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Impossibile aggiungere l’attività a Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Fonte Obsidian',
 };

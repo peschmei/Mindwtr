@@ -1793,8 +1793,9 @@ export const csOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'Importujte CSV nebo ZIP zálohy TickTick do oblastí, projektů a úkolů Mindwtr.',
         'obsidian.title': 'Úkoly z Obsidianu',
         'obsidian.description': 'Importujte úkoly z trezoru Obsidian, ponechte viditelnou zdrojovou poznámku a skutečné závazky podle potřeby přeneste do Mindwtr.',
-        'obsidian.bringIntoMindwtr': 'Přenést do Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Úkol byl přidán do Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Úkol se nepodařilo přidat do Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Přenést do Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Úkol byl přidán do Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Úkol už v Mindwtr existuje.',
+    'obsidian.bringIntoMindwtrFailed': 'Úkol se nepodařilo přidat do Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Zdroj v Obsidianu',
 };

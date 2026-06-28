@@ -1187,8 +1187,9 @@ export const esOverrides: Record<string, string> = {
         'mindSweep.group.workAdmin.p5': 'Cualquier cosa que tu yo del futuro agradecerá que archives hoy',
         'obsidian.title': 'Tareas de Obsidian',
         'obsidian.description': 'Importa tareas desde tu bóveda de Obsidian, conserva visible la nota de origen y lleva los compromisos reales a Mindwtr cuando haga falta.',
-        'obsidian.bringIntoMindwtr': 'Traer a Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Tarea añadida a Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'No se pudo añadir la tarea a Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Traer a Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Tarea añadida a Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'La tarea ya existe en Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'No se pudo añadir la tarea a Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Origen de Obsidian',
 };

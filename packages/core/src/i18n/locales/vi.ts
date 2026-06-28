@@ -1871,8 +1871,9 @@ export const viOverrides: Record<string, string> = {
         'mindSweep.group.workAdmin.p5': 'Bất cứ điều gì bản thân tương lai của bạn sẽ ước là đã lưu hôm nay',
         'obsidian.title': 'Nhiệm vụ Obsidian',
         'obsidian.description': 'Nhập nhiệm vụ từ kho Obsidian, giữ ghi chú nguồn hiển thị và đưa các cam kết thực sự vào Mindwtr khi cần.',
-        'obsidian.bringIntoMindwtr': 'Đưa vào Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Đã thêm nhiệm vụ vào Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Không thể thêm nhiệm vụ vào Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Đưa vào Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Đã thêm nhiệm vụ vào Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Nhiệm vụ đã có trong Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Không thể thêm nhiệm vụ vào Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Nguồn Obsidian',
 };

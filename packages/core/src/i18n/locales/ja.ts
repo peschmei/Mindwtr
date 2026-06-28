@@ -1262,8 +1262,9 @@ export const jaOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick の CSV または ZIP バックアップを Mindwtr のエリア、プロジェクト、タスクにインポートします。',
         'obsidian.title': 'Obsidianタスク',
         'obsidian.description': 'Obsidian保管庫からタスクを取り込み、元ノートを見える状態に保ち、必要に応じて実際のコミットメントをMindwtrへ移します。',
-        'obsidian.bringIntoMindwtr': 'Mindwtrに取り込む',
-        'obsidian.bringIntoMindwtrSuccess': 'タスクをMindwtrに追加しました。',
-        'obsidian.bringIntoMindwtrFailed': 'タスクをMindwtrに追加できませんでした。',
+    'obsidian.bringIntoMindwtr': 'Mindwtrに取り込む',
+    'obsidian.bringIntoMindwtrSuccess': 'タスクをMindwtrに追加しました。',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'タスクはすでにMindwtrにあります。',
+    'obsidian.bringIntoMindwtrFailed': 'タスクをMindwtrに追加できませんでした。',
         'obsidian.sourceAttachmentTitle': 'Obsidianソース',
 };

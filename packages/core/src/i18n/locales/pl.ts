@@ -1288,8 +1288,9 @@ export const plOverrides: Record<string, string> = {
         'mindSweep.group.workAdmin.p5': 'Wszystko, za co twoje przyszłe ja podziękuje, jeśli odłożysz to dziś na miejsce',
         'obsidian.title': 'Zadania Obsidian',
         'obsidian.description': 'Importuj zadania ze skarbca Obsidian, zachowaj widoczną notatkę źródłową i przenoś realne zobowiązania do Mindwtr, gdy trzeba.',
-        'obsidian.bringIntoMindwtr': 'Przenieś do Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Zadanie dodane do Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Nie udało się dodać zadania do Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Przenieś do Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Zadanie dodane do Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Zadanie już istnieje w Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Nie udało się dodać zadania do Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Źródło Obsidian',
 };

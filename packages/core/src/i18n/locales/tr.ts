@@ -1305,8 +1305,9 @@ export const trOverrides: Record<string, string> = {
         'mindSweep.group.workAdmin.p5': 'Bugün dosyalarsan gelecekteki halinin teşekkür edeceği her şey',
         'obsidian.title': 'Obsidian görevleri',
         'obsidian.description': 'Obsidian kasanızdaki görevleri içe aktarın, kaynak notu görünür tutun ve gerçek taahhütleri gerektiğinde Mindwtr’a taşıyın.',
-        'obsidian.bringIntoMindwtr': 'Mindwtr’a getir',
-        'obsidian.bringIntoMindwtrSuccess': 'Görev Mindwtr’a eklendi.',
-        'obsidian.bringIntoMindwtrFailed': 'Görev Mindwtr’a eklenemedi.',
+    'obsidian.bringIntoMindwtr': 'Mindwtr’a getir',
+    'obsidian.bringIntoMindwtrSuccess': 'Görev Mindwtr’a eklendi.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Görev zaten Mindwtr’da var.',
+    'obsidian.bringIntoMindwtrFailed': 'Görev Mindwtr’a eklenemedi.',
         'obsidian.sourceAttachmentTitle': 'Obsidian kaynağı',
 };

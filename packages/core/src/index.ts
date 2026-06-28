@@ -503,6 +503,7 @@ export {
 } from './focus-utils';
 
 export {
+    generateDeterministicUUID,
     generateUUID,
 } from './uuid';
 

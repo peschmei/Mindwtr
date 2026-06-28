@@ -456,8 +456,9 @@ export const nlOverrides: Record<string, string> = {
         'taskEdit.relativeStartBeforeDue': 'vóór vervaldatum',
         'obsidian.title': 'Obsidian-taken',
         'obsidian.description': 'Importeer taken uit je Obsidian-kluis, houd de bronnotitie zichtbaar en breng echte verplichtingen naar Mindwtr wanneer dat nodig is.',
-        'obsidian.bringIntoMindwtr': 'Naar Mindwtr brengen',
-        'obsidian.bringIntoMindwtrSuccess': 'Taak toegevoegd aan Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Kon de taak niet toevoegen aan Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Naar Mindwtr brengen',
+    'obsidian.bringIntoMindwtrSuccess': 'Taak toegevoegd aan Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Taak bestaat al in Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Kon de taak niet toevoegen aan Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Obsidian-bron',
 };

@@ -1874,8 +1874,9 @@ export const en: Record<string, string> = {
 
         'obsidian.title': 'Obsidian Tasks',
         'obsidian.description': 'Import tasks from your Obsidian vault, keep the source note visible, and bring real commitments into Mindwtr when needed.',
-        'obsidian.bringIntoMindwtr': 'Bring into Mindwtr',
-        'obsidian.bringIntoMindwtrSuccess': 'Task added to Mindwtr.',
-        'obsidian.bringIntoMindwtrFailed': 'Could not add the task to Mindwtr.',
+    'obsidian.bringIntoMindwtr': 'Bring into Mindwtr',
+    'obsidian.bringIntoMindwtrSuccess': 'Task added to Mindwtr.',
+    'obsidian.bringIntoMindwtrAlreadyExists': 'Task already exists in Mindwtr.',
+    'obsidian.bringIntoMindwtrFailed': 'Could not add the task to Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Obsidian source',
 };
