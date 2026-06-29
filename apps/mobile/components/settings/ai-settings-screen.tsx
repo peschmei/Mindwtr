@@ -23,11 +23,13 @@ import {
 import { loadAIKey, saveAIKey } from '@/lib/ai-config';
 import { useToast } from '@/contexts/toast-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { logInfo } from '@/lib/app-log';
 import { logSettingsError, logSettingsWarn } from '@/lib/settings-utils';
 
 import { AiSettingsAssistantCard } from './ai-settings-assistant-card';
 import { AiSettingsSpeechCard } from './ai-settings-speech-card';
 import {
+    describeWhisperDownloadUrl,
     downloadWhisperModelFile,
     isWhisperModelFileReady,
     isWhisperModelSafeDeleteTarget,
@@ -35,6 +37,7 @@ import {
     resolveWhisperNativeFsModule,
     resolveWhisperNativeHashModule,
     verifyWhisperModelFileHash,
+    type WhisperModelDownloadLogger,
     type WhisperModelNativeFs,
     type WhisperModelNativeHashFs,
 } from './ai-settings-whisper-model';
@@ -92,6 +95,51 @@ const hashWhisperModelFile = async (uri: string): Promise<string> => {
         throw new Error('Whisper model hashing is unavailable in this build. Use a dev build or production build.');
     }
     return rnfs.hash(toNativeHashPath(uri), 'sha256');
+};
+
+
+const describeDiagnosticError = (error: unknown): Record<string, unknown> => (
+    error instanceof Error
+        ? { errorName: error.name, errorMessage: error.message }
+        : { errorMessage: String(error) }
+);
+
+const describeNativeModuleForDiagnostics = (value: unknown): Record<string, unknown> => {
+    const root = typeof value === 'object' && value !== null ? value as Record<string, unknown> : null;
+    const defaultValue = root && typeof root.default === 'object' && root.default !== null
+        ? root.default as Record<string, unknown>
+        : null;
+    const keys = (candidate: Record<string, unknown> | null) => candidate
+        ? Object.keys(candidate).slice(0, 20).join(',')
+        : '';
+    return {
+        moduleType: value === null ? 'null' : typeof value,
+        rootKeys: keys(root),
+        defaultKeys: keys(defaultValue),
+        rootHasDownloadFile: typeof root?.downloadFile === 'function',
+        defaultHasDownloadFile: typeof defaultValue?.downloadFile === 'function',
+        rootHasHash: typeof root?.hash === 'function',
+        defaultHasHash: typeof defaultValue?.hash === 'function',
+    };
+};
+
+const describePathInfoForDiagnostics = (info: { exists?: boolean; isDirectory?: boolean | null; size?: number | null } | null | undefined): Record<string, unknown> => ({
+    exists: info?.exists ?? false,
+    isDirectory: info && 'isDirectory' in info ? info.isDirectory : undefined,
+    size: info && 'size' in info ? info.size : undefined,
+});
+
+const createWhisperDownloadLogger = (attemptId: string): WhisperModelDownloadLogger => async (event, details) => {
+    await logInfo(`Whisper model download ${event}`, {
+        scope: 'settings',
+        force: true,
+        extra: {
+            feature: 'whisperModelDownload',
+            attemptId,
+            event,
+            ...(details ?? {}),
+        },
+    });
 };
 
 export function AISettingsScreen() {
@@ -543,8 +591,50 @@ export function AISettingsScreen() {
 
     const handleDownloadWhisperModel = async () => {
         if (!selectedWhisperModel) return;
+        const attemptId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const logWhisperDownload = createWhisperDownloadLogger(attemptId);
+        const hashWhisperModelFileWithDiagnostics = async (uri: string): Promise<string> => {
+            await logWhisperDownload('hash-start', {
+                uri,
+                nativePath: toNativeHashPath(uri),
+                hashModuleAvailable: Boolean(getRNFSHashModule()),
+            });
+            try {
+                const digest = await hashWhisperModelFile(uri);
+                await logWhisperDownload('hash-complete', {
+                    uri,
+                    sha256: digest,
+                    sha256Prefix: digest.slice(0, 12),
+                    sha256Length: digest.length,
+                });
+                return digest;
+            } catch (error) {
+                await logWhisperDownload('hash-error', {
+                    uri,
+                    ...describeDiagnosticError(error),
+                });
+                throw error;
+            }
+        };
+
+        await logWhisperDownload('attempt-start', {
+            platform: Platform.OS,
+            appOwnership: Constants.appOwnership ?? 'unknown',
+            nativeApplicationVersion: Constants.nativeApplicationVersion ?? '',
+            nativeBuildVersion: Constants.nativeBuildVersion ?? '',
+            isFossBuild,
+            isExpoGo,
+            modelId: selectedWhisperModel.id,
+            fileName: selectedWhisperModel.fileName,
+            expectedBytes: selectedWhisperModel.sizeBytes,
+            minimumBytes: selectedWhisperModel.minBytes,
+            configuredOfflineModelPath: speechSettings.offlineModelPath ?? '',
+            modelUrlParts: describeWhisperDownloadUrl(`${WHISPER_MODEL_BASE_URL}/${selectedWhisperModel.fileName}`),
+        });
+
         if (isExpoGo) {
             const message = tr('settings.aiMobile.whisperDownloadsRequireADevBuildOrProductionBuildNot');
+            await logWhisperDownload('attempt-blocked-expo-go', { message });
             setWhisperDownloadError(message);
             setWhisperDownloadState('error');
             showToast({
@@ -562,6 +652,10 @@ export function AISettingsScreen() {
         };
         try {
             const directories = getWhisperDirectories();
+            await logWhisperDownload('storage-candidates', {
+                count: directories.length,
+                directories: directories.map((directory) => directory.uri).join(','),
+            });
             if (!directories.length) {
                 throw new Error('Whisper storage unavailable');
             }
@@ -573,83 +667,144 @@ export function AISettingsScreen() {
             let lastError: Error | null = null;
             for (const directory of directories) {
                 try {
+                    await logWhisperDownload('directory-start', { directoryUri: directory.uri });
                     directory.create({ intermediates: true, idempotent: true });
+                    await logWhisperDownload('directory-ready', { directoryUri: directory.uri });
                     const dirUri = directory.uri.endsWith('/') ? directory.uri : `${directory.uri}/`;
                     const targetFile = new File(`${dirUri}${fileName}`);
                     const conflictInfo = safePathInfo(targetFile.uri);
+                    const safeTarget = isSafeWhisperModelTarget(targetFile.uri, selectedWhisperModel);
+                    await logWhisperDownload('target-preflight', {
+                        targetUri: targetFile.uri,
+                        nativeTargetPath: targetFile.uri.startsWith('file:') ? toNativeHashPath(targetFile.uri) : targetFile.uri,
+                        conflictInfo: describePathInfoForDiagnostics(conflictInfo),
+                        safeTarget,
+                    });
                     if (conflictInfo?.exists && conflictInfo.isDirectory) {
                         throw new Error(tr('settings.aiMobile.offlineModelPathIsFolder', { path: targetFile.uri }));
                     }
-                    if (!isSafeWhisperModelTarget(targetFile.uri, selectedWhisperModel)) {
+                    if (!safeTarget) {
                         throw new Error(tr('settings.aiMobile.offlineModelPathIsUnsafe', { path: targetFile.uri }));
                     }
                     const existingInfo = safePathInfo(targetFile.uri);
+                    await logWhisperDownload('existing-file-info', {
+                        targetUri: targetFile.uri,
+                        info: describePathInfoForDiagnostics(existingInfo),
+                        ready: isWhisperModelFileReady(selectedWhisperModel, existingInfo),
+                    });
                     if (existingInfo?.exists && existingInfo.isDirectory === false) {
                         if (isWhisperModelFileReady(selectedWhisperModel, existingInfo)) {
                             try {
-                                await verifyWhisperModelFileHash(selectedWhisperModel, targetFile.uri, hashWhisperModelFile);
+                                await logWhisperDownload('existing-file-ready-verify-start', { targetUri: targetFile.uri });
+                                await verifyWhisperModelFileHash(selectedWhisperModel, targetFile.uri, hashWhisperModelFileWithDiagnostics);
+                                await logWhisperDownload('existing-file-ready-verify-complete', { targetUri: targetFile.uri });
                                 updateSpeechSettings({ offlineModelPath: targetFile.uri, model: selectedWhisperModel.id });
                                 setWhisperDownloadState('success');
                                 clearSuccess();
+                                await logWhisperDownload('attempt-success-existing-file', { targetUri: targetFile.uri });
                                 return;
                             } catch (error) {
+                                await logWhisperDownload('existing-file-hash-error', describeDiagnosticError(error));
                                 logSettingsWarn('Whisper existing model hash verification failed', error);
                             }
                         }
                         try {
+                            await logWhisperDownload('existing-file-delete-start', { targetUri: targetFile.uri });
                             targetFile.delete();
+                            await logWhisperDownload('existing-file-delete-complete', { targetUri: targetFile.uri });
                         } catch (error) {
+                            await logWhisperDownload('existing-file-delete-error', describeDiagnosticError(error));
                             logSettingsWarn('Whisper incomplete file cleanup failed', error);
                         }
                     }
                     try {
+                        const rawRNFSModule = getRNFSModule();
+                        const nativeDownloadModule = getRNFSDownloadModule();
+                        const nativeHashModule = getRNFSHashModule();
+                        await logWhisperDownload('native-module-resolution', {
+                            ...describeNativeModuleForDiagnostics(rawRNFSModule),
+                            resolvedDownloadModule: Boolean(nativeDownloadModule),
+                            resolvedHashModule: Boolean(nativeHashModule),
+                        });
                         const file = await downloadWhisperModelFile({
                             url,
                             targetFile,
-                            nativeFs: getRNFSDownloadModule(),
-                            resolveDownloadUrl: resolveWhisperModelDownloadUrl,
+                            nativeFs: nativeDownloadModule,
+                            resolveDownloadUrl: (downloadUrl) => resolveWhisperModelDownloadUrl(downloadUrl, globalThis.fetch, logWhisperDownload),
+                            logger: logWhisperDownload,
                             expoDownloadFile: async (downloadUrl, destination, options) => {
+                                await logWhisperDownload('expo-download-called', {
+                                    urlParts: describeWhisperDownloadUrl(downloadUrl),
+                                    destinationUri: destination.uri,
+                                    idempotent: options?.idempotent,
+                                });
                                 await File.downloadFileAsync(downloadUrl, destination, options);
                                 return destination;
                             },
                         });
                         const downloadedInfo = safePathInfo(file.uri);
-                        if (!isWhisperModelFileReady(selectedWhisperModel, downloadedInfo)) {
+                        const ready = isWhisperModelFileReady(selectedWhisperModel, downloadedInfo);
+                        await logWhisperDownload('downloaded-file-info', {
+                            targetUri: file.uri,
+                            info: describePathInfoForDiagnostics(downloadedInfo),
+                            ready,
+                            expectedBytes: selectedWhisperModel.sizeBytes,
+                            minimumBytes: selectedWhisperModel.minBytes,
+                        });
+                        if (!ready) {
                             try {
+                                await logWhisperDownload('downloaded-file-delete-start', { targetUri: file.uri });
                                 file.delete();
+                                await logWhisperDownload('downloaded-file-delete-complete', { targetUri: file.uri });
                             } catch (error) {
+                                await logWhisperDownload('downloaded-file-delete-error', describeDiagnosticError(error));
                                 logSettingsWarn('Whisper incomplete download cleanup failed', error);
                             }
                             throw new Error('Downloaded Whisper model file looks incomplete. Please retry on Wi-Fi.');
                         }
                         try {
-                            await verifyWhisperModelFileHash(selectedWhisperModel, file.uri, hashWhisperModelFile);
+                            await verifyWhisperModelFileHash(selectedWhisperModel, file.uri, hashWhisperModelFileWithDiagnostics);
                         } catch (error) {
                             try {
+                                await logWhisperDownload('failed-integrity-delete-start', { targetUri: file.uri });
                                 file.delete();
+                                await logWhisperDownload('failed-integrity-delete-complete', { targetUri: file.uri });
                             } catch (cleanupError) {
+                                await logWhisperDownload('failed-integrity-delete-error', describeDiagnosticError(cleanupError));
                                 logSettingsWarn('Whisper failed integrity cleanup failed', cleanupError);
                             }
                             throw error;
                         }
                         updateSpeechSettings({ offlineModelPath: file.uri, model: selectedWhisperModel.id });
+                        await logWhisperDownload('settings-update-requested', {
+                            offlineModelPath: file.uri,
+                            modelId: selectedWhisperModel.id,
+                        });
                     } catch (downloadError) {
+                        await logWhisperDownload('download-error', describeDiagnosticError(downloadError));
                         const fallbackMessage = tr('settings.aiMobile.downloadFailedPleaseRetryOnWiFiLargeModelsCannot');
                         throw new Error(downloadError instanceof Error
-                            ? `${fallbackMessage}\n${downloadError.message}`
+                            ? `${fallbackMessage}
+${downloadError.message}`
                             : fallbackMessage);
                     }
                     setWhisperDownloadState('success');
                     clearSuccess();
+                    await logWhisperDownload('attempt-success-downloaded-file', { modelId: selectedWhisperModel.id });
                     return;
                 } catch (error) {
                     lastError = error instanceof Error ? error : new Error(String(error));
+                    await logWhisperDownload('directory-failed', {
+                        directoryUri: directory.uri,
+                        ...describeDiagnosticError(error),
+                    });
                     logSettingsWarn('Whisper model download failed', error);
                 }
             }
             throw lastError ?? new Error('Whisper storage unavailable');
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
+            await logWhisperDownload('attempt-error', { message, ...describeDiagnosticError(error) });
             setWhisperDownloadError(message);
             setWhisperDownloadState('error');
             logSettingsWarn('Whisper model download failed', error);

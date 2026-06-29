@@ -571,10 +571,10 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             inputLabel: 'Review date',
             dialogLabel: 'Review Date calendar',
         },
-    ])('closes the $fieldId mini calendar when clicking outside', ({ fieldId, editValue, inputLabel, dialogLabel }) => {
+    ])('closes the $fieldId mini calendar when clicking outside', ({ fieldId, editValue, dialogLabel }) => {
         const handlers = createHandlers();
 
-        const { getByLabelText, getByRole, queryByRole } = render(
+        const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId={fieldId}
                 data={createData(editValue)}
@@ -582,7 +582,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             />
         );
 
-        fireEvent.focus(getByLabelText(inputLabel));
+        fireEvent.click(getByRole('button', { name: dialogLabel }));
         expect(getByRole('dialog', { name: dialogLabel })).toBeInTheDocument();
 
         fireEvent.mouseDown(document.body);
@@ -593,7 +593,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     it('sets the date and closes the mini calendar when a day is selected', () => {
         const handlers = createHandlers();
 
-        const { getByLabelText, getByRole, queryByRole } = render(
+        const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
                 data={createData({ editDueDate: '2026-04-12' })}
@@ -601,39 +601,17 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             />
         );
 
-        fireEvent.focus(getByLabelText('Due date'));
+        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
         const dialog = getByRole('dialog', { name: 'Due Date calendar' });
 
-        fireEvent.pointerDown(getByRole('button', { name: /April 19, 2026/i }));
+        fireEvent.pointerDown(within(dialog).getByRole('button', { name: /April 19, 2026/i }));
 
         expect(handlers.setEditDueDate).toHaveBeenCalledWith('2026-04-19');
         expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
         expect(dialog).not.toBeInTheDocument();
     });
 
-    it('closes the due-date mini calendar when the date input loses focus', async () => {
-        const handlers = createHandlers();
-
-        const { getByLabelText, getByRole, queryByRole } = render(
-            <TaskItemFieldRenderer
-                fieldId="dueDate"
-                data={createData({ editDueDate: '2026-04-12' })}
-                handlers={handlers}
-            />
-        );
-
-        const input = getByLabelText('Due date');
-        fireEvent.focus(input);
-        expect(getByRole('dialog', { name: 'Due Date calendar' })).toBeInTheDocument();
-
-        fireEvent.blur(input);
-
-        await waitFor(() => {
-            expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
-        });
-    });
-
-    it('keeps the mini calendar closed after selecting a date from another month', async () => {
+    it('keeps the due-date mini calendar closed when the date input receives focus', () => {
         const handlers = createHandlers();
 
         const { getByLabelText, getByRole, queryByRole } = render(
@@ -645,10 +623,46 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         );
 
         fireEvent.focus(getByLabelText('Due date'));
+
+        expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+        expect(getByRole('button', { name: 'Today' })).toBeInTheDocument();
+    });
+
+    it('opens the due-date mini calendar from the calendar button and hides quick shortcuts', () => {
+        const handlers = createHandlers();
+
+        const { getByLabelText, getByRole, queryByRole } = render(
+            <TaskItemFieldRenderer
+                fieldId="dueDate"
+                data={createData({ editDueDate: '2026-04-12' })}
+                handlers={handlers}
+            />
+        );
+
+        fireEvent.focus(getByLabelText('Due date'));
+        expect(getByRole('button', { name: 'Today' })).toBeInTheDocument();
+
+        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
+
+        expect(getByRole('dialog', { name: 'Due Date calendar' })).toBeInTheDocument();
+        expect(queryByRole('button', { name: 'Today' })).not.toBeInTheDocument();
+    });
+
+    it('keeps the mini calendar closed after selecting a date from another month', async () => {
+        const handlers = createHandlers();
+
+        const { getByRole, queryByRole } = render(
+            <TaskItemFieldRenderer
+                fieldId="dueDate"
+                data={createData({ editDueDate: '2026-04-12' })}
+                handlers={handlers}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
         const dialog = getByRole('dialog', { name: 'Due Date calendar' });
         const nextMonthButton = within(dialog).getByRole('button', { name: 'Next month' });
         fireEvent.click(nextMonthButton);
-        nextMonthButton.focus();
 
         const updatedDialog = getByRole('dialog', { name: 'Due Date calendar' });
         fireEvent.pointerDown(
@@ -662,12 +676,28 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         });
     });
 
-    it('shows due-date quick shortcuts only while the due date field is active', () => {
+    it.each([
+        {
+            fieldId: 'startTime' as const,
+            inputLabel: 'Start date',
+            handlerKey: 'setEditStartTime' as const,
+        },
+        {
+            fieldId: 'dueDate' as const,
+            inputLabel: 'Due date',
+            handlerKey: 'setEditDueDate' as const,
+        },
+        {
+            fieldId: 'reviewAt' as const,
+            inputLabel: 'Review date',
+            handlerKey: 'setEditReviewAt' as const,
+        },
+    ])('shows $fieldId quick shortcuts only while the date field is active', ({ fieldId, inputLabel, handlerKey }) => {
         const handlers = createHandlers();
 
         const { getByLabelText, getByText, queryByRole } = render(
             <TaskItemFieldRenderer
-                fieldId="dueDate"
+                fieldId={fieldId}
                 data={createData()}
                 handlers={handlers}
             />
@@ -675,7 +705,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         expect(queryByRole('button', { name: 'Next month' })).not.toBeInTheDocument();
 
-        fireEvent.focus(getByLabelText('Due date'));
+        fireEvent.focus(getByLabelText(inputLabel));
 
         const nextMonthButton = getByText('Next month').closest('button');
         const chipsRow = nextMonthButton?.parentElement;
@@ -683,6 +713,11 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         expect(chipsRow).toHaveClass('w-full');
         expect(chipsRow).toHaveClass('flex-wrap');
         expect(chipsRow).not.toHaveClass('max-w-[min(22rem,100%)]');
+
+        fireEvent.mouseDown(nextMonthButton!);
+        fireEvent.click(nextMonthButton!);
+
+        expect(handlers[handlerKey]).toHaveBeenCalled();
     });
 
     it('renders status choices as pills and keeps archived available', () => {

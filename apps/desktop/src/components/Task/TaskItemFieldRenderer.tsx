@@ -263,7 +263,6 @@ type DateFieldProps = {
     onClear: () => void;
     onDateOnly?: () => void;
     hasValue: boolean;
-    quickDateChipsMode?: 'always' | 'calendar';
 };
 
 export function DateField({
@@ -281,12 +280,12 @@ export function DateField({
     onClear,
     onDateOnly,
     hasValue,
-    quickDateChipsMode = 'always',
 }: DateFieldProps) {
     const rootRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
     const calendarRef = useRef<HTMLDivElement | null>(null);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [isFieldActive, setIsFieldActive] = useState(false);
     const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
     const calendarSystem = isJalaliCalendarLocale(nativeDateInputLocale) ? 'jalali' : 'gregorian';
     const [calendarMonth, setCalendarMonth] = useState(() =>
@@ -312,7 +311,7 @@ export function DateField({
     const weekdayLabels = getWeekdayLabels(nativeDateInputLocale, weekStartIndex);
     const days = getCalendarGridDays(calendarMonth, weekStartIndex, calendarSystem);
     const todayValue = safeFormatDate(new Date(), 'yyyy-MM-dd');
-    const showQuickDateChips = quickDateChipsMode === 'always' || isCalendarOpen;
+    const showQuickDateChips = isFieldActive && !isCalendarOpen;
 
     const updateCalendarPosition = useCallback(() => {
         const anchor = inputRef.current?.parentElement ?? inputRef.current;
@@ -327,9 +326,16 @@ export function DateField({
         setCalendarPosition({ top, left });
     }, []);
     const openCalendar = useCallback(() => {
+        setIsFieldActive(true);
         updateCalendarPosition();
         setIsCalendarOpen(true);
     }, [updateCalendarPosition]);
+
+    const resetFieldState = useCallback(() => {
+        setIsFieldActive(false);
+        setIsCalendarOpen(false);
+        setDraftDateValue(formatDateInputDisplay(dateValue, dateInputOrder, calendarSystem));
+    }, [calendarSystem, dateInputOrder, dateValue]);
 
     useEffect(() => {
         setDraftDateValue(formatDateInputDisplay(dateValue, dateInputOrder, calendarSystem));
@@ -348,7 +354,7 @@ export function DateField({
         const handlePointerDown = (event: MouseEvent | PointerEvent | TouchEvent) => {
             const target = event.target;
             if (target instanceof Node && rootRef.current?.contains(target)) return;
-            setIsCalendarOpen(false);
+            resetFieldState();
         };
         const handleKeyDown = (event: globalThis.KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -371,7 +377,7 @@ export function DateField({
             window.removeEventListener('resize', handleViewportChange);
             window.removeEventListener('scroll', handleViewportChange, true);
         };
-    }, [isCalendarOpen, updateCalendarPosition]);
+    }, [isCalendarOpen, resetFieldState, updateCalendarPosition]);
 
     const handleDateInputChange = (value: string) => {
         setDraftDateValue(value);
@@ -393,7 +399,18 @@ export function DateField({
     };
 
     return (
-        <div className="relative flex flex-col gap-1" ref={rootRef}>
+        <div
+            className="relative flex flex-col gap-1"
+            ref={rootRef}
+            onFocusCapture={() => setIsFieldActive(true)}
+            onBlurCapture={() => {
+                window.setTimeout(() => {
+                    const activeElement = document.activeElement;
+                    if (activeElement instanceof Node && rootRef.current?.contains(activeElement)) return;
+                    resetFieldState();
+                }, 0);
+            }}
+        >
             <label className={taskEditorLabelClassName}>{label}</label>
             <div className="flex w-full max-w-[min(22rem,100%)] items-center gap-2">
                 <div className="relative min-w-0 flex-1">
@@ -407,32 +424,29 @@ export function DateField({
                         aria-haspopup="dialog"
                         aria-expanded={isCalendarOpen}
                         value={draftDateValue}
-                        onFocus={openCalendar}
-                        onClick={openCalendar}
                         onChange={(event) => handleDateInputChange(event.target.value)}
-                        onBlur={() => {
-                            window.setTimeout(() => {
-                                const activeElement = document.activeElement;
-                                if (activeElement instanceof Node && calendarRef.current?.contains(activeElement)) return;
-                                setDraftDateValue(formatDateInputDisplay(dateValue, dateInputOrder, calendarSystem));
-                                setIsCalendarOpen(false);
-                            }, 0);
-                        }}
                         onKeyDown={(event) => {
                             if (event.key === 'Escape') {
                                 setIsCalendarOpen(false);
+                                setIsFieldActive(false);
                                 event.stopPropagation();
                             } else if (event.key === 'ArrowDown') {
-                                setIsCalendarOpen(true);
+                                openCalendar();
                                 event.preventDefault();
                             }
                         }}
                         className={`${dateInputClassName} w-full pr-8`}
                     />
-                    <CalendarDays
-                        className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-                        aria-hidden="true"
-                    />
+                    <button
+                        type="button"
+                        aria-label={`${label} calendar`}
+                        aria-haspopup="dialog"
+                        aria-expanded={isCalendarOpen}
+                        onClick={openCalendar}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                        <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
                 </div>
                 {timeInput}
                 {onDateOnly ? (
@@ -534,23 +548,25 @@ export function DateField({
                 </div>
             )}
             {showQuickDateChips && (
-                <QuickDateChips
-                    t={t}
-                    selectedDate={selectedDate}
-                    wrap
-                    onSelect={(date) => {
-                        if (!date) {
-                            setDraftDateValue('');
-                            onClear();
-                            setIsCalendarOpen(false);
-                            return;
-                        }
-                        const nextDateValue = safeFormatDate(date, 'yyyy-MM-dd');
-                        setDraftDateValue(formatDateInputDisplay(nextDateValue, dateInputOrder, calendarSystem));
-                        onDateChange(nextDateValue);
-                    }}
-                    className="w-full"
-                />
+                <div className="w-full" onMouseDown={(event) => event.preventDefault()}>
+                    <QuickDateChips
+                        t={t}
+                        selectedDate={selectedDate}
+                        wrap
+                        onSelect={(date) => {
+                            if (!date) {
+                                setDraftDateValue('');
+                                onClear();
+                                setIsCalendarOpen(false);
+                                return;
+                            }
+                            const nextDateValue = safeFormatDate(date, 'yyyy-MM-dd');
+                            setDraftDateValue(formatDateInputDisplay(nextDateValue, dateInputOrder, calendarSystem));
+                            onDateChange(nextDateValue);
+                        }}
+                        className="w-full"
+                    />
+                </div>
             )}
         </div>
     );
@@ -1191,7 +1207,6 @@ export function TaskItemFieldRenderer({
         onDateOnly,
         hasValue,
         warning,
-        quickDateChipsMode,
     }: {
         label: string;
         dateAriaLabel: string;
@@ -1203,7 +1218,6 @@ export function TaskItemFieldRenderer({
         onDateOnly?: () => void;
         hasValue: boolean;
         warning?: string;
-        quickDateChipsMode?: DateFieldProps['quickDateChipsMode'];
     }) => (
         <div className="space-y-1">
             <DateField
@@ -1220,7 +1234,6 @@ export function TaskItemFieldRenderer({
                 onClear={onClear}
                 onDateOnly={onDateOnly}
                 hasValue={hasValue}
-                quickDateChipsMode={quickDateChipsMode}
             />
             {warning && (
                 <p className="text-xs text-amber-500 dark:text-amber-300" role="note">
@@ -1483,7 +1496,6 @@ export function TaskItemFieldRenderer({
                             onDateOnly: hasTime ? () => handleTimeChange('') : undefined,
                             hasValue: Boolean(editDueDate),
                             warning: dateIssueLabel,
-                            quickDateChipsMode: 'calendar',
                         })}
                         {hasTime && !task.suppressMindwtrReminders && (() => {
                             const label = tFallback(t, 'taskEdit.repeatReminderLabel', 'Repeat reminder');

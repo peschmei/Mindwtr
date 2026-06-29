@@ -67,32 +67,115 @@ export const resolveWhisperNativeHashModule = (value: unknown): WhisperModelNati
     getNativeModuleCandidates(value).find(hasNativeHash) ?? null
 );
 
+export type WhisperModelDownloadLogger = (
+    event: string,
+    details?: Record<string, unknown>
+) => void | Promise<void>;
+
 export type WhisperModelResolveDownloadUrl = (url: string) => Promise<string>;
 
-export const resolveWhisperModelDownloadUrl = async (url: string, fetchImpl = globalThis.fetch): Promise<string> => {
-    if (typeof fetchImpl !== 'function') return url;
+const emitDownloadLog = async (
+    logger: WhisperModelDownloadLogger | undefined,
+    event: string,
+    details?: Record<string, unknown>
+): Promise<void> => {
+    if (!logger) return;
+    try {
+        await logger(event, details);
+    } catch {
+    }
+};
+
+const describeError = (error: unknown): Record<string, unknown> => (
+    error instanceof Error
+        ? { errorName: error.name, errorMessage: error.message }
+        : { errorMessage: String(error) }
+);
+
+export const describeWhisperDownloadUrl = (rawUrl: string): Record<string, unknown> => {
+    try {
+        const parsed = new URL(rawUrl);
+        return {
+            scheme: parsed.protocol.replace(/:$/u, ''),
+            host: parsed.host,
+            path: parsed.pathname,
+            hasQuery: Boolean(parsed.search),
+        };
+    } catch {
+        return {
+            parseError: true,
+            length: rawUrl.length,
+            prefix: rawUrl.slice(0, 32),
+        };
+    }
+};
+
+export const resolveWhisperModelDownloadUrl = async (
+    url: string,
+    fetchImpl = globalThis.fetch,
+    logger?: WhisperModelDownloadLogger
+): Promise<string> => {
+    if (typeof fetchImpl !== 'function') {
+        await emitDownloadLog(logger, 'resolve-url-fetch-unavailable', { originalUrlParts: describeWhisperDownloadUrl(url) });
+        return url;
+    }
 
     const resolveFromHead = async (redirect: RequestRedirect): Promise<string> => {
+        await emitDownloadLog(logger, 'resolve-url-head-start', { redirect, urlParts: describeWhisperDownloadUrl(url) });
         const response = await fetchImpl(url, { method: 'HEAD', redirect });
         const location = response.headers?.get?.('location');
-        if (location) return new URL(location, url).toString();
+        if (location) {
+            const resolvedLocation = new URL(location, url).toString();
+            await emitDownloadLog(logger, 'resolve-url-head-location', {
+                redirect,
+                location: describeWhisperDownloadUrl(resolvedLocation),
+                responseUrlParts: typeof response.url === 'string' ? describeWhisperDownloadUrl(response.url) : undefined,
+            });
+            return resolvedLocation;
+        }
         const resolvedUrl = typeof response.url === 'string' && response.url.trim() ? response.url : '';
+        await emitDownloadLog(logger, 'resolve-url-head-response', {
+            redirect,
+            responseUrlParts: resolvedUrl ? describeWhisperDownloadUrl(resolvedUrl) : undefined,
+            changed: Boolean(resolvedUrl && resolvedUrl !== url),
+        });
         return resolvedUrl && resolvedUrl !== url ? resolvedUrl : '';
     };
 
     try {
         const manualRedirectUrl = await resolveFromHead('manual');
-        if (manualRedirectUrl) return manualRedirectUrl;
-    } catch {
+        if (manualRedirectUrl) {
+            await emitDownloadLog(logger, 'resolve-url-complete', {
+                mode: 'manual',
+                changed: manualRedirectUrl !== url,
+                finalUrlParts: describeWhisperDownloadUrl(manualRedirectUrl),
+            });
+            return manualRedirectUrl;
+        }
+    } catch (error) {
         // Some mobile fetch implementations do not support manual redirects for HEAD.
+        await emitDownloadLog(logger, 'resolve-url-head-error', { redirect: 'manual', ...describeError(error) });
     }
 
     try {
         const followedUrl = await resolveFromHead('follow');
-        if (followedUrl) return followedUrl;
-    } catch {
+        if (followedUrl) {
+            await emitDownloadLog(logger, 'resolve-url-complete', {
+                mode: 'follow',
+                changed: followedUrl !== url,
+                finalUrlParts: describeWhisperDownloadUrl(followedUrl),
+            });
+            return followedUrl;
+        }
+    } catch (error) {
         // Fall back to the original URL; the native downloader will surface any HTTP failure.
+        await emitDownloadLog(logger, 'resolve-url-head-error', { redirect: 'follow', ...describeError(error) });
     }
+    await emitDownloadLog(logger, 'resolve-url-complete', {
+        mode: 'original',
+        changed: false,
+        finalUrlParts: describeWhisperDownloadUrl(url),
+    });
     return url;
 };
 
@@ -121,15 +204,21 @@ export const downloadWhisperModelFile = async <TFile extends WhisperModelDownloa
     targetFile,
     nativeFs,
     resolveDownloadUrl,
+    logger,
 }: {
     url: string;
     targetFile: TFile;
     nativeFs?: WhisperModelNativeFs | null;
     resolveDownloadUrl?: WhisperModelResolveDownloadUrl;
+    logger?: WhisperModelDownloadLogger;
     expoDownloadFile: WhisperModelExpoDownloadFile<TFile>;
 }): Promise<TFile> => {
     const downloadFile = nativeFs?.downloadFile;
     if (typeof downloadFile !== 'function') {
+        await emitDownloadLog(logger, 'native-download-unavailable', {
+            targetUri: targetFile.uri,
+            urlParts: describeWhisperDownloadUrl(url),
+        });
         throw new Error('Native streaming Whisper model downloads are unavailable in this build.');
     }
 
@@ -138,27 +227,52 @@ export const downloadWhisperModelFile = async <TFile extends WhisperModelDownloa
         try {
             const resolvedUrl = await resolveDownloadUrl(url);
             if (resolvedUrl.trim()) downloadUrl = resolvedUrl;
-        } catch {
+        } catch (error) {
+            await emitDownloadLog(logger, 'resolve-url-wrapper-error', describeError(error));
             downloadUrl = url;
         }
     }
 
+    const nativeTargetPath = toWhisperNativeDownloadPath(targetFile.uri);
+    const startedAt = Date.now();
+    await emitDownloadLog(logger, 'native-download-start', {
+        originalUrlParts: describeWhisperDownloadUrl(url),
+        finalUrlParts: describeWhisperDownloadUrl(downloadUrl),
+        finalUrlChanged: downloadUrl !== url,
+        targetUri: targetFile.uri,
+        nativeTargetPath,
+    });
+
     try {
         const result = await downloadFile({
             fromUrl: downloadUrl,
-            toFile: toWhisperNativeDownloadPath(targetFile.uri),
+            toFile: nativeTargetPath,
             headers: { Accept: 'application/octet-stream' },
             cacheable: false,
             readTimeout: 10 * 60 * 1000,
             backgroundTimeout: 30 * 60 * 1000,
         }).promise;
         const statusCode = result.statusCode;
+        await emitDownloadLog(logger, 'native-download-complete', {
+            statusCode,
+            bytesWritten: result.bytesWritten,
+            elapsedMs: Date.now() - startedAt,
+        });
         if (typeof statusCode !== 'number' || statusCode < 200 || statusCode >= 300) {
             throw new Error(`Whisper model download failed with HTTP ${statusCode ?? 'unknown'}`);
         }
         return targetFile;
     } catch (error) {
-        targetFile.delete?.();
+        await emitDownloadLog(logger, 'native-download-error', {
+            elapsedMs: Date.now() - startedAt,
+            ...describeError(error),
+        });
+        try {
+            targetFile.delete?.();
+            await emitDownloadLog(logger, 'native-download-cleanup-complete', { targetUri: targetFile.uri });
+        } catch (cleanupError) {
+            await emitDownloadLog(logger, 'native-download-cleanup-error', describeError(cleanupError));
+        }
         throw error;
     }
 };

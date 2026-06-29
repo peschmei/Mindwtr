@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    describeWhisperDownloadUrl,
     downloadWhisperModelFile,
     resolveWhisperModelDownloadUrl,
     resolveWhisperNativeFsModule,
@@ -66,6 +67,15 @@ describe('ai settings whisper model helpers', () => {
         )).resolves.toBeUndefined();
     });
 
+    it('describes download URLs without logging signed query tokens', () => {
+        expect(describeWhisperDownloadUrl('https://cdn.example.test/signed/ggml-tiny.bin?token=secret')).toEqual({
+            scheme: 'https',
+            host: 'cdn.example.test',
+            path: '/signed/ggml-tiny.bin',
+            hasQuery: true,
+        });
+    });
+
 
     it('resolves a native downloader from a default-exported react-native-fs module', () => {
         const nativeFs = {
@@ -95,6 +105,7 @@ describe('ai settings whisper model helpers', () => {
 
     it('resolves a Hugging Face redirect location from HEAD without downloading the model', async () => {
         const calls: Array<{ url: string; init: { method?: string; redirect?: string } }> = [];
+        const logs: Array<{ event: string; details?: Record<string, unknown> }> = [];
         const resolved = await resolveWhisperModelDownloadUrl(
             'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
             async (url, init) => {
@@ -107,17 +118,30 @@ describe('ai settings whisper model helpers', () => {
                             : null,
                     },
                 } as Response;
-            }
+            },
+            (event, details) => { logs.push({ event, details }); }
         );
 
         expect(resolved).toBe('https://cdn.example.test/signed/ggml-tiny.bin?token=abc');
         expect(calls).toEqual([expect.objectContaining({
             init: expect.objectContaining({ method: 'HEAD', redirect: 'manual' }),
         })]);
+        expect(logs.map((entry) => entry.event)).toEqual([
+            'resolve-url-head-start',
+            'resolve-url-head-location',
+            'resolve-url-complete',
+        ]);
+        expect(logs[1]?.details?.location).toEqual({
+            scheme: 'https',
+            host: 'cdn.example.test',
+            path: '/signed/ggml-tiny.bin',
+            hasQuery: true,
+        });
     });
 
     it('uses a resolved final URL for native Whisper downloads', async () => {
         const calls: unknown[] = [];
+        const logs: Array<{ event: string; details?: Record<string, unknown> }> = [];
         const targetFile = { uri: 'file:///document/whisper-models/ggml-tiny.bin' };
 
         await downloadWhisperModelFile({
@@ -131,15 +155,26 @@ describe('ai settings whisper model helpers', () => {
                     };
                 },
             },
-            resolveDownloadUrl: async () => 'https://cdn.example.test/final/ggml-tiny.bin',
+            resolveDownloadUrl: async () => 'https://cdn.example.test/final/ggml-tiny.bin?token=abc',
+            logger: (event, details) => { logs.push({ event, details }); },
             expoDownloadFile: async () => {
                 throw new Error('Expo download should not be used when native streaming is available');
             },
         });
 
         expect(calls).toEqual([expect.objectContaining({
-            fromUrl: 'https://cdn.example.test/final/ggml-tiny.bin',
+            fromUrl: 'https://cdn.example.test/final/ggml-tiny.bin?token=abc',
         })]);
+        expect(logs.map((entry) => entry.event)).toEqual([
+            'native-download-start',
+            'native-download-complete',
+        ]);
+        expect(logs[0]?.details?.finalUrlParts).toEqual({
+            scheme: 'https',
+            host: 'cdn.example.test',
+            path: '/final/ggml-tiny.bin',
+            hasQuery: true,
+        });
     });
 
     it('prefers native streaming downloads for Whisper models', async () => {
