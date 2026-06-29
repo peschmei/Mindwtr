@@ -120,7 +120,7 @@ vi.mock('lucide-react-native', () => ({
 
 vi.mock('react-native-draggable-flatlist', () => ({
   NestableDraggableFlatList: (props: any) => React.createElement('NestableDraggableFlatList', props),
-  ScaleDecorator: ({ children }: any) => children,
+  ScaleDecorator: ({ children, ...props }: any) => React.createElement('ScaleDecorator', props, children),
 }));
 
 vi.mock('@mindwtr/core', () => {
@@ -566,7 +566,7 @@ describe('TaskList project quick add', () => {
     });
   });
 
-  it('uses compact draggable rows with a placeholder for long project reorder lists', async () => {
+  it('uses compact draggable rows without extra placeholder or scale overlays for long project reorder lists', async () => {
     const longTaskList = Array.from({ length: 130 }, (_, index) => makeTask(
       `task-${index}`,
       `Task ${index}`,
@@ -591,7 +591,10 @@ describe('TaskList project quick add', () => {
 
     const draggableList = tree.root.findByType('NestableDraggableFlatList' as unknown as React.ElementType);
     expect(draggableList.props.data).toHaveLength(longTaskList.length);
-    expect(draggableList.props.renderPlaceholder).toEqual(expect.any(Function));
+    expect(draggableList.props.renderPlaceholder).toBeUndefined();
+    expect(draggableList.props.animationConfig).toEqual(expect.objectContaining({
+      overshootClamping: true,
+    }));
 
     let row!: ReturnType<typeof create>;
     await act(async () => {
@@ -606,6 +609,7 @@ describe('TaskList project quick add', () => {
     });
 
     expect(row.root.findAllByType('SwipeableTaskItem' as unknown as React.ElementType)).toHaveLength(0);
+    expect(row.root.findAllByType('ScaleDecorator' as unknown as React.ElementType)).toHaveLength(0);
     expect(row.root.findByProps({ testID: 'project-task-reorder-row-task-80' })).toBeTruthy();
     expect(row.root.findByProps({ testID: 'project-task-drag-handle-task-80' })).toBeTruthy();
 

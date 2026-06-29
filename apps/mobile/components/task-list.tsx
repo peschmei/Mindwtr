@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { View, FlatList, Text, TextInput, RefreshControl, Modal, Pressable, TouchableOpacity, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Folder, GripVertical, MoveVertical } from 'lucide-react-native';
-import { NestableDraggableFlatList, ScaleDecorator, type DragEndParams, type RenderItemParams } from 'react-native-draggable-flatlist';
+import { NestableDraggableFlatList, type DragEndParams, type RenderItemParams } from 'react-native-draggable-flatlist';
 import {
   useTaskStore,
   Task,
@@ -102,6 +102,14 @@ import { useTaskListSelection } from './use-task-list-selection';
 
 const REMOVE_CLIPPED_SUBVIEWS_MIN_ITEMS = 15;
 const PROJECT_REORDER_ITEM_HEIGHT = 80;
+const PROJECT_REORDER_ANIMATION_CONFIG = {
+  damping: 28,
+  mass: 0.15,
+  overshootClamping: true,
+  restDisplacementThreshold: 0.1,
+  restSpeedThreshold: 0.1,
+  stiffness: 240,
+} as const;
 const STATIC_LIST_VIRTUALIZATION_THRESHOLD = 80;
 const STATIC_LIST_ROW_ESTIMATE = 88;
 const STATIC_LIST_OVERSCAN = 8;
@@ -1490,70 +1498,52 @@ function TaskListComponent({
     offset: PROJECT_REORDER_ITEM_HEIGHT * index,
   }), []);
 
-  const renderProjectReorderPlaceholder = useCallback(({ item }: { item: Task }) => (
-    <View
-      style={[
-        styles.projectDragPlaceholder,
-        { backgroundColor: themeColorsMemo.filterBg, borderColor: themeColorsMemo.tint },
-      ]}
-    >
-      <Text
-        numberOfLines={1}
-        style={[styles.projectDragPlaceholderTitle, { color: themeColorsMemo.secondaryText }]}
-      >
-        {item.title}
-      </Text>
-    </View>
-  ), [themeColorsMemo.filterBg, themeColorsMemo.secondaryText, themeColorsMemo.tint]);
-
   const renderProjectReorderTask = useCallback(({ drag, isActive, item }: RenderItemParams<Task>) => {
     const statusLabel = t(`status.${item.status}`);
 
     return (
-      <ScaleDecorator activeScale={1.01}>
+      <View
+        style={[
+          styles.projectDragTaskRow,
+          { height: PROJECT_REORDER_ITEM_HEIGHT },
+          isActive && styles.projectDragTaskRowActive,
+        ]}
+        testID={`project-task-reorder-row-${item.id}`}
+      >
         <View
           style={[
-            styles.projectDragTaskRow,
-            { height: PROJECT_REORDER_ITEM_HEIGHT },
-            isActive && styles.projectDragTaskRowActive,
+            styles.projectReorderTaskCard,
+            { backgroundColor: themeColorsMemo.taskItemBg, borderColor: themeColorsMemo.border },
           ]}
-          testID={`project-task-reorder-row-${item.id}`}
         >
-          <View
-            style={[
-              styles.projectReorderTaskCard,
-              { backgroundColor: themeColorsMemo.taskItemBg, borderColor: themeColorsMemo.border },
-            ]}
+          <Text
+            numberOfLines={2}
+            style={[styles.projectReorderTaskTitle, { color: themeColorsMemo.text }]}
           >
-            <Text
-              numberOfLines={2}
-              style={[styles.projectReorderTaskTitle, { color: themeColorsMemo.text }]}
-            >
-              {item.title}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={[styles.projectReorderTaskMeta, { color: themeColorsMemo.secondaryText }]}
-            >
-              {statusLabel}
-            </Text>
-          </View>
-          <TouchableOpacity
-            accessibilityLabel={`${tFallback(t, 'board.dragTask', 'Drag task')}: ${item.title}`}
-            accessibilityRole="button"
-            activeOpacity={0.85}
-            disabled={isActive}
-            onPressIn={drag}
-            style={[
-              styles.projectDragHandle,
-              { backgroundColor: themeColorsMemo.filterBg, borderColor: themeColorsMemo.border },
-            ]}
-            testID={`project-task-drag-handle-${item.id}`}
+            {item.title}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[styles.projectReorderTaskMeta, { color: themeColorsMemo.secondaryText }]}
           >
-            <GripVertical size={20} color={themeColorsMemo.secondaryText} />
-          </TouchableOpacity>
+            {statusLabel}
+          </Text>
         </View>
-      </ScaleDecorator>
+        <TouchableOpacity
+          accessibilityLabel={`${tFallback(t, 'board.dragTask', 'Drag task')}: ${item.title}`}
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          disabled={isActive}
+          onPressIn={drag}
+          style={[
+            styles.projectDragHandle,
+            { backgroundColor: themeColorsMemo.filterBg, borderColor: themeColorsMemo.border },
+          ]}
+          testID={`project-task-drag-handle-${item.id}`}
+        >
+          <GripVertical size={20} color={themeColorsMemo.secondaryText} />
+        </TouchableOpacity>
+      </View>
     );
   }, [
     t,
@@ -1673,10 +1663,10 @@ function TaskListComponent({
             data={group.tasks}
             getItemLayout={getProjectReorderItemLayout}
             keyExtractor={(task) => task.id}
-            renderPlaceholder={renderProjectReorderPlaceholder}
             renderItem={renderProjectReorderTask}
             onDragEnd={(params) => handleProjectTaskDragEnd(group.sectionId, params)}
             activationDistance={2}
+            animationConfig={PROJECT_REORDER_ANIMATION_CONFIG}
             autoscrollThreshold={80}
             autoscrollSpeed={120}
             dragItemOverflow
@@ -1693,7 +1683,6 @@ function TaskListComponent({
     getProjectReorderItemLayout,
     projectDragHitSlop,
     projectSectionIds,
-    renderProjectReorderPlaceholder,
     renderProjectReorderTask,
     t,
     themeColorsMemo.border,

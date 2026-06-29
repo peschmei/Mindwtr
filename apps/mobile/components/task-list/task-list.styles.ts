@@ -660,20 +660,6 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 15,
   },
-  projectDragPlaceholder: {
-    minHeight: 72,
-    marginHorizontal: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  projectDragPlaceholderTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
   projectDragHandle: {
     width: 44,
     marginBottom: 8,
