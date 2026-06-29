@@ -120,6 +120,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Authenticate Google Play API
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_android }}
@@ -179,16 +181,9 @@ jobs:
               -H "Authorization: Bearer $ACCESS_TOKEN" \
               "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits/$EDIT_ID" >/dev/null
           fi
-          RESOLVED_CODE="$LOCAL_CODE"
-          if [ "$MAX_CODE" -ge "$LOCAL_CODE" ]; then
-            RESOLVED_CODE=$((MAX_CODE + 1))
-            echo "::warning::Google Play already has versionCode $MAX_CODE; local versionCode $LOCAL_CODE will be bumped to $RESOLVED_CODE for this CI build."
-          else
-            echo "versionCode ok: local $LOCAL_CODE > store $MAX_CODE"
-          fi
-          echo "local_code=$LOCAL_CODE" >> "$GITHUB_OUTPUT"
-          echo "remote_max_code=$MAX_CODE" >> "$GITHUB_OUTPUT"
-          echo "resolved_code=$RESOLVED_CODE" >> "$GITHUB_OUTPUT"
+          REMOTE_MAX_VERSION_CODE="$MAX_CODE" \
+            ALLOW_UNTRACKED_VERSION_CODE=0 \
+            node scripts/ci/android-version-code-policy.js
 
   android:
     needs: android-version-code
@@ -198,6 +193,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/release-android.yml
     with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       play_track: production
       version_code: ${{ needs['android-version-code'].outputs.version_code }}
     secrets: inherit
@@ -207,6 +203,7 @@ jobs:
     if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_android_foss) && needs['android-version-code'].result == 'success' }}
     uses: ./.github/workflows/release-android-foss.yml
     with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       version_code: ${{ needs['android-version-code'].outputs.version_code }}
     secrets: inherit
 

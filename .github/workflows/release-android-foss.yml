@@ -43,6 +43,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.tag || github.event.inputs.tag || github.ref }}
 
       - name: Install pinned Node.js (match reproducible recipe)
         run: |
@@ -81,24 +83,10 @@ jobs:
       - name: Apply resolved Android versionCode
         if: ${{ inputs.version_code != '' }}
         env:
-          VERSION_CODE: ${{ inputs.version_code }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('fs');
-          const path = 'apps/mobile/app.json';
-          const versionCode = Number(process.env.VERSION_CODE);
-          if (!Number.isInteger(versionCode) || versionCode <= 0) {
-            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
-          }
-          const json = JSON.parse(fs.readFileSync(path, 'utf8'));
-          json.expo = json.expo || {};
-          json.expo.android = json.expo.android || {};
-          const previous = json.expo.android.versionCode;
-          json.expo.android.versionCode = versionCode;
-          fs.writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-          console.log(`FOSS Android versionCode: ${previous} -> ${versionCode}`);
-          NODE
+          REQUESTED_VERSION_CODE: ${{ inputs.version_code }}
+          ALLOW_UNTRACKED_VERSION_CODE: ${{ contains(inputs.tag || github.event.inputs.tag || github.ref_name, '-') && 'true' || 'false' }}
+          WRITE_APP_JSON: "1"
+        run: node scripts/ci/android-version-code-policy.js
 
       - name: Build FOSS Android APK (Gradle, arm64-v8a only)
         timeout-minutes: 30

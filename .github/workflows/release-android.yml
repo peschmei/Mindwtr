@@ -106,6 +106,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.tag || github.event.inputs.tag || github.ref }}
 
       - name: Authenticate Google Play API
         if: ${{ inputs.version_code == '' && (inputs.play_track != 'none' || inputs.internal_test_release) }}
@@ -127,25 +129,9 @@ jobs:
         if: ${{ inputs.version_code != '' }}
         id: provided_version_code
         env:
-          VERSION_CODE: ${{ inputs.version_code }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('fs');
-          const versionCode = Number(process.env.VERSION_CODE);
-          if (!Number.isInteger(versionCode) || versionCode <= 0) {
-            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
-          }
-          const json = JSON.parse(fs.readFileSync('apps/mobile/app.json', 'utf8'));
-          const localCode = Number(json.expo?.android?.versionCode || 0);
-          if (!Number.isInteger(localCode) || localCode <= 0) {
-            throw new Error('Missing expo.android.versionCode in apps/mobile/app.json');
-          }
-          const output = process.env.GITHUB_OUTPUT;
-          fs.appendFileSync(output, `local_code=${localCode}\n`);
-          fs.appendFileSync(output, `resolved_code=${versionCode}\n`);
-          console.log(`Using provided Android versionCode: ${versionCode}`);
-          NODE
+          REQUESTED_VERSION_CODE: ${{ inputs.version_code }}
+          ALLOW_UNTRACKED_VERSION_CODE: ${{ (contains(inputs.tag || github.event.inputs.tag || github.ref_name, '-') || inputs.internal_test_release || inputs.play_track != 'production') && 'true' || 'false' }}
+        run: node scripts/ci/android-version-code-policy.js
 
       - name: Ensure Android versionCode is unique
         if: ${{ inputs.version_code == '' && (inputs.play_track != 'none' || inputs.internal_test_release) }}
@@ -189,16 +175,9 @@ jobs:
             echo "Missing expo.android.versionCode in apps/mobile/app.json" >&2
             exit 1
           fi
-          RESOLVED_CODE="$LOCAL_CODE"
-          if [ "$MAX_CODE" -ge "$LOCAL_CODE" ]; then
-            RESOLVED_CODE=$((MAX_CODE + 1))
-            echo "::warning::Google Play already has versionCode $MAX_CODE; local versionCode $LOCAL_CODE will be bumped to $RESOLVED_CODE for this CI build."
-          else
-            echo "versionCode ok: local $LOCAL_CODE > store $MAX_CODE"
-          fi
-          echo "local_code=$LOCAL_CODE" >> "$GITHUB_OUTPUT"
-          echo "remote_max_code=$MAX_CODE" >> "$GITHUB_OUTPUT"
-          echo "resolved_code=$RESOLVED_CODE" >> "$GITHUB_OUTPUT"
+          REMOTE_MAX_VERSION_CODE="$MAX_CODE" \
+            ALLOW_UNTRACKED_VERSION_CODE=${{ (contains(inputs.tag || github.event.inputs.tag || github.ref_name, '-') || inputs.internal_test_release || inputs.play_track != 'production') && 'true' || 'false' }} \
+            node scripts/ci/android-version-code-policy.js
 
       - name: Resolve Android publish plan
         id: publish_plan
@@ -285,6 +264,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.tag || github.event.inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -314,24 +295,10 @@ jobs:
       - name: Apply resolved Android versionCode
         if: ${{ needs.preflight.outputs.version_code != '' }}
         env:
-          VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('fs');
-          const path = 'apps/mobile/app.json';
-          const versionCode = Number(process.env.VERSION_CODE);
-          if (!Number.isInteger(versionCode) || versionCode <= 0) {
-            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
-          }
-          const json = JSON.parse(fs.readFileSync(path, 'utf8'));
-          json.expo = json.expo || {};
-          json.expo.android = json.expo.android || {};
-          const previous = json.expo.android.versionCode;
-          json.expo.android.versionCode = versionCode;
-          fs.writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-          console.log(`Android versionCode: ${previous} -> ${versionCode}`);
-          NODE
+          REQUESTED_VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
+          ALLOW_UNTRACKED_VERSION_CODE: ${{ (contains(inputs.tag || github.event.inputs.tag || github.ref_name, '-') || inputs.internal_test_release || inputs.play_track != 'production') && 'true' || 'false' }}
+          WRITE_APP_JSON: "1"
+        run: node scripts/ci/android-version-code-policy.js
 
       - name: Build Android AAB (local EAS)
         timeout-minutes: 60
@@ -370,6 +337,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.tag || github.event.inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -399,24 +368,10 @@ jobs:
       - name: Apply resolved Android internal versionCode
         if: ${{ needs.preflight.outputs.internal_version_code != '' }}
         env:
-          VERSION_CODE: ${{ needs.preflight.outputs.internal_version_code }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('fs');
-          const path = 'apps/mobile/app.json';
-          const versionCode = Number(process.env.VERSION_CODE);
-          if (!Number.isInteger(versionCode) || versionCode <= 0) {
-            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
-          }
-          const json = JSON.parse(fs.readFileSync(path, 'utf8'));
-          json.expo = json.expo || {};
-          json.expo.android = json.expo.android || {};
-          const previous = json.expo.android.versionCode;
-          json.expo.android.versionCode = versionCode;
-          fs.writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-          console.log(`Android internal versionCode: ${previous} -> ${versionCode}`);
-          NODE
+          REQUESTED_VERSION_CODE: ${{ needs.preflight.outputs.internal_version_code }}
+          ALLOW_UNTRACKED_VERSION_CODE: "true"
+          WRITE_APP_JSON: "1"
+        run: node scripts/ci/android-version-code-policy.js
 
       - name: Build Android internal profileable AAB (local EAS)
         timeout-minutes: 60
@@ -455,6 +410,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.tag || github.event.inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -484,24 +441,10 @@ jobs:
       - name: Apply resolved Android versionCode
         if: ${{ needs.preflight.outputs.version_code != '' }}
         env:
-          VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('fs');
-          const path = 'apps/mobile/app.json';
-          const versionCode = Number(process.env.VERSION_CODE);
-          if (!Number.isInteger(versionCode) || versionCode <= 0) {
-            throw new Error(`Invalid Android versionCode: ${process.env.VERSION_CODE}`);
-          }
-          const json = JSON.parse(fs.readFileSync(path, 'utf8'));
-          json.expo = json.expo || {};
-          json.expo.android = json.expo.android || {};
-          const previous = json.expo.android.versionCode;
-          json.expo.android.versionCode = versionCode;
-          fs.writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-          console.log(`Android versionCode: ${previous} -> ${versionCode}`);
-          NODE
+          REQUESTED_VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
+          ALLOW_UNTRACKED_VERSION_CODE: ${{ (contains(inputs.tag || github.event.inputs.tag || github.ref_name, '-') || inputs.internal_test_release || inputs.play_track != 'production') && 'true' || 'false' }}
+          WRITE_APP_JSON: "1"
+        run: node scripts/ci/android-version-code-policy.js
 
       - name: Build Android APK (local EAS)
         timeout-minutes: 60
@@ -548,6 +491,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.tag || github.event.inputs.tag || github.ref }}
 
       - name: Authenticate Google Play API
         id: play_auth
