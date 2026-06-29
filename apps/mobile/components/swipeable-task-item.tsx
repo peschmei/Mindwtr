@@ -14,7 +14,7 @@ import {
     tFallback,
     useTaskStore,
 } from '@mindwtr/core';
-import type { ProjectSequenceTaskCue, Task, TaskStatus } from '@mindwtr/core';
+import type { Area, Project, ProjectSequenceTaskCue, Task, TaskStatus } from '@mindwtr/core';
 import { useLanguage } from '../contexts/language-context';
 import React, { useCallback, useRef, useState } from 'react';
 import { ArrowRight, Check, RotateCcw, Trash2 } from 'lucide-react-native';
@@ -60,6 +60,7 @@ export interface SwipeableTaskItemProps {
     onContextPress?: (context: string) => void;
     onTagPress?: (tag: string) => void;
     projectDeadlineLabel?: string;
+    rowContext?: SwipeableTaskItemRowContext;
 }
 
 type ProjectNextActionPromptState = {
@@ -68,6 +69,22 @@ type ProjectNextActionPromptState = {
     projectTitle: string;
     sectionId?: string;
 };
+
+type TaskStoreActions = ReturnType<typeof useTaskStore.getState>;
+
+export type SwipeableTaskItemRowContext = {
+    addTask: TaskStoreActions['addTask'];
+    updateTask: TaskStoreActions['updateTask'];
+    restoreTask: TaskStoreActions['restoreTask'];
+    projects: Project[];
+    areas: Area[];
+    focusedCount: number;
+    focusTaskLimit: number;
+    timeEstimatesEnabled: boolean;
+    showTaskAge: boolean;
+    undoNotificationsEnabled: boolean;
+};
+
 
 const TASK_SWIPE_FRICTION = 1.25;
 const TASK_SWIPE_OPEN_THRESHOLD = 72;
@@ -88,6 +105,33 @@ const getUnknownErrorMessage = (error: unknown): string | undefined => {
     return undefined;
 };
 
+type SwipeableTaskItemInnerProps = Omit<SwipeableTaskItemProps, 'rowContext'> & {
+    rowContext: SwipeableTaskItemRowContext;
+};
+
+export function SwipeableTaskItem(props: SwipeableTaskItemProps) {
+    if (props.rowContext) {
+        return <SwipeableTaskItemInner {...props} rowContext={props.rowContext} />;
+    }
+    return <StoreBackedSwipeableTaskItem {...props} />;
+}
+
+function StoreBackedSwipeableTaskItem(props: SwipeableTaskItemProps) {
+    const rowContext = useTaskStore((state): SwipeableTaskItemRowContext => ({
+        addTask: state.addTask,
+        updateTask: state.updateTask,
+        restoreTask: state.restoreTask,
+        projects: state.projects,
+        areas: state.areas,
+        focusedCount: state.getDerivedState().focusedCount,
+        focusTaskLimit: normalizeFocusTaskLimit(state.settings?.gtd?.focusTaskLimit),
+        timeEstimatesEnabled: state.settings?.features?.timeEstimates !== false,
+        showTaskAge: state.settings?.appearance?.showTaskAge === true,
+        undoNotificationsEnabled: state.settings?.undoNotificationsEnabled !== false,
+    }), shallow);
+    return <SwipeableTaskItemInner {...props} rowContext={rowContext} />;
+}
+
 /**
  * A swipeable task item with context-aware left swipe actions:
  * - Inbox: swipe to Next
@@ -97,7 +141,7 @@ const getUnknownErrorMessage = (error: unknown): string | undefined => {
  * 
  * Right swipe always shows Delete action.
  */
-export function SwipeableTaskItem({
+function SwipeableTaskItemInner({
     task,
     isDark,
     tc,
@@ -124,7 +168,8 @@ export function SwipeableTaskItem({
     onContextPress,
     onTagPress,
     projectDeadlineLabel,
-}: SwipeableTaskItemProps) {
+    rowContext,
+}: SwipeableTaskItemInnerProps) {
     const swipeableRef = useRef<Swipeable>(null);
     const ignorePressUntil = useRef<number>(0);
     const { t, language } = useLanguage();
@@ -140,18 +185,7 @@ export function SwipeableTaskItem({
         timeEstimatesEnabled,
         showTaskAge,
         undoNotificationsEnabled,
-    } = useTaskStore((state) => ({
-        addTask: state.addTask,
-        updateTask: state.updateTask,
-        restoreTask: state.restoreTask,
-        projects: state.projects,
-        areas: state.areas,
-        focusedCount: state.getDerivedState().focusedCount,
-        focusTaskLimit: normalizeFocusTaskLimit(state.settings?.gtd?.focusTaskLimit),
-        timeEstimatesEnabled: state.settings?.features?.timeEstimates !== false,
-        showTaskAge: state.settings?.appearance?.showTaskAge === true,
-        undoNotificationsEnabled: state.settings?.undoNotificationsEnabled !== false,
-    }), shallow);
+    } = rowContext;
     const canShowFocusToggle = showFocusToggle
         && task.status !== 'done'
         && task.status !== 'reference'

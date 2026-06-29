@@ -635,6 +635,44 @@ describe('TaskList project quick add', () => {
     });
   });
 
+  it('passes shared row context to task rows instead of making each row subscribe to the store', async () => {
+    const visibleTask = makeTask('task-row-context', 'Review launch notes');
+    storeState.tasks = [visibleTask];
+    storeState._allTasks = [visibleTask];
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <TaskList
+          allowAdd={false}
+          showHeader={false}
+          statusFilter="next"
+          taskSource={[visibleTask]}
+          title="Next"
+        />,
+      );
+    });
+
+    const row = tree.root.findByType('SwipeableTaskItem' as unknown as React.ElementType);
+    expect(row.props.rowContext).toEqual(expect.objectContaining({
+      areas: storeState.areas,
+      focusedCount: 0,
+      projects: storeState.projects,
+      restoreTask: storeState.restoreTask,
+      updateTask: updateTaskMock,
+    }));
+    expect(row.props.rowContext).toEqual(expect.objectContaining({
+      focusTaskLimit: 3,
+      showTaskAge: false,
+      timeEstimatesEnabled: true,
+      undoNotificationsEnabled: true,
+    }));
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
   it('uses compact draggable rows without extra placeholder or scale overlays for long project reorder lists', async () => {
     const longTaskList = Array.from({ length: 130 }, (_, index) => makeTask(
       `task-${index}`,

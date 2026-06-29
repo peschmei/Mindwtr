@@ -36,7 +36,7 @@ import {
 import { TaskEditModal } from './task-edit-modal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ListEmptyState } from './list-empty-state';
-import { SwipeableTaskItem } from './swipeable-task-item';
+import { SwipeableTaskItem, type SwipeableTaskItemRowContext } from './swipeable-task-item';
 import { useTheme } from '../contexts/theme-context';
 import { useLanguage } from '../contexts/language-context';
 
@@ -423,6 +423,31 @@ function TaskListComponent({
   const keyRequired = isAIKeyRequired(settings);
   const prioritiesEnabled = settings?.features?.priorities !== false;
   const timeEstimatesEnabled = settings?.features?.timeEstimates !== false;
+  const showTaskAge = settings?.appearance?.showTaskAge === true;
+  const undoNotificationsEnabled = settings?.undoNotificationsEnabled !== false;
+  const rowContext = useMemo<SwipeableTaskItemRowContext>(() => ({
+    addTask,
+    updateTask,
+    restoreTask,
+    projects,
+    areas,
+    focusedCount,
+    focusTaskLimit,
+    timeEstimatesEnabled,
+    showTaskAge,
+    undoNotificationsEnabled,
+  }), [
+    addTask,
+    areas,
+    focusedCount,
+    focusTaskLimit,
+    projects,
+    restoreTask,
+    showTaskAge,
+    timeEstimatesEnabled,
+    undoNotificationsEnabled,
+    updateTask,
+  ]);
   const showTimeEstimateFilters = showTimeEstimateFiltersProp && timeEstimatesEnabled && statusFilter !== 'inbox';
   const canBulkOrganizeInbox = enableInboxBulkOrganize && statusFilter === 'inbox';
   const canBulkOrganizeProject = enableProjectBulkOrganize && Boolean(projectId);
@@ -1471,6 +1496,7 @@ function TaskListComponent({
           hideProjectMeta={Boolean(projectId)}
           sequenceCue={sequenceCue}
           sequenceLabel={sequenceLabel}
+          rowContext={rowContext}
           onProjectPress={projectId ? undefined : openProjectScreen}
           onContextPress={openContextsScreen}
           onTagPress={openContextsScreen}
@@ -1494,6 +1520,7 @@ function TaskListComponent({
     toggleMultiSelect,
     projectId,
     sequenceCueLabels,
+    rowContext,
   ]);
 
   const getProjectReorderItemLayout = useCallback((_: ArrayLike<Task> | null | undefined, index: number) => ({
