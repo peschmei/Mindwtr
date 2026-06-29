@@ -432,16 +432,18 @@ export function AISettingsScreen() {
 
     const safePathInfo = (uri: string) => {
         const normalized = normalizeWhisperPath(uri);
+        let pathInfo: ReturnType<typeof Paths.info> | null = null;
         try {
-            const info = Paths.info(normalized);
-            if (info) return info;
+            pathInfo = Paths.info(normalized);
         } catch (error) {
             logSettingsWarn('Whisper path info failed', error);
         }
         try {
             const file = new File(normalized);
             if (file.exists) {
-                const size = typeof file.size === 'number' ? file.size : 0;
+                const size = typeof file.size === 'number' && Number.isFinite(file.size) && file.size > 0
+                    ? file.size
+                    : (pathInfo && 'size' in pathInfo && typeof pathInfo.size === 'number' ? pathInfo.size : undefined);
                 return { exists: true, isDirectory: false, size };
             }
         } catch {
@@ -453,7 +455,7 @@ export function AISettingsScreen() {
             }
         } catch {
         }
-        return null;
+        return pathInfo ?? null;
     };
 
     const resolveWhisperModelPath = (modelId: string) => {
@@ -726,7 +728,7 @@ export function AISettingsScreen() {
                             resolvedDownloadModule: Boolean(nativeDownloadModule),
                             resolvedHashModule: Boolean(nativeHashModule),
                         });
-                        const file = await downloadWhisperModelFile({
+                        const downloadResult = await downloadWhisperModelFile({
                             url,
                             targetFile,
                             nativeFs: nativeDownloadModule,
@@ -742,14 +744,16 @@ export function AISettingsScreen() {
                                 return destination;
                             },
                         });
+                        const { file, bytesWritten } = downloadResult;
                         const downloadedInfo = safePathInfo(file.uri);
-                        const ready = isWhisperModelFileReady(selectedWhisperModel, downloadedInfo);
+                        const ready = isWhisperModelFileReady(selectedWhisperModel, downloadedInfo, bytesWritten);
                         await logWhisperDownload('downloaded-file-info', {
                             targetUri: file.uri,
                             info: describePathInfoForDiagnostics(downloadedInfo),
                             ready,
                             expectedBytes: selectedWhisperModel.sizeBytes,
                             minimumBytes: selectedWhisperModel.minBytes,
+                            bytesWritten,
                         });
                         if (!ready) {
                             try {

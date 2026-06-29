@@ -18,6 +18,12 @@ export type WhisperModelNativeDownloadResult = {
     bytesWritten?: number;
 };
 
+export type WhisperModelDownloadSuccess<TFile extends WhisperModelDownloadFile> = {
+    file: TFile;
+    statusCode: number;
+    bytesWritten?: number;
+};
+
 export type WhisperModelNativeFs = {
     downloadFile: (options: {
         fromUrl: string;
@@ -212,7 +218,7 @@ export const downloadWhisperModelFile = async <TFile extends WhisperModelDownloa
     resolveDownloadUrl?: WhisperModelResolveDownloadUrl;
     logger?: WhisperModelDownloadLogger;
     expoDownloadFile: WhisperModelExpoDownloadFile<TFile>;
-}): Promise<TFile> => {
+}): Promise<WhisperModelDownloadSuccess<TFile>> => {
     const downloadFile = nativeFs?.downloadFile;
     if (typeof downloadFile !== 'function') {
         await emitDownloadLog(logger, 'native-download-unavailable', {
@@ -261,7 +267,11 @@ export const downloadWhisperModelFile = async <TFile extends WhisperModelDownloa
         if (typeof statusCode !== 'number' || statusCode < 200 || statusCode >= 300) {
             throw new Error(`Whisper model download failed with HTTP ${statusCode ?? 'unknown'}`);
         }
-        return targetFile;
+        return {
+            file: targetFile,
+            statusCode,
+            bytesWritten: typeof result.bytesWritten === 'number' ? result.bytesWritten : undefined,
+        };
     } catch (error) {
         await emitDownloadLog(logger, 'native-download-error', {
             elapsedMs: Date.now() - startedAt,
@@ -298,15 +308,26 @@ export const getWhisperModelExpectedBytes = (model: WhisperModelDescriptor): num
         : undefined
 );
 
+const getPositiveFiniteByteCount = (value: unknown): number | undefined => (
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
+);
+
 export const isWhisperModelFileReady = (
     model: WhisperModelDescriptor,
-    info: WhisperModelPathInfo | null | undefined
+    info: WhisperModelPathInfo | null | undefined,
+    observedBytes?: number | null
 ): boolean => {
     if (!info?.exists || info.isDirectory !== false) return false;
-    const size = info.size ?? 0;
+    const size = getPositiveFiniteByteCount(info.size);
+    const nativeBytes = getPositiveFiniteByteCount(observedBytes);
     const expectedBytes = getWhisperModelExpectedBytes(model);
-    if (expectedBytes !== undefined) return size === expectedBytes;
-    return size >= getWhisperModelMinimumBytes(model);
+    if (expectedBytes !== undefined) {
+        if (size !== undefined) return size === expectedBytes;
+        return nativeBytes === expectedBytes;
+    }
+    const minimumBytes = getWhisperModelMinimumBytes(model);
+    if (size !== undefined) return size >= minimumBytes;
+    return nativeBytes !== undefined && nativeBytes >= minimumBytes;
 };
 
 export type WhisperModelHashFile = (uri: string) => Promise<string>;

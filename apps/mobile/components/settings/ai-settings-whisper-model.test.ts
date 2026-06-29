@@ -33,6 +33,15 @@ describe('ai settings whisper model helpers', () => {
         expect(isWhisperModelFileReady(model, { exists: false, isDirectory: false, size: sizeBytes })).toBe(false);
     });
 
+    it('accepts exact native bytesWritten when Expo file info omits size after streaming download', () => {
+        const infoWithoutSize = { exists: true, isDirectory: false };
+
+        expect(isWhisperModelFileReady(model, infoWithoutSize)).toBe(false);
+        expect(isWhisperModelFileReady(model, infoWithoutSize, sizeBytes)).toBe(true);
+        expect(isWhisperModelFileReady(model, infoWithoutSize, sizeBytes - 1)).toBe(false);
+        expect(isWhisperModelFileReady(model, infoWithoutSize, sizeBytes + 1)).toBe(false);
+    });
+
     it('only allows deletion of exact known model files', () => {
         const allowed = ['file:///document/whisper-models/ggml-tiny.bin'];
 
@@ -198,7 +207,8 @@ describe('ai settings whisper model helpers', () => {
             },
         });
 
-        expect(result).toBe(targetFile);
+        expect(result.file).toBe(targetFile);
+        expect(result.bytesWritten).toBe(sizeBytes);
         expect(calls).toEqual([expect.objectContaining({
             fromUrl: 'https://example.test/ggml-tiny.bin',
             toFile: '/document/whisper-models/ggml-tiny.bin',
