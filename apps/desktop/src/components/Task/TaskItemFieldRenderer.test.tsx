@@ -258,6 +258,11 @@ function TagAutocompleteHarness() {
     );
 }
 
+const selectTextareaRange = (textarea: HTMLTextAreaElement, start: number, end: number) => {
+    fireEvent.focus(textarea);
+    textarea.setSelectionRange(start, end);
+};
+
 function AssignedToAutocompleteHarness() {
     const [editAssignedTo, setEditAssignedTo] = useState('');
 
@@ -1020,12 +1025,18 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const original = 'Line one\nLine two\nLine three';
         const insertionPoint = original.indexOf('Line three');
 
-        fireEvent.change(textarea, { target: { value: original } });
-        textarea.setSelectionRange(insertionPoint, insertionPoint);
-        fireEvent.select(textarea);
+        fireEvent.change(textarea, {
+            target: {
+                value: original,
+                selectionStart: insertionPoint,
+                selectionEnd: insertionPoint,
+            },
+        });
         fireEvent.change(textarea, {
             target: {
                 value: `${original.slice(0, insertionPoint)}extra ${original.slice(insertionPoint)}`,
+                selectionStart: insertionPoint + 'extra '.length,
+                selectionEnd: insertionPoint + 'extra '.length,
             },
         });
         const selectionSpy = vi.spyOn(HTMLTextAreaElement.prototype, 'setSelectionRange');
@@ -1067,8 +1078,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
 
         fireEvent.change(textarea, { target: { value: 'run tests' } });
-        textarea.setSelectionRange(0, 9);
-        fireEvent.select(textarea);
+        selectTextareaRange(textarea, 0, 9);
         fireEvent.keyDown(textarea, { key: '`' });
 
         await waitFor(() => {
@@ -1083,8 +1093,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
 
         fireEvent.change(textarea, { target: { value: 'run tests' } });
-        textarea.setSelectionRange(0, 9);
-        fireEvent.select(textarea);
+        selectTextareaRange(textarea, 0, 9);
         fireEvent.keyDown(textarea, { key: '`' });
 
         await waitFor(() => {
@@ -1113,8 +1122,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
 
         fireEvent.change(textarea, { target: { value: 'drop this' } });
-        textarea.setSelectionRange(0, 9);
-        fireEvent.select(textarea);
+        selectTextareaRange(textarea, 0, 9);
         fireEvent.keyDown(textarea, { key: '~' });
 
         await waitFor(() => {
@@ -1128,9 +1136,9 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const { getByRole } = render(<DescriptionHarness />);
         const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
 
-        fireEvent.change(textarea, { target: { value: 'run tests' } });
-        textarea.setSelectionRange(0, 9);
-        fireEvent.select(textarea);
+        fireEvent.change(textarea, {
+            target: { value: 'run tests', selectionStart: 0, selectionEnd: 9 },
+        });
         fireEvent.change(textarea, { target: { value: '`' } });
 
         await waitFor(() => {
@@ -1144,9 +1152,9 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const { getByRole } = render(<DescriptionHarness />);
         const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
 
-        fireEvent.change(textarea, { target: { value: 'drop this' } });
-        textarea.setSelectionRange(0, 9);
-        fireEvent.select(textarea);
+        fireEvent.change(textarea, {
+            target: { value: 'drop this', selectionStart: 0, selectionEnd: 9 },
+        });
         fireEvent.change(textarea, { target: { value: '~' } });
 
         await waitFor(() => {
@@ -1160,9 +1168,9 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const { getByRole } = render(<DescriptionHarness />);
         const textarea = getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
 
-        fireEvent.change(textarea, { target: { value: 'run tests' } });
-        textarea.setSelectionRange(0, 9);
-        fireEvent.select(textarea);
+        fireEvent.change(textarea, {
+            target: { value: 'run tests', selectionStart: 0, selectionEnd: 9 },
+        });
         fireEvent.change(textarea, { target: { value: '```' } });
 
         await waitFor(() => {

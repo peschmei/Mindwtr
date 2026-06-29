@@ -163,6 +163,7 @@ describe('TaskQuickActionMenu', () => {
 
         const panel = screen.getByRole('dialog', { name: 'Due Date' });
         fireEvent.focus(within(panel).getByLabelText('Due Date'));
+        fireEvent.click(within(panel).getByRole('button', { name: 'Due Date calendar' }));
         expect(screen.getByRole('dialog', { name: 'Due Date calendar' })).toBeInTheDocument();
 
         fireEvent.pointerDown(within(panel).getByRole('button', { name: 'Cancel' }));
@@ -202,6 +203,7 @@ describe('TaskQuickActionMenu', () => {
         fireEvent.click(screen.getByRole('menuitem', { name: 'Due Date…' }));
         const panel = screen.getByRole('dialog', { name: 'Due Date' });
         fireEvent.focus(within(panel).getByLabelText('Due Date'));
+        fireEvent.click(within(panel).getByRole('button', { name: 'Due Date calendar' }));
 
         fireEvent.pointerDown(screen.getByRole('button', { name: /April 19, 2026/i }));
 
