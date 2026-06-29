@@ -844,7 +844,6 @@ const MIN_WHISPER_MODEL_BYTES = 5 * 1024 * 1024;
 const WHISPER_REALTIME_SLICE_SEC = 30;
 const WHISPER_REALTIME_BUFFER_SIZE = 2048;
 const WHISPER_MODEL_DIR_NAME = 'whisper-models';
-const WHISPER_MODEL_KEEP_FILE = '.keep';
 const WHISPER_MODEL_FILES: Record<string, string> = {
   'whisper-tiny': 'ggml-tiny.bin',
   'whisper-tiny.en': 'ggml-tiny.en.bin',
@@ -1162,13 +1161,19 @@ const ensureWhisperModelDirectory = (): string | null => {
     const createDirectory = () => {
       const dir = new Directory(dirUri);
       dir.create({ intermediates: true, idempotent: true });
-      try {
-        const keepFile = new File(dir, WHISPER_MODEL_KEEP_FILE);
-        if (!keepFile.exists) {
-          keepFile.create({ intermediates: true, overwrite: true });
-        }
-      } catch {
-        // Ignore keep file errors; directory is the important part.
+      const after = checkPath(dirUri);
+      if (after.exists && !after.isDirectory) {
+        void logWarn('Whisper model directory blocked after create', {
+          scope: 'speech',
+          force: true,
+          extra: {
+            uri: dirUri,
+            exists: String(Boolean(after.exists)),
+            isDirectory: String(Boolean(after.isDirectory)),
+            size: String(after.size ?? 0),
+          },
+        });
+        throw new Error(`Whisper model directory is not a directory after create: ${dirUri}`);
       }
       return dir.uri;
     };

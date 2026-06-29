@@ -6,6 +6,7 @@ const fileSystemMock = vi.hoisted(() => ({
   directoryUris: null as Set<string> | null,
   fileUris: null as Set<string> | null,
   fileSizes: new Map<string, number>(),
+  emulateDirectoryFileConstructorBug: false,
 }));
 
 function normalizeMockUri(uri: string) {
@@ -92,8 +93,15 @@ vi.mock('expo-file-system', () => ({
   File: class MockFile {
     uri: string;
 
-    constructor(uri: string) {
-      this.uri = uri;
+    constructor(uri: string | { uri: string }, name?: string) {
+      if (typeof uri === 'string') {
+        this.uri = uri;
+        return;
+      }
+      const base = uri.uri.endsWith('/') ? uri.uri : uri.uri + '/';
+      this.uri = fileSystemMock.emulateDirectoryFileConstructorBug || !name
+        ? uri.uri
+        : base + name;
     }
 
     get name() {
@@ -125,6 +133,16 @@ vi.mock('expo-file-system', () => ({
       }
       if (fileSystemMock.existingUris) {
         fileSystemMock.existingUris.delete(this.uri);
+      }
+    }
+
+    create() {
+      if (fileSystemMock.directoryUris || fileSystemMock.fileUris) {
+        fileSystemMock.fileUris ??= new Set<string>();
+        fileSystemMock.fileUris.add(normalizeMockUri(this.uri));
+      }
+      if (fileSystemMock.existingUris) {
+        fileSystemMock.existingUris.add(this.uri);
       }
     }
   },
@@ -202,6 +220,7 @@ describe('speech-to-text', () => {
     fileSystemMock.directoryUris = null;
     fileSystemMock.fileUris = null;
     fileSystemMock.fileSizes.clear();
+    fileSystemMock.emulateDirectoryFileConstructorBug = false;
     vi.clearAllMocks();
   });
 
@@ -329,6 +348,28 @@ describe('speech-to-text', () => {
       path: '/document/whisper-models/ggml-tiny.en.bin',
       exists: false,
       size: 0,
+    });
+    expect(fileSystemMock.fileUris.has('file:///document/whisper-models')).toBe(false);
+    expect(fileSystemMock.directoryUris.has('file:///document/whisper-models')).toBe(true);
+  });
+
+  it('does not create a file over the Whisper model directory while resolving the model path', () => {
+    fileSystemMock.emulateDirectoryFileConstructorBug = true;
+    fileSystemMock.directoryUris = new Set([
+      'file:///document',
+      'file:///cache',
+      'file:///document/whisper-models',
+    ]);
+    fileSystemMock.fileUris = new Set([
+      'file:///document/whisper-models/ggml-tiny.en.bin',
+    ]);
+    fileSystemMock.fileSizes.set('file:///document/whisper-models/ggml-tiny.en.bin', 77704715);
+
+    expect(ensureWhisperModelPathForConfig('whisper-tiny.en')).toMatchObject({
+      uri: 'file:///document/whisper-models/ggml-tiny.en.bin',
+      path: '/document/whisper-models/ggml-tiny.en.bin',
+      exists: true,
+      size: 77704715,
     });
     expect(fileSystemMock.fileUris.has('file:///document/whisper-models')).toBe(false);
     expect(fileSystemMock.directoryUris.has('file:///document/whisper-models')).toBe(true);
