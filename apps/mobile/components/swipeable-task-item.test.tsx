@@ -261,11 +261,12 @@ describe('SwipeableTaskItem', () => {
   const hasText = (tree: renderer.ReactTestRenderer, text: string) =>
     tree.root.findAll((node) => flattenText(node.props?.children).includes(text)).length > 0;
 
+  const flattenStyle = (style: unknown): Record<string, unknown> => {
+    if (Array.isArray(style)) return Object.assign({}, ...style.map(flattenStyle));
+    return style && typeof style === 'object' ? style as Record<string, unknown> : {};
+  };
+
   const getTextColor = (tree: renderer.ReactTestRenderer, text: string) => {
-    const flattenStyle = (style: unknown): Record<string, unknown> => {
-      if (Array.isArray(style)) return Object.assign({}, ...style.map(flattenStyle));
-      return style && typeof style === 'object' ? style as Record<string, unknown> : {};
-    };
     const matches = tree.root.findAll((node) => (
       flattenText(node.props?.children) === text && node.props?.style
     ));
@@ -291,6 +292,46 @@ describe('SwipeableTaskItem', () => {
       formatStr === 'Pp' ? 'May 12, 2026, 8:30 AM' : ''
     ));
     safeParseDate.mockImplementation((value?: string | null) => (value ? new Date(value) : null));
+  });
+
+  it('keeps inbox row titles width-constrained without the focus toggle', () => {
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(
+        <SwipeableTaskItem
+          task={{
+            id: 'task-1',
+            title: 'Do laundry',
+            status: 'inbox',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          } as any}
+          isDark={false}
+          tc={{
+            taskItemBg: '#111111',
+            border: '#222222',
+            text: '#ffffff',
+            secondaryText: '#999999',
+            tint: '#3b82f6',
+            warning: '#f59e0b',
+          } as any}
+          onPress={vi.fn()}
+          onStatusChange={vi.fn()}
+          onDelete={vi.fn()}
+          statusBadgeAsIcon
+        />
+      );
+    });
+
+    const title = tree.root.findAll((node) => (
+      flattenText(node.props?.children) === 'Do laundry' && node.props?.style
+    )).at(-1);
+
+    expect(title).toBeTruthy();
+    expect(flattenStyle(title?.props.style)).toEqual(expect.objectContaining({
+      flex: 1,
+      minWidth: 0,
+    }));
   });
 
   it('requires a deliberate horizontal drag before opening swipe actions', () => {

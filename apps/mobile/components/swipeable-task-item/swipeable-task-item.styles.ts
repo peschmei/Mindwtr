@@ -28,11 +28,15 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        minWidth: 0,
     },
     taskContent: {
         flex: 1,
+        minWidth: 0,
     },
     taskTitle: {
+        flex: 1,
+        minWidth: 0,
         fontSize: 15,
         fontWeight: '500',
         lineHeight: 20,
