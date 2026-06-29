@@ -113,6 +113,22 @@ def find_block_end(start_index: int, base_indent: int) -> int:
             break
     return block_end_index
 
+def remove_patch_source(path: str) -> None:
+    index = 0
+    while index < len(lines):
+        if lines[index].strip() != '- type: patch':
+            index += 1
+            continue
+        indent = len(lines[index]) - len(lines[index].lstrip())
+        block_end_index = find_block_end(index, indent)
+        block = [line.strip() for line in lines[index:block_end_index]]
+        if f'path: {path}' in block:
+            del lines[index:block_end_index]
+            continue
+        index += 1
+
+remove_patch_source('appstream-homepage.patch')
+
 appindicator_module = "shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json"
 appindicator_module_entry = f"- {appindicator_module}"
 lines = [line for line in lines if line.strip() != appindicator_module_entry]
@@ -229,6 +245,8 @@ lines[env_line_index + 1:block_end_index] = [
 
 manifest_path.write_text("\n".join(lines) + "\n")
 PY
+
+rm -f "${flathub_dir}/appstream-homepage.patch"
 
 worktree_dir="$(mktemp -d)"
 
