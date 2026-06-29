@@ -16,6 +16,7 @@ const NATIVE_HTTP_TIMEOUT_SECS: u64 = 30;
 fn blocking_http_client() -> Result<reqwest::blocking::Client, String> {
     reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(NATIVE_HTTP_TIMEOUT_SECS))
+        .use_native_tls()
         .build()
         .map_err(|error| format!("Failed to create HTTP client: {error}"))
 }
