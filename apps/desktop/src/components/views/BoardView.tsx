@@ -6,7 +6,10 @@ import {
     DragEndEvent,
     DragStartEvent,
     closestCorners,
+    closestCenter,
     pointerWithin,
+    rectIntersection,
+    getFirstCollision,
     PointerSensor,
     useSensor,
     useSensors,
@@ -419,17 +422,26 @@ export function BoardView() {
         () => new Set<string>(getColumns(t).map((column) => column.id)),
         [t]
     );
-    // Prefer the card under the pointer over the wrapping column droppable, so a cross-column
-    // drop lands at the dropped position instead of always at the bottom of the target column.
+    // Lock onto the column the drag is over, then snap to the closest card *within* that
+    // column (by the dragged item's rect, not the raw pointer). Without this, releasing in
+    // the gap between cards falls through to the column droppable and lands at the bottom,
+    // which made cross-column placement feel inconsistent (#791).
     const collisionDetection = React.useCallback<CollisionDetection>((args) => {
-        const pointerCollisions = pointerWithin(args);
-        const collisions = pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args);
-        return [...collisions].sort((a, b) => {
-            const aIsColumn = columnIdSet.has(String(a.id)) ? 1 : 0;
-            const bIsColumn = columnIdSet.has(String(b.id)) ? 1 : 0;
-            return aIsColumn - bIsColumn;
-        });
-    }, [columnIdSet]);
+        const pointerHits = pointerWithin(args);
+        const intersections = pointerHits.length > 0 ? pointerHits : rectIntersection(args);
+        const overId = getFirstCollision(intersections, 'id');
+        if (overId == null) return closestCorners(args);
+
+        if (columnIdSet.has(String(overId))) {
+            const cardIds = new Set(getColumnTasks(overId as TaskStatus).map((task) => task.id));
+            const columnCards = args.droppableContainers.filter((container) => cardIds.has(String(container.id)));
+            if (columnCards.length > 0) {
+                const closest = closestCenter({ ...args, droppableContainers: columnCards });
+                if (closest.length > 0) return closest;
+            }
+        }
+        return [{ id: overId }];
+    }, [columnIdSet, getColumnTasks]);
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
