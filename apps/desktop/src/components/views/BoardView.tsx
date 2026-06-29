@@ -6,9 +6,11 @@ import {
     DragEndEvent,
     DragStartEvent,
     closestCorners,
+    pointerWithin,
     PointerSensor,
     useSensor,
     useSensors,
+    type CollisionDetection,
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -413,6 +415,22 @@ export function BoardView() {
         return sortBy === 'default' ? sortTasksByBoardOrder(list) : list;
     }, [computeSequential, filteredTasks, projectMap, sequentialProjectFirstTasks, sortBy, sortByProjectOrder]);
 
+    const columnIdSet = React.useMemo(
+        () => new Set<string>(getColumns(t).map((column) => column.id)),
+        [t]
+    );
+    // Prefer the card under the pointer over the wrapping column droppable, so a cross-column
+    // drop lands at the dropped position instead of always at the bottom of the target column.
+    const collisionDetection = React.useCallback<CollisionDetection>((args) => {
+        const pointerCollisions = pointerWithin(args);
+        const collisions = pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args);
+        return [...collisions].sort((a, b) => {
+            const aIsColumn = columnIdSet.has(String(a.id)) ? 1 : 0;
+            const bIsColumn = columnIdSet.has(String(b.id)) ? 1 : 0;
+            return aIsColumn - bIsColumn;
+        });
+    }, [columnIdSet]);
+
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveTask(null);
@@ -429,12 +447,19 @@ export function BoardView() {
             activeStatus: currentTask?.status,
             overStatus: overTask?.status,
             columnTaskIds: currentTask ? getColumnTasks(currentTask.status).map((task) => task.id) : [],
+            overColumnTaskIds: overTask ? getColumnTasks(overTask.status).map((task) => task.id) : undefined,
             canReorder: sortBy === 'default',
         });
         if (action.type === 'move') {
             moveTask(action.taskId, action.status);
         } else if (action.type === 'reorder') {
             void reorderBoardTasks(action.status, action.orderedIds);
+        } else if (action.type === 'moveAndReorder') {
+            // Change status first (keeps recurrence handling), then place at the dropped index.
+            void (async () => {
+                await moveTask(action.taskId, action.status);
+                await reorderBoardTasks(action.status, action.orderedIds);
+            })();
         }
     };
 
@@ -641,7 +666,7 @@ export function BoardView() {
                         <DndContext
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
-                            collisionDetection={closestCorners}
+                            collisionDetection={collisionDetection}
                             sensors={sensors}
                         >
                             {COLUMNS.map((col) => (

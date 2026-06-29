@@ -25,11 +25,59 @@ describe('resolveBoardDragEnd', () => {
         expect(action).toEqual({ type: 'none' });
     });
 
-    it('moves the task when dropped on a card in another column', () => {
+    it('moves the task to the bottom when the target column order is unknown', () => {
         const action = resolveBoardDragEnd({
             ...baseArgs,
             overId: 'task-other',
             overStatus: 'someday',
+        });
+
+        expect(action).toEqual({ type: 'move', taskId: 'task-e', status: 'someday' });
+    });
+
+    it('moves and inserts at the dropped card position in another column', () => {
+        const action = resolveBoardDragEnd({
+            ...baseArgs,
+            overId: 'task-2',
+            overStatus: 'someday',
+            overColumnTaskIds: ['task-1', 'task-2', 'task-3'],
+        });
+
+        expect(action).toEqual({
+            type: 'moveAndReorder',
+            taskId: 'task-e',
+            status: 'someday',
+            orderedIds: ['task-1', 'task-e', 'task-2', 'task-3'],
+        });
+    });
+
+    it('places the task at the top of another column when dropped on its first card', () => {
+        const action = resolveBoardDragEnd({
+            activeId: 'task-n',
+            columnIds: [...COLUMN_IDS],
+            activeStatus: 'next',
+            overId: 'task-1',
+            overStatus: 'waiting',
+            columnTaskIds: ['task-l', 'task-m', 'task-n', 'task-o', 'task-p'],
+            overColumnTaskIds: ['task-1', 'task-2', 'task-3', 'task-4', 'task-5'],
+            canReorder: true,
+        });
+
+        expect(action).toEqual({
+            type: 'moveAndReorder',
+            taskId: 'task-n',
+            status: 'waiting',
+            orderedIds: ['task-n', 'task-1', 'task-2', 'task-3', 'task-4', 'task-5'],
+        });
+    });
+
+    it('only moves across columns (no positioning) when a non-default sort is active', () => {
+        const action = resolveBoardDragEnd({
+            ...baseArgs,
+            overId: 'task-2',
+            overStatus: 'someday',
+            overColumnTaskIds: ['task-1', 'task-2', 'task-3'],
+            canReorder: false,
         });
 
         expect(action).toEqual({ type: 'move', taskId: 'task-e', status: 'someday' });
