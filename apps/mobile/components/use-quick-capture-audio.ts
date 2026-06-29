@@ -494,7 +494,20 @@ export function useQuickCaptureAudio({
           whisperModelReady,
           whisperModelPath: modelPath,
         });
-        const localWhisperInput = speechReady && provider === 'whisper'
+        let realtimeResult: SpeechToTextResult | null = null;
+        let realtimeTranscriptReady = false;
+        if (speechReady && provider === 'whisper' && currentRecording.allowRealtimeFallback) {
+          try {
+            const result = await currentRecording.result;
+            if (result.transcript?.trim()) {
+              realtimeResult = result;
+              realtimeTranscriptReady = true;
+            }
+          } catch (error) {
+            onWarn('Whisper realtime transcription failed', error);
+          }
+        }
+        const localWhisperInput = speechReady && provider === 'whisper' && !realtimeTranscriptReady
           ? await prepareAudioForLocalWhisper({
             uri: finalFile.uri,
             platform: getWhisperCapturePlatform(),
@@ -502,7 +515,9 @@ export function useQuickCaptureAudio({
             extension: '.wav',
           })
           : null;
-        const canTranscribeSpeech = provider === 'whisper' ? Boolean(localWhisperInput) : speechReady;
+        const canTranscribeSpeech = provider === 'whisper'
+          ? realtimeTranscriptReady || Boolean(localWhisperInput)
+          : speechReady;
         const saveAudioAttachments = currentSettings.gtd?.saveAudioAttachments !== false || !canTranscribeSpeech;
 
         let attachment: Attachment | null = saveAudioAttachments ? {
@@ -550,7 +565,7 @@ export function useQuickCaptureAudio({
             ? Intl.DateTimeFormat().resolvedOptions().timeZone
             : undefined;
           const transcriptionUri = stripFileScheme(attachment?.uri ?? finalFile.uri);
-          if (provider === 'whisper') {
+          if (provider === 'whisper' && !realtimeResult) {
             logSpeechCaptureInfo('Quick capture Whisper offline transcription queued', {
               platform: Platform.OS,
               model,
@@ -574,6 +589,33 @@ export function useQuickCaptureAudio({
             now: new Date(),
             timeZone,
           } satisfies SpeechToTextConfig;
+          if (provider === 'whisper' && realtimeResult) {
+            logSpeechCaptureInfo('Quick capture Whisper using realtime transcription', {
+              platform: Platform.OS,
+              model,
+              modelReady: String(whisperModelReady),
+              fileSize: String(fileInfo?.size ?? 0),
+              realtimeFallback: String(currentRecording.allowRealtimeFallback),
+              saveAudioAttachments: String(saveAudioAttachments),
+            });
+            void Promise.resolve(realtimeResult)
+              .then(async (result) => {
+                const applyResult = await applySpeechResult(taskId, result);
+                if (applyResult === 'empty') {
+                  await discardEmptySpeechTask(taskId, [
+                    finalFile,
+                    attachment?.uri ? new File(attachment.uri) : null,
+                  ], 'whisper_empty_realtime');
+                }
+              })
+              .catch((error) => onWarn('Speech-to-text failed', error))
+              .finally(() => {
+                if (!saveAudioAttachments) {
+                  safeDeleteFile(finalFile, 'whisper_realtime_cleanup');
+                }
+              });
+            return;
+          }
           const speechPromise = provider === 'whisper' && localWhisperInput
             ? runWhisperLocalTranscription(localWhisperInput, speechConfig)
             : processAudioCapture(transcriptionUri, speechConfig);
