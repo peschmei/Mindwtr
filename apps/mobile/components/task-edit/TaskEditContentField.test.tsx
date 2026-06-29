@@ -5,6 +5,16 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TaskEditContentField } from './TaskEditContentField';
 
+const mockFindNodeHandle = vi.hoisted(() => vi.fn(() => 314));
+
+vi.mock('react-native', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-native')>();
+  return {
+    ...actual,
+    findNodeHandle: mockFindNodeHandle,
+  };
+});
+
 vi.mock('../markdown-reference-autocomplete', () => ({
   MarkdownReferenceAutocomplete: (props: any) => React.createElement('MarkdownReferenceAutocomplete', props),
 }));
@@ -217,7 +227,7 @@ describe('TaskEditContentField', () => {
     });
   });
 
-  it('does not register Android description focus as a whole-input scroll target', () => {
+  it('registers the Android description header as the focus scroll target', () => {
     const handleInputFocus = vi.fn();
     const setIsDescriptionInputFocused = vi.fn();
     let tree!: ReturnType<typeof create>;
@@ -241,7 +251,9 @@ describe('TaskEditContentField', () => {
       });
 
       expect(setIsDescriptionInputFocused).toHaveBeenCalledWith(true);
-      expect(handleInputFocus).toHaveBeenCalledWith(undefined);
+      expect(mockFindNodeHandle).toHaveBeenCalled();
+      expect(handleInputFocus).toHaveBeenCalledWith(314);
+      expect(handleInputFocus).not.toHaveBeenCalledWith(42);
     });
   });
 

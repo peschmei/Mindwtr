@@ -5,6 +5,7 @@ import {
     TouchableOpacity,
     View,
     Platform,
+    findNodeHandle,
     type NativeSyntheticEvent,
     type TextInputKeyPressEventData,
 } from 'react-native';
@@ -120,6 +121,7 @@ export function TaskEditContentField({
     const ignoredNativePairChangeRefs = React.useRef<Record<string, IgnoredNativePairChange>>({});
     const pendingChecklistSelectionRefs = React.useRef<Record<string, MarkdownSelection | null>>({});
     const [checklistSelectionRestorePending, setChecklistSelectionRestorePending] = React.useState<Record<string, boolean>>({});
+    const descriptionFocusAnchorRef = React.useRef<View | null>(null);
     const checklistLength = editedTask.checklist?.length ?? 0;
     React.useEffect(() => {
         if (fieldId !== 'checklist' || checklistLength < 2) {
@@ -216,6 +218,13 @@ export function TaskEditContentField({
         }
     }, []);
 
+    const getDescriptionFocusScrollTarget = React.useCallback((nativeTarget?: number) => {
+        if (Platform.OS === 'android') {
+            return findNodeHandle(descriptionFocusAnchorRef.current) ?? undefined;
+        }
+        return nativeTarget || undefined;
+    }, []);
+
     const handleDescriptionSelectionChange = React.useCallback((selection: MarkdownSelection) => {
         setDescriptionSelection(selection);
 
@@ -310,7 +319,11 @@ export function TaskEditContentField({
         case 'description':
             return (
                 <View style={styles.formGroup}>
-                    <View style={styles.inlineHeader}>
+                    <View
+                        ref={descriptionFocusAnchorRef}
+                        collapsable={false}
+                        style={styles.inlineHeader}
+                    >
                         <Text style={[styles.label, { color: tc.secondaryText }]}>{t('taskEdit.descriptionLabel')}</Text>
                         <View style={styles.inlineActions}>
                             <TouchableOpacity onPress={() => setShowDescriptionPreview((value) => !value)}>
@@ -351,7 +364,7 @@ export function TaskEditContentField({
                                 onFocus={(event) => {
                                     setIsDescriptionInputFocused(true);
                                     const target = event.nativeEvent.target;
-                                    handleInputFocus(Platform.OS === 'ios' && target ? target : undefined);
+                                    handleInputFocus(getDescriptionFocusScrollTarget(target));
                                 }}
                                 onBlur={() => {
                                     const preserveFocus = descriptionToolbarInteractionUntilRef.current > Date.now();
