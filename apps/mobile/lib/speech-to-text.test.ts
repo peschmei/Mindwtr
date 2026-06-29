@@ -26,11 +26,21 @@ const whisperMock = vi.hoisted(() => ({
   initWhisper: vi.fn(),
 }));
 
+const rnfsMock = vi.hoisted(() => ({
+  writeFile: vi.fn(),
+  appendFile: vi.fn(),
+  readFile: vi.fn(),
+  exists: vi.fn(),
+  unlink: vi.fn(),
+  stat: vi.fn(),
+}));
+
 vi.mock('react-native', () => ({
   Platform: { OS: 'android' },
 }));
 
 vi.mock('expo-constants', () => constantsMock);
+vi.mock('react-native-fs', () => ({ ...rnfsMock, default: rnfsMock }));
 
 vi.mock('expo-file-system', () => ({
   Directory: class MockDirectory {
@@ -100,6 +110,7 @@ vi.mock('whisper.rn/realtime-transcription/index.js', () => ({}));
 import {
   ensureWhisperModelPathForConfig,
   prepareAudioForLocalWhisper,
+  resolveWhisperModelPathForConfigAsync,
   processAudioCapture,
   REMOTE_SPEECH_TO_TEXT_FOSS_ERROR,
   resolveSpeechToTextRuntimeSettings,
@@ -221,6 +232,27 @@ describe('speech-to-text', () => {
       'file:///document/ggml-tiny.en.bin'
     )).toMatchObject({
       uri: 'file:///document/whisper-models/ggml-tiny.en.bin',
+      exists: true,
+      size: 77704715,
+    });
+  });
+
+  it('resolves an RNFS-written Whisper model when Expo metadata reports it missing', async () => {
+    const uri = 'file:///document/whisper-models/ggml-tiny.en.bin';
+    fileSystemMock.existingUris = new Set([
+      'file:///document/',
+      'file:///document/whisper-models',
+    ]);
+    rnfsMock.stat.mockResolvedValueOnce({
+      path: '/document/whisper-models/ggml-tiny.en.bin',
+      size: 77704715,
+      isFile: () => true,
+      isDirectory: () => false,
+    });
+
+    await expect(resolveWhisperModelPathForConfigAsync('whisper-tiny.en', uri)).resolves.toMatchObject({
+      uri,
+      path: '/document/whisper-models/ggml-tiny.en.bin',
       exists: true,
       size: 77704715,
     });

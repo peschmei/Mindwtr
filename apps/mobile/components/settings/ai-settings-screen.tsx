@@ -38,6 +38,7 @@ import {
     verifyWhisperModelFileHash,
     type WhisperModelNativeFs,
     type WhisperModelNativeHashFs,
+    type WhisperModelPathInfo,
 } from './ai-settings-whisper-model';
 import {
     AI_PROVIDER_CONSENT_KEY,
@@ -110,6 +111,54 @@ const hashWhisperModelFile = async (uri: string): Promise<string> => {
     return rnfs.hash(toNativeHashPath(uri), 'sha256');
 };
 
+const getWhisperNativePathInfo = async (uri: string): Promise<WhisperModelPathInfo | null> => {
+    const rnfs = getRNFSDownloadModule();
+    if (!rnfs || typeof rnfs.stat !== 'function') {
+        void logInfo('Whisper model native stat unavailable', {
+            scope: 'settings',
+            force: true,
+            extra: { uri },
+        });
+        return null;
+    }
+    const nativePath = toNativeHashPath(uri);
+    try {
+        const stat = await rnfs.stat(nativePath);
+        const isDirectory = typeof stat.isDirectory === 'function' ? stat.isDirectory() : false;
+        const isFile = typeof stat.isFile === 'function' ? stat.isFile() : !isDirectory;
+        const size = typeof stat.size === 'number' && Number.isFinite(stat.size) ? stat.size : 0;
+        void logInfo('Whisper model native stat result', {
+            scope: 'settings',
+            force: true,
+            extra: {
+                uri,
+                nativePath,
+                exists: String(Boolean(isFile && !isDirectory)),
+                isFile: String(Boolean(isFile)),
+                isDirectory: String(Boolean(isDirectory)),
+                size: String(size),
+                statPath: stat.path ?? '',
+                originalFilepath: stat.originalFilepath ?? '',
+            },
+        });
+        return {
+            exists: Boolean(isFile && !isDirectory),
+            isDirectory,
+            size,
+        };
+    } catch (error) {
+        void logInfo('Whisper model native stat failed', {
+            scope: 'settings',
+            force: true,
+            extra: {
+                uri,
+                nativePath,
+                error: error instanceof Error ? error.message : String(error),
+            },
+        });
+        return null;
+    }
+};
 
 
 export function AISettingsScreen() {
@@ -125,6 +174,7 @@ export function AISettingsScreen() {
     const [speechApiKey, setSpeechApiKey] = useState('');
     const [whisperDownloadState, setWhisperDownloadState] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
     const [whisperDownloadError, setWhisperDownloadError] = useState('');
+    const [whisperNativePathInfo, setWhisperNativePathInfo] = useState<{ uri: string; info: WhisperModelPathInfo } | null>(null);
     const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
     const [speechOpen, setSpeechOpen] = useState(false);
     const [modelPicker, setModelPicker] = useState<null | 'model' | 'copilot' | 'speech'>(null);
@@ -479,9 +529,11 @@ export function AISettingsScreen() {
         allowedUris: getWhisperTargetUris(model.fileName).map(normalizeWhisperPath),
     });
 
-    const getWhisperPathInfoSize = (info: ReturnType<typeof safePathInfo>): number => (
-        info && 'size' in info && typeof info.size === 'number' ? info.size : 0
-    );
+    const getWhisperPathInfoSize = (info: unknown): number => {
+        if (!info || typeof info !== 'object') return 0;
+        const size = (info as { size?: unknown }).size;
+        return typeof size === 'number' ? size : 0;
+    };
 
     const getWhisperReadiness = (model: (typeof WHISPER_MODELS)[number], uri: string) => {
         const info = safePathInfo(uri);
@@ -549,13 +601,42 @@ export function AISettingsScreen() {
     const whisperModelPath = speechProvider === 'whisper'
         ? (speechSettings.offlineModelPath ?? resolveWhisperModelPath(speechModel))
         : undefined;
+
+    useEffect(() => {
+        let cancelled = false;
+        const normalizedPath = whisperModelPath ? normalizeWhisperPath(whisperModelPath) : '';
+        if (speechProvider !== 'whisper' || !normalizedPath || !selectedWhisperModel) {
+            setWhisperNativePathInfo(null);
+            return () => {
+                cancelled = true;
+            };
+        }
+        const expoInfo = safePathInfo(normalizedPath);
+        if (isWhisperModelFileReady(selectedWhisperModel, expoInfo)) {
+            setWhisperNativePathInfo(null);
+            return () => {
+                cancelled = true;
+            };
+        }
+        void getWhisperNativePathInfo(normalizedPath).then((info) => {
+            if (cancelled) return;
+            setWhisperNativePathInfo(info ? { uri: normalizedPath, info } : null);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [speechModel, speechProvider, whisperModelPath, selectedWhisperModel]);
+
     let whisperDownloaded = false;
     let whisperSizeLabel = '';
     if (whisperModelPath && selectedWhisperModel) {
-        const { info, ready } = getWhisperReadiness(selectedWhisperModel, whisperModelPath);
-        whisperDownloaded = ready;
-        const size = getWhisperPathInfoSize(info);
-        if (ready && size > 0) {
+        const normalizedPath = normalizeWhisperPath(whisperModelPath);
+        const { info, ready } = getWhisperReadiness(selectedWhisperModel, normalizedPath);
+        const nativeInfo = whisperNativePathInfo?.uri === normalizedPath ? whisperNativePathInfo.info : null;
+        const nativeReady = isWhisperModelFileReady(selectedWhisperModel, nativeInfo);
+        whisperDownloaded = ready || nativeReady;
+        const size = getWhisperPathInfoSize(ready ? info : (nativeInfo ?? info));
+        if (whisperDownloaded && size > 0) {
             whisperSizeLabel = `${(size / (1024 * 1024)).toFixed(1)} MB`;
         }
     }
@@ -606,11 +687,15 @@ export function AISettingsScreen() {
                         throw new Error(tr('settings.aiMobile.offlineModelPathIsUnsafe', { path: targetFile.uri }));
                     }
                     const existingInfo = safePathInfo(targetFile.uri);
-                    if (existingInfo?.exists && existingInfo.isDirectory === false) {
-                        if (isWhisperModelFileReady(selectedWhisperModel, existingInfo)) {
+                    const existingNativeInfo = existingInfo?.exists ? null : await getWhisperNativePathInfo(targetFile.uri);
+                    const existingReady = isWhisperModelFileReady(selectedWhisperModel, existingInfo)
+                        || isWhisperModelFileReady(selectedWhisperModel, existingNativeInfo);
+                    if ((existingInfo?.exists && existingInfo.isDirectory === false) || existingNativeInfo?.exists) {
+                        if (existingReady) {
                             try {
                                 await verifyWhisperModelFileHash(selectedWhisperModel, targetFile.uri, hashWhisperModelFile);
                                 updateSpeechSettings({ offlineModelPath: targetFile.uri, model: selectedWhisperModel.id });
+                                setWhisperNativePathInfo(existingNativeInfo ? { uri: normalizeWhisperPath(targetFile.uri), info: existingNativeInfo } : null);
                                 setWhisperDownloadState('success');
                                 clearSuccess();
                                 return;
@@ -645,7 +730,27 @@ export function AISettingsScreen() {
                         });
                         const { file, bytesWritten } = downloadResult;
                         const downloadedInfo = safePathInfo(file.uri);
-                        const ready = isWhisperModelFileReady(selectedWhisperModel, downloadedInfo, bytesWritten);
+                        const nativeDownloadedInfo = await getWhisperNativePathInfo(file.uri);
+                        const expoReady = isWhisperModelFileReady(selectedWhisperModel, downloadedInfo, bytesWritten);
+                        const nativeReady = isWhisperModelFileReady(selectedWhisperModel, nativeDownloadedInfo, bytesWritten);
+                        const ready = expoReady || nativeReady;
+                        void logInfo('Whisper model download verification', {
+                            scope: 'settings',
+                            force: true,
+                            extra: {
+                                targetUri: file.uri,
+                                bytesWritten: String(bytesWritten ?? ''),
+                                expoExists: String(Boolean(downloadedInfo?.exists)),
+                                expoIsDirectory: String(Boolean(downloadedInfo?.isDirectory)),
+                                expoSize: String(getWhisperPathInfoSize(downloadedInfo)),
+                                nativeExists: String(Boolean(nativeDownloadedInfo?.exists)),
+                                nativeIsDirectory: String(Boolean(nativeDownloadedInfo?.isDirectory)),
+                                nativeSize: String(getWhisperPathInfoSize(nativeDownloadedInfo)),
+                                expoReady: String(expoReady),
+                                nativeReady: String(nativeReady),
+                                ready: String(ready),
+                            },
+                        });
                         if (!ready) {
                             try {
                                 file.delete();
@@ -665,6 +770,7 @@ export function AISettingsScreen() {
                             throw error;
                         }
                         updateSpeechSettings({ offlineModelPath: file.uri, model: selectedWhisperModel.id });
+                        setWhisperNativePathInfo(nativeDownloadedInfo ? { uri: normalizeWhisperPath(file.uri), info: nativeDownloadedInfo } : null);
                     } catch (downloadError) {
                         const fallbackMessage = tr('settings.aiMobile.downloadFailedPleaseRetryOnWiFiLargeModelsCannot');
                         throw new Error(downloadError instanceof Error

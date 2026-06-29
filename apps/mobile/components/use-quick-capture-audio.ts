@@ -489,6 +489,7 @@ export function useQuickCaptureAudio({
           provider,
           apiKey,
           whisperModelReady,
+          whisperModelPath: modelPath,
         });
         const localWhisperInput = speechReady && provider === 'whisper'
           ? await prepareAudioForLocalWhisper({
@@ -739,6 +740,7 @@ export function useQuickCaptureAudio({
         provider,
         apiKey,
         whisperModelReady,
+        whisperModelPath: modelPath,
       });
       const audioUri = finalFile.uri;
       const localWhisperInput = speechReady && provider === 'whisper'

@@ -115,13 +115,15 @@ export const isQuickCaptureSpeechReady = ({
     provider,
     apiKey,
     whisperModelReady,
+    whisperModelPath,
 }: {
     speechEnabled: boolean;
     provider: string;
     apiKey?: string;
     whisperModelReady: boolean;
+    whisperModelPath?: string;
 }) => {
     if (!speechEnabled) return false;
-    if (provider === 'whisper') return whisperModelReady;
+    if (provider === 'whisper') return whisperModelReady || Boolean(whisperModelPath?.trim());
     return Boolean(apiKey);
 };

@@ -108,6 +108,12 @@ describe('quick-capture utils', () => {
         })).toBe(false);
         expect(isQuickCaptureSpeechReady({
             speechEnabled: true,
+            provider: 'whisper',
+            whisperModelReady: false,
+            whisperModelPath: 'file:///document/whisper-models/ggml-tiny.en.bin',
+        })).toBe(true);
+        expect(isQuickCaptureSpeechReady({
+            speechEnabled: true,
             provider: 'gemini',
             apiKey: '',
             whisperModelReady: true,

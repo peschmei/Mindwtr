@@ -154,24 +154,44 @@ let whisperRealtimeModuleCache:
 type RNFSModule = typeof import('react-native-fs');
 let rnfsModuleCache: RNFSModule | null | undefined;
 
-const getRNFSModule = (): RNFSModule | null => {
-  if (rnfsModuleCache !== undefined) return rnfsModuleCache;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('react-native-fs') as RNFSModule;
+const resolveRNFSModule = (value: unknown): RNFSModule | null => {
+  const candidates = [
+    value,
+    value && typeof value === 'object' ? (value as { default?: unknown }).default : undefined,
+  ];
+  for (const candidate of candidates) {
+    const mod = candidate as RNFSModule | undefined;
     const hasCoreFs = !!mod
       && typeof (mod as unknown as { writeFile?: unknown }).writeFile === 'function'
       && typeof (mod as unknown as { appendFile?: unknown }).appendFile === 'function'
       && typeof (mod as unknown as { readFile?: unknown }).readFile === 'function'
       && typeof (mod as unknown as { exists?: unknown }).exists === 'function'
       && typeof (mod as unknown as { unlink?: unknown }).unlink === 'function';
-    if (!hasCoreFs) {
-      rnfsModuleCache = null;
-      return null;
-    }
-    rnfsModuleCache = mod;
-    return mod;
-  } catch (error) {
+    if (hasCoreFs) return mod;
+  }
+  return null;
+};
+
+const getRNFSModule = (): RNFSModule | null => {
+  if (rnfsModuleCache !== undefined) return rnfsModuleCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    rnfsModuleCache = resolveRNFSModule(require('react-native-fs'));
+    return rnfsModuleCache;
+  } catch {
+    rnfsModuleCache = null;
+    return null;
+  }
+};
+
+const getRNFSModuleAsync = async (): Promise<RNFSModule | null> => {
+  const loaded = getRNFSModule();
+  if (loaded) return loaded;
+  try {
+    const imported = await import('react-native-fs');
+    rnfsModuleCache = resolveRNFSModule(imported);
+    return rnfsModuleCache;
+  } catch {
     rnfsModuleCache = null;
     return null;
   }
@@ -891,6 +911,55 @@ const checkFile = (uri: string) => {
   return { exists: false, size: 0 };
 };
 
+type NativeStatLike = {
+  size?: unknown;
+  path?: unknown;
+  originalFilepath?: unknown;
+  isFile?: () => boolean;
+  isDirectory?: () => boolean;
+};
+
+const checkNativeFile = async (normalized: ReturnType<typeof normalizeFilePath>) => {
+  const rnfs = await getRNFSModuleAsync() as (RNFSModule & { stat?: (path: string) => Promise<NativeStatLike> }) | null;
+  if (!rnfs || typeof rnfs.stat !== 'function') {
+    return { exists: false, size: 0 };
+  }
+  try {
+    const stat = await rnfs.stat(normalized.path);
+    const isDirectory = typeof stat.isDirectory === 'function' ? stat.isDirectory() : false;
+    const isFile = typeof stat.isFile === 'function' ? stat.isFile() : !isDirectory;
+    const size = typeof stat.size === 'number' && Number.isFinite(stat.size) ? stat.size : 0;
+    void logInfo('Whisper model native stat result', {
+      scope: 'speech',
+      force: true,
+      extra: {
+        uri: normalized.uri,
+        path: normalized.path,
+        exists: String(Boolean(isFile && !isDirectory)),
+        isFile: String(Boolean(isFile)),
+        isDirectory: String(Boolean(isDirectory)),
+        size: String(size),
+        nativePath: typeof stat.path === 'string' ? stat.path : '',
+        originalFilepath: typeof stat.originalFilepath === 'string' ? stat.originalFilepath : '',
+      },
+    });
+    if (isFile && !isDirectory) {
+      return { exists: true, size };
+    }
+  } catch (error) {
+    void logInfo('Whisper model native stat failed', {
+      scope: 'speech',
+      force: true,
+      extra: {
+        uri: normalized.uri,
+        path: normalized.path,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+  }
+  return { exists: false, size: 0 };
+};
+
 const checkPath = (uri?: string) => {
   if (!uri) return { exists: false, isDirectory: false, size: 0 };
   try {
@@ -1149,6 +1218,76 @@ export const ensureWhisperModelPathForConfig = (
   return resolved;
 };
 
+export const resolveWhisperModelPathForConfigAsync = async (
+  modelId: string | undefined,
+  modelPath?: string
+): Promise<WhisperModelResolved> => {
+  const resolved = resolveWhisperModelPathForConfig(modelId, modelPath);
+  if (resolved.exists) return resolved;
+
+  const candidates = buildWhisperModelCandidates(modelId, modelPath, true, true);
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const normalized = normalizeFilePath(candidate);
+    const nativeInfo = await checkNativeFile(normalized);
+    if (nativeInfo.exists) {
+      return { path: normalized.path, uri: normalized.uri, exists: true, size: nativeInfo.size };
+    }
+  }
+
+  return resolved;
+};
+
+export const ensureWhisperModelPathForConfigAsync = async (
+  modelId: string | undefined,
+  modelPath?: string
+): Promise<WhisperModelResolved> => {
+  const resolved = await resolveWhisperModelPathForConfigAsync(modelId, modelPath);
+  const fileName = modelId ? WHISPER_MODEL_FILES[modelId] : undefined;
+  if (!fileName) return resolved;
+
+  const preferredDir = ensureWhisperModelDirectory();
+  const preferredUri = preferredDir ? `${preferredDir.endsWith('/') ? preferredDir : `${preferredDir}/`}${fileName}` : null;
+
+  if (preferredUri) {
+    const preferredNormalized = normalizeFilePath(preferredUri);
+    const preferredInfo = checkFile(preferredNormalized.uri);
+    if (preferredInfo.exists) {
+      return {
+        path: preferredNormalized.path,
+        uri: preferredNormalized.uri,
+        exists: true,
+        size: preferredInfo.size,
+      };
+    }
+    const preferredNativeInfo = await checkNativeFile(preferredNormalized);
+    if (preferredNativeInfo.exists) {
+      return {
+        path: preferredNormalized.path,
+        uri: preferredNormalized.uri,
+        exists: true,
+        size: preferredNativeInfo.size,
+      };
+    }
+  }
+
+  if (resolved.exists) return resolved;
+
+  const candidates = buildWhisperModelCandidates(modelId, modelPath, true, true);
+  void logWarn('Whisper model missing', {
+    scope: 'speech',
+    force: true,
+    extra: buildWhisperDiagnostics(modelId, modelPath, resolved, candidates),
+  });
+
+  if (preferredUri) {
+    const preferredNormalized = normalizeFilePath(preferredUri);
+    return { path: preferredNormalized.path, uri: preferredNormalized.uri, exists: false, size: 0 };
+  }
+
+  return resolved;
+};
+
 const enableWhisperNativeLogging = async (): Promise<void> => {
   if (whisperNativeLogEnabled) return;
   if (!__DEV__) {
@@ -1181,7 +1320,7 @@ const enableWhisperNativeLogging = async (): Promise<void> => {
 
 const getWhisperContext = async (modelPath: string, modelId?: string) => {
   await enableWhisperNativeLogging();
-  const resolved = ensureWhisperModelPathForConfig(modelId, modelPath);
+  const resolved = await ensureWhisperModelPathForConfigAsync(modelId, modelPath);
   if (!resolved.exists) {
     throw new Error(`Offline model not found at ${resolved.path}`);
   }
@@ -1490,11 +1629,11 @@ export const startWhisperRealtimeCapture = async (
   if (!whisperRealtime) {
     throw new Error('Whisper realtime transcription requires native audio stream modules.');
   }
-  const RNFS = getRNFSModule();
+  const RNFS = await getRNFSModuleAsync();
   if (!RNFS) {
     throw new Error('react-native-fs is unavailable. Use a dev build or production build with native modules.');
   }
-  const resolved = ensureWhisperModelPathForConfig(config.model, config.modelPath);
+  const resolved = await ensureWhisperModelPathForConfigAsync(config.model, config.modelPath);
   if (!resolved.exists) {
     throw new Error(`Offline model not found at ${resolved.path}`);
   }
@@ -1658,7 +1797,7 @@ export const preloadWhisperContext = async (config: {
   modelPath?: string;
 }): Promise<void> => {
   if (isExpoGo()) return;
-  const resolved = ensureWhisperModelPathForConfig(config.model, config.modelPath);
+  const resolved = await ensureWhisperModelPathForConfigAsync(config.model, config.modelPath);
   if (!resolved.exists) return;
   await getWhisperContext(resolved.path, config.model);
 };
@@ -1667,7 +1806,7 @@ export const transcribeLocalWhisper = async (input: LocalWhisperAudio, config: S
   if (isExpoGo()) {
     throw new Error('On-device Whisper requires a dev build or production build (not Expo Go).');
   }
-  const resolved = ensureWhisperModelPathForConfig(config.model, config.modelPath);
+  const resolved = await ensureWhisperModelPathForConfigAsync(config.model, config.modelPath);
   if (!resolved.exists) {
     throw new Error(`Offline model not found at ${resolved.path}`);
   }

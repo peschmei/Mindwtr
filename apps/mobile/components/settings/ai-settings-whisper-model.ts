@@ -24,6 +24,14 @@ export type WhisperModelDownloadSuccess<TFile extends WhisperModelDownloadFile> 
     bytesWritten?: number;
 };
 
+export type WhisperModelNativeStatResult = {
+    path?: string;
+    originalFilepath?: string;
+    size?: number;
+    isFile?: () => boolean;
+    isDirectory?: () => boolean;
+};
+
 export type WhisperModelNativeFs = {
     downloadFile: (options: {
         fromUrl: string;
@@ -33,6 +41,7 @@ export type WhisperModelNativeFs = {
         readTimeout?: number;
         backgroundTimeout?: number;
     }) => { promise: Promise<WhisperModelNativeDownloadResult> };
+    stat?: (path: string) => Promise<WhisperModelNativeStatResult>;
 };
 
 export type WhisperModelNativeHashFs = {

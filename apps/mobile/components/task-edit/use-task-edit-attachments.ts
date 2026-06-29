@@ -402,7 +402,7 @@ export function useTaskEditAttachments({
             const resolvedModelPath = provider === 'whisper'
                 ? (whisperResolved?.exists ? whisperResolved.path : modelPath)
                 : undefined;
-            const speechReady = provider === 'whisper' ? whisperModelReady : Boolean(apiKey);
+            const speechReady = provider === 'whisper' ? whisperModelReady || Boolean(modelPath?.trim()) : Boolean(apiKey);
             if (!speechReady) {
                 throw new Error(resolveText('attachments.transcriptionUnavailable', 'Speech-to-text is not ready. Check your AI settings and try again.'));
             }
