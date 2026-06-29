@@ -11,9 +11,9 @@ on:
         required: true
         type: string
       play_track:
-        description: 'Google Play testing tracks for a manually widened RC AAB (comma-separated; include beta for open testing)'
+        description: 'Additional Google Play testing tracks for the normal RC AAB (comma-separated; use beta for open testing). Internal is always published as a profileable build when Play testing runs.'
         required: false
-        default: 'internal'
+        default: 'none'
         type: string
       run_play_testing:
         description: 'Upload the Android AAB to the configured Google Play testing tracks'
@@ -207,7 +207,7 @@ jobs:
     uses: ./.github/workflows/release-android.yml
     with:
       tag: ${{ needs.validate.outputs.tag }}
-      play_track: ${{ github.event_name != 'workflow_dispatch' && 'internal' || (inputs.run_play_testing && inputs.play_track || 'none') }}
+      play_track: ${{ github.event_name != 'workflow_dispatch' && 'internal' || (inputs.run_play_testing && format('internal,{0}', inputs.play_track) || 'none') }}
       internal_test_release: false
       release_notes: 'Mindwtr release candidate. Please test launch, capture, task editing, task completion, sync settings, and upgrade from the previous stable release.'
       retention_days: '28'
