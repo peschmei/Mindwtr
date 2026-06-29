@@ -51,7 +51,8 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            libasound2-dev
+            libasound2-dev \
+            libssl-dev
         shell: bash
 
       - name: Setup Rust
