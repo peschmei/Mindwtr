@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fileSystemMock = vi.hoisted(() => ({
   bytes: vi.fn(),
+  existingUris: null as Set<string> | null,
+  fileSizes: new Map<string, number>(),
 }));
 
 const appLogMock = vi.hoisted(() => ({
@@ -54,11 +56,11 @@ vi.mock('expo-file-system', () => ({
     }
 
     get exists() {
-      return true;
+      return fileSystemMock.existingUris ? fileSystemMock.existingUris.has(this.uri) : true;
     }
 
     get size() {
-      return 44;
+      return fileSystemMock.fileSizes.get(this.uri) ?? 44;
     }
 
     bytes() {
@@ -68,7 +70,11 @@ vi.mock('expo-file-system', () => ({
   Paths: {
     cache: { uri: 'file:///cache/' },
     document: { uri: 'file:///document/' },
-    info: vi.fn(() => ({ exists: true, isDirectory: false })),
+    info: vi.fn((uri: string) => ({
+      exists: fileSystemMock.existingUris ? fileSystemMock.existingUris.has(uri) : true,
+      isDirectory: false,
+      size: fileSystemMock.fileSizes.get(uri),
+    })),
   },
 }));
 
@@ -82,6 +88,7 @@ import {
   processAudioCapture,
   REMOTE_SPEECH_TO_TEXT_FOSS_ERROR,
   resolveSpeechToTextRuntimeSettings,
+  resolveWhisperModelPathForConfig,
   startWhisperRealtimeCapture,
 } from './speech-to-text';
 
@@ -124,6 +131,8 @@ const makeM4aHeader = () => new Uint8Array([
 describe('speech-to-text', () => {
   beforeEach(() => {
     constantsMock.default.expoConfig.extra.isFossBuild = false;
+    fileSystemMock.existingUris = null;
+    fileSystemMock.fileSizes.clear();
     vi.clearAllMocks();
   });
 
@@ -184,6 +193,22 @@ describe('speech-to-text', () => {
         extra: { provider: 'gemini' },
       })
     );
+  });
+
+  it('finds a downloaded Whisper model when the stored root path is stale', () => {
+    fileSystemMock.existingUris = new Set([
+      'file:///document/whisper-models/ggml-tiny.en.bin',
+    ]);
+    fileSystemMock.fileSizes.set('file:///document/whisper-models/ggml-tiny.en.bin', 77704715);
+
+    expect(resolveWhisperModelPathForConfig(
+      'whisper-tiny.en',
+      'file:///document/ggml-tiny.en.bin'
+    )).toMatchObject({
+      uri: 'file:///document/whisper-models/ggml-tiny.en.bin',
+      exists: true,
+      size: 77704715,
+    });
   });
 
   it('fails cleanly when Android Whisper realtime helper modules are unavailable', async () => {

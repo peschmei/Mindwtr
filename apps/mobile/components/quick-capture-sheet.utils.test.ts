@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
     buildCaptureExtra,
+    buildCaptureFileUri,
     getCaptureFileExtension,
     getCaptureMimeType,
     isQuickCaptureSpeechReady,
     normalizeContextToken,
     parseContextQueryTokens,
+    selectQuickCaptureSettings,
 } from './quick-capture-sheet.utils';
 
 describe('quick-capture utils', () => {
@@ -18,6 +20,13 @@ describe('quick-capture utils', () => {
         expect(getCaptureMimeType('.wav')).toBe('audio/wav');
         expect(getCaptureMimeType('.mp3')).toBe('audio/mpeg');
         expect(getCaptureMimeType('.unknown')).toBe('audio/mp4');
+    });
+
+    it('builds capture file URIs inside the target directory', () => {
+        expect(buildCaptureFileUri('file:///document/audio-captures', 'mindwtr-audio.m4a'))
+            .toBe('file:///document/audio-captures/mindwtr-audio.m4a');
+        expect(buildCaptureFileUri('file:///document/audio-captures/', 'mindwtr-audio.wav'))
+            .toBe('file:///document/audio-captures/mindwtr-audio.wav');
     });
 
     it('builds structured capture error metadata', () => {
@@ -61,5 +70,29 @@ describe('quick-capture utils', () => {
             apiKey: '',
             whisperModelReady: true,
         })).toBe(false);
+    });
+
+    it('uses the latest store speech settings over a stale capture snapshot', () => {
+        const staleSettings = {
+            ai: {
+                speechToText: {
+                    provider: 'whisper',
+                    model: 'whisper-tiny.en',
+                    offlineModelPath: 'file:///document/ggml-tiny.en.bin',
+                },
+            },
+        };
+        const latestSettings = {
+            ai: {
+                speechToText: {
+                    provider: 'whisper',
+                    model: 'whisper-tiny.en',
+                    offlineModelPath: 'file:///document/whisper-models/ggml-tiny.en.bin',
+                },
+            },
+        };
+
+        expect(selectQuickCaptureSettings(staleSettings, latestSettings)).toBe(latestSettings);
+        expect(selectQuickCaptureSettings(staleSettings, undefined)).toBe(staleSettings);
     });
 });

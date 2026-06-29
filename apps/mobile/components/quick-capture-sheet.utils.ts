@@ -36,6 +36,21 @@ export const buildCaptureExtra = (message?: string, error?: unknown): Record<str
     return Object.keys(extra).length ? extra : undefined;
 };
 
+
+export const buildCaptureFileUri = (directoryUri: string, fileName: string) => {
+    const baseUri = directoryUri.endsWith('/') ? directoryUri : `${directoryUri}/`;
+    return `${baseUri}${fileName}`;
+};
+
+type QuickCaptureSettingsLike = {
+    ai?: unknown;
+} | null | undefined;
+
+export const selectQuickCaptureSettings = <T extends QuickCaptureSettingsLike>(
+    snapshotSettings: T,
+    latestSettings: T
+): T => latestSettings ?? snapshotSettings;
+
 export const getCaptureFileExtension = (uri: string) => {
     const match = uri.match(/\.[a-z0-9]+$/i);
     return match ? match[0] : '.m4a';

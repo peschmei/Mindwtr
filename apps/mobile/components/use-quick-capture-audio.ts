@@ -30,7 +30,13 @@ import {
   type SpeechToTextConfig,
   type SpeechToTextResult,
 } from '../lib/speech-to-text';
-import { getCaptureFileExtension, getCaptureMimeType, isQuickCaptureSpeechReady } from './quick-capture-sheet.utils';
+import {
+  buildCaptureFileUri,
+  getCaptureFileExtension,
+  getCaptureMimeType,
+  isQuickCaptureSpeechReady,
+  selectQuickCaptureSettings,
+} from './quick-capture-sheet.utils';
 
 type SpeechSettings = SpeechToTextSettings;
 type BuildTaskPropsResult = {
@@ -249,7 +255,8 @@ export function useQuickCaptureAudio({
         interruptionMode: 'duckOthers',
         interruptionModeAndroid: 'duckOthers',
       });
-      const speech = settings.ai?.speechToText;
+      const currentSettings = selectQuickCaptureSettings(settings, useTaskStore.getState().settings);
+      const speech = currentSettings.ai?.speechToText;
       const speechRuntime = resolveSpeechToTextRuntimeSettings(speech);
       const { provider, model, modelPath } = speechRuntime;
       const whisperResolved = provider === 'whisper'
@@ -281,8 +288,7 @@ export function useQuickCaptureAudio({
           const fileName = `mindwtr-audio-${timestamp}.wav`;
           const buildOutputFile = (base?: Directory | null) => {
             if (!base?.uri) return null;
-            const baseUri = base.uri.endsWith('/') ? base.uri : `${base.uri}/`;
-            return new File(`${baseUri}${fileName}`);
+            return new File(buildCaptureFileUri(base.uri, fileName));
           };
           let outputFile: File | null = buildOutputFile(directory);
           if (!outputFile) {
@@ -354,7 +360,7 @@ export function useQuickCaptureAudio({
     recording,
     recordingBusy,
     resolveWhisperModel,
-    settings.ai?.speechToText,
+    settings,
     stripFileScheme,
     t,
   ]);
@@ -391,7 +397,8 @@ export function useQuickCaptureAudio({
         const now = new Date();
         const nowIso = now.toISOString();
         const displayTitle = `${t('quickAdd.audioNoteTitle')} ${safeFormatDate(now, 'Pp')}`;
-        const speech = settings.ai?.speechToText;
+        const currentSettings = selectQuickCaptureSettings(settings, useTaskStore.getState().settings);
+        const speech = currentSettings.ai?.speechToText;
         const speechRuntime = resolveSpeechToTextRuntimeSettings(speech);
         const { provider, model, modelPath } = speechRuntime;
         const apiKey = provider === 'whisper' ? '' : await loadAIKey(provider).catch(() => '');
@@ -418,7 +425,7 @@ export function useQuickCaptureAudio({
           })
           : null;
         const canTranscribeSpeech = provider === 'whisper' ? Boolean(localWhisperInput) : speechReady;
-        const saveAudioAttachments = settings.gtd?.saveAudioAttachments !== false || !canTranscribeSpeech;
+        const saveAudioAttachments = currentSettings.gtd?.saveAudioAttachments !== false || !canTranscribeSpeech;
 
         let attachment: Attachment | null = saveAudioAttachments ? {
           id: generateUUID(),
@@ -484,7 +491,7 @@ export function useQuickCaptureAudio({
             language: speechRuntime.language,
             mode: speechRuntime.mode,
             fieldStrategy: speechRuntime.fieldStrategy,
-            parseModel: provider === 'openai' && settings.ai?.provider === 'openai' ? settings.ai?.model : undefined,
+            parseModel: provider === 'openai' && currentSettings.ai?.provider === 'openai' ? currentSettings.ai?.model : undefined,
             now: new Date(),
             timeZone,
           } satisfies SpeechToTextConfig;
@@ -561,7 +568,7 @@ export function useQuickCaptureAudio({
       const directory = await ensureAudioDirectory();
       const fileName = `mindwtr-audio-${timestamp}${extension}`;
       const sourceFile = new File(uri);
-      const destinationFile = directory ? new File(directory, fileName) : null;
+      const destinationFile = directory ? new File(buildCaptureFileUri(directory.uri, fileName)) : null;
       let finalFile = sourceFile;
 
       if (destinationFile) {
@@ -589,7 +596,8 @@ export function useQuickCaptureAudio({
       }
       const nowIso = now.toISOString();
       const displayTitle = `${t('quickAdd.audioNoteTitle')} ${safeFormatDate(now, 'Pp')}`;
-      const speech = settings.ai?.speechToText;
+      const currentSettings = selectQuickCaptureSettings(settings, useTaskStore.getState().settings);
+      const speech = currentSettings.ai?.speechToText;
       const speechRuntime = resolveSpeechToTextRuntimeSettings(speech);
       const { provider, model, modelPath } = speechRuntime;
       const apiKey = provider === 'whisper' ? '' : await loadAIKey(provider).catch(() => '');
@@ -617,7 +625,7 @@ export function useQuickCaptureAudio({
         })
         : null;
       const canTranscribeSpeech = provider === 'whisper' ? Boolean(localWhisperInput) : speechReady;
-      const saveAudioAttachments = settings.gtd?.saveAudioAttachments !== false || !canTranscribeSpeech;
+      const saveAudioAttachments = currentSettings.gtd?.saveAudioAttachments !== false || !canTranscribeSpeech;
 
       let attachment: Attachment | null = saveAudioAttachments ? {
         id: generateUUID(),
@@ -681,7 +689,7 @@ export function useQuickCaptureAudio({
           language: speechRuntime.language,
           mode: speechRuntime.mode,
           fieldStrategy: speechRuntime.fieldStrategy,
-          parseModel: provider === 'openai' && settings.ai?.provider === 'openai' ? settings.ai?.model : undefined,
+          parseModel: provider === 'openai' && currentSettings.ai?.provider === 'openai' ? currentSettings.ai?.model : undefined,
           now: new Date(),
           timeZone,
         } satisfies SpeechToTextConfig;
