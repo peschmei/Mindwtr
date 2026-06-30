@@ -970,7 +970,16 @@ export function QuickCaptureSheet({
         onToggleOptions={handleToggleOptions}
         onToggleAddAnother={setAddAnother}
         onToggleFocusNewTask={() => {
-          if (!focusNewTask && !canFocusNewTask) return;
+          if (!focusNewTask && !canFocusNewTask) {
+            // Keep the hard focus cap, but explain the block instead of silently
+            // swallowing the tap (mirrors the task-list focus toggle).
+            showToast({
+              title: tFallback(t, 'digest.focus', 'Focus'),
+              message: focusNewTaskDisabledReason,
+              tone: 'warning',
+            });
+            return;
+          }
           setFocusNewTask((current) => !current);
         }}
         onToggleRecording={handleToggleRecording}

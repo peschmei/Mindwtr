@@ -723,6 +723,42 @@ describe('TaskStore', () => {
         expect(state._tasksById.get(unclarified.id ?? '')?.isFocusedToday).toBe(false);
     });
 
+    it('promotes a starred inbox capture to next so the star takes effect', async () => {
+        const { addTask } = useTaskStore.getState();
+
+        // Starring at capture is an explicit "actionable next action I'm doing today"
+        // decision, incompatible with the unprocessed Inbox default. Promote Inbox -> Next
+        // so the star can stick; focus eligibility requires status 'next'.
+        const result = await addTask('Capture into focus', { isFocusedToday: true });
+        expect(result.success).toBe(true);
+
+        const state = useTaskStore.getState();
+        const task = state._tasksById.get(result.id ?? '');
+        expect(task?.status).toBe('next');
+        expect(task?.isFocusedToday).toBe(true);
+        expect(state.getDerivedState().focusedCount).toBe(1);
+    });
+
+    it('leaves a starred inbox capture in inbox when the focus cap is full', async () => {
+        const { addTask } = useTaskStore.getState();
+
+        for (const title of ['Focused 1', 'Focused 2', 'Focused 3']) {
+            const seeded = await addTask(title, { status: 'next', isFocusedToday: true });
+            expect(seeded.success).toBe(true);
+        }
+
+        // The promotion only commits when focus actually sticks: a full cap drops the
+        // star and the task stays in Inbox rather than being silently reclassified.
+        const blocked = await addTask('Capture into full focus', { isFocusedToday: true });
+        expect(blocked.success).toBe(true);
+
+        const state = useTaskStore.getState();
+        const task = state._tasksById.get(blocked.id ?? '');
+        expect(task?.isFocusedToday).toBe(false);
+        expect(task?.status).toBe('inbox');
+        expect(state.getDerivedState().focusedCount).toBe(3);
+    });
+
     it('does not focus newly added sequential tasks blocked by an earlier action', async () => {
         const { addProject, addTask } = useTaskStore.getState();
 

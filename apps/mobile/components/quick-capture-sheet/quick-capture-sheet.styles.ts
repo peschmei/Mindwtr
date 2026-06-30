@@ -48,13 +48,16 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  focusButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  focusChip: {
+    minHeight: 40,
+    borderRadius: 999,
     borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    flexShrink: 0,
   },
   recordButton: {
     width: 40,

@@ -678,7 +678,14 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             };
 
             if (newTask.isFocusedToday === true) {
-                const focusCandidate: Task = { ...newTask, isFocusedToday: false };
+                // Starring at capture is an explicit "this is an actionable next action I'm
+                // doing today" decision, which is incompatible with the unprocessed Inbox
+                // default. Evaluate (and, if focus sticks, commit) the task as Next so the
+                // star can take effect — focus eligibility requires status 'next'. The
+                // promotion is committed only when focus actually lands, so a refused star
+                // (cap full / ineligible) never silently reclassifies an Inbox task.
+                const promotedStatus: TaskStatus = newTask.status === 'inbox' ? 'next' : newTask.status;
+                const focusCandidate: Task = { ...newTask, status: promotedStatus, isFocusedToday: false };
                 const focusEligibility = getTaskFocusEligibility(focusCandidate, {
                     tasks: [...nextAllTasks, focusCandidate],
                     projects: currentState._allProjects,
@@ -687,6 +694,7 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 if (!focusEligibility.eligible || focusedCount >= focusTaskLimit) {
                     newTask.isFocusedToday = false;
                 } else {
+                    newTask.status = promotedStatus;
                     focusedCount += 1;
                 }
             }

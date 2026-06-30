@@ -1,6 +1,7 @@
 import React from 'react';
 import type { RefObject } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { AtSign, CalendarDays, ChevronDown, ChevronUp, Clock, FileText, Flag, Folder, Mic, SlidersHorizontal, Square, X } from 'lucide-react-native';
 import { tFallback } from '@mindwtr/core';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
@@ -130,6 +131,9 @@ export function QuickCaptureSheetBody({
   const focusLabel = focusNewTask
     ? removeFocusLabel
     : (focusDisabled ? (focusNewTaskDisabledReason || addFocusLabel) : addFocusLabel);
+  // Short visible label for the property chip; reuses the Focus screen title so it
+  // stays translated everywhere without minting a new English-only string.
+  const focusChipLabel = tFallback(t, 'agenda.title', 'Focus');
   // Drop the trailing ellipsis here so the Custom chip is narrow enough to sit on the preset row;
   // the shared recurrence.custom string (used elsewhere) keeps its "…".
   const customDateLabel = t('recurrence.custom').replace(/[\s.…]+$/u, '');
@@ -142,6 +146,40 @@ export function QuickCaptureSheetBody({
   const androidKeyboardLift = Platform.OS === 'android' && keyboardAvoidingEnabled && androidKeyboardInset > 0
     ? { paddingBottom: androidKeyboardInset }
     : null;
+
+  // "Add to today's focus" is a task property, not a title-entry control, so it lives
+  // with the Contexts/Area/Project chips (here) instead of next to the mic. The mic
+  // stays beside the title because it is an input method. On = filled gold star +
+  // selected chip, matching how focused tasks render in the list.
+  const renderFocusChip = (chipStyle: StyleProp<ViewStyle>) => (
+    <TouchableOpacity
+      onPress={onToggleFocusNewTask}
+      accessibilityRole="button"
+      accessibilityLabel={focusLabel}
+      accessibilityState={{ selected: focusNewTask }}
+      style={[
+        chipStyle,
+        {
+          backgroundColor: focusNewTask ? `${FOCUS_STAR_COLOR}22` : tc.filterBg,
+          borderColor: focusNewTask ? FOCUS_STAR_COLOR : tc.border,
+        },
+      ]}
+      activeOpacity={0.85}
+    >
+      <FocusStarIcon
+        focused={focusNewTask}
+        inactiveColor={tc.secondaryText}
+        size={16}
+      />
+      <CompactText
+        style={[styles.optionText, { color: focusNewTask ? FOCUS_STAR_COLOR : tc.text }]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {focusChipLabel}
+      </CompactText>
+    </TouchableOpacity>
+  );
 
   return (
     <Modal
@@ -210,29 +248,6 @@ export function QuickCaptureSheetBody({
                 numberOfLines={1}
                 textAlignVertical="center"
               />
-              <TouchableOpacity
-                onPress={onToggleFocusNewTask}
-                accessibilityRole="button"
-                accessibilityLabel={focusLabel}
-                accessibilityState={{ selected: focusNewTask, disabled: focusDisabled }}
-                style={[
-                  styles.focusButton,
-                  {
-                    backgroundColor: tc.filterBg,
-                    borderColor: focusNewTask ? FOCUS_STAR_COLOR : tc.border,
-                    opacity: focusDisabled ? 0.5 : 1,
-                  },
-                ]}
-                disabled={focusDisabled}
-                activeOpacity={0.85}
-              >
-                <FocusStarIcon
-                  focused={focusNewTask}
-                  inactiveColor={tc.secondaryText}
-                  disabled={focusDisabled}
-                  size={18}
-                />
-              </TouchableOpacity>
               <TouchableOpacity
                 onPress={onToggleRecording}
                 accessibilityRole="button"
@@ -304,6 +319,7 @@ export function QuickCaptureSheetBody({
                   </CompactText>
                 </TouchableOpacity>
               ) : null}
+              {!optionsExpanded ? renderFocusChip(styles.focusChip) : null}
               <TouchableOpacity
                 style={[styles.optionsToggle, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
                 onPress={onToggleOptions}
@@ -331,6 +347,7 @@ export function QuickCaptureSheetBody({
             {optionsExpanded && (
               <>
                 <View style={styles.optionsRow}>
+                  {renderFocusChip(styles.optionChip)}
                   {showDueTime && (
                     <TouchableOpacity
                       style={[styles.optionChip, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
