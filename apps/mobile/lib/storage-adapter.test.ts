@@ -114,6 +114,66 @@ describe('mobile storage adapter', () => {
     expect(updateMobileWidgetFromDataMock).toHaveBeenCalledWith(currentSnapshot);
   }, 10_000);
 
+  it('waits for queued SQLite writes before reading from SQLite', async () => {
+    const currentSnapshot: AppData = {
+      tasks: [],
+      projects: [
+        {
+          id: 'project-current',
+          title: 'Current project',
+          status: 'active',
+          order: 0,
+          createdAt: '2026-06-30T00:00:00.000Z',
+          updatedAt: '2026-06-30T00:00:00.000Z',
+        },
+      ],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    };
+    let finishSqliteWrite!: () => void;
+    let writeFinished = false;
+    const sqliteAdapterSaveData = vi.fn(() => new Promise<void>((resolve) => {
+      finishSqliteWrite = () => {
+        writeFinished = true;
+        resolve();
+      };
+    }));
+    const sqliteAdapterGetData = vi.fn(async () => {
+      if (!writeFinished) {
+        throw new Error('read started before queued write finished');
+      }
+      return currentSnapshot;
+    });
+
+    const { mobileStorage, __mobileStorageTestUtils } = await import('./storage-adapter');
+    __mobileStorageTestUtils.setSqliteStateForTests({
+      adapter: {
+        getData: sqliteAdapterGetData,
+        saveData: sqliteAdapterSaveData,
+        saveTask: sqliteAdapterSaveTask,
+      } as any,
+      client: {},
+    });
+
+    const savePromise = mobileStorage.saveData(currentSnapshot);
+    for (let index = 0; index < 5 && sqliteAdapterSaveData.mock.calls.length === 0; index += 1) {
+      await Promise.resolve();
+    }
+    expect(sqliteAdapterSaveData).toHaveBeenCalledTimes(1);
+
+    const readPromise = mobileStorage.getData();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sqliteAdapterGetData).not.toHaveBeenCalled();
+
+    finishSqliteWrite();
+    await savePromise;
+    await expect(readPromise).resolves.toEqual(currentSnapshot);
+    expect(sqliteAdapterGetData).toHaveBeenCalledTimes(1);
+  }, 10_000);
+
   it('ignores an unmarked JSON backup startup snapshot', async () => {
     const staleBackup = {
       tasks: [

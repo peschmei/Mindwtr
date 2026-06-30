@@ -24,6 +24,15 @@ const enqueueSave = async (work: () => Promise<void>): Promise<void> => {
     saveQueue = next.catch(() => undefined);
     return next;
 };
+
+const waitForQueuedSqliteWrites = async (): Promise<void> => {
+    while (true) {
+        const pendingSave = saveQueue;
+        await pendingSave.catch(() => undefined);
+        if (pendingSave === saveQueue) return;
+    }
+};
+
 const SQLITE_DB_NAME = 'mindwtr.db';
 const PREFER_LEGACY_SQLITE_OPEN = true;
 const sqliteSyncOpenEnv = String(process.env.EXPO_PUBLIC_SQLITE_SYNC_OPEN || '').trim().toLowerCase();
@@ -436,6 +445,10 @@ const createStorage = (): StorageAdapter => {
                 if (!shouldUseSqlite) {
                     throw new Error('SQLite disabled in Expo Go');
                 }
+                await measureStartupPhase(
+                    'mobile.storage.get_data.await_sqlite_writes',
+                    async () => waitForQueuedSqliteWrites()
+                );
                 const { adapter } = await measureStartupPhase('mobile.storage.get_data.sqlite_get_state', async () =>
                     withOperationTimeout(
                         getSqliteState(),
@@ -552,6 +565,7 @@ const createStorage = (): StorageAdapter => {
                 });
             }
             try {
+                await waitForQueuedSqliteWrites();
                 const { adapter } = await withOperationTimeout(
                     getSqliteState(),
                     SQLITE_QUERY_TIMEOUT_MS,
@@ -589,6 +603,7 @@ const createStorage = (): StorageAdapter => {
                 return searchAll(data.tasks, data.projects, query);
             }
             try {
+                await waitForQueuedSqliteWrites();
                 const { adapter } = await withOperationTimeout(
                     getSqliteState(),
                     SQLITE_QUERY_TIMEOUT_MS,
