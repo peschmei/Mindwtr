@@ -94,16 +94,22 @@ jobs:
   linux:
     if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_linux) }}
     uses: ./.github/workflows/release-linux.yml
+    with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     secrets: inherit
 
   macos:
     if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_macos) }}
     uses: ./.github/workflows/release-macos.yml
+    with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     secrets: inherit
 
   windows:
     if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || inputs.run_windows) }}
     uses: ./.github/workflows/release-windows.yml
+    with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     secrets: inherit
 
   android-version-code:
