@@ -157,6 +157,7 @@ describe('performSyncCycle', () => {
         const result = await performSyncCycle({
             readLocal: async () => mockAppData([deletedTask]),
             readRemote: async () => mockAppData([liveTask]),
+            now: () => '2026-04-01T00:00:00.000Z',
             writeLocal: async (data) => {
                 wroteLocal = data;
             },
