@@ -723,7 +723,7 @@ describe('AgendaView', () => {
         });
 
         const { getByLabelText, getByText } = renderAgenda();
-        const groupSelect = getByLabelText(/group by/i) as HTMLSelectElement;
+        const groupSelect = getByLabelText(/^Group$/i) as HTMLSelectElement;
         fireEvent.change(groupSelect, { target: { value: 'context' } });
 
         expect(getByText('@work')).toBeInTheDocument();
@@ -775,7 +775,7 @@ describe('AgendaView', () => {
         });
 
         const { getByLabelText, getByText } = renderAgenda();
-        const groupSelect = getByLabelText(/group by/i) as HTMLSelectElement;
+        const groupSelect = getByLabelText(/^Group$/i) as HTMLSelectElement;
         fireEvent.change(groupSelect, { target: { value: 'project' } });
 
         expect(getByText('Alpha project')).toBeInTheDocument();
@@ -827,7 +827,7 @@ describe('AgendaView', () => {
         });
 
         const { getByLabelText, getByText } = renderAgenda();
-        const groupSelect = getByLabelText(/group by/i) as HTMLSelectElement;
+        const groupSelect = getByLabelText(/^Group$/i) as HTMLSelectElement;
         fireEvent.change(groupSelect, { target: { value: 'priority' } });
 
         expect(getByText('Urgent')).toBeInTheDocument();
@@ -1429,7 +1429,7 @@ describe('AgendaView', () => {
 
         fireEvent.click(getByRole('button', { name: /^Filters$/i }));
         fireEvent.click(getByRole('button', { name: 'Start date' }));
-        fireEvent.change(getByRole('combobox', { name: /group by/i }), { target: { value: 'project' } });
+        fireEvent.change(getByRole('combobox', { name: /^Group$/i }), { target: { value: 'project' } });
         fireEvent.click(getByRole('button', { name: /^Save$/i }));
         fireEvent.change(getByDisplayValue('Focus filter'), { target: { value: 'Start by project' } });
         const saveButtons = getAllByRole('button', { name: /^Save$/i });
@@ -1612,7 +1612,7 @@ describe('AgendaView', () => {
         });
 
         const { getByLabelText, getByText } = renderAgenda();
-        const groupSelect = getByLabelText(/group by/i) as HTMLSelectElement;
+        const groupSelect = getByLabelText(/^Group$/i) as HTMLSelectElement;
         fireEvent.change(groupSelect, { target: { value: 'context' } });
 
         expect(getByText(/no context/i)).toBeInTheDocument();
@@ -1662,7 +1662,7 @@ describe('AgendaView', () => {
         });
 
         const firstRender = renderAgenda();
-        const groupSelect = firstRender.getByLabelText(/group by/i) as HTMLSelectElement;
+        const groupSelect = firstRender.getByLabelText(/^Group$/i) as HTMLSelectElement;
         fireEvent.change(groupSelect, { target: { value: 'context' } });
 
         const workContextGroup = firstRender.getByRole('button', { name: /@work\s*1/i });

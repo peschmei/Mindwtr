@@ -134,8 +134,6 @@ export const csOverrides: Record<string, string> = {
         'settings.aiModel': 'Model AI',
         'settings.speechOfflineModel': 'Offline řečový model',
         'settings.captureDefaultText': 'Textový vstup',
-        'focus.nextActionsScopeHelp': 'Řazení a seskupování ovlivňuje Další kroky. Dnešní fokus a Dnes zůstávají bez skupin.',
-        'focus.allSectionsScopeHelp': 'Filtry se použijí na všechny sekce Fokusu.',
         'trash.emptyHintWithProjects': 'Smazané úkoly a projekty se zobrazí zde',
         'trash.clearAllConfirmBodyWithProjects': 'Tím trvale smažete všechny úkoly a projekty v koši.',
         'trash.restoreProject': 'Obnovit projekt',
