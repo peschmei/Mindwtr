@@ -33,11 +33,11 @@ export function AppAnnouncementModal({
   const tc = useThemeColors();
   const filledButton = useFilledButtonColors();
 
-  if (!announcement) return null;
-
   React.useEffect(() => {
     if (visible && announcement) onShown?.();
   }, [announcement, onShown, visible]);
+
+  if (!announcement) return null;
 
   const action = announcement.action;
   const dismissLabel = announcement.dismissLabel ?? 'Not now';
