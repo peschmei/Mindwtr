@@ -22,6 +22,7 @@ Changes collected after `v1.0.5` and before the next version tag.
 - feat(tasks): improve add controls, entity creation affordances, list grouping, and quick-add focus handling.
 - fix(desktop): restore focus to quick-add after adding a task.
 - fix(desktop): keep inline capture limited to Inbox.
+- fix(desktop): use the Windows native certificate trust path for WebDAV sync.
 - fix(filters): hide unused metadata filters and keep hidden criteria from affecting visible task lists.
 - fix(mobile): expose priority in the task editor default view and show status chips on review-due focus rows.
 - fix(mobile): add active-area capture mode copy, split context/tag filters, show filter-only search results, and reduce project swipe sensitivity.
