@@ -22,7 +22,7 @@ export const esOverrides: Record<string, string> = {
         'nav.sectionLists': 'Listas',
         'nav.sectionOrganize': 'Organizar',
         'nav.sectionArchive': 'Archivo',
-        'quickAdd.help': 'Al capturar de forma rápida puedes usar los comandos /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> o !Area, @context, #tag, +Project.',
+        'quickAdd.help': 'Al capturar de forma rápida puedes usar los comandos /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /energy:<level>, /next, /area:<name> o !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Ejemplo: Llamar a mamá /due:tomorrow @movil',
         'quickAdd.inlineHint': 'Prueba: Llamar a mamá /due:tomorrow 5pm @movil #familia',
         'quickAdd.syntaxHelp': 'Ayuda de sintaxis de captura rápida',

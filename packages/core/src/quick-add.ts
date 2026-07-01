@@ -1,6 +1,6 @@
 import * as chrono from 'chrono-node';
 import { format, isValid, set } from 'date-fns';
-import type { Area, Attachment, Project, Task, TaskStatus } from './types';
+import type { Area, Attachment, Project, Task, TaskEnergyLevel, TaskStatus } from './types';
 import { generateUUID } from './uuid';
 import { normalizeTaskStatus } from './task-status';
 import { normalizeLinkAttachmentInput } from './attachment-link-utils';
@@ -61,11 +61,17 @@ const STATUS_TOKENS: Record<string, TaskStatus> = {
     done: 'done',
 };
 
+const ENERGY_TOKENS: Record<string, TaskEnergyLevel> = {
+    low: 'low',
+    medium: 'medium',
+    high: 'high',
+};
+
 const ESCAPE_SENTINEL = '__MW_ESC__';
 const QUICK_ADD_ESCAPE_CHARS = new Set(['@', '#', '+', '/', '!']);
 const QUICK_ADD_FOCUS_COMMAND_PATTERN = String.raw`\*(?:\s+focus\b)?`;
-const QUICK_ADD_COMMAND_BOUNDARY = String.raw`(?=\s\/(?:${QUICK_ADD_FOCUS_COMMAND_PATTERN}|link:|note:|start:|due:|review:|project:|area:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b)|$)`;
-const QUICK_ADD_INLINE_CONTROL_BOUNDARY = String.raw`(?=\s(?:[@#+!]|\/(?:${QUICK_ADD_FOCUS_COMMAND_PATTERN}|link:|note:|start:|due:|review:|project:|area:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b))|$)`;
+const QUICK_ADD_COMMAND_BOUNDARY = String.raw`(?=\s\/(?:${QUICK_ADD_FOCUS_COMMAND_PATTERN}|link:|note:|start:|due:|review:|project:|area:|energy:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b)|$)`;
+const QUICK_ADD_INLINE_CONTROL_BOUNDARY = String.raw`(?=\s(?:[@#+!]|\/(?:${QUICK_ADD_FOCUS_COMMAND_PATTERN}|link:|note:|start:|due:|review:|project:|area:|energy:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b))|$)`;
 const SIMPLE_TASK_TOKEN_RE = /[@#][\p{L}\p{N}_-]+/gu;
 const RICH_TASK_TOKEN_RE = new RegExp(
     String.raw`(?:^|\s)([@#](?![\s\p{L}\p{N}_-])[^@#+/!]+?)${QUICK_ADD_INLINE_CONTROL_BOUNDARY}`,
@@ -463,6 +469,16 @@ export function parseQuickAdd(
     tagMatches.forEach((tag) => tags.add(tag.token));
     tagMatches.forEach((tag) => (working = stripToken(working, tag.raw)));
 
+    let energyLevel: TaskEnergyLevel | undefined;
+    const energyMatch = working.match(/\/energy:([^\s/]+)/i);
+    if (energyMatch) {
+        const token = restoreEscapes(energyMatch[1] ?? '').trim().toLowerCase();
+        energyLevel = ENERGY_TOKENS[token];
+        if (energyLevel) {
+            working = stripToken(working, energyMatch[0]);
+        }
+    }
+
     // Area: /area:<id|name> or !Area Name
     let areaId: string | undefined;
     const areaIdMatch = working.match(/\/area:([^\s/]+)/i);
@@ -587,6 +603,7 @@ export function parseQuickAdd(
     if (attachments && attachments.length > 0) props.attachments = attachments;
     if (projectId) props.projectId = projectId;
     if (areaId) props.areaId = areaId;
+    if (energyLevel) props.energyLevel = energyLevel;
     if (focusToday) props.isFocusedToday = true;
 
     return {

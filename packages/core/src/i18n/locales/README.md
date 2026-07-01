@@ -15,14 +15,14 @@ Some translated UI strings are intentionally identical to English, for example s
 
 Mindwtr also checks for verbatim English-looking values so placeholder copies do not ship by accident. If `bun run i18n:check` or `locale-parity.test.ts` flags a deliberately identical translation, add that specific key to the locale-specific mirrored-English allow-list used by both checks. Keep that list narrow and key-based; do not remove reviewed translations just to reduce the warning, and do not broadly ignore all identical strings for a locale.
 
-Parser and command tokens stay in English inside translated help text, for example `/start:`, `/due:`, `/review:`, `/note:`, `/link:`, `/next`, `/area:`, `!Area`, `@context`, `#tag`, and `+Project`.
+Parser and command tokens stay in English inside translated help text, for example `/start:`, `/due:`, `/review:`, `/note:`, `/link:`, `/energy:`, `/next`, `/area:`, `!Area`, `@context`, `#tag`, and `+Project`.
 
 ## How to contribute a language fix
 
 1. Open the language file (for example `vi.ts` for Vietnamese or `fr.ts` for French).
 2. Add or update keys in `<lang>Overrides`.
 3. For a new language, also register it in `i18n-types.ts`, `i18n-constants.ts`, `i18n-translations.ts`, `i18n-loader.ts`, `date.ts`, app language pickers, and the locale parity checks.
-4. Keep command tokens in English where applicable (`/start:`, `/due:`, `/review:`, `/note:`, `/next`, `@context`, `#tag`, `+Project`).
+4. Keep command tokens in English where applicable (`/start:`, `/due:`, `/review:`, `/note:`, `/energy:`, `/next`, `@context`, `#tag`, `+Project`).
 5. Run tests:
 
 ```bash

@@ -29,7 +29,7 @@ export const nlOverrides: Record<string, string> = {
         'nav.sectionLists': 'Lijsten',
         'nav.sectionOrganize': 'Organiseren',
         'nav.sectionArchive': 'Archief',
-        'quickAdd.help': 'Snel toevoegen ondersteunt /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> of !Area, @context, #tag, +Project.',
+        'quickAdd.help': 'Snel toevoegen ondersteunt /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /energy:<level>, /next, /area:<name> of !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Voorbeeld: Bel mama /due:tomorrow @phone',
         'quickAdd.inlineHint': 'Tip: Bel mama /due:tomorrow 5pm @phone #family',
         'quickAdd.syntaxHelp': 'Hulp voor snel toevoegen-syntax',

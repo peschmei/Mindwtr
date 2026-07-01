@@ -28,7 +28,7 @@ export const deOverrides: Record<string, string> = {
         'nav.sectionArchive': 'Archiv',
         
         //Quick Add        
-        'quickAdd.help': 'Schnell hinzufügen unterstützt /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /next, /area:<name> oder !Area, @context, #tag, +Project.',
+        'quickAdd.help': 'Schnell hinzufügen unterstützt /start:<when>, /due:<when>, /review:<when>, /note:<text>, /link:<url>, /energy:<level>, /next, /area:<name> oder !Area, @context, #tag, +Project.',
         'quickAdd.example': 'Beispiel: Mama anrufen /due:tomorrow @phone',
         'quickAdd.inlineHint': 'Tipp: Mama anrufen /due:tomorrow 5pm @phone #family',
         'quickAdd.syntaxHelp': 'Hilfe zur Schnell-hinzufügen-Syntax',

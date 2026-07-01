@@ -839,6 +839,7 @@ const PROTECTED_TOKENS = [
         '/review:<when>',
         '/note:<text>',
         '/link:<url>',
+        '/energy:<level>',
         '/next',
         '/area:<name>',
         '!Area',

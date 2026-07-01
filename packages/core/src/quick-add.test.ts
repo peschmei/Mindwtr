@@ -42,6 +42,23 @@ describe('quick-add', () => {
         expect(result.props.isFocusedToday).toBe(true);
     });
 
+    it('parses energy quick-add commands', () => {
+        const result = parseQuickAdd('Draft proposal /energy:High /next');
+
+        expect(result.title).toBe('Draft proposal');
+        expect(result.props.energyLevel).toBe('high');
+        expect(result.props.status).toBe('next');
+    });
+
+    it('keeps parsing later energy commands after a note', () => {
+        const result = parseQuickAdd('Call mom /note:ask about trip /energy:low /next');
+
+        expect(result.title).toBe('Call mom');
+        expect(result.props.description).toBe('ask about trip');
+        expect(result.props.energyLevel).toBe('low');
+        expect(result.props.status).toBe('next');
+    });
+
     it('parses URL notes into the description field', () => {
         const now = new Date('2026-03-30T10:00:00Z');
         const result = parseQuickAdd('Check website /note:https://example.com', undefined, now);
