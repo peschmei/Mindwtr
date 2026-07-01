@@ -919,6 +919,30 @@ describe('FocusScreen', () => {
     expect(() => tree.root.findByProps({ children: 'All clear' })).toThrow();
   });
 
+  it('shows the status badge on review-due rows but keeps it hidden on next actions', () => {
+    storeState.tasks = [
+      makeTask('plain-next', { title: 'Plain next' }),
+      makeTask('waiting-review', {
+        status: 'waiting',
+        title: 'Waiting review',
+        reviewAt: '2000-01-01T00:00:00.000Z',
+      }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const rows = tree.root.findAllByType(SwipeableTaskItem);
+    const reviewRow = rows.find((node) => node.props.task.id === 'waiting-review');
+    const nextRow = rows.find((node) => node.props.task.id === 'plain-next');
+
+    expect(reviewRow?.props.hideStatusBadge).toBe(false);
+    expect(nextRow?.props.hideStatusBadge).toBe(true);
+  });
+
   it('marks a review-due Focus task reviewed from the row action and offers undo', async () => {
     const reviewAt = '2000-01-01T00:00:00.000Z';
     storeState.tasks = [

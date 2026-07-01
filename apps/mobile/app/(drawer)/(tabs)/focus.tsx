@@ -1443,7 +1443,7 @@ export default function FocusScreen() {
           onDelete={() => { void deleteTask(item.task.id); }}
           isHighlighted={item.task.id === highlightTaskId}
           showFocusToggle
-          hideStatusBadge
+          hideStatusBadge={section.type !== 'reviewDue'}
           projectDeadlineLabel={projectDeadlineLabel}
           onLongPressAction={longPressAction}
           onLongPressActionLabel={longPressActionLabel}
