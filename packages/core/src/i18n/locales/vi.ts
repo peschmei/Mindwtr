@@ -1097,6 +1097,7 @@ export const viOverrides: Record<string, string> = {
         'settings.defaultArea': 'Khu vực mặc định cho nhiệm vụ mới',
         'settings.defaultAreaDesc': 'Áp dụng cho nhiệm vụ mới, bao gồm thu thập trong Inbox. Bạn vẫn có thể đổi hoặc xóa khu vực cho từng nhiệm vụ.',
         'settings.defaultAreaNone': 'Không có khu vực',
+        'settings.defaultAreaActive': 'Bộ lọc khu vực hiện tại',
         'settings.autoArchive': 'Tự động lưu trữ nhiệm vụ đã xong',
         'settings.autoArchiveDesc': 'Chuyển các nhiệm vụ đã hoàn thành sang Đã lưu trữ sau số ngày đã chọn.',
         'settings.autoArchiveDays': 'Lưu trữ sau',
