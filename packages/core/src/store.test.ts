@@ -2243,6 +2243,51 @@ describe('TaskStore', () => {
         expect(restored?.status).toBe('archived');
     });
 
+    it('clears dead project and section refs when restoring a deleted task', async () => {
+        const { addProject, addSection, addTask, deleteTask, deleteProject, purgeProject, restoreTask } = useTaskStore.getState();
+        const project = await addProject('Dead Project', '#444444');
+        expect(project).not.toBeNull();
+        if (!project) return;
+        const section = await addSection(project.id, 'Dead Section');
+        expect(section).not.toBeNull();
+        if (!section) return;
+
+        await addTask('Restore without project', { projectId: project.id, sectionId: section.id, status: 'next' });
+        const task = useTaskStore.getState()._allTasks.find((item) => item.title === 'Restore without project');
+        expect(task).toBeTruthy();
+        if (!task) return;
+
+        await deleteTask(task.id);
+        await deleteProject(project.id);
+        await purgeProject(project.id);
+        await restoreTask(task.id);
+
+        const restored = useTaskStore.getState()._allTasks.find((item) => item.id === task.id);
+        expect(restored?.deletedAt).toBeUndefined();
+        expect(restored?.projectId).toBeUndefined();
+        expect(restored?.sectionId).toBeUndefined();
+    });
+
+    it('clears dead area refs when restoring a deleted task', async () => {
+        const { addArea, addTask, deleteTask, deleteArea, restoreTask } = useTaskStore.getState();
+        const area = await addArea('Dead Area');
+        expect(area).not.toBeNull();
+        if (!area) return;
+
+        await addTask('Restore without area', { areaId: area.id, status: 'next' });
+        const task = useTaskStore.getState()._allTasks.find((item) => item.title === 'Restore without area');
+        expect(task).toBeTruthy();
+        if (!task) return;
+
+        await deleteTask(task.id);
+        await deleteArea(area.id);
+        await restoreTask(task.id);
+
+        const restored = useTaskStore.getState()._allTasks.find((item) => item.id === task.id);
+        expect(restored?.deletedAt).toBeUndefined();
+        expect(restored?.areaId).toBeUndefined();
+    });
+
     it('purges deleted tasks while deriving the visible task slice from all tasks', async () => {
         const archivedTask = {
             id: 'archived-visible',

@@ -194,7 +194,7 @@ const applyVisibleTaskChanges = (
 
 type MutateTasksOptions = {
     selectTasks: (state: TaskStore) => Task[];
-    buildUpdates: (task: Task, context: { now: string }) => Partial<Task>;
+    buildUpdates: (task: Task, context: { now: string; state: TaskStore }) => Partial<Task>;
     buildSettings?: (state: TaskStore, selectedTasks: readonly Task[], context: { now: string; settings: TaskStore['settings'] }) => TaskStore['settings'] | undefined;
     updateVisible?: boolean;
     missingMessage?: string;
@@ -222,7 +222,7 @@ const mutateTasks = async (
         const changedTasks = selectedTasks.map((task) => {
             const updatedTask: Task = {
                 ...task,
-                ...options.buildUpdates(task, { now }),
+                ...options.buildUpdates(task, { now, state }),
                 updatedAt: now,
                 rev: nextRevision(task.rev),
                 revBy: deviceState.deviceId,
@@ -366,6 +366,47 @@ const resolveTaskContainerAssignment = ({
         sectionId: resolved.sectionId,
         areaId: resolved.areaId,
     };
+};
+
+const sanitizeRestoredTaskContainerReferences = (
+    task: Task,
+    state: TaskStore,
+): Pick<Task, 'projectId' | 'sectionId' | 'areaId'> => {
+    let projectId = normalizeOptionalReferenceId(task.projectId);
+    let sectionId = normalizeOptionalReferenceId(task.sectionId);
+    let areaId = normalizeOptionalReferenceId(task.areaId);
+
+    const liveProjectIds = new Set(
+        state._allProjects
+            .filter((project) => !project.deletedAt && !project.purgedAt)
+            .map((project) => project.id),
+    );
+    const liveSection = sectionId
+        ? state._allSections.find((section) => section.id === sectionId && !section.deletedAt)
+        : undefined;
+    const sectionProjectId = liveSection && liveProjectIds.has(liveSection.projectId)
+        ? liveSection.projectId
+        : undefined;
+
+    if (projectId && !liveProjectIds.has(projectId)) {
+        projectId = undefined;
+    }
+    if (sectionId && !sectionProjectId) {
+        sectionId = undefined;
+    }
+
+    const resolved = resolveTaskContainerHierarchy({
+        projectId,
+        sectionId,
+        areaId,
+        sectionProjectId,
+    });
+
+    if (resolved.areaId && !state._allAreas.some((area) => area.id === resolved.areaId && !area.deletedAt)) {
+        resolved.areaId = undefined;
+    }
+
+    return resolved;
 };
 
 const prepareTaskUpdatesForStore = ({
@@ -858,9 +899,10 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 const task = state._tasksById.get(id);
                 return task ? [task] : [];
             },
-            buildUpdates: () => ({
+            buildUpdates: (task, { state }) => ({
                 deletedAt: undefined,
                 purgedAt: undefined,
+                ...sanitizeRestoredTaskContainerReferences(task, state),
             }),
             missingMessage: 'Task not found',
         });
