@@ -94,15 +94,39 @@ describe('ListView', () => {
     expect(html).not.toContain('data-view-filter-input');
   });
 
-  it('uses a compact one-line quick-add hint in the list footer', () => {
-    const { getByRole, getByText, queryByText } = renderListView('inbox', 'Inbox');
+  it('uses a compact one-line quick-add hint in the inbox list footer', () => {
+    const { getByRole, getByText, queryByPlaceholderText, queryByText } = renderListView('inbox', 'Inbox');
 
+    expect(queryByPlaceholderText(/Add Task/i)).toBeInTheDocument();
     expect(getByText('Try: Call mom /due:tomorrow 5pm @phone #family')).toBeInTheDocument();
     expect(getByRole('button', { name: 'Quick Add syntax help' })).toHaveAttribute(
       'title',
       expect.stringContaining('/start:<when>')
     );
     expect(queryByText(/Quick add supports/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['next', 'Next'],
+    ['waiting', 'Waiting'],
+    ['someday', 'Someday'],
+    ['reference', 'Reference'],
+  ] as const)('does not render the inline quick-add composer in the %s view', (statusFilter, title) => {
+    const { queryByPlaceholderText, queryByText } = renderListView(statusFilter, title);
+
+    expect(queryByPlaceholderText(/Add Task/i)).not.toBeInTheDocument();
+    expect(queryByText('Try: Call mom /due:tomorrow 5pm @phone #family')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['next', 'Next'],
+    ['waiting', 'Waiting'],
+    ['someday', 'Someday'],
+    ['reference', 'Reference'],
+  ] as const)('does not show a contextual empty-state add action in the %s view', (statusFilter, title) => {
+    const { queryByRole } = renderListView(statusFilter, title);
+
+    expect(queryByRole('button', { name: 'Add Task' })).not.toBeInTheDocument();
   });
 
   it('renders local search input in done view', () => {

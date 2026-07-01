@@ -782,10 +782,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const isInbox = statusFilter === 'inbox';
     const isNextView = statusFilter === 'next';
     const isWaitingView = statusFilter === 'waiting';
-    const showQuickAdd = statusFilter === 'inbox'
-        || statusFilter === 'next'
-        || statusFilter === 'waiting'
-        || statusFilter === 'someday';
+    const showQuickAdd = isInbox;
     const priorityOptions: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
     const timeEstimateOptions: TimeEstimate[] = ['5min', '10min', '15min', '30min', '1hr', '2hr', '3hr', '4hr', '4hr+'];
     const formatEstimate = formatTimeEstimateLabel;
@@ -857,25 +854,21 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 return {
                     title: t('list.next') || 'Next Actions',
                     body: resolveText('list.noTasks', 'No next actions yet.'),
-                    action: t('nav.addTask') || 'Add task',
                 };
             case 'waiting':
                 return {
                     title: resolveText('waiting.empty', t('list.waiting') || 'Waiting'),
                     body: resolveText('waiting.emptyHint', 'Track delegated or pending items.'),
-                    action: t('nav.addTask') || 'Add task',
                 };
             case 'someday':
                 return {
                     title: resolveText('someday.empty', t('list.someday') || 'Someday'),
                     body: resolveText('someday.emptyHint', 'Store ideas for later.'),
-                    action: t('nav.addTask') || 'Add task',
                 };
             case 'reference':
                 return {
                     title: resolveText('reference.empty', t('list.reference') || 'Reference'),
                     body: resolveText('reference.emptyHint', 'Reference holds info you might want later — no action required.'),
-                    action: t('nav.addTask') || 'Add task',
                 };
             case 'done':
                 return {
@@ -886,7 +879,6 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 return {
                     title: t('list.tasks') || 'Tasks',
                     body: resolveText('list.noTasks', 'No tasks yet.'),
-                    action: t('nav.addTask') || 'Add task',
                 };
         }
     })();
