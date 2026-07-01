@@ -1021,6 +1021,7 @@ export const zhHant: Record<string, string> = {
         'settings.defaultArea': '新任務預設領域',
         'settings.defaultAreaDesc': '適用於新任務，包括收件箱擷取。你仍可為單個任務變更或清除領域。',
         'settings.defaultAreaNone': '無領域',
+        'settings.defaultAreaActive': '目前領域篩選',
         'settings.autoArchive': '自動歸檔完成任務',
         'settings.autoArchiveDesc': '在設定天數後將已完成任務移入歸檔。',
         'settings.autoArchiveDays': '歸檔時間',

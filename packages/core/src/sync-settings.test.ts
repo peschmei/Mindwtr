@@ -20,6 +20,7 @@ describe('Sync Logic', () => {
                 settings: {
                     gtd: {
                         defaultScheduleTime: '08:00',
+                        defaultAreaMode: 'fixed',
                         defaultAreaId: 'area-local',
                         focusTaskLimit: 3,
                         focusGroupBy: 'context',
@@ -43,6 +44,7 @@ describe('Sync Logic', () => {
                 settings: {
                     gtd: {
                         defaultScheduleTime: '09:30',
+                        defaultAreaMode: 'active',
                         defaultAreaId: 'area-incoming',
                         focusTaskLimit: 5,
                         focusGroupBy: 'project',
@@ -67,11 +69,40 @@ describe('Sync Logic', () => {
             expect(merged.settings.dateFormat).toBe('yyyy-MM-dd');
             expect(merged.settings.timeFormat).toBe('12h');
             expect(merged.settings.gtd?.defaultScheduleTime).toBe('09:30');
+            expect(merged.settings.gtd?.defaultAreaMode).toBe('active');
             expect(merged.settings.gtd?.defaultAreaId).toBe('area-incoming');
             expect(merged.settings.gtd?.focusTaskLimit).toBe(5);
             expect(merged.settings.gtd?.focusGroupBy).toBe('project');
             expect(merged.settings.gtd?.defaultProjectFlowMode).toBe('sequential');
             expect(merged.settings.gtd?.inboxProcessing?.scheduleEnabled).toBe(true);
+        });
+
+        it('syncs clearing the default area mode as an explicit GTD setting', () => {
+            const local: AppData = {
+                ...mockAppData(),
+                settings: {
+                    gtd: { defaultAreaMode: 'active', defaultAreaId: null },
+                    syncPreferences: { gtd: true },
+                    syncPreferencesUpdatedAt: {
+                        gtd: '2024-01-01T00:00:00.000Z',
+                    },
+                },
+            };
+            const incoming: AppData = {
+                ...mockAppData(),
+                settings: {
+                    gtd: { defaultAreaMode: 'none', defaultAreaId: null },
+                    syncPreferences: { gtd: true },
+                    syncPreferencesUpdatedAt: {
+                        gtd: '2024-01-02T00:00:00.000Z',
+                    },
+                },
+            };
+
+            const merged = mergeAppData(local, incoming);
+
+            expect(merged.settings.gtd?.defaultAreaMode).toBe('none');
+            expect(merged.settings.gtd?.defaultAreaId).toBeNull();
         });
 
         it('syncs clearing the default area as an explicit GTD setting', () => {

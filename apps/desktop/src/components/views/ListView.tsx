@@ -12,6 +12,7 @@ import {
     isTaskInActiveProject,
     parseQuickAdd,
     normalizeClockTimeInput,
+    getDefaultTaskAreaMode,
     resolveDefaultNewTaskAreaId,
     safeParseDate,
     shallow,
@@ -42,7 +43,7 @@ import { useListViewOptimizations } from '../../hooks/useListViewOptimizations';
 import { usePersistedViewState } from '../../hooks/usePersistedViewState';
 import { dispatchNavigateEvent } from '../../lib/navigation-events';
 import { reportError } from '../../lib/report-error';
-import { projectMatchesAreaFilter, resolveAreaFilter, taskMatchesAreaFilter } from '@mindwtr/core';
+import { AREA_FILTER_ALL, AREA_FILTER_NONE, projectMatchesAreaFilter, resolveAreaFilter, taskMatchesAreaFilter } from '@mindwtr/core';
 import { cn } from '../../lib/utils';
 import { sortDoneTasksForListView } from './list/done-sort';
 import { groupTasksByArea, groupTasksByContext, groupTasksByEnergy, groupTasksByPerson, groupTasksByPriority, groupTasksByProject, groupTasksByTag, type NextGroupBy, type ReferenceGroupBy, type TaskGroup, type TaskListGroupBy } from './list/next-grouping';
@@ -237,7 +238,13 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         prioritiesEnabled,
         timeEstimatesEnabled,
     ]);
-    const defaultNewTaskAreaId = resolveDefaultNewTaskAreaId(settings, areas);
+    const defaultAreaMode = getDefaultTaskAreaMode(settings);
+    const activeNewTaskAreaId = resolvedAreaFilter !== AREA_FILTER_ALL && resolvedAreaFilter !== AREA_FILTER_NONE
+        ? resolvedAreaFilter
+        : undefined;
+    const defaultNewTaskAreaId = defaultAreaMode === 'active'
+        ? activeNewTaskAreaId
+        : resolveDefaultNewTaskAreaId(settings, areas);
 
     useEffect(() => {
         if (!perf.enabled) return;
@@ -756,6 +763,9 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 );
                 if (!created) return;
                 initialProps.projectId = created.id;
+            }
+            if (!initialProps.projectId && !initialProps.areaId && defaultNewTaskAreaId) {
+                initialProps.areaId = defaultNewTaskAreaId;
             }
             // Only set status if we have an explicit filter and parser didn't set one
             if (!initialProps.status && statusFilter !== 'all') {

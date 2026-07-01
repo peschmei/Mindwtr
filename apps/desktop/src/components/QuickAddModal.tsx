@@ -10,7 +10,11 @@ import {
     parseQuickAdd,
     normalizeClockTimeInput,
     normalizeFocusTaskLimit,
+    getDefaultTaskAreaMode,
     resolveDefaultNewTaskAreaId,
+    AREA_FILTER_ALL,
+    AREA_FILTER_NONE,
+    resolveAreaFilter,
     safeFormatDate,
     generateUUID,
     splitQuickAddBulkLines,
@@ -191,7 +195,17 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
     const standaloneDataRefreshRef = useRef<Promise<void> | null>(null);
     const pastedImageAttachmentsRef = useRef<PastedImageAttachment[]>([]);
     const sortedAreas = useMemo(() => [...areas].filter((area) => !area.deletedAt).sort((a, b) => a.order - b.order), [areas]);
-    const defaultAreaId = resolveDefaultNewTaskAreaId(settings, sortedAreas) ?? '';
+    const defaultAreaMode = getDefaultTaskAreaMode(settings);
+    const resolvedAreaFilter = useMemo(
+        () => resolveAreaFilter(settings?.filters?.areaId, sortedAreas),
+        [settings?.filters?.areaId, sortedAreas],
+    );
+    const activeAreaId = resolvedAreaFilter !== AREA_FILTER_ALL && resolvedAreaFilter !== AREA_FILTER_NONE
+        ? resolvedAreaFilter
+        : undefined;
+    const defaultAreaId = defaultAreaMode === 'active'
+        ? activeAreaId ?? ''
+        : resolveDefaultNewTaskAreaId(settings, sortedAreas) ?? '';
     const quickAddParseOptions = useMemo(
         () => ({
             knownContexts: allContexts,

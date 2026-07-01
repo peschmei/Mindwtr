@@ -3,6 +3,7 @@ import {
     AI_PROVIDER_VALUE_SET,
     AI_REASONING_EFFORT_VALUE_SET,
     SETTINGS_DEFAULT_PROJECT_FLOW_MODE_VALUE_SET,
+    SETTINGS_DEFAULT_TASK_AREA_MODE_VALUE_SET,
     SETTINGS_DENSITY_VALUE_SET,
     SETTINGS_FOCUS_GROUP_BY_VALUE_SET,
     SETTINGS_KEYBINDING_STYLE_VALUE_SET,
@@ -421,6 +422,19 @@ export const sanitizeMergedSettingsForSync = (
         }
 
         if (
+            next.gtd.defaultAreaMode !== undefined
+            && !setContainsValue(SETTINGS_DEFAULT_TASK_AREA_MODE_VALUE_SET, next.gtd.defaultAreaMode)
+        ) {
+            next.gtd = {
+                ...next.gtd,
+                defaultAreaMode: localSettings.gtd?.defaultAreaMode,
+            };
+            if (next.gtd.defaultAreaMode === undefined) {
+                delete next.gtd.defaultAreaMode;
+            }
+        }
+
+        if (
             next.gtd.defaultAreaId !== undefined
             && next.gtd.defaultAreaId !== null
             && !isNonEmptyString(next.gtd.defaultAreaId)
@@ -591,6 +605,7 @@ export const mergeSettingsForSync = (
         'gtd',
         {
             defaultScheduleTime: localSettings.gtd?.defaultScheduleTime,
+            defaultAreaMode: localSettings.gtd?.defaultAreaMode,
             defaultAreaId: localSettings.gtd?.defaultAreaId,
             focusTaskLimit: localSettings.gtd?.focusTaskLimit,
             focusGroupBy: localSettings.gtd?.focusGroupBy,
@@ -598,6 +613,7 @@ export const mergeSettingsForSync = (
         },
         {
             defaultScheduleTime: incomingSettings.gtd?.defaultScheduleTime,
+            defaultAreaMode: incomingSettings.gtd?.defaultAreaMode,
             defaultAreaId: incomingSettings.gtd?.defaultAreaId,
             focusTaskLimit: incomingSettings.gtd?.focusTaskLimit,
             focusGroupBy: incomingSettings.gtd?.focusGroupBy,
@@ -609,6 +625,11 @@ export const mergeSettingsForSync = (
                 delete nextGtd.defaultScheduleTime;
             } else {
                 nextGtd.defaultScheduleTime = value.defaultScheduleTime;
+            }
+            if (value.defaultAreaMode === undefined) {
+                delete nextGtd.defaultAreaMode;
+            } else {
+                nextGtd.defaultAreaMode = value.defaultAreaMode;
             }
             if (value.defaultAreaId === undefined) {
                 delete nextGtd.defaultAreaId;

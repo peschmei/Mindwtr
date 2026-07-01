@@ -303,12 +303,14 @@ import type { MergeStats, SyncHistoryEntry } from './sync';
 export type AppTheme = 'light' | 'dark' | 'system' | 'eink' | 'nord' | 'sepia' | 'material3-light' | 'material3-dark' | 'oled';
 export type AppLanguage = 'en' | 'vi' | 'zh' | 'zh-Hant' | 'es' | 'hi' | 'ar' | 'de' | 'ru' | 'ja' | 'fr' | 'pt' | 'pl' | 'ko' | 'cs' | 'it' | 'tr' | 'nl' | 'system';
 export type MobileQuickAccessView = 'review' | 'projects' | 'calendar' | 'contexts';
+export type DefaultTaskAreaMode = 'none' | 'fixed' | 'active';
 
 export interface GtdSettings {
     timeEstimatePresets?: TimeEstimate[];
     taskEditor?: TaskEditorSettings;
     autoArchiveDays?: number;
     defaultCaptureMethod?: 'text' | 'audio';
+    defaultAreaMode?: DefaultTaskAreaMode;
     defaultAreaId?: string | null;
     focusTaskLimit?: number;
     focusGroupBy?: FocusGroupBy;

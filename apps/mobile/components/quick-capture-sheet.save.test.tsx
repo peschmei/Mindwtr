@@ -76,6 +76,11 @@ const {
 
 vi.mock('@mindwtr/core', () => ({
   DEFAULT_PROJECT_COLOR: '#3B82F6',
+  getDefaultTaskAreaMode: (settings: any) => {
+    const mode = settings?.gtd?.defaultAreaMode;
+    if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;
+    return settings?.gtd?.defaultAreaId ? 'fixed' : 'none';
+  },
   getQuickAddProjectInitialProps: (props: any, fallbackAreaId?: string | null) => {
     const areaId = props?.areaId || fallbackAreaId || undefined;
     return areaId ? { areaId } : undefined;
@@ -90,6 +95,8 @@ vi.mock('@mindwtr/core', () => ({
   normalizeClockTimeInput: (value?: string | null) => String(value ?? '').trim(),
   normalizeFocusTaskLimit: (value: unknown) => (typeof value === 'number' ? value : 3),
   resolveDefaultNewTaskAreaId: (settings: any, areas: any[]) => {
+    const mode = settings?.gtd?.defaultAreaMode ?? (settings?.gtd?.defaultAreaId ? 'fixed' : 'none');
+    if (mode !== 'fixed') return undefined;
     const areaId = settings?.gtd?.defaultAreaId;
     return typeof areaId === 'string' && areas.some((area) => area.id === areaId && !area.deletedAt)
       ? areaId
@@ -726,13 +733,13 @@ describe('QuickCaptureSheet save handling', () => {
     expect(openTaskScreen).toHaveBeenCalledWith('task-new', 'project-1', 'task');
   });
 
-  it('uses the selected area filter for new captures before the GTD default area', async () => {
+  it('uses the selected area filter for new captures in active area mode', async () => {
     selectedAreaIdForNewTasksMock.current = 'area-work';
     selectStore.getState().areas = [
       { id: 'area-home', name: 'Home', order: 0, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
       { id: 'area-work', name: 'Work', order: 1, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
     ];
-    selectStore.getState().settings = { gtd: { defaultAreaId: 'area-home' } };
+    selectStore.getState().settings = { gtd: { defaultAreaMode: 'active', defaultAreaId: 'area-home' } };
     addTask.mockResolvedValue({ success: true, id: 'task-1' });
 
     let tree!: ReturnType<typeof create>;
@@ -762,12 +769,48 @@ describe('QuickCaptureSheet save handling', () => {
     }));
   });
 
+  it('uses the fixed GTD default area before the selected area filter in fixed area mode', async () => {
+    selectedAreaIdForNewTasksMock.current = 'area-work';
+    selectStore.getState().areas = [
+      { id: 'area-home', name: 'Home', order: 0, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
+      { id: 'area-work', name: 'Work', order: 1, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
+    ];
+    selectStore.getState().settings = { gtd: { defaultAreaMode: 'fixed', defaultAreaId: 'area-home' } };
+    addTask.mockResolvedValue({ success: true, id: 'task-1' });
+
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(
+        <QuickCaptureSheet
+          visible
+          openRequestId={1}
+          initialValue="Fixed-default task"
+          onClose={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const body = tree.root.findAll((node) => String(node.type) === 'QuickCaptureSheetBody')[0];
+    if (!body) throw new Error('QuickCaptureSheetBody not found');
+
+    await act(async () => {
+      body.props.handleSave();
+      await Promise.resolve();
+    });
+
+    expect(addTask).toHaveBeenCalledWith('Fixed-default task', expect.objectContaining({
+      areaId: 'area-home',
+      status: 'inbox',
+    }));
+  });
+
   it('does not apply the GTD default area while the no-area filter is active', async () => {
     selectedAreaIdForNewTasksMock.current = null;
     selectStore.getState().areas = [
       { id: 'area-home', name: 'Home', order: 0, createdAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
     ];
-    selectStore.getState().settings = { gtd: { defaultAreaId: 'area-home' } };
+    selectStore.getState().settings = { gtd: { defaultAreaMode: 'active', defaultAreaId: 'area-home' } };
     addTask.mockResolvedValue({ success: true, id: 'task-1' });
 
     let tree!: ReturnType<typeof create>;

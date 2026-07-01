@@ -1108,6 +1108,7 @@ export const en: Record<string, string> = {
         'settings.defaultArea': 'Default area for new tasks',
         'settings.defaultAreaDesc': 'Applies to new tasks, including Inbox captures. You can still change or clear the area per task.',
         'settings.defaultAreaNone': 'No area',
+        'settings.defaultAreaActive': 'Current area filter',
         'settings.autoArchive': 'Auto-archive done tasks',
         'settings.autoArchiveDesc': 'Move completed tasks to Archived after the selected number of days.',
         'settings.autoArchiveDays': 'Archive after',

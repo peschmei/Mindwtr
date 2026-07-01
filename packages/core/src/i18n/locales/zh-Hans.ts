@@ -1021,6 +1021,7 @@ export const zhHans: Record<string, string> = {
         'settings.defaultArea': '新任务默认领域',
         'settings.defaultAreaDesc': '适用于新任务，包括收件箱捕获。你仍可为单个任务更改或清除领域。',
         'settings.defaultAreaNone': '无领域',
+        'settings.defaultAreaActive': '当前领域筛选',
         'settings.autoArchive': '自动归档完成任务',
         'settings.autoArchiveDesc': '在设定天数后将已完成任务移入归档。',
         'settings.autoArchiveDays': '归档时间',

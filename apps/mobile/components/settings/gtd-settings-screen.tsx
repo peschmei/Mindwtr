@@ -27,6 +27,7 @@ import {
     FOCUS_TASK_LIMIT_OPTIONS,
     normalizeClockTimeInput,
     normalizeFocusTaskLimit,
+    getDefaultTaskAreaMode,
     resolveDefaultNewTaskAreaId,
     sanitizePomodoroDurations,
     tFallback,
@@ -59,6 +60,7 @@ type PomodoroSettings = NonNullable<GtdSettings['pomodoro']>;
 type InboxProcessingSettings = NonNullable<GtdSettings['inboxProcessing']>;
 
 const SHOW_TEMP_ONBOARDING_TRIGGER = false;
+const DEFAULT_AREA_ACTIVE_OPTION_ID = '__active-area__';
 
 export function GtdSettingsScreen({
     onNavigate,
@@ -89,10 +91,14 @@ export function GtdSettingsScreen({
         ? settings.gtd.timeEstimatePresets
         : defaultTimeEstimatePresets) as TimeEstimate[];
     const defaultCaptureMethod = settings.gtd?.defaultCaptureMethod ?? 'text';
+    const defaultAreaMode = getDefaultTaskAreaMode(settings);
     const sortedAreas = [...areas]
         .filter((area) => !area.deletedAt)
         .sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name));
     const defaultAreaId = resolveDefaultNewTaskAreaId(settings, sortedAreas) ?? '';
+    const defaultAreaPickerValue = defaultAreaMode === 'active'
+        ? DEFAULT_AREA_ACTIVE_OPTION_ID
+        : defaultAreaId;
     const saveAudioAttachments = settings.gtd?.saveAudioAttachments !== false;
     const quickAddAutoClean = settings.quickAddAutoClean === true;
     const markdownEditorAssist = settings.markdownEditorAssist !== false;
@@ -363,6 +369,7 @@ export function GtdSettingsScreen({
     const defaultAreaLabel = t('settings.defaultArea');
     const defaultAreaDesc = t('settings.defaultAreaDesc');
     const defaultAreaNoneLabel = t('settings.defaultAreaNone');
+    const defaultAreaActiveLabel = t('settings.defaultAreaActive');
     const captureSettingsTitle = tFallback(t, 'settings.captureSettings', tr('settings.gtdMobile.captureDefaults'));
     const quickAddAutoCleanLabel = t('settings.quickAddAutoClean');
     const quickAddAutoCleanDesc = t('settings.quickAddAutoCleanDesc');
@@ -380,11 +387,18 @@ export function GtdSettingsScreen({
     ];
     const defaultAreaOptions = [
         { id: '', label: defaultAreaNoneLabel },
+        { id: DEFAULT_AREA_ACTIVE_OPTION_ID, label: defaultAreaActiveLabel },
         ...sortedAreas.map((area) => ({ id: area.id, label: area.name })),
     ];
-    const defaultAreaSelectedLabel = defaultAreaOptions.find((option) => option.id === defaultAreaId)?.label ?? defaultAreaNoneLabel;
+    const defaultAreaSelectedLabel = defaultAreaOptions.find((option) => option.id === defaultAreaPickerValue)?.label ?? defaultAreaNoneLabel;
     const selectDefaultArea = (areaId: string) => {
-        updateGtdSettings({ defaultAreaId: areaId || null });
+        if (areaId === DEFAULT_AREA_ACTIVE_OPTION_ID) {
+            updateGtdSettings({ defaultAreaMode: 'active', defaultAreaId: null });
+        } else if (areaId) {
+            updateGtdSettings({ defaultAreaMode: 'fixed', defaultAreaId: areaId });
+        } else {
+            updateGtdSettings({ defaultAreaMode: 'none', defaultAreaId: null });
+        }
         setDefaultAreaPickerVisible(false);
     };
 
@@ -822,7 +836,7 @@ export function GtdSettingsScreen({
                             <Text style={[styles.pickerTitle, { color: tc.text }]}>{defaultAreaLabel}</Text>
                             <ScrollView style={styles.pickerList} contentContainerStyle={styles.pickerListContent}>
                                 {defaultAreaOptions.map((option) => {
-                                    const selected = defaultAreaId === option.id;
+                                    const selected = defaultAreaPickerValue === option.id;
                                     return (
                                         <TouchableOpacity
                                             key={option.id || 'none'}

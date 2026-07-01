@@ -15,6 +15,7 @@ import {
   sortDoneTasksForListView,
   parseQuickAdd,
   formatFocusTaskLimitText,
+  getDefaultTaskAreaMode,
   normalizeClockTimeInput,
   resolveDefaultNewTaskAreaId,
   getQuickAddProjectInitialProps,
@@ -455,10 +456,11 @@ function TaskListComponent({
   const canBulkOrganizeSelection = canBulkOrganizeInbox || canBulkOrganizeProject;
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
   const { areaById, resolvedAreaFilter, selectedAreaIdForNewTasks } = useMobileAreaFilter();
+  const defaultAreaMode = getDefaultTaskAreaMode(settings);
   const defaultNewTaskAreaId = resolveDefaultNewTaskAreaId(settings, areas);
-  const quickAddNewTaskAreaId = selectedAreaIdForNewTasks === undefined
-    ? defaultNewTaskAreaId
-    : selectedAreaIdForNewTasks ?? undefined;
+  const quickAddNewTaskAreaId = defaultAreaMode === 'active'
+    ? selectedAreaIdForNewTasks ?? undefined
+    : defaultNewTaskAreaId;
 
   // Track the last-seen signal so a remount (e.g. toggling reorder mode swaps the
   // scroll container component type) doesn't re-open the sheet from a stale value.

@@ -45,6 +45,11 @@ const storeState: MockStoreState = {
 
 vi.mock('@mindwtr/core', () => ({
   FOCUS_TASK_LIMIT_OPTIONS: [3, 5, 10],
+  getDefaultTaskAreaMode: (settings: AppData['settings']) => {
+    const mode = settings?.gtd?.defaultAreaMode;
+    if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;
+    return settings?.gtd?.defaultAreaId ? 'fixed' : 'none';
+  },
   normalizeClockTimeInput: (value?: string | null) => {
     const trimmed = String(value ?? '').trim();
     if (!trimmed) return '';
@@ -57,6 +62,8 @@ vi.mock('@mindwtr/core', () => ({
   },
   normalizeFocusTaskLimit: (value?: number) => value ?? 3,
   resolveDefaultNewTaskAreaId: (settings: AppData['settings'], areas: AppData['areas']) => {
+    const mode = settings?.gtd?.defaultAreaMode ?? (settings?.gtd?.defaultAreaId ? 'fixed' : 'none');
+    if (mode !== 'fixed') return undefined;
     const areaId = settings?.gtd?.defaultAreaId;
     return typeof areaId === 'string' && areas.some((area) => area.id === areaId && !area.deletedAt)
       ? areaId
@@ -361,7 +368,43 @@ describe('GtdSettingsScreen task editor layout', () => {
 
     expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
       gtd: expect.objectContaining({
+        defaultAreaMode: 'fixed',
         defaultAreaId: 'area-work',
+      }),
+    }));
+    expect(tree.root.findByType(Modal).props.visible).toBe(false);
+  });
+
+  it('saves the active area mode from capture settings', () => {
+    storeState.settings = {
+      gtd: {
+        defaultAreaId: null,
+        taskEditor: {},
+      },
+      features: {
+        priorities: true,
+        timeEstimates: true,
+      },
+    };
+    storeState.areas = [];
+
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<GtdSettingsScreen onNavigate={vi.fn()} screen="gtd-capture" />);
+    });
+
+    renderer.act(() => {
+      tree.root.findByProps({ testID: 'default-area-picker-button' }).props.onPress();
+    });
+
+    renderer.act(() => {
+      tree.root.findByProps({ testID: 'default-area-picker-option-__active-area__' }).props.onPress();
+    });
+
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      gtd: expect.objectContaining({
+        defaultAreaMode: 'active',
+        defaultAreaId: null,
       }),
     }));
     expect(tree.root.findByType(Modal).props.visible).toBe(false);

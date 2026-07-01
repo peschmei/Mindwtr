@@ -188,6 +188,61 @@ describe('QuickAddModal', () => {
         expect(addTask).toHaveBeenCalledWith('Fast capture', expect.objectContaining({ status: 'inbox' }));
     });
 
+    it('uses the current area filter when default area mode is active', async () => {
+        const addTask = vi.fn(async () => ({ success: true, id: 'task-id' }));
+        act(() => {
+            useTaskStore.setState((state) => ({
+                ...state,
+                addTask,
+                _allAreas: [
+                    {
+                        id: 'area-home',
+                        name: 'Home',
+                        color: '#10b981',
+                        order: 0,
+                        createdAt: '2026-07-01T00:00:00.000Z',
+                        updatedAt: '2026-07-01T00:00:00.000Z',
+                    },
+                    {
+                        id: 'area-work',
+                        name: 'Work',
+                        color: '#3b82f6',
+                        order: 1,
+                        createdAt: '2026-07-01T00:00:00.000Z',
+                        updatedAt: '2026-07-01T00:00:00.000Z',
+                    },
+                ],
+                settings: {
+                    ...state.settings,
+                    filters: { ...(state.settings?.filters ?? {}), areaId: 'area-work' },
+                    gtd: {
+                        ...(state.settings?.gtd ?? {}),
+                        defaultAreaMode: 'active',
+                        defaultAreaId: 'area-home',
+                    },
+                },
+            }));
+        });
+
+        renderQuickAddModal();
+
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent('mindwtr:quick-add', {
+                detail: { initialValue: 'Area filtered capture' },
+            }));
+            await Promise.resolve();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(addTask).toHaveBeenCalledWith('Area filtered capture', expect.objectContaining({
+                areaId: 'area-work',
+                status: 'inbox',
+            }));
+        });
+    });
+
     it('asks native code to hide standalone quick add without promoting the main window', async () => {
         (window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
 

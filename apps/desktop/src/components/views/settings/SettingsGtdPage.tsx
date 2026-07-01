@@ -3,6 +3,7 @@ import {
     FOCUS_TASK_LIMIT_OPTIONS,
     normalizeClockTimeInput,
     normalizeFocusTaskLimit,
+    getDefaultTaskAreaMode,
     resolveDefaultNewTaskAreaId,
     sanitizePomodoroDurations,
     translateText,
@@ -41,6 +42,7 @@ type Labels = {
     defaultArea: string;
     defaultAreaDesc: string;
     defaultAreaNone: string;
+    defaultAreaActive: string;
     focusTaskLimit: string;
     focusTaskLimitDesc: string;
     defaultProjectFlowMode: string;
@@ -125,6 +127,8 @@ type Labels = {
     visible: string;
     hidden: string;
 };
+
+const DEFAULT_AREA_ACTIVE_SELECT_VALUE = '__active-area__';
 
 type PomodoroSettings = NonNullable<GtdSettings['pomodoro']>;
 type InboxProcessingSettings = NonNullable<GtdSettings['inboxProcessing']>;
@@ -230,10 +234,14 @@ export function SettingsGtdPage({
         ? 'modal'
         : 'inline';
     const defaultCaptureMethod = safeSettings.gtd?.defaultCaptureMethod ?? 'text';
+    const defaultAreaMode = getDefaultTaskAreaMode(safeSettings);
     const sortedAreas = [...areas]
         .filter((area) => !area.deletedAt)
         .sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name));
     const defaultAreaId = resolveDefaultNewTaskAreaId(safeSettings, sortedAreas) ?? '';
+    const defaultAreaSelectValue = defaultAreaMode === 'active'
+        ? DEFAULT_AREA_ACTIVE_SELECT_VALUE
+        : defaultAreaId;
     const saveAudioAttachments = safeSettings.gtd?.saveAudioAttachments !== false;
     const quickAddAutoClean = safeSettings.quickAddAutoClean === true;
     const markdownEditorAssist = safeSettings.markdownEditorAssist !== false;
@@ -847,14 +855,22 @@ export function SettingsGtdPage({
                         <div className="text-xs text-muted-foreground mt-1">{t.defaultAreaDesc}</div>
                     </div>
                     <select
-                        value={defaultAreaId}
+                        value={defaultAreaSelectValue}
                         aria-label={t.defaultArea}
                         onChange={(event) => {
-                            updateGtdSettings({ defaultAreaId: event.target.value || null });
+                            const value = event.target.value;
+                            if (value === DEFAULT_AREA_ACTIVE_SELECT_VALUE) {
+                                updateGtdSettings({ defaultAreaMode: 'active', defaultAreaId: null });
+                            } else if (value) {
+                                updateGtdSettings({ defaultAreaMode: 'fixed', defaultAreaId: value });
+                            } else {
+                                updateGtdSettings({ defaultAreaMode: 'none', defaultAreaId: null });
+                            }
                         }}
                         className="max-w-56 shrink-0 text-sm bg-muted/50 text-foreground border border-border rounded px-3 py-2 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
                     >
                         <option value="">{t.defaultAreaNone}</option>
+                        <option value={DEFAULT_AREA_ACTIVE_SELECT_VALUE}>{t.defaultAreaActive}</option>
                         {sortedAreas.map((area) => (
                             <option key={area.id} value={area.id}>{area.name}</option>
                         ))}

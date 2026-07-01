@@ -13,6 +13,7 @@ import {
   DEFAULT_AREA_COLOR,
   DEFAULT_PROJECT_COLOR,
   formatFocusTaskLimitText,
+  getDefaultTaskAreaMode,
   getQuickAddProjectInitialProps,
   getUsedTaskTokens,
   hasTimeComponent,
@@ -124,9 +125,10 @@ export function QuickCaptureSheet({
   const isSavingRef = useRef(false);
   const prioritiesEnabled = settings?.features?.priorities !== false;
   const { selectedAreaIdForNewTasks } = useMobileAreaFilter();
-  const defaultAreaId = selectedAreaIdForNewTasks === undefined
-    ? resolveDefaultNewTaskAreaId(settings, areas) ?? null
-    : selectedAreaIdForNewTasks;
+  const defaultAreaMode = getDefaultTaskAreaMode(settings);
+  const defaultAreaId = defaultAreaMode === 'active'
+    ? selectedAreaIdForNewTasks ?? null
+    : resolveDefaultNewTaskAreaId(settings, areas) ?? null;
 
   const updateSpeechSettings = useCallback(
     (next: Partial<NonNullable<NonNullable<typeof settings.ai>['speechToText']>>) => {

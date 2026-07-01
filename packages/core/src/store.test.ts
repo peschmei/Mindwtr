@@ -308,6 +308,23 @@ describe('TaskStore', () => {
         expect(useTaskStore.getState()._tasksById.get(explicitNone.id ?? '')?.areaId).toBeUndefined();
     });
 
+    it('does not apply a fixed default area while the default area mode is active or none', async () => {
+        const { addArea, addTask, updateSettings } = useTaskStore.getState();
+        const work = await addArea('Work');
+        expect(work).not.toBeNull();
+        if (!work) return;
+
+        await updateSettings({ gtd: { defaultAreaMode: 'active', defaultAreaId: work.id } });
+        const activeModeResult = await addTask('Active Mode Capture');
+        expect(activeModeResult.success).toBe(true);
+        expect(useTaskStore.getState()._tasksById.get(activeModeResult.id ?? '')?.areaId).toBeUndefined();
+
+        await updateSettings({ gtd: { defaultAreaMode: 'none', defaultAreaId: work.id } });
+        const noneModeResult = await addTask('No Area Mode Capture');
+        expect(noneModeResult.success).toBe(true);
+        expect(useTaskStore.getState()._tasksById.get(noneModeResult.id ?? '')?.areaId).toBeUndefined();
+    });
+
     it('ignores a stale configured default area when adding a task', async () => {
         const { addTask, updateSettings } = useTaskStore.getState();
         await updateSettings({ gtd: { defaultAreaId: 'missing-area' } });

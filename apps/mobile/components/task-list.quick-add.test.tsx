@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Area, Project, Task } from '@mindwtr/core';
+import type { AppSettings, Area, Project, Task } from '@mindwtr/core';
 
 const addTaskMock = vi.hoisted(() => vi.fn());
 const addProjectMock = vi.hoisted(() => vi.fn());
@@ -82,7 +82,7 @@ const storeState = vi.hoisted(() => ({
     ai: { enabled: false },
     appearance: {},
     features: {},
-  },
+  } as AppSettings,
   getDerivedState: vi.fn(() => ({
     focusedCount: storeState._allTasks.filter((task) => task.isFocusedToday).length,
   })),
@@ -142,6 +142,11 @@ vi.mock('@mindwtr/core', () => {
     formatFocusTaskLimitText: (template: string, limit: number) => (
       template.includes('{{count}}') ? template.replace('{{count}}', String(limit)) : `Max ${limit} focus items.`
     ),
+    getDefaultTaskAreaMode: (settings: any) => {
+      const mode = settings?.gtd?.defaultAreaMode;
+      if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;
+      return settings?.gtd?.defaultAreaId ? 'fixed' : 'none';
+    },
     getQuickAddProjectInitialProps: vi.fn(() => ({})),
     getTranslationsSync: vi.fn(() => ({ 'trash.restoreToInbox': 'Restore' })),
     getUsedTaskTokens: vi.fn(() => []),
@@ -154,6 +159,8 @@ vi.mock('@mindwtr/core', () => {
     parseQuickAdd: parseQuickAddMock,
     parseSearchQuery: vi.fn(() => ({ filters: [], text: '' })),
     resolveDefaultNewTaskAreaId: (settings: any, areas: any[]) => {
+      const mode = settings?.gtd?.defaultAreaMode ?? (settings?.gtd?.defaultAreaId ? 'fixed' : 'none');
+      if (mode !== 'fixed') return undefined;
       const areaId = settings?.gtd?.defaultAreaId;
       return typeof areaId === 'string' && areas.some((area) => area.id === areaId && !area.deletedAt)
         ? areaId
@@ -356,6 +363,11 @@ describe('TaskList project quick add', () => {
     storeState._allTasks = [];
     storeState.areas = [];
     storeState.highlightTaskId = null;
+    storeState.settings = {
+      ai: { enabled: false },
+      appearance: {},
+      features: {},
+    };
     selectedAreaIdForNewTasksMock.current = undefined;
     addTaskMock.mockResolvedValue({ success: true, id: 'created-task' });
     parseQuickAddMock.mockImplementation((input: string) => ({ title: input, props: {} }));
@@ -493,7 +505,7 @@ describe('TaskList project quick add', () => {
     });
   });
 
-  it('assigns standalone quick-add tasks to the selected area filter', async () => {
+  it('assigns standalone quick-add tasks to the selected area filter in active area mode', async () => {
     selectedAreaIdForNewTasksMock.current = 'area-work';
     storeState.areas = [{
       id: 'area-work',
@@ -502,6 +514,10 @@ describe('TaskList project quick add', () => {
       createdAt: '2026-06-01T00:00:00.000Z',
       updatedAt: '2026-06-01T00:00:00.000Z',
     }];
+    storeState.settings = {
+      ...storeState.settings,
+      gtd: { defaultAreaMode: 'active', defaultAreaId: 'area-home' },
+    };
 
     let tree!: ReturnType<typeof create>;
     await act(async () => {

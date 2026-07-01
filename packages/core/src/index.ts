@@ -577,6 +577,7 @@ export type {
 
 export {
     dedupeLiveAreasByName,
+    getDefaultTaskAreaMode,
     normalizeAreaNameKey,
     resolveDefaultNewTaskAreaId,
 } from './area-utils';

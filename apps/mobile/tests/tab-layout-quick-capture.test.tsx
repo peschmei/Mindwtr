@@ -13,6 +13,8 @@ const mockTaskSettings = vi.hoisted(() => ({
   appearance: {} as Record<string, unknown>,
   gtd: {
     defaultCaptureMethod: 'text',
+    defaultAreaMode: undefined as 'none' | 'fixed' | 'active' | undefined,
+    defaultAreaId: undefined as string | undefined,
   },
   savedSearches: [],
 }));
@@ -85,6 +87,11 @@ vi.mock('@react-navigation/native', () => ({
 }));
 
 vi.mock('@mindwtr/core', () => ({
+  getDefaultTaskAreaMode: (settings: any) => {
+    const mode = settings?.gtd?.defaultAreaMode;
+    if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;
+    return settings?.gtd?.defaultAreaId ? 'fixed' : 'none';
+  },
   tFallback: (t: (key: string) => string, key: string, fallback: string) => {
     const translated = t(key);
     return translated && translated !== key ? translated : fallback;
@@ -332,6 +339,8 @@ describe('mobile tab quick capture', () => {
     mockRouterPush.mockClear();
     mockTaskSettings.appearance = {};
     mockTaskSettings.gtd.defaultCaptureMethod = 'text';
+    mockTaskSettings.gtd.defaultAreaMode = undefined;
+    mockTaskSettings.gtd.defaultAreaId = undefined;
     mockTaskSettings.savedSearches = [];
     selectedAreaIdForNewTasksMock.current = null;
     mockThemeTokens.value = { isMaterial: false, roles: null, shape: { large: 16 } };
@@ -369,7 +378,8 @@ describe('mobile tab quick capture', () => {
     expect(sheets[0]?.props.visible).toBe(true);
   });
 
-  it('passes the selected area filter into quick capture initial props', () => {
+  it('passes the selected area filter into quick capture initial props in active area mode', () => {
+    mockTaskSettings.gtd.defaultAreaMode = 'active';
     selectedAreaIdForNewTasksMock.current = 'area-work';
     let tree!: ReturnType<typeof create>;
 

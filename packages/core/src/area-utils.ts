@@ -1,14 +1,23 @@
-import type { AppSettings, Area } from './types';
+import type { AppSettings, Area, DefaultTaskAreaMode } from './types';
 import { nextRevision } from './sync-revision';
 
 export const normalizeAreaNameKey = (name: unknown): string => (
     typeof name === 'string' ? name.trim().toLowerCase() : ''
 );
 
+export const getDefaultTaskAreaMode = (
+    settings: AppSettings | undefined
+): DefaultTaskAreaMode => {
+    const mode = settings?.gtd?.defaultAreaMode;
+    if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;
+    return settings?.gtd?.defaultAreaId ? 'fixed' : 'none';
+};
+
 export const resolveDefaultNewTaskAreaId = (
     settings: AppSettings | undefined,
     areas: readonly Area[]
 ): string | undefined => {
+    if (getDefaultTaskAreaMode(settings) !== 'fixed') return undefined;
     const configuredAreaId = settings?.gtd?.defaultAreaId;
     if (typeof configuredAreaId !== 'string') return undefined;
     const areaId = configuredAreaId.trim();

@@ -1184,6 +1184,9 @@ export const createSettingsActions = ({
             const defaultAreaIdUpdate = updates.gtd
                 ? Object.prototype.hasOwnProperty.call(updates.gtd, 'defaultAreaId')
                 : false;
+            const defaultAreaModeUpdate = updates.gtd
+                ? Object.prototype.hasOwnProperty.call(updates.gtd, 'defaultAreaMode')
+                : false;
             const focusTaskLimitUpdate = updates.gtd
                 ? Object.prototype.hasOwnProperty.call(updates.gtd, 'focusTaskLimit')
                 : false;
@@ -1198,7 +1201,7 @@ export const createSettingsActions = ({
                 markSyncUpdated('language');
             }
 
-            if (defaultScheduleTimeUpdate || defaultAreaIdUpdate || focusTaskLimitUpdate || focusGroupByUpdate || defaultProjectFlowModeUpdate) {
+            if (defaultScheduleTimeUpdate || defaultAreaIdUpdate || defaultAreaModeUpdate || focusTaskLimitUpdate || focusGroupByUpdate || defaultProjectFlowModeUpdate) {
                 markSyncUpdated('gtd');
             }
 

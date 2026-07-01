@@ -515,6 +515,57 @@ describe('ListView', () => {
     expect(showToast).not.toHaveBeenCalled();
   });
 
+  it('uses the current area filter in the inline inbox composer when default area mode is active', async () => {
+    const addTask = vi.fn().mockResolvedValue({ success: true });
+    const areas = [
+      {
+        id: 'area-home',
+        name: 'Home',
+        color: '#10b981',
+        order: 0,
+        createdAt: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-07-01T00:00:00.000Z',
+      },
+      {
+        id: 'area-work',
+        name: 'Work',
+        color: '#3b82f6',
+        order: 1,
+        createdAt: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-07-01T00:00:00.000Z',
+      },
+    ];
+
+    useTaskStore.setState({
+      addTask,
+      areas,
+      _allAreas: areas,
+      settings: {
+        quickAddAutoClean: true,
+        filters: { areaId: 'area-work' },
+        gtd: { defaultAreaMode: 'active', defaultAreaId: 'area-home' },
+      },
+    });
+
+    const { container, getByRole } = renderListView('inbox', 'Inbox');
+    const input = getByRole('combobox', { name: '' });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Area filtered task' } });
+    });
+
+    const form = container.querySelector('form');
+    expect(form).not.toBeNull();
+    await act(async () => {
+      fireEvent.submit(form!);
+    });
+
+    expect(addTask).toHaveBeenCalledWith('Area filtered task', expect.objectContaining({
+      areaId: 'area-work',
+      status: 'inbox',
+    }));
+  });
+
   it('applies trailing date NLP in the desktop inline inbox quick add', async () => {
     const addTask = vi.fn().mockResolvedValue({ success: true });
     const now = new Date('2026-04-16T10:00:00Z');
