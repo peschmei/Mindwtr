@@ -123,6 +123,15 @@ const FallbackTaskListWithoutEditTrigger = ({
     );
 };
 
+const FallbackAddTaskTrigger = ({ onOpen }: { onOpen: () => void }) => (
+    <div data-main-content tabIndex={-1}>
+        <button type="button" data-add-task-trigger onClick={onOpen}>
+            Add task
+        </button>
+        <DummyList />
+    </div>
+);
+
 describe('KeybindingProvider (vim)', () => {
     beforeEach(() => {
         useUiStore.setState({ editingTaskId: null });
@@ -192,6 +201,23 @@ describe('KeybindingProvider (vim)', () => {
         fireEvent.keyDown(window, { key: 'a' });
 
         expect(focusAddInput).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to the visible add-task trigger when the active scope has no add handler', () => {
+        const onOpen = vi.fn();
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <FallbackAddTaskTrigger onOpen={onOpen} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        fireEvent.keyDown(window, { key: 'a' });
+        fireEvent.keyDown(window, { key: 'o' });
+
+        expect(onOpen).toHaveBeenCalledTimes(2);
     });
 
     it('opens settings with Cmd+,', () => {

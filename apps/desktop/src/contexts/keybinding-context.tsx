@@ -247,6 +247,14 @@ export function KeybindingProvider({
         return true;
     }, []);
 
+    const focusActiveAddTaskTarget = useCallback((scope: TaskListScope | null | undefined) => {
+        if (scope?.focusAddInput) {
+            scope.focusAddInput();
+            return;
+        }
+        focusFallbackAddTaskTarget();
+    }, [focusFallbackAddTaskTarget]);
+
     const focusFallbackFilterInput = useCallback(() => {
         const root = document.querySelector<HTMLElement>('[data-main-content]') ?? document.body;
         const input = Array.from(root.querySelectorAll<HTMLElement>('[data-view-filter-input]'))
@@ -614,7 +622,7 @@ export function KeybindingProvider({
                 case 'o':
                 case 'a':
                     e.preventDefault();
-                    scope?.focusAddInput?.();
+                    focusActiveAddTaskTarget(scope);
                     break;
                 case '/':
                     e.preventDefault();
@@ -684,7 +692,7 @@ export function KeybindingProvider({
                         break;
                     case 'o':
                         e.preventDefault();
-                        scope?.focusAddInput?.();
+                        focusActiveAddTaskTarget(scope);
                         break;
                     case 's':
                         e.preventDefault();
@@ -817,6 +825,7 @@ export function KeybindingProvider({
         toggleDensity,
         currentView,
         getActiveScope,
+        focusActiveAddTaskTarget,
         applyAreaFilterShortcut,
     ]);
 
