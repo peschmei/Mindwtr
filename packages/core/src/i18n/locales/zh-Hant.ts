@@ -1,6 +1,11 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const zhHant: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'donationPrompt.title': "讓 Mindwtr 保持免費和獨立",
+        'donationPrompt.body': "Mindwtr 沒有廣告、追蹤或付費牆。它由一個人開發，並由覺得它有幫助的使用者支持。如果它幫助你保持清晰，一筆小額捐贈可以幫助它持續改進。",
+        'donationPrompt.dismiss': "稍後再說",
+        'donationPrompt.action': "支持 Mindwtr",
+        'settings.donateLinkValue': "捐贈",
         'markdown.copyCode': '複製程式碼',
         'nav.main': '主頁',
         'nav.inbox': '收集箱',
@@ -1355,7 +1360,7 @@ export const zhHant: Record<string, string> = {
         'settings.website': '開發者網站',
         'settings.github': 'GitHub',
         'settings.documentation': '文件',
-        'settings.sponsorProject': '支持項目',
+        'settings.sponsorProject': "支持開發",
         'settings.license': '授權條款',
         'settings.feedback': '發送反饋',
         'settings.feedbackDesc': '提交錯誤報告或功能請求。無需帳號。',

@@ -7,6 +7,8 @@ export const STORE_REVIEW_MIN_ACTIVE_DAYS = 7;
 export const STORE_REVIEW_ATTEMPT_COOLDOWN_MS = 90 * DAY_MS;
 export const DONATION_PROMPT_MIN_DAYS_SINCE_FIRST_SEEN = 30;
 export const DONATION_PROMPT_MIN_ACTIVE_DAYS = 21;
+export const DONATION_PROMPT_REPEAT_COOLDOWN_MS = 183 * DAY_MS;
+export const DONATION_PROMPT_SUPPORT_CLICK_COOLDOWN_MS = 365 * DAY_MS;
 export const UPDATE_REMINDER_CHECK_INTERVAL_MS = DAY_MS;
 export const UPDATE_REMINDER_MIN_DAYS_SINCE_FIRST_SEEN = 7;
 export const UPDATE_REMINDER_MIN_ACTIVE_DAYS = 2;
@@ -25,6 +27,7 @@ export type UserPromptState = {
     donation?: {
         askedEver?: boolean;
         lastShownAt?: string;
+        lastActionAt?: string;
     };
     update?: {
         dismissedVersion?: string;
@@ -122,6 +125,18 @@ function countActiveDaysThroughNow(values: string[] | null | undefined, nowMs: n
     return normalizePromptDayKeys(values).filter((key) => {
         const dayIndex = parsePromptDayKey(key);
         return dayIndex !== null && dayIndex <= todayIndex;
+    }).length;
+}
+
+function countActiveDaysSinceDay(
+    values: string[] | null | undefined,
+    nowMs: number,
+    startDayIndex: number,
+): number {
+    const todayIndex = getPromptLocalDayIndex(nowMs);
+    return normalizePromptDayKeys(values).filter((key) => {
+        const dayIndex = parsePromptDayKey(key);
+        return dayIndex !== null && dayIndex >= startDayIndex && dayIndex <= todayIndex;
     }).length;
 }
 
@@ -261,14 +276,33 @@ export function shouldShowDonationPrompt({
     donationAllowed,
 }: DonationPromptInput): boolean {
     if (!donationAllowed) return false;
-    if (promptState?.donation?.askedEver === true) return false;
 
-    const firstSeenDayCount = daysSinceFirstSeen(promptState, nowMs);
-    if (firstSeenDayCount === null || firstSeenDayCount < DONATION_PROMPT_MIN_DAYS_SINCE_FIRST_SEEN) {
+    const donationLastActionMs = parseTimeMs(promptState?.donation?.lastActionAt);
+    if (donationLastActionMs !== null && nowMs - donationLastActionMs < DONATION_PROMPT_SUPPORT_CLICK_COOLDOWN_MS) {
         return false;
     }
 
-    const activeDayCount = countActiveDaysThroughNow(promptState?.activeDayKeys, nowMs);
+    const donationLastShownMs = parseTimeMs(promptState?.donation?.lastShownAt);
+    let activeDayCount: number;
+
+    if (donationLastShownMs !== null) {
+        if (nowMs - donationLastShownMs < DONATION_PROMPT_REPEAT_COOLDOWN_MS) return false;
+        activeDayCount = countActiveDaysSinceDay(
+            promptState?.activeDayKeys,
+            nowMs,
+            getPromptLocalDayIndex(donationLastShownMs) + 1,
+        );
+    } else {
+        if (promptState?.donation?.askedEver === true) return false;
+
+        const firstSeenDayCount = daysSinceFirstSeen(promptState, nowMs);
+        if (firstSeenDayCount === null || firstSeenDayCount < DONATION_PROMPT_MIN_DAYS_SINCE_FIRST_SEEN) {
+            return false;
+        }
+
+        activeDayCount = countActiveDaysThroughNow(promptState?.activeDayKeys, nowMs);
+    }
+
     if (activeDayCount < DONATION_PROMPT_MIN_ACTIVE_DAYS) return false;
 
     return isCooldownElapsed(
@@ -290,6 +324,20 @@ export function recordDonationPromptShown(
             ...(promptState?.donation ?? {}),
             askedEver: true,
             lastShownAt: nowIso,
+        },
+    };
+}
+
+export function recordDonationPromptSupportClicked(
+    promptState: UserPromptState | null | undefined,
+    nowMs: number,
+): UserPromptState {
+    const nowIso = new Date(nowMs).toISOString();
+    return {
+        ...(promptState ?? {}),
+        donation: {
+            ...(promptState?.donation ?? {}),
+            lastActionAt: nowIso,
         },
     };
 }

@@ -20,18 +20,24 @@ type AppAnnouncementModalProps = {
   visible: boolean;
   onAction: (action: AppAnnouncementAction) => void;
   onDismiss: () => void;
+  onShown?: () => void;
 };
 
 export function AppAnnouncementModal({
   announcement,
   onAction,
   onDismiss,
+  onShown,
   visible,
 }: AppAnnouncementModalProps) {
   const tc = useThemeColors();
   const filledButton = useFilledButtonColors();
 
   if (!announcement) return null;
+
+  React.useEffect(() => {
+    if (visible && announcement) onShown?.();
+  }, [announcement, onShown, visible]);
 
   const action = announcement.action;
   const dismissLabel = announcement.dismissLabel ?? 'Not now';

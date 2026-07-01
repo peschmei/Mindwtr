@@ -7,7 +7,7 @@ import * as Linking from 'expo-linking';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BackHandler, Platform, SafeAreaView, StatusBar, Text, View } from 'react-native';
 import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
@@ -26,6 +26,7 @@ import {
   getAnnouncementDismissalStorageKey,
   isSupportedLanguage,
   recordDonationPromptShown,
+  recordDonationPromptSupportClicked,
   recordUpdateReminderChecked,
   recordUpdateReminderDismissed,
   recordUpdateReminderShown,
@@ -143,6 +144,7 @@ const resolveMobileDonationPromptAllowed = async (options: {
   return Platform.OS === 'android' || Platform.OS === 'ios';
 };
 
+const DONATION_PROMPT_STARTUP_DELAY_MS = 2000;
 const UPDATE_REMINDER_RELEASES_API = 'https://api.github.com/repos/dongdongbh/Mindwtr/releases/latest';
 const UPDATE_REMINDER_RELEASES_URL = 'https://github.com/dongdongbh/Mindwtr/releases/latest';
 const APP_STORE_APP_ID = '6758597144';
@@ -380,6 +382,22 @@ function RootLayoutContentInner() {
   const resolveText = useCallback((key: string, fallback: string) => (
     translateWithFallback(t, key, fallback)
   ), [t]);
+
+  const donationPromptAnnouncement = useMemo<AppAnnouncement>(() => ({
+    ...DONATION_PROMPT_ANNOUNCEMENT,
+    title: resolveText('donationPrompt.title', DONATION_PROMPT_ANNOUNCEMENT.title),
+    body: resolveText('donationPrompt.body', DONATION_PROMPT_ANNOUNCEMENT.body),
+    dismissLabel: resolveText(
+      'donationPrompt.dismiss',
+      DONATION_PROMPT_ANNOUNCEMENT.dismissLabel ?? DONATION_PROMPT_ANNOUNCEMENT.title,
+    ),
+    action: DONATION_PROMPT_ANNOUNCEMENT.action
+      ? {
+        ...DONATION_PROMPT_ANNOUNCEMENT.action,
+        label: resolveText('donationPrompt.action', DONATION_PROMPT_ANNOUNCEMENT.action.label),
+      }
+      : undefined,
+  }), [resolveText]);
 
   const buildQuickCaptureInitialProps = useCallback((initialProps?: QuickCaptureOptions['initialProps']) => {
     const nextInitialProps = initialProps ? { ...initialProps } : {};
@@ -700,8 +718,25 @@ function RootLayoutContentInner() {
       router.push({ pathname: '/settings', params: { settingsScreen: 'about' } } as never);
       return;
     }
+    updateLocalUserPromptState((state) => recordDonationPromptSupportClicked(state, Date.now()))
+      .catch((error) => {
+        void logWarn('Failed to record donation support action', {
+          scope: 'prompt-state',
+          extra: { error: error instanceof Error ? error.message : String(error) },
+        });
+      });
     openAnnouncementUrl(action.url);
   }, [dismissDonationPrompt, openAnnouncementUrl, router]);
+
+  const recordDonationPromptVisible = useCallback(() => {
+    updateLocalUserPromptState((state) => recordDonationPromptShown(state, Date.now()))
+      .catch((error) => {
+        void logWarn('Failed to record donation prompt state', {
+          scope: 'prompt-state',
+          extra: { error: error instanceof Error ? error.message : String(error) },
+        });
+      });
+  }, []);
 
   const dismissUpdateReminder = useCallback(() => {
     const latestVersion = updateReminderInfo?.latestVersion;
@@ -923,18 +958,8 @@ function RootLayoutContentInner() {
         if (cancelled) return;
         if (!shouldShowDonationPrompt({ nowMs, promptState, donationAllowed: true })) return;
         timer = setTimeout(() => {
-          updateLocalUserPromptState((state) => recordDonationPromptShown(state, nowMs))
-            .then(() => {
-              if (!cancelled) setDonationPromptOpen(true);
-            })
-            .catch((error) => {
-              if (!cancelled) setDonationDismissedInSession(true);
-              void logWarn('Failed to record donation prompt state', {
-                scope: 'prompt-state',
-                extra: { error: error instanceof Error ? error.message : String(error) },
-              });
-            });
-        }, 250);
+          if (!cancelled) setDonationPromptOpen(true);
+        }, DONATION_PROMPT_STARTUP_DELAY_MS);
       })
       .catch((error) => {
         if (!cancelled) setDonationDismissedInSession(true);
@@ -1161,10 +1186,11 @@ function RootLayoutContentInner() {
             onDismiss={dismissAppAnnouncement}
           />
           <AppAnnouncementModal
-            announcement={DONATION_PROMPT_ANNOUNCEMENT}
+            announcement={donationPromptAnnouncement}
             visible={donationPromptOpen && !announcementOpen && !mobileOnboardingOpen}
             onAction={handleDonationPromptAction}
             onDismiss={dismissDonationPrompt}
+            onShown={recordDonationPromptVisible}
           />
           <AppAnnouncementModal
             announcement={updateReminderInfo ? buildUpdateReminderAnnouncement(updateReminderInfo) : null}

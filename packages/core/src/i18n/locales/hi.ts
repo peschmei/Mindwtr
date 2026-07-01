@@ -1,6 +1,11 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const hiOverrides: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'donationPrompt.title': "Mindwtr को मुक्त और स्वतंत्र बनाए रखें",
+        'donationPrompt.body': "Mindwtr में विज्ञापन, ट्रैकिंग या पेवॉल नहीं हैं। इसे एक व्यक्ति बनाता है और वे लोग समर्थन देते हैं जिन्हें यह उपयोगी लगता है। अगर यह आपको स्पष्ट रहने में मदद करता है, तो एक छोटा दान इसे बेहतर बनाते रहने में मदद करता है।",
+        'donationPrompt.dismiss': "शायद बाद में",
+        'donationPrompt.action': "Mindwtr का समर्थन करें",
+        'settings.donateLinkValue': "दान करें",
         'markdown.copyCode': 'कोड कॉपी करें',
         'nav.main': 'मुख्य',
         'nav.inbox': 'इनबॉक्स',
@@ -1131,6 +1136,7 @@ export const hiOverrides: Record<string, string> = {
         'settings.developer': 'डेवलपर',
         'settings.github': 'GitHub',
         'settings.documentation': 'प्रलेखन',
+        'settings.sponsorProject': "विकास का समर्थन करें",
         'settings.license': 'लाइसेंस',
         'settings.checkForUpdates': 'अद्यतन के लिए जाँच',
         'settings.checkStoreUpdates': 'माइक्रोसॉफ्ट स्टोर की जांच करें',

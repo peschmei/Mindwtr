@@ -1,6 +1,11 @@
 export const viOverrides: Record<string, string> = {
         // App
         'app.name': 'Mindwtr',
+        'donationPrompt.title': "Giữ Mindwtr miễn phí và độc lập",
+        'donationPrompt.body': "Mindwtr không có quảng cáo, theo dõi hay tường phí. Ứng dụng được xây dựng bởi một người và được hỗ trợ bởi những người thấy nó hữu ích. Nếu Mindwtr giúp bạn giữ đầu óc rõ ràng, một khoản đóng góp nhỏ sẽ giúp ứng dụng tiếp tục được cải thiện.",
+        'donationPrompt.dismiss': "Có thể để sau",
+        'donationPrompt.action': "Ủng hộ Mindwtr",
+        'settings.donateLinkValue': "Đóng góp",
         'markdown.copyCode': 'Sao chép mã',
 
         // Navigation
@@ -1469,7 +1474,7 @@ export const viOverrides: Record<string, string> = {
         'settings.website': 'Trang web nhà phát triển',
         'settings.github': 'GitHub',
         'settings.documentation': 'Tài liệu',
-        'settings.sponsorProject': 'Tài trợ dự án',
+        'settings.sponsorProject': "Ủng hộ phát triển",
         'settings.license': 'Giấy phép',
         'settings.feedback': 'Gửi phản hồi',
         'settings.feedbackDesc': 'Báo cáo lỗi hoặc gợi ý tính năng. Không cần tài khoản.',

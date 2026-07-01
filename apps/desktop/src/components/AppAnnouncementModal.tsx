@@ -10,6 +10,7 @@ type AppAnnouncementModalProps = {
     isOpen: boolean;
     onAction: (action: AppAnnouncementAction) => void;
     onDismiss: () => void;
+    onShown?: () => void;
 };
 
 function getActionIcon(action: AppAnnouncementAction) {
@@ -31,6 +32,7 @@ export function AppAnnouncementModal({
     isOpen,
     onAction,
     onDismiss,
+    onShown,
 }: AppAnnouncementModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
     const primaryButtonRef = useRef<HTMLButtonElement>(null);
@@ -40,11 +42,12 @@ export function AppAnnouncementModal({
 
     useEffect(() => {
         if (!isOpen || !announcement) return;
+        onShown?.();
         const timer = window.setTimeout(() => {
             (primaryButtonRef.current ?? dismissButtonRef.current)?.focus();
         }, 50);
         return () => window.clearTimeout(timer);
-    }, [announcement, isOpen]);
+    }, [announcement, isOpen, onShown]);
 
     if (!isOpen || !announcement) return null;
 

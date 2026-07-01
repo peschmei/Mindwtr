@@ -160,10 +160,10 @@ export function SettingsAboutPage({
                 <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">{t.sponsorProject}</span>
                     <button
-                        onClick={() => onOpenLink('https://mindwtr.app/support')}
+                        onClick={() => onOpenLink('https://mindwtr.app/donate?src=app_about')}
                         className="text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
                     >
-                        mindwtr.app/support
+                        mindwtr.app/donate
                         <ExternalLink className="w-3 h-3" />
                     </button>
                 </div>

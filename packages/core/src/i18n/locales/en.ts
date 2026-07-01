@@ -2,6 +2,11 @@
 export const en: Record<string, string> = {
         // App
         'app.name': 'Mindwtr',
+        'donationPrompt.title': "Keep Mindwtr free and independent",
+        'donationPrompt.body': "Mindwtr has no ads, tracking, or paywalls. It is built by one person and supported by people who find it useful. If it helps you stay clear, a small donation helps keep it improving.",
+        'donationPrompt.dismiss': "Maybe later",
+        'donationPrompt.action': "Support Mindwtr",
+        'settings.donateLinkValue': "Donate",
         'markdown.copyCode': 'Copy code',
 
         // Navigation
@@ -1483,7 +1488,7 @@ export const en: Record<string, string> = {
         'settings.website': 'Developer Website',
         'settings.github': 'GitHub',
         'settings.documentation': 'Documentation',
-        'settings.sponsorProject': 'Support Project',
+        'settings.sponsorProject': "Support development",
         'settings.license': 'License',
         'settings.feedback': 'Send feedback',
         'settings.feedbackDesc': 'Report a bug or suggest a feature. No account needed.',

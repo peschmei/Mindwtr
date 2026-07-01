@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useTransition, useCallback, Suspense, lazy } from 'react';
+import { useEffect, useState, useRef, useTransition, useCallback, useMemo, Suspense, lazy } from 'react';
 import { Layout } from './components/Layout';
 import { ListView } from './components/views/ListView';
 import { CalendarView } from './components/views/CalendarView';
@@ -21,6 +21,7 @@ import {
     getAnnouncementDismissalStorageKey,
     isSupportedLanguage,
     recordDonationPromptShown,
+    recordDonationPromptSupportClicked,
     recordUpdateReminderChecked,
     recordUpdateReminderDismissed,
     recordUpdateReminderShown,
@@ -120,6 +121,7 @@ const DONATION_PROMPT_ENABLED = (
     import.meta.env.VITE_DONATION_PROMPT_ENABLED === '1'
     || import.meta.env.VITE_DONATION_PROMPT_ENABLED === 'true'
 );
+const DONATION_PROMPT_STARTUP_DELAY_MS = 2000;
 const MS_STORE_REVIEW_URL = 'ms-windows-store://review/?ProductId=9N0V5B0B6FRX';
 const MAC_APP_STORE_REVIEW_URL = 'macappstore://itunes.apple.com/app/id6758597144?action=write-review';
 
@@ -453,6 +455,22 @@ function App() {
     const translateOrFallback = useCallback((key: string, fallback: string) => {
         return translateWithFallback(t, key, fallback);
     }, [t]);
+
+    const donationPromptAnnouncement = useMemo<AppAnnouncement>(() => ({
+        ...DONATION_PROMPT_ANNOUNCEMENT,
+        title: translateOrFallback('donationPrompt.title', DONATION_PROMPT_ANNOUNCEMENT.title),
+        body: translateOrFallback('donationPrompt.body', DONATION_PROMPT_ANNOUNCEMENT.body),
+        dismissLabel: translateOrFallback(
+            'donationPrompt.dismiss',
+            DONATION_PROMPT_ANNOUNCEMENT.dismissLabel ?? DONATION_PROMPT_ANNOUNCEMENT.title,
+        ),
+        action: DONATION_PROMPT_ANNOUNCEMENT.action
+            ? {
+                ...DONATION_PROMPT_ANNOUNCEMENT.action,
+                label: translateOrFallback('donationPrompt.action', DONATION_PROMPT_ANNOUNCEMENT.action.label),
+            }
+            : undefined,
+    }), [translateOrFallback]);
 
     const hideToTray = useCallback(async () => {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
@@ -1068,8 +1086,21 @@ function App() {
             handleViewChange('settings');
             return;
         }
+        try {
+            updateLocalUserPromptState((state) => recordDonationPromptSupportClicked(state, Date.now()));
+        } catch (error) {
+            void logError(error, { scope: 'prompt-state', step: 'recordDonationSupportClicked' });
+        }
         void openAnnouncementUrl(action.url);
     }, [dismissDonationPrompt, handleViewChange, openAnnouncementUrl]);
+
+    const recordDonationPromptVisible = useCallback(() => {
+        try {
+            updateLocalUserPromptState((state) => recordDonationPromptShown(state, Date.now()));
+        } catch (error) {
+            void logError(error, { scope: 'prompt-state', step: 'recordDonationShown' });
+        }
+    }, []);
 
     const dismissUpdateReminder = useCallback(() => {
         const latestVersion = updateReminderInfo?.latestVersion;
@@ -1252,15 +1283,8 @@ function App() {
         if (!shouldShowDonationPrompt({ nowMs, promptState, donationAllowed: true })) return;
 
         const timer = window.setTimeout(() => {
-            try {
-                updateLocalUserPromptState((state) => recordDonationPromptShown(state, nowMs));
-            } catch (error) {
-                setDonationDismissedInSession(true);
-                void logError(error, { scope: 'prompt-state', step: 'recordDonationShown' });
-                return;
-            }
             setDonationPromptOpen(true);
-        }, 250);
+        }, DONATION_PROMPT_STARTUP_DELAY_MS);
         return () => window.clearTimeout(timer);
     }, [
         announcementOpen,
@@ -1475,7 +1499,7 @@ function App() {
                         onDismiss={dismissAppAnnouncement}
                     />
                     <AppAnnouncementModal
-                        announcement={DONATION_PROMPT_ANNOUNCEMENT}
+                        announcement={donationPromptAnnouncement}
                         isOpen={
                             donationPromptOpen
                             && !announcementOpen
@@ -1485,6 +1509,7 @@ function App() {
                         }
                         onAction={handleDonationPromptAction}
                         onDismiss={dismissDonationPrompt}
+                        onShown={recordDonationPromptVisible}
                     />
                     <AppAnnouncementModal
                         announcement={updateReminderInfo ? buildUpdateReminderAnnouncement(updateReminderInfo) : null}

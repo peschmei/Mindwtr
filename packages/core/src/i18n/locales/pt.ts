@@ -2,6 +2,11 @@
 export const ptOverrides: Record<string, string> = {
         // App
         'app.name': 'Mindwtr',
+        'donationPrompt.title': "Mantenha o Mindwtr gratuito e independente",
+        'donationPrompt.body': "O Mindwtr não tem anúncios, rastreamento nem paywalls. Ele é criado por uma pessoa e apoiado por quem o considera útil. Se ele ajuda você a manter a clareza, uma pequena doação ajuda a continuar melhorando.",
+        'donationPrompt.dismiss': "Talvez mais tarde",
+        'donationPrompt.action': "Apoiar o Mindwtr",
+        'settings.donateLinkValue': "Doar",
         'markdown.copyCode': 'Copiar código',
 
         // Navigation
@@ -1216,7 +1221,7 @@ export const ptOverrides: Record<string, string> = {
         'settings.website': 'Developer Site',
         'settings.github': 'GitHub',
         'settings.documentation': 'Documentação',
-        'settings.sponsorProject': 'Apoiar o projeto',
+        'settings.sponsorProject': "Apoiar o desenvolvimento",
         'settings.license': 'Licença',
         'settings.checkForUpdates': 'Verifique se há atualizações',
         'settings.checkStoreUpdates': 'Verifique a Microsoft Store',

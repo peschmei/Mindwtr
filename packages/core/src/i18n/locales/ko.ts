@@ -1,6 +1,11 @@
 // Split from i18n-translations.ts to make community translation contributions easier.
 export const koOverrides: Record<string, string> = {
         'app.name': 'Mindwtr',
+        'donationPrompt.title': "Mindwtr를 무료이고 독립적으로 유지하기",
+        'donationPrompt.body': "Mindwtr에는 광고, 추적, 유료 장벽이 없습니다. 한 사람이 만들고, 유용하다고 느끼는 사람들이 후원합니다. Mindwtr가 더 명확하게 정리하는 데 도움이 된다면 작은 후원이 계속 개선하는 데 힘이 됩니다.",
+        'donationPrompt.dismiss': "나중에",
+        'donationPrompt.action': "Mindwtr 후원",
+        'settings.donateLinkValue': "후원",
         'markdown.copyCode': '코드 복사',
         'nav.main': '기본',
         'nav.inbox': '받은편지함',
@@ -1133,6 +1138,7 @@ export const koOverrides: Record<string, string> = {
         'settings.developer': '개발자',
         'settings.github': 'GitHub',
         'settings.documentation': '선적 서류 비치',
+        'settings.sponsorProject': "개발 후원",
         'settings.license': '라이선스',
         'settings.checkForUpdates': '업데이트 확인',
         'settings.checkStoreUpdates': '마이크로소프트 스토어 확인',

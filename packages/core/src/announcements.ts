@@ -21,13 +21,13 @@ export const APP_ANNOUNCEMENT_DISMISSED_VALUE = 'dismissed';
 
 export const DONATION_PROMPT_ANNOUNCEMENT: AppAnnouncement = {
     id: 'support-mindwtr-one-time-v1',
-    title: 'Mindwtr is free, forever',
-    body: 'No ads, no paywalls. Mindwtr is built and maintained by one person. If it helps you, you can support its development. Either way, thank you.',
-    dismissLabel: 'No thanks',
+    title: 'Keep Mindwtr free and independent',
+    body: 'Mindwtr has no ads, tracking, or paywalls. It is built by one person and supported by people who find it useful. If it helps you stay clear, a small donation helps keep it improving.',
+    dismissLabel: 'Maybe later',
     action: {
         type: 'url',
         label: 'Support Mindwtr',
-        url: 'https://ko-fi.com/dongdongbh',
+        url: 'https://mindwtr.app/donate?src=app_prompt',
     },
 };
 

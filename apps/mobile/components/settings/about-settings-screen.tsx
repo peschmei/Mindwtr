@@ -454,10 +454,10 @@ export function AboutSettingsScreen({
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
-                        onPress={() => openLink('https://mindwtr.app/support')}
+                        onPress={() => openLink('https://mindwtr.app/donate?src=app_about')}
                     >
                         <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.sponsorProject')}</Text>
-                        <Text style={styles.linkText}>mindwtr.app/support</Text>
+                        <Text style={styles.linkText}>{tr('settings.donateLinkValue')}</Text>
                     </TouchableOpacity>
                     <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
                         <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.license')}</Text>

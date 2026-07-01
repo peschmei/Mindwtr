@@ -2,6 +2,11 @@
 export const deOverrides: Record<string, string> = {
         //App
         'app.name': 'Mindwtr',
+        'donationPrompt.title': "Mindwtr kostenlos und unabhängig halten",
+        'donationPrompt.body': "Mindwtr hat keine Werbung, kein Tracking und keine Paywalls. Es wird von einer Person entwickelt und von Menschen unterstützt, die es nützlich finden. Wenn es Ihnen hilft, klar zu bleiben, hilft eine kleine Spende dabei, es weiter zu verbessern.",
+        'donationPrompt.dismiss': "Vielleicht später",
+        'donationPrompt.action': "Mindwtr unterstützen",
+        'settings.donateLinkValue': "Spenden",
         'markdown.copyCode': 'Code kopieren',
         
         //Navigation
@@ -1217,7 +1222,7 @@ export const deOverrides: Record<string, string> = {
         'settings.website': 'Entwickler-Webseite',
         'settings.github': 'GitHub',
         'settings.documentation': 'Dokumentation',
-        'settings.sponsorProject': 'Projekt unterstützen',
+        'settings.sponsorProject': "Entwicklung unterstützen",
         'settings.license': 'Lizenz',
         'settings.checkForUpdates': 'Suchen Sie nach Aktualisierungen',
         'settings.checkStoreUpdates': 'Überprüfen Sie den Microsoft Store',
