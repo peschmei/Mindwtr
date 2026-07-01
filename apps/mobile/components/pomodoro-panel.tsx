@@ -10,7 +10,9 @@ import {
   type PomodoroAutoStartOptions,
   type PomodoroDurations,
   type PomodoroEvent,
+  type PomodoroSessionHistory,
   resetPomodoroState,
+  sanitizePomodoroSessionHistory,
   tFallback,
   useTaskStore,
 } from '@mindwtr/core';
@@ -56,6 +58,7 @@ export function PomodoroPanel({
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined);
   const [phaseEndsAt, setPhaseEndsAt] = useState<string | undefined>(undefined);
   const [lastEvent, setLastEvent] = useState<PomodoroEvent | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<PomodoroSessionHistory>(() => sanitizePomodoroSessionHistory());
   const [isHydratingSession, setIsHydratingSession] = useState(true);
   const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
   const hasHydratedRef = useRef(false);
@@ -82,6 +85,15 @@ export function PomodoroPanel({
     ));
     setSelectedTaskId((prev) => (prev === session.selectedTaskId ? prev : session.selectedTaskId));
     setPhaseEndsAt((prev) => (prev === session.phaseEndsAt ? prev : session.phaseEndsAt));
+    setSessionHistory((prev) => (
+      prev.totalCompletedFocusSessions === session.sessionHistory.totalCompletedFocusSessions
+        && Object.keys(prev.completedFocusSessionsByTaskId).length === Object.keys(session.sessionHistory.completedFocusSessionsByTaskId).length
+        && Object.entries(prev.completedFocusSessionsByTaskId).every(([taskId, count]) => (
+          session.sessionHistory.completedFocusSessionsByTaskId[taskId] === count
+        ))
+        ? prev
+        : session.sessionHistory
+    ));
     if (options?.emitEvent !== false) {
       setLastEvent(session.lastEvent);
     }
@@ -143,6 +155,7 @@ export function PomodoroPanel({
       selectedTaskId,
       phaseEndsAt,
       lastEvent: null,
+      sessionHistory,
     });
     void AsyncStorage.setItem(POMODORO_SESSION_STORAGE_KEY, JSON.stringify(payload)).catch((error) => {
       void logWarn('Failed to persist pomodoro session', {
@@ -154,6 +167,7 @@ export function PomodoroPanel({
     durations,
     phaseEndsAt,
     selectedTaskId,
+    sessionHistory,
     timerState.completedFocusSessions,
     timerState.isRunning,
     timerState.phase,
@@ -168,10 +182,11 @@ export function PomodoroPanel({
         timerState,
         selectedTaskId,
         phaseEndsAt,
+        sessionHistory,
       }, Date.now(), autoStartOptions));
     }, 1000);
     return () => clearInterval(interval);
-  }, [autoStartOptions, durations, phaseEndsAt, selectedTaskId, timerState]);
+  }, [autoStartOptions, durations, phaseEndsAt, selectedTaskId, sessionHistory, timerState]);
 
   const selectedTask = useMemo(
     () => (linkTaskEnabled && selectedTaskId ? tasks.find((task) => task.id === selectedTaskId) : undefined),
@@ -221,6 +236,7 @@ export function PomodoroPanel({
       timerState,
       selectedTaskId,
       phaseEndsAt,
+      sessionHistory,
     }, Date.now(), autoStartOptions);
     applyResolvedSession({
       ...session,
@@ -237,6 +253,7 @@ export function PomodoroPanel({
       timerState,
       selectedTaskId,
       phaseEndsAt,
+      sessionHistory,
     }, Date.now(), autoStartOptions);
     if (session.lastEvent) {
       applyResolvedSession(session);
@@ -254,6 +271,7 @@ export function PomodoroPanel({
       timerState,
       selectedTaskId,
       phaseEndsAt,
+      sessionHistory,
     }, Date.now(), autoStartOptions);
     applyResolvedSession({
       ...session,
@@ -269,6 +287,7 @@ export function PomodoroPanel({
       timerState,
       selectedTaskId,
       phaseEndsAt,
+      sessionHistory,
     }, Date.now(), autoStartOptions);
     applyResolvedSession({
       ...session,

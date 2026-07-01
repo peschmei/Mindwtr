@@ -1065,8 +1065,10 @@ export {
     getPomodoroPhaseSeconds,
     getPomodoroPresetOptions,
     POMODORO_PRESETS,
+    recordPomodoroFocusSessions,
     resetPomodoroState,
     sanitizePomodoroDurations,
+    sanitizePomodoroSessionHistory,
     tickPomodoroState,
 } from './pomodoro';
 export type {
@@ -1076,6 +1078,7 @@ export type {
     PomodoroEvent,
     PomodoroPhase,
     PomodoroPreset,
+    PomodoroSessionHistory,
     PomodoroState,
     PomodoroTickResult,
 } from './pomodoro';

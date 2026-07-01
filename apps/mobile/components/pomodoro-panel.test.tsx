@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { PomodoroPanel } from './pomodoro-panel';
 
@@ -112,6 +113,44 @@ describe('PomodoroPanel', () => {
         pomodoro: {},
       },
     };
+    vi.mocked(AsyncStorage.getItem).mockResolvedValue(null);
+    vi.mocked(AsyncStorage.setItem).mockResolvedValue(undefined);
+    vi.mocked(AsyncStorage.setItem).mockClear();
+  });
+
+  it('keeps restored local session history when persisting the timer state', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify({
+      durations: { focusMinutes: 25, breakMinutes: 5 },
+      timerState: {
+        phase: 'focus',
+        remainingSeconds: 1500,
+        isRunning: false,
+        completedFocusSessions: 0,
+      },
+      selectedTaskId: 'task-1',
+      sessionHistory: {
+        totalCompletedFocusSessions: 4,
+        completedFocusSessionsByTaskId: {
+          'task-1': 2,
+        },
+      },
+    }));
+
+    await renderPanel();
+    await act(async () => undefined);
+
+    const lastWrite = vi.mocked(AsyncStorage.setItem).mock.calls.at(-1);
+    expect(lastWrite?.[0]).toBe('@mindwtr_pomodoro_state');
+    expect(JSON.parse(String(lastWrite?.[1]))).toMatchObject({
+      timerState: expect.objectContaining({ completedFocusSessions: 4 }),
+      selectedTaskId: 'task-1',
+      sessionHistory: {
+        totalCompletedFocusSessions: 4,
+        completedFocusSessionsByTaskId: {
+          'task-1': 2,
+        },
+      },
+    });
   });
 
   it('renders the phase as read-only status and names the next switch action', async () => {
