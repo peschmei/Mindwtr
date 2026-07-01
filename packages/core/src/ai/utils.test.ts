@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseJson } from './utils';
 
 describe('parseJson', () => {
@@ -53,5 +53,19 @@ describe('parseJson', () => {
     it('throws when no validator-complete element can be salvaged', () => {
         // The first suggestion is cut off before its required fields, so nothing validates.
         expect(() => parseJson<Reviewish>('{"suggestions":[{"id":"a","act', isReviewish)).toThrow(/AI JSON parse error:/);
+    });
+    it('limits repair validation attempts for payloads with many boundaries', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const validator = vi.fn((_value: unknown): _value is { items: string[] } => false);
+        const quote = String.fromCharCode(34);
+        const values = Array.from({ length: 120 }, (_, index) => JSON.stringify('value-' + index)).join(',');
+        const truncated = '{' + quote + 'items' + quote + ':[' + values + ',';
+
+        try {
+            expect(() => parseJson(truncated, validator)).toThrow(/AI JSON parse error:/);
+            expect(validator.mock.calls.length).toBeLessThanOrEqual(50);
+        } finally {
+            warn.mockRestore();
+        }
     });
 });

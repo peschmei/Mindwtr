@@ -1,3 +1,5 @@
+const MAX_JSON_REPAIR_BOUNDARIES = 50;
+
 /**
  * Repair candidates for a truncated JSON document (e.g. the model hit its output
  * token limit mid-array). Walks the text tracking string state and the bracket
@@ -41,8 +43,9 @@ function repairTruncatedJson(input: string): string[] {
     }
 
     const repaired: string[] = [];
-    for (let i = boundaries.length - 1; i >= 0; i -= 1) {
-        const { len, stack: openStack } = boundaries[i];
+    const repairBoundaries = boundaries.slice(-MAX_JSON_REPAIR_BOUNDARIES);
+    for (let i = repairBoundaries.length - 1; i >= 0; i -= 1) {
+        const { len, stack: openStack } = repairBoundaries[i];
         const head = input.slice(0, len).replace(/[,\s]+$/, '');
         const closers = openStack
             .map((opener) => (opener === '{' ? '}' : ']'))
