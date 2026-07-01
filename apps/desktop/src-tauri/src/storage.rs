@@ -2495,6 +2495,204 @@ mod tests {
     }
 
     #[test]
+    fn sqlite_round_trip_preserves_fully_populated_task_and_project_fields() {
+        let mut conn = Connection::open_in_memory().expect("should open in-memory db");
+        conn.execute_batch(SQLITE_SCHEMA)
+            .expect("should create schema");
+
+        let task = serde_json::json!({
+            "id": "task-full",
+            "title": "Full task",
+            "status": "completed",
+            "priority": "high",
+            "energyLevel": "medium",
+            "assignedTo": "person-1",
+            "taskMode": "deep",
+            "startTime": "2026-06-01T08:30:00.000Z",
+            "dueDate": "2026-06-02T12:00:00.000Z",
+            "recurrence": {
+                "type": "weekly",
+                "interval": 2,
+                "weekdays": [1, 3]
+            },
+            "showFutureRecurrence": true,
+            "pushCount": 3,
+            "tags": ["tag-1", "tag-2"],
+            "contexts": ["context-1"],
+            "checklist": [{
+                "id": "check-1",
+                "title": "Check one",
+                "isCompleted": false
+            }],
+            "description": "Task body",
+            "textDirection": "rtl",
+            "attachments": [{
+                "id": "task-attachment-1",
+                "kind": "file",
+                "title": "task.pdf",
+                "uri": "file:///task.pdf",
+                "cloudKey": "attachments/task.pdf",
+                "localStatus": "available",
+                "createdAt": "2026-06-01T08:00:00.000Z",
+                "updatedAt": "2026-06-01T08:00:00.000Z"
+            }],
+            "location": "Office",
+            "projectId": "project-full",
+            "sectionId": "section-1",
+            "areaId": "area-1",
+            "order": 17,
+            "boardOrder": 4,
+            "isFocusedToday": true,
+            "timeEstimate": "45m",
+            "suppressMindwtrReminders": true,
+            "reviewAt": "2026-06-03T09:00:00.000Z",
+            "completedAt": "2026-06-04T10:00:00.000Z",
+            "statusBeforeProjectArchive": "next",
+            "completedAtBeforeProjectArchive": "2026-06-05T10:00:00.000Z",
+            "isFocusedTodayBeforeProjectArchive": false,
+            "projectArchivedAt": "2026-06-06T10:00:00.000Z",
+            "rev": 42,
+            "revBy": "device-a",
+            "createdAt": "2026-06-01T08:00:00.000Z",
+            "updatedAt": "2026-06-07T08:00:00.000Z",
+            "deletedAt": "2026-06-08T08:00:00.000Z",
+            "purgedAt": "2026-06-09T08:00:00.000Z"
+        });
+        let project = serde_json::json!({
+            "id": "project-full",
+            "title": "Full project",
+            "status": "waiting",
+            "color": "#2563eb",
+            "order": 9,
+            "tagIds": ["tag-1"],
+            "isSequential": true,
+            "sequentialScope": "section",
+            "isFocused": true,
+            "supportNotes": "Project notes",
+            "attachments": [{
+                "id": "project-attachment-1",
+                "kind": "file",
+                "title": "project.pdf",
+                "uri": "file:///project.pdf",
+                "cloudKey": "attachments/project.pdf",
+                "localStatus": "available",
+                "createdAt": "2026-06-01T08:00:00.000Z",
+                "updatedAt": "2026-06-01T08:00:00.000Z"
+            }],
+            "dueDate": "2026-06-10T12:00:00.000Z",
+            "reviewAt": "2026-06-11T09:00:00.000Z",
+            "areaId": "area-1",
+            "areaTitle": "Work",
+            "rev": 43,
+            "revBy": "device-b",
+            "createdAt": "2026-06-01T08:00:00.000Z",
+            "updatedAt": "2026-06-07T08:00:00.000Z",
+            "deletedAt": "2026-06-08T08:00:00.000Z",
+            "purgedAt": "2026-06-09T08:00:00.000Z"
+        });
+        let source = serde_json::json!({
+            "tasks": [task.clone()],
+            "projects": [project.clone()],
+            "areas": [],
+            "sections": [],
+            "people": [],
+            "settings": {}
+        });
+
+        migrate_json_to_sqlite(&mut conn, &source).expect("should write fully populated records");
+        let round_tripped = read_sqlite_data(&conn).expect("should read sqlite data");
+        let round_tripped_task = round_tripped
+            .get("tasks")
+            .and_then(|value| value.as_array())
+            .and_then(|tasks| tasks.first())
+            .expect("should read task");
+        let round_tripped_project = round_tripped
+            .get("projects")
+            .and_then(|value| value.as_array())
+            .and_then(|projects| projects.first())
+            .expect("should read project");
+
+        for key in [
+            "id",
+            "title",
+            "status",
+            "priority",
+            "energyLevel",
+            "assignedTo",
+            "taskMode",
+            "startTime",
+            "dueDate",
+            "recurrence",
+            "showFutureRecurrence",
+            "pushCount",
+            "tags",
+            "contexts",
+            "checklist",
+            "description",
+            "textDirection",
+            "attachments",
+            "location",
+            "projectId",
+            "sectionId",
+            "areaId",
+            "order",
+            "boardOrder",
+            "isFocusedToday",
+            "timeEstimate",
+            "suppressMindwtrReminders",
+            "reviewAt",
+            "completedAt",
+            "statusBeforeProjectArchive",
+            "completedAtBeforeProjectArchive",
+            "isFocusedTodayBeforeProjectArchive",
+            "projectArchivedAt",
+            "rev",
+            "revBy",
+            "createdAt",
+            "updatedAt",
+            "deletedAt",
+            "purgedAt",
+        ] {
+            assert_eq!(
+                round_tripped_task.get(key),
+                task.get(key),
+                "task field {key}"
+            );
+        }
+        assert_eq!(round_tripped_task.get("orderNum"), task.get("order"));
+
+        for key in [
+            "id",
+            "title",
+            "status",
+            "color",
+            "order",
+            "tagIds",
+            "isSequential",
+            "sequentialScope",
+            "isFocused",
+            "supportNotes",
+            "attachments",
+            "dueDate",
+            "reviewAt",
+            "areaId",
+            "areaTitle",
+            "rev",
+            "revBy",
+            "createdAt",
+            "updatedAt",
+            "deletedAt",
+            "purgedAt",
+        ] {
+            assert_eq!(
+                round_tripped_project.get(key),
+                project.get(key),
+                "project field {key}"
+            );
+        }
+    }
+
+    #[test]
     fn ensure_tasks_fts_schema_recreates_legacy_index_with_checklist() {
         let conn = Connection::open_in_memory().expect("should open in-memory db");
         conn.execute_batch(
