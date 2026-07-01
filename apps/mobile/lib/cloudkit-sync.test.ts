@@ -1,9 +1,25 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     ensureCloudKitReady,
     readRemoteCloudKit,
     writeRemoteCloudKit,
 } from './cloudkit-sync';
+
+const swiftMapperSource = readFileSync(
+    new URL('../modules/cloudkit-sync/ios/CloudKitRecordMapper.swift', import.meta.url),
+    'utf8',
+);
+const macosBridgeSource = readFileSync(
+    new URL('../../desktop/src-tauri/src/macos_cloudkit_bridge.m', import.meta.url),
+    'utf8',
+);
+
+const extractSourceBlock = (source: string, pattern: RegExp, label: string): string => {
+    const match = source.match(pattern);
+    if (!match?.[1]) throw new Error('Missing ' + label + ' field block');
+    return match[1];
+};
 
 const {
     asyncStorageGetItem,
@@ -46,6 +62,24 @@ vi.mock('./app-log', () => ({
 }));
 
 const createPendingPromise = <T,>() => new Promise<T>(() => undefined);
+
+describe('CloudKit native field specs', () => {
+    it('maps project purgedAt in Swift and macOS CloudKit mappers', () => {
+        const swiftProjectFields = extractSourceBlock(
+            swiftMapperSource,
+            /private static let projectFieldSpecs: \[FieldSpec\] = \[([\s\S]*?)\n    \]/,
+            'Swift project',
+        );
+        const macosProjectFields = extractSourceBlock(
+            macosBridgeSource,
+            /static const MWFieldSpec kProjectFields\[\] = \{([\s\S]*?)\n\};/,
+            'macOS project',
+        );
+
+        expect(swiftProjectFields).toContain('purgedAt');
+        expect(macosProjectFields).toContain('purgedAt');
+    });
+});
 
 describe('cloudkit-sync abort handling', () => {
     beforeEach(() => {

@@ -168,6 +168,7 @@ enum CloudKitRecordMapper {
         FieldSpec(jsKey: "createdAt", ckKey: "createdAt", kind: .date),
         FieldSpec(jsKey: "updatedAt", ckKey: "updatedAt", kind: .date),
         FieldSpec(jsKey: "deletedAt", ckKey: "deletedAt", kind: .date),
+        FieldSpec(jsKey: "purgedAt", ckKey: "purgedAt", kind: .date),
     ]
 
     // MARK: - Section Fields
