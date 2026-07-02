@@ -73,9 +73,26 @@ const normalizeAttachmentsForContentComparison = (
         .map((attachment) => normalizeAttachmentForContentComparison(attachment));
 };
 
+// Task fields deliberately absent from content comparison: revision/order metadata
+// (CONTENT_DIFF_IGNORED_KEYS) and project-archive bookkeeping (SIGNATURE_OPAQUE_KEYS).
+// A new Task field must be added either here or to the comparable below (compile error otherwise).
+type TaskContentComparisonExcludedKey =
+    | 'rev'
+    | 'revBy'
+    | 'createdAt'
+    | 'updatedAt'
+    | 'purgedAt'
+    | 'order'
+    | 'orderNum'
+    | 'boardOrder'
+    | 'statusBeforeProjectArchive'
+    | 'completedAtBeforeProjectArchive'
+    | 'isFocusedTodayBeforeProjectArchive'
+    | 'projectArchivedAt';
+
 export const normalizeTaskForContentComparison = (task: Task): Record<string, unknown> => {
     const hasRecurrence = task.recurrence !== undefined && task.recurrence !== null;
-    const comparable: Record<string, unknown> = {
+    const comparable = {
         id: task.id,
         title: task.title,
         status: task.status === 'inbox' ? undefined : task.status,
@@ -110,7 +127,7 @@ export const normalizeTaskForContentComparison = (task: Task): Record<string, un
         reviewAt: task.reviewAt,
         completedAt: task.completedAt,
         deletedAt: task.deletedAt,
-    };
+    } satisfies Record<Exclude<keyof Task, TaskContentComparisonExcludedKey>, unknown>;
     return comparable;
 };
 

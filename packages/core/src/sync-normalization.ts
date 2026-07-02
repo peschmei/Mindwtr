@@ -187,7 +187,9 @@ export const normalizeTaskForSyncMerge = (task: Task, nowIso: string): Task => {
         order: normalized.order,
         orderNum: normalized.orderNum,
         boardOrder: normalized.boardOrder,
-    };
+        // Fields not listed here are stripped from every task on every merge.
+        // The satisfies clause turns a forgotten new Task field into a compile error.
+    } satisfies Record<keyof Task, unknown>;
 };
 
 export const normalizeProjectForSyncMerge = (project: Project): Project => {
