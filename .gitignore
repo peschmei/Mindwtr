@@ -82,6 +82,7 @@ aur/src/
 
 # Flatpak build cache
 .flatpak-builder/
+build-dir/
 
 # Agent files
 AGENT.md
