@@ -54,6 +54,7 @@ vi.mock('@mindwtr/core', () => {
   };
   return {
     formatFocusTaskLimitText: (template: string, limit: number) => template.replace('{{count}}', String(limit)),
+    shallow: Object.is,
     useTaskStore: () => storeState,
     isDueForReview: () => false,
     isTaskInActiveProject: () => true,

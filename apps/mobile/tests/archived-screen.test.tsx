@@ -44,6 +44,7 @@ vi.mock('react-native', async () => {
 });
 
 vi.mock('@mindwtr/core', () => ({
+  shallow: Object.is,
   useTaskStore: () => mocks.storeState,
   safeFormatDate: vi.fn(() => 'May 12, 2026, 8:30 AM'),
   taskMatchesAreaFilter: vi.fn(() => true),
