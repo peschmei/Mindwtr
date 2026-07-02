@@ -380,7 +380,7 @@ describe('TaskEditContentField', () => {
     });
   });
 
-  it('wraps selected checklist item text from mobile key presses', () => {
+  it('wraps selected checklist item text when the native change replaces the range', () => {
     const { getState, applyChecklistUpdate, setEditedTask } = createChecklistState();
     let tree!: ReturnType<typeof create>;
 
@@ -402,23 +402,22 @@ describe('TaskEditContentField', () => {
       input.props.onSelectionChange({ nativeEvent: { selection: { start: 0, end: 6 } } });
     });
 
-    const preventDefault = vi.fn();
-    act(() => {
-      input.props.onKeyPress({ nativeEvent: { key: '[' }, preventDefault });
-    });
-
-    expect(preventDefault).toHaveBeenCalled();
-    expect(getState().checklist[0].title).toBe('[Item 1]');
-
-    const callsAfterKeyPress = applyChecklistUpdate.mock.calls.length;
     act(() => {
       input.props.onChangeText('[');
     });
 
-    expect(applyChecklistUpdate).toHaveBeenCalledTimes(callsAfterKeyPress);
+    expect(getState().checklist[0].title).toBe('[Item 1]');
+
+    const callsAfterWrap = applyChecklistUpdate.mock.calls.length;
+    act(() => {
+      input.props.onChangeText('[');
+    });
+
+    expect(getState().checklist[0].title).toBe('[Item 1]');
+    expect(applyChecklistUpdate).toHaveBeenCalledTimes(callsAfterWrap);
   });
 
-  it('leaves checklist key presses to native text input when editor assist is disabled', () => {
+  it('leaves checklist typing to native text input when editor assist is disabled', () => {
     useTaskStore.setState({ settings: { markdownEditorAssist: false } });
     const { getState, applyChecklistUpdate, setEditedTask } = createChecklistState();
     let tree!: ReturnType<typeof create>;
@@ -440,14 +439,6 @@ describe('TaskEditContentField', () => {
     act(() => {
       input.props.onSelectionChange({ nativeEvent: { selection: { start: 0, end: 6 } } });
     });
-
-    const preventDefault = vi.fn();
-    act(() => {
-      input.props.onKeyPress({ nativeEvent: { key: '[' }, preventDefault });
-    });
-
-    expect(preventDefault).not.toHaveBeenCalled();
-    expect(getState().checklist[0].title).toBe('Item 1');
 
     act(() => {
       input.props.onChangeText('[');
@@ -477,24 +468,22 @@ describe('TaskEditContentField', () => {
 
       let input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.checklist 1' });
 
-      const preventDefault = vi.fn();
-      act(() => {
-        input.props.onKeyPress({ nativeEvent: { key: '(' }, preventDefault });
-      });
-
-      expect(preventDefault).toHaveBeenCalled();
-      expect(getState().checklist[0].title).toBe('()');
-
-      input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.checklist 1' });
-      expect(input.props.selection).toEqual({ start: 1, end: 1 });
-
-      const callsAfterKeyPress = applyChecklistUpdate.mock.calls.length;
       act(() => {
         input.props.onChangeText('(');
       });
 
       expect(getState().checklist[0].title).toBe('()');
-      expect(applyChecklistUpdate).toHaveBeenCalledTimes(callsAfterKeyPress);
+
+      input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.checklist 1' });
+      expect(input.props.selection).toEqual({ start: 1, end: 1 });
+
+      const callsAfterPair = applyChecklistUpdate.mock.calls.length;
+      act(() => {
+        input.props.onChangeText('(');
+      });
+
+      expect(getState().checklist[0].title).toBe('()');
+      expect(applyChecklistUpdate).toHaveBeenCalledTimes(callsAfterPair);
 
       input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.checklist 1' });
       act(() => {
@@ -502,7 +491,7 @@ describe('TaskEditContentField', () => {
       });
 
       expect(getState().checklist[0].title).toBe('()');
-      expect(applyChecklistUpdate).toHaveBeenCalledTimes(callsAfterKeyPress);
+      expect(applyChecklistUpdate).toHaveBeenCalledTimes(callsAfterPair);
     });
   });
 

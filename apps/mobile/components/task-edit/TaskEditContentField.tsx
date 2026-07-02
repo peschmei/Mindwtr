@@ -6,8 +6,6 @@ import {
     View,
     Platform,
     findNodeHandle,
-    type NativeSyntheticEvent,
-    type TextInputKeyPressEventData,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -25,10 +23,7 @@ import { MarkdownText } from '../markdown-text';
 import { getControlledTextInputSelection } from '../text-input-selection';
 import {
     applyMarkdownPairInsertionWithSelectionFallback,
-    applyMarkdownPairKeyPressWithSelectionFallback,
-    createIgnoredNativePairChange,
     createIgnoredNativePairChangeFromTextChange,
-    shouldIgnoreNativePairKeyPress,
     shouldIgnoreNativePairChange,
     type IgnoredNativePairChange,
     isRangeSelection,
@@ -286,47 +281,10 @@ export function TaskEditContentField({
         updateChecklistTitle(index, key, text);
     }, [getChecklistSelection, restoreChecklistSelection, updateChecklistTitle]);
 
-    const handleChecklistKeyPress = React.useCallback((
-        index: number,
-        key: string,
-        event: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    ) => {
-        const previousValue = checklistTitleRefs.current[key] ?? '';
-        const ignoredNativeChange = ignoredNativePairChangeRefs.current[key];
-        if (
-            ignoredNativeChange
-            && shouldIgnoreNativePairKeyPress(event.nativeEvent.key, previousValue, ignoredNativeChange)
-        ) {
-            ignoredNativeChange.duplicateKeyPressHandled = true;
-            event.preventDefault?.();
-            restoreChecklistSelection(key, ignoredNativeChange.selection);
-            return;
-        }
-
-        const assistEnabled = isMarkdownEditorAssistEnabled(useTaskStore.getState().settings);
-        const pairedInsertion = applyMarkdownPairKeyPressWithSelectionFallback(
-            previousValue,
-            event.nativeEvent.key,
-            getChecklistSelection(key, previousValue),
-            lastChecklistRangeRefs.current[key],
-            { assist: assistEnabled },
-        );
-        if (!pairedInsertion) return;
-
-        event.preventDefault?.();
-        ignoredNativePairChangeRefs.current[key] = createIgnoredNativePairChange(
-            previousValue,
-            event.nativeEvent.key,
-            pairedInsertion.baseSelection,
-            pairedInsertion.result,
-        );
-        lastChecklistRangeRefs.current[key] = isRangeSelection(pairedInsertion.result.selection)
-            ? pairedInsertion.result.selection
-            : null;
-        updateChecklistTitle(index, key, pairedInsertion.result.value);
-        restoreChecklistSelection(key, pairedInsertion.result.selection);
-    }, [getChecklistSelection, restoreChecklistSelection, updateChecklistTitle]);
-
+    // Checklist auto-pairing intentionally lives only in handleChecklistTitleChange. On
+    // Android the keyPress event is synthesized from the same native edit as the text
+    // change (and preventDefault cannot cancel it), so a keyPress pairing path processes
+    // one keystroke twice — IME-specific echo orders then double the pair (#565).
     const handleChecklistMove = React.useCallback((from: number, to: number) => {
         if (from === to || to < 0) return;
 
@@ -652,7 +610,6 @@ export function TaskEditContentField({
                                                     }
                                                 }}
                                                 onChangeText={(text) => handleChecklistTitleChange(index, checklistItemKey, text)}
-                                                onKeyPress={(event) => handleChecklistKeyPress(index, checklistItemKey, event)}
                                                 onSelectionChange={(event) => handleChecklistSelectionChange(
                                                     checklistItemKey,
                                                     event.nativeEvent.selection,

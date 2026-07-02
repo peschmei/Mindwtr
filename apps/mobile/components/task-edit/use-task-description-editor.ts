@@ -13,12 +13,9 @@ import {
 } from '@mindwtr/core';
 
 import {
-    applyMarkdownPairKeyPressWithSelectionFallback,
     applyMarkdownPairInsertionWithSelectionFallback,
     applyMarkdownUrlPasteWithSelectionFallback,
-    createIgnoredNativePairChange,
     createIgnoredNativePairChangeFromTextChange,
-    shouldIgnoreNativePairKeyPress,
     shouldIgnoreNativePairChange,
     type IgnoredNativePairChange,
     isRangeSelection,
@@ -267,45 +264,11 @@ export function useTaskDescriptionEditor({
         applyDescriptionValue(text);
     }, [applyDescriptionValue, descriptionDraftRef, restoreDescriptionSelection]);
 
+    // Auto-pairing intentionally lives only in handleDescriptionChange. On Android the
+    // keyPress event is synthesized from the same native edit as the text change (and
+    // preventDefault cannot cancel it), so pairing here too processes one keystroke
+    // twice — IME-specific echo orders then double the pair (#565).
     const handleDescriptionKeyPress = React.useCallback((event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
-        const ignoredNativeChange = ignoredNativePairChangeRef.current;
-        if (
-            ignoredNativeChange
-            && shouldIgnoreNativePairKeyPress(event.nativeEvent.key, descriptionDraftRef.current, ignoredNativeChange)
-        ) {
-            ignoredNativeChange.duplicateKeyPressHandled = true;
-            event.preventDefault?.();
-            restoreDescriptionSelection(ignoredNativeChange.selection);
-            return;
-        }
-
-        const assistEnabled = isMarkdownEditorAssistEnabled(useTaskStore.getState().settings);
-        const pairedInsertion = applyMarkdownPairKeyPressWithSelectionFallback(
-            descriptionDraftRef.current,
-            event.nativeEvent.key,
-            descriptionSelectionRef.current,
-            lastDescriptionRangeRef.current,
-            { assist: assistEnabled },
-        );
-        if (pairedInsertion) {
-            event.preventDefault?.();
-            ignoredNativePairChangeRef.current = createIgnoredNativePairChange(
-                descriptionDraftRef.current,
-                event.nativeEvent.key,
-                pairedInsertion.baseSelection,
-                pairedInsertion.result,
-            );
-            lastDescriptionRangeRef.current = isRangeSelection(pairedInsertion.result.selection)
-                ? pairedInsertion.result.selection
-                : null;
-            applyDescriptionValue(pairedInsertion.result.value, {
-                baseSelection: pairedInsertion.baseSelection,
-                nextSelection: pairedInsertion.result.selection,
-            });
-            restoreDescriptionSelection(pairedInsertion.result.selection);
-            return;
-        }
-
         const next = applyMarkdownKeyboardShortcut(
             descriptionDraftRef.current,
             descriptionSelectionRef.current,

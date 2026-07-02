@@ -35,12 +35,9 @@ import { KeyboardAccessoryHost } from './keyboard-accessory-host';
 import { MarkdownFormatToolbar } from './markdown-format-toolbar';
 import { MarkdownReferenceAutocomplete } from './markdown-reference-autocomplete';
 import {
-    applyMarkdownPairKeyPressWithSelectionFallback,
     applyMarkdownPairInsertionWithSelectionFallback,
     applyMarkdownUrlPasteWithSelectionFallback,
-    createIgnoredNativePairChange,
     createIgnoredNativePairChangeFromTextChange,
-    shouldIgnoreNativePairKeyPress,
     shouldIgnoreNativePairChange,
     type IgnoredNativePairChange,
     isRangeSelection,
@@ -394,45 +391,11 @@ export function ExpandedMarkdownEditor({
         setEditorValue(nextValue);
         onChange(nextValue);
     }, [onChange, onSelectionChange, restoreEditorFocus]);
+    // Auto-pairing intentionally lives only in the text-change handler. On Android the
+    // keyPress event is synthesized from the same native edit as the text change (and
+    // preventDefault cannot cancel it), so pairing here too processes one keystroke
+    // twice — IME-specific echo orders then double the pair (#565).
     const handleKeyPress = React.useCallback((event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
-        const ignoredNativeChange = ignoredNativePairChangeRef.current;
-        if (
-            ignoredNativeChange
-            && shouldIgnoreNativePairKeyPress(event.nativeEvent.key, valueRef.current, ignoredNativeChange)
-        ) {
-            ignoredNativeChange.duplicateKeyPressHandled = true;
-            event.preventDefault?.();
-            restoreEditorFocus(ignoredNativeChange.selection);
-            return;
-        }
-
-        const assistEnabled = isMarkdownEditorAssistEnabled(useTaskStore.getState().settings);
-        const pairedInsertion = applyMarkdownPairKeyPressWithSelectionFallback(
-            valueRef.current,
-            event.nativeEvent.key,
-            selectionRef.current,
-            lastRangeSelectionRef.current,
-            { assist: assistEnabled },
-        );
-        if (pairedInsertion) {
-            event.preventDefault?.();
-            ignoredNativePairChangeRef.current = createIgnoredNativePairChange(
-                valueRef.current,
-                event.nativeEvent.key,
-                pairedInsertion.baseSelection,
-                pairedInsertion.result,
-            );
-            valueRef.current = pairedInsertion.result.value;
-            selectionRef.current = pairedInsertion.result.selection;
-            lastRangeSelectionRef.current = isRangeSelection(pairedInsertion.result.selection) ? pairedInsertion.result.selection : null;
-            setEditorValue(pairedInsertion.result.value);
-            setEditorSelection(pairedInsertion.result.selection);
-            onChange(pairedInsertion.result.value);
-            onSelectionChange(pairedInsertion.result.selection);
-            restoreEditorFocus(pairedInsertion.result.selection);
-            return;
-        }
-
         const next = applyMarkdownKeyboardShortcut(
             valueRef.current,
             selectionRef.current,

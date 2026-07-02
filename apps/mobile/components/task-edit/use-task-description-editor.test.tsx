@@ -61,15 +61,10 @@ describe('useTaskDescriptionEditor', () => {
       tree = create(<DescriptionEditorHarness expose={expose} />);
     });
 
-    const preventDefault = vi.fn();
     act(() => {
-      expose.current!.editor.handleDescriptionKeyPress({
-        nativeEvent: { key: '(' },
-        preventDefault,
-      } as any);
+      expose.current!.editor.handleDescriptionChange('(');
     });
 
-    expect(preventDefault).toHaveBeenCalled();
     expect(expose.current!.draft).toBe('()');
 
     act(() => {
@@ -89,7 +84,46 @@ describe('useTaskDescriptionEditor', () => {
     });
   });
 
-  it('ignores duplicate Android key press echoes before stale native changes arrive', () => {
+  it('keeps a single pair when the native change arrives before repeated key press echoes', () => {
+    // Samsung IME order from #565: the text change fires first, then the same
+    // keystroke is echoed as multiple onKeyPress events for one physical press.
+    const expose = React.createRef<HarnessApi | null>();
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<DescriptionEditorHarness expose={expose} />);
+    });
+
+    act(() => {
+      expose.current!.editor.handleDescriptionChange('(');
+    });
+
+    expect(expose.current!.draft).toBe('()');
+
+    act(() => {
+      expose.current!.editor.handleDescriptionKeyPress({
+        nativeEvent: { key: '(' },
+        preventDefault: vi.fn(),
+      } as any);
+    });
+
+    expect(expose.current!.draft).toBe('()');
+
+    act(() => {
+      expose.current!.editor.handleDescriptionKeyPress({
+        nativeEvent: { key: '(' },
+        preventDefault: vi.fn(),
+      } as any);
+    });
+
+    expect(expose.current!.draft).toBe('()');
+
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('leaves pairing to the text change when key press echoes arrive first', () => {
     const expose = React.createRef<HarnessApi | null>();
     let tree!: ReturnType<typeof create>;
 
@@ -105,8 +139,10 @@ describe('useTaskDescriptionEditor', () => {
       } as any);
     });
 
-    expect(firstPreventDefault).toHaveBeenCalled();
-    expect(expose.current!.draft).toBe('[]');
+    // Key presses never pair: on Android they describe the same native edit as
+    // the following text change, so pairing here would process it twice (#565).
+    expect(firstPreventDefault).not.toHaveBeenCalled();
+    expect(expose.current!.draft).toBe('');
 
     const duplicatePreventDefault = vi.fn();
     act(() => {
@@ -116,7 +152,13 @@ describe('useTaskDescriptionEditor', () => {
       } as any);
     });
 
-    expect(duplicatePreventDefault).toHaveBeenCalled();
+    expect(duplicatePreventDefault).not.toHaveBeenCalled();
+    expect(expose.current!.draft).toBe('');
+
+    act(() => {
+      expose.current!.editor.handleDescriptionChange('[');
+    });
+
     expect(expose.current!.draft).toBe('[]');
 
     act(() => {

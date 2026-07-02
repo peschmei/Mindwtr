@@ -1,40 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-    applyMarkdownPairKeyPressWithSelectionFallback,
     applyMarkdownPairInsertionWithSelectionFallback,
     applyMarkdownUrlPasteWithSelectionFallback,
-    createIgnoredNativePairChange,
     createIgnoredNativePairChangeFromTextChange,
     shouldIgnoreNativePairChange,
 } from './markdown-selection-utils';
 
 describe('markdown selection replacement fallbacks', () => {
-    it('recognizes raw and duplicate native pair changes after an applied key press', () => {
-        const paired = applyMarkdownPairKeyPressWithSelectionFallback(
-            '',
-            '(',
-            { start: 0, end: 0 },
-        );
-        expect(paired?.result).toEqual({
-            value: '()',
-            selection: { start: 1, end: 1 },
-        });
-
-        const ignored = createIgnoredNativePairChange(
-            '',
-            '(',
-            paired!.baseSelection,
-            paired!.result,
-        );
-
-        expect(shouldIgnoreNativePairChange('(', '()', ignored)).toBe(true);
-        expect(shouldIgnoreNativePairChange('(()', '()', ignored)).toBe(true);
-        expect(shouldIgnoreNativePairChange('(())', '()', ignored)).toBe(true);
-        expect(shouldIgnoreNativePairChange('()a', '()', ignored)).toBe(false);
-    });
-
-    it('recognizes duplicate native pair changes after a text change applies the pair first', () => {
+    it('recognizes duplicate native pair changes after a text change applies the pair', () => {
         const paired = applyMarkdownPairInsertionWithSelectionFallback(
             '',
             '(',
@@ -87,6 +61,22 @@ describe('markdown selection replacement fallbacks', () => {
         ).toBeNull();
     });
 
+    it('wraps selected text when the native change replaces the current range', () => {
+        expect(
+            applyMarkdownPairInsertionWithSelectionFallback(
+                'read docs',
+                'read [',
+                { start: 5, end: 9 },
+            ),
+        ).toEqual({
+            result: {
+                value: 'read [docs]',
+                selection: { start: 6, end: 10 },
+            },
+            baseSelection: { start: 5, end: 9 },
+        });
+    });
+
     it('also keeps pair insertion working when selection collapses before the text change', () => {
         expect(
             applyMarkdownPairInsertionWithSelectionFallback(
@@ -104,44 +94,11 @@ describe('markdown selection replacement fallbacks', () => {
         });
     });
 
-    it('wraps selected text from a mobile key press before Android replaces the range', () => {
+    it('wraps selected text from a mobile quote text change', () => {
         expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
+            applyMarkdownPairInsertionWithSelectionFallback(
                 'read docs',
-                '[',
-                { start: 5, end: 9 },
-            ),
-        ).toEqual({
-            result: {
-                value: 'read [docs]',
-                selection: { start: 6, end: 10 },
-            },
-            baseSelection: { start: 5, end: 9 },
-        });
-    });
-
-    it('uses the last range selection for mobile key press pairing after selection collapses', () => {
-        expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
-                'read docs',
-                '[',
-                { start: 5, end: 5 },
-                { start: 5, end: 9 },
-            ),
-        ).toEqual({
-            result: {
-                value: 'read [docs]',
-                selection: { start: 6, end: 10 },
-            },
-            baseSelection: { start: 5, end: 9 },
-        });
-    });
-
-    it('wraps selected text from a mobile quote key press', () => {
-        expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
-                'read docs',
-                '"',
+                'read "',
                 { start: 5, end: 9 },
             ),
         ).toEqual({
@@ -153,25 +110,9 @@ describe('markdown selection replacement fallbacks', () => {
         });
     });
 
-    it('auto-pairs a mobile key press without a range selection', () => {
+    it('wraps selected text from a mobile backtick text change', () => {
         expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
-                'read docs',
-                '[',
-                { start: 5, end: 5 },
-            ),
-        ).toEqual({
-            result: {
-                value: 'read []docs',
-                selection: { start: 6, end: 6 },
-            },
-            baseSelection: { start: 5, end: 5 },
-        });
-    });
-
-    it('wraps selected text from a mobile backtick key press', () => {
-        expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
+            applyMarkdownPairInsertionWithSelectionFallback(
                 'run tests',
                 '`',
                 { start: 0, end: 9 },
@@ -185,8 +126,8 @@ describe('markdown selection replacement fallbacks', () => {
         });
     });
 
-    it('keeps repeated mobile backtick key presses on the fallback range after selection collapses', () => {
-        const once = applyMarkdownPairKeyPressWithSelectionFallback(
+    it('escalates repeated backtick wraps into a fenced code block', () => {
+        const once = applyMarkdownPairInsertionWithSelectionFallback(
             'run tests',
             '`',
             { start: 0, end: 9 },
@@ -199,10 +140,10 @@ describe('markdown selection replacement fallbacks', () => {
             baseSelection: { start: 0, end: 9 },
         });
 
-        const twice = applyMarkdownPairKeyPressWithSelectionFallback(
+        // The wrapped range stays selected, so the next backtick replaces it natively.
+        const twice = applyMarkdownPairInsertionWithSelectionFallback(
             once!.result.value,
-            '`',
-            { start: once!.result.selection.end, end: once!.result.selection.end },
+            '```',
             once!.result.selection,
         );
         expect(twice).toEqual({
@@ -214,10 +155,9 @@ describe('markdown selection replacement fallbacks', () => {
         });
 
         expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
+            applyMarkdownPairInsertionWithSelectionFallback(
                 twice!.result.value,
-                '`',
-                { start: twice!.result.selection.end, end: twice!.result.selection.end },
+                '`````',
                 twice!.result.selection,
             ),
         ).toEqual({
@@ -229,8 +169,8 @@ describe('markdown selection replacement fallbacks', () => {
         });
     });
 
-    it('creates a fenced code block from collapsed mobile triple-backtick key presses', () => {
-        const once = applyMarkdownPairKeyPressWithSelectionFallback(
+    it('creates a fenced code block from collapsed mobile triple-backtick text changes', () => {
+        const once = applyMarkdownPairInsertionWithSelectionFallback(
             '',
             '`',
             { start: 0, end: 0 },
@@ -243,9 +183,10 @@ describe('markdown selection replacement fallbacks', () => {
             baseSelection: { start: 0, end: 0 },
         });
 
-        const twice = applyMarkdownPairKeyPressWithSelectionFallback(
+        // Typing the second backtick before the auto-inserted closer types over it.
+        const twice = applyMarkdownPairInsertionWithSelectionFallback(
             once!.result.value,
-            '`',
+            '```',
             once!.result.selection,
         );
         expect(twice).toEqual({
@@ -257,9 +198,9 @@ describe('markdown selection replacement fallbacks', () => {
         });
 
         expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
+            applyMarkdownPairInsertionWithSelectionFallback(
                 twice!.result.value,
-                '`',
+                '```',
                 twice!.result.selection,
             ),
         ).toEqual({
@@ -303,11 +244,11 @@ describe('markdown selection replacement fallbacks', () => {
         });
     });
 
-    it('ignores non-pair mobile key presses without a range selection', () => {
+    it('ignores non-pair mobile text changes', () => {
         expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
+            applyMarkdownPairInsertionWithSelectionFallback(
                 'read docs',
-                'a',
+                'read adocs',
                 { start: 5, end: 5 },
             ),
         ).toBeNull();
@@ -330,15 +271,6 @@ describe('markdown selection replacement fallbacks', () => {
                 'read [',
                 { start: 6, end: 6 },
                 { start: 5, end: 9 },
-                assistOff,
-            ),
-        ).toBeNull();
-        expect(
-            applyMarkdownPairKeyPressWithSelectionFallback(
-                '',
-                '(',
-                { start: 0, end: 0 },
-                null,
                 assistOff,
             ),
         ).toBeNull();

@@ -16,7 +16,6 @@ export type IgnoredNativePairChange = {
     duplicateNativeValues: string[];
     appliedValue: string;
     selection: MarkdownSelection;
-    duplicateKeyPressHandled?: boolean;
 };
 
 export const isRangeSelection = (selection: MarkdownSelection | null | undefined): selection is MarkdownSelection => (
@@ -27,7 +26,7 @@ const replaceSelectionWithText = (value: string, selection: MarkdownSelection, t
     `${value.slice(0, selection.start)}${text}${value.slice(selection.end)}`
 );
 
-export const createIgnoredNativePairChange = (
+const createIgnoredNativePairChange = (
     previousValue: string,
     key: string,
     baseSelection: MarkdownSelection,
@@ -98,18 +97,6 @@ export const shouldIgnoreNativePairChange = (
         || ignoredChange.duplicateNativeValues.includes(nextValue)
     )
 );
-
-export const shouldIgnoreNativePairKeyPress = (
-    key: string,
-    currentValue: string,
-    ignoredChange: IgnoredNativePairChange,
-): boolean => {
-    if (ignoredChange.duplicateKeyPressHandled) return false;
-    if (currentValue !== ignoredChange.appliedValue) return false;
-
-    const duplicateKeyPressValue = replaceSelectionWithText(currentValue, ignoredChange.selection, key);
-    return ignoredChange.duplicateNativeValues.includes(duplicateKeyPressValue);
-};
 
 const getSelectionCandidates = (
     primarySelection: MarkdownSelection,
@@ -182,30 +169,3 @@ export const applyMarkdownPairInsertionWithSelectionFallback = (
     )
 );
 
-export const applyMarkdownPairKeyPressWithSelectionFallback = (
-    previousValue: string,
-    key: string,
-    primarySelection: MarkdownSelection,
-    fallbackSelection?: MarkdownSelection | null,
-    options?: MarkdownAssistOptions,
-): MarkdownSelectionReplacement | null => {
-    if (!key || key.length > 1) return null;
-    if (options?.assist === false) return null;
-
-    const selections = getSelectionCandidates(primarySelection, fallbackSelection);
-    const orderedSelections = [
-        ...selections.filter(isRangeSelection),
-        ...selections.filter((selection) => !isRangeSelection(selection)),
-    ];
-    for (const selection of orderedSelections) {
-        const nextValue = `${previousValue.slice(0, selection.start)}${key}${previousValue.slice(selection.end)}`;
-        const result = applyMarkdownPairInsertion(previousValue, nextValue, selection);
-        if (result) {
-            return {
-                result,
-                baseSelection: selection,
-            };
-        }
-    }
-    return null;
-};

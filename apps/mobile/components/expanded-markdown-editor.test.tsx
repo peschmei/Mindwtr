@@ -142,10 +142,7 @@ describe('ExpandedMarkdownEditor', () => {
     });
 
     act(() => {
-      tree!.root.findByType(TextInput).props.onKeyPress({
-        nativeEvent: { key: '[' },
-        preventDefault: vi.fn(),
-      });
+      tree!.root.findByType(TextInput).props.onChangeText('read [');
     });
 
     expect(onChange).toHaveBeenCalledWith('read [docs]');
@@ -189,10 +186,7 @@ describe('ExpandedMarkdownEditor', () => {
       });
 
       act(() => {
-        tree!.root.findByType(TextInput).props.onKeyPress({
-          nativeEvent: { key: '(' },
-          preventDefault: vi.fn(),
-        });
+        tree!.root.findByType(TextInput).props.onChangeText('(');
       });
 
       expect(onChange).toHaveBeenCalledWith('()');
