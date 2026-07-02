@@ -501,6 +501,7 @@ export function useInboxProcessingController({
     applyProcessingEdits,
     currentTask,
     formatScheduledDateValue,
+    laterNoDateSelected,
     moveToNext,
     pendingStartDate,
     pendingStartDateOnly,

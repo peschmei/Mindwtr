@@ -10,6 +10,11 @@ const deleteTask = vi.fn();
 const addProject = vi.fn();
 const push = vi.fn();
 const clarifyTask = vi.fn();
+const showToast = vi.fn();
+const dismissToast = vi.fn();
+const translate = (key: string) => ({
+  'taskEdit.dateOnly': 'Date only',
+}[key] ?? key);
 const mockSettings = { gtd: { inboxProcessing: {} }, ai: {} } as any;
 const baseInboxTask = {
   id: 'inbox-1',
@@ -223,9 +228,7 @@ vi.mock('@mindwtr/core', () => {
 
 vi.mock('../contexts/language-context', () => ({
   useLanguage: () => ({
-    t: (key: string) => ({
-      'taskEdit.dateOnly': 'Date only',
-    }[key] ?? key),
+    t: translate,
     language: 'en',
   }),
 }));
@@ -240,8 +243,8 @@ vi.mock('expo-router', () => ({
 
 vi.mock('../contexts/toast-context', () => ({
   useToast: () => ({
-    showToast: vi.fn(),
-    dismissToast: vi.fn(),
+    showToast,
+    dismissToast,
   }),
 }));
 
@@ -303,6 +306,8 @@ describe('InboxProcessingModal', () => {
     addProject.mockClear();
     push.mockClear();
     clarifyTask.mockClear();
+    showToast.mockClear();
+    dismissToast.mockClear();
   });
 
   afterEach(() => {
@@ -1015,6 +1020,68 @@ describe('InboxProcessingModal', () => {
     );
     expect(updateTask.mock.calls[0][1]).toHaveProperty('startTime', undefined);
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('advances to the next inbox item when Later No date is selected directly', () => {
+    storeState.tasks = [
+      { ...baseInboxTask },
+      {
+        ...baseInboxTask,
+        id: 'inbox-2',
+        title: 'Second inbox task',
+        description: 'Second description',
+        contexts: [],
+        tags: [],
+      },
+    ];
+    const onClose = vi.fn();
+    let tree: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<InboxProcessingModal visible onClose={onClose} />);
+    });
+
+    const root = tree!.root;
+    const laterButton = findNodeWithText(root, 'Later').parent;
+
+    if (!laterButton) {
+      throw new Error('Later button not found');
+    }
+
+    act(() => {
+      laterButton.props.onPress();
+    });
+
+    const noDateButton = findNodeWithText(root, 'No date').parent;
+
+    if (!noDateButton) {
+      throw new Error('No date button not found');
+    }
+
+    act(() => {
+      noDateButton.props.onPress();
+    });
+
+    const nextTaskButton = findNodeWithText(root, 'Next task →').parent;
+
+    if (!nextTaskButton) {
+      throw new Error('Next task button not found');
+    }
+
+    act(() => {
+      nextTaskButton.props.onPress();
+    });
+
+    expect(updateTask).toHaveBeenCalledWith(
+      'inbox-1',
+      expect.objectContaining({
+        status: 'next',
+      })
+    );
+    expect(updateTask.mock.calls[0][1]).toHaveProperty('startTime', undefined);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(root.findByProps({ placeholder: 'taskEdit.titleLabel' }).props.value).toBe('Second inbox task');
+    expect(showToast).not.toHaveBeenCalled();
   });
 
   it('saves the selected priority when the priority field is shown', () => {
