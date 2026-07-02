@@ -261,6 +261,44 @@ describe('TaskItemDisplay', () => {
         expect(getByText(longTitle)).not.toHaveClass('truncate');
     });
 
+    it('renders a one-line markdown description preview in collapsed rows', () => {
+        const { getByText, queryByText, container } = render(
+            <LanguageProvider>
+                <TaskItemDisplay
+                    task={{ ...baseTask, description: '- [ ] **Call** the vendor\nSecond line' }}
+                    language="en"
+                    selectionMode={false}
+                    isViewOpen={false}
+                    actions={{
+                        onToggleView: vi.fn(),
+                        onEdit: vi.fn(),
+                        onDelete: vi.fn(),
+                        onDuplicate: vi.fn(),
+                        onStatusChange: vi.fn(),
+                        openAttachment: vi.fn(),
+                    }}
+                    visibleAttachments={[]}
+                    recurrenceRule=""
+                    recurrenceStrategy="strict"
+                    prioritiesEnabled={false}
+                    timeEstimatesEnabled={false}
+                    isStagnant={false}
+                    showQuickDone={false}
+                    readOnly={false}
+                    t={(key: string) => key}
+                />
+            </LanguageProvider>
+        );
+
+        const preview = container.querySelector('.task-item-display__description-preview');
+        expect(preview).not.toBeNull();
+        expect(preview).toHaveClass('truncate');
+        expect(getByText('Call').tagName).toBe('STRONG');
+        expect(queryByText(/\*\*Call\*\*/)).toBeNull();
+        expect(queryByText(/\[ \]/)).toBeNull();
+        expect(queryByText('Second line')).toBeNull();
+    });
+
     it('shows the completion date and time for completed tasks when compact details are off', () => {
         const completedTask: Task = {
             ...baseTask,
@@ -613,13 +651,13 @@ describe('TaskItemDisplay', () => {
         );
     });
 
-    it('only renders the task description when the row is expanded', () => {
+    it('shows a truncated description preview collapsed and the full description expanded', () => {
         const taskWithDescription: Task = {
             ...baseTask,
-            description: 'Expanded task note',
+            description: 'Expanded task note\nSecond note line',
         };
 
-        const { queryByText, rerender } = render(
+        const { container, queryByText, rerender } = render(
             <LanguageProvider>
                 <TaskItemDisplay
                     task={taskWithDescription}
@@ -647,7 +685,9 @@ describe('TaskItemDisplay', () => {
             </LanguageProvider>
         );
 
-        expect(queryByText('Expanded task note')).not.toBeInTheDocument();
+        expect(queryByText(/Expanded task note/)).toBeInTheDocument();
+        expect(container.querySelector('.task-item-display__description-preview')).toHaveClass('truncate');
+        expect(queryByText(/Second note line/)).not.toBeInTheDocument();
 
         rerender(
             <LanguageProvider>
@@ -677,7 +717,8 @@ describe('TaskItemDisplay', () => {
             </LanguageProvider>
         );
 
-        expect(queryByText('Expanded task note')).toBeInTheDocument();
+        expect(queryByText(/Expanded task note/)).toBeInTheDocument();
+        expect(queryByText(/Second note line/)).toBeInTheDocument();
     });
 
     it('renders internal markdown task links in expanded details', () => {

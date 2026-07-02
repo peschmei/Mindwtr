@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
-import { safeFormatDate, shallow, useTaskStore } from '@mindwtr/core';
+import { getInlineMarkdownPreview, safeFormatDate, shallow, useTaskStore } from '@mindwtr/core';
 import type { Task } from '@mindwtr/core';
+import { MarkdownInlineText } from '@/components/markdown-text';
 import { useLanguage } from '../../contexts/language-context';
 
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
@@ -84,9 +85,12 @@ function ArchivedTaskItem({
                         {task.title}
                     </Text>
                     {task.description && (
-                        <Text style={[styles.taskDescription, { color: tc.secondaryText }]} numberOfLines={1}>
-                            {task.description}
-                        </Text>
+                        <MarkdownInlineText
+                            markdown={getInlineMarkdownPreview(task.description)}
+                            tc={tc}
+                            style={[styles.taskDescription, { color: tc.secondaryText }]}
+                            numberOfLines={1}
+                        />
                     )}
                     <Text style={[styles.archivedDate, { color: tc.secondaryText }]}>
                         {completedLabel}: {completionDateLabel}

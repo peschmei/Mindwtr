@@ -46,8 +46,13 @@ vi.mock('react-native', async () => {
 vi.mock('@mindwtr/core', () => ({
   shallow: Object.is,
   useTaskStore: () => mocks.storeState,
+  getInlineMarkdownPreview: vi.fn((markdown: string) => (markdown || '').split('\n')[0] ?? ''),
   safeFormatDate: vi.fn(() => 'May 12, 2026, 8:30 AM'),
   taskMatchesAreaFilter: vi.fn(() => true),
+}));
+
+vi.mock('@/components/markdown-text', () => ({
+  MarkdownInlineText: ({ markdown, ...props }: any) => React.createElement('MarkdownInlineText', props, markdown),
 }));
 
 vi.mock('../contexts/language-context', () => ({

@@ -1,6 +1,7 @@
 import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
-import { projectMatchesAreaFilter, shallow, taskMatchesAreaFilter, useTaskStore } from '@mindwtr/core';
+import { getInlineMarkdownPreview, projectMatchesAreaFilter, shallow, taskMatchesAreaFilter, useTaskStore } from '@mindwtr/core';
 import type { Project, Task } from '@mindwtr/core';
+import { MarkdownInlineText } from '@/components/markdown-text';
 import { useTheme } from '../../contexts/theme-context';
 import { useLanguage } from '../../contexts/language-context';
 
@@ -92,9 +93,12 @@ function TrashTaskItem({
             {task.title}
           </Text>
           {task.description && (
-            <Text style={[styles.taskDescription, { color: tc.secondaryText }]} numberOfLines={1}>
-              {task.description}
-            </Text>
+            <MarkdownInlineText
+              markdown={getInlineMarkdownPreview(task.description)}
+              tc={tc}
+              style={[styles.taskDescription, { color: tc.secondaryText }]}
+              numberOfLines={1}
+            />
           )}
           <Text style={[styles.archivedDate, { color: tc.secondaryText }]}>{typeLabel}</Text>
           <Text style={[styles.archivedDate, { color: tc.secondaryText }]}>{deletedLabel}: {task.deletedAt ? new Date(task.deletedAt).toLocaleDateString() : 'Unknown'}</Text>
