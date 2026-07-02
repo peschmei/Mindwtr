@@ -104,8 +104,10 @@ pub(crate) fn open_sqlite(app: &tauri::AppHandle) -> Result<Connection, String> 
     ensure_column(&conn, "tasks", "energyLevel", "TEXT")?;
     ensure_column(&conn, "tasks", "assignedTo", "TEXT")?;
     ensure_column(&conn, "tasks", "textDirection", "TEXT")?;
+    ensure_column(&conn, "tasks", "relativeStartOffset", "TEXT")?;
     ensure_column(&conn, "tasks", "showFutureRecurrence", "INTEGER")?;
     ensure_column(&conn, "tasks", "suppressMindwtrReminders", "INTEGER")?;
+    ensure_column(&conn, "tasks", "repeatReminderMinutes", "INTEGER")?;
     ensure_column(&conn, "tasks", "statusBeforeProjectArchive", "TEXT")?;
     ensure_column(&conn, "tasks", "completedAtBeforeProjectArchive", "TEXT")?;
     ensure_column(
@@ -645,11 +647,12 @@ fn json_str_or_default(value: Option<&Value>, default: &str) -> String {
 fn upsert_task_row(conn: &Connection, task: &Value) -> Result<(), String> {
     let tags_json = json_str_or_default(task.get("tags"), "[]");
     let contexts_json = json_str_or_default(task.get("contexts"), "[]");
+    let relative_start_offset_json = json_str(task.get("relativeStartOffset"));
     let recurrence_json = json_str(task.get("recurrence"));
     let checklist_json = json_str(task.get("checklist"));
     let attachments_json = json_str(task.get("attachments"));
     conn.execute(
-        "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, textDirection, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, reviewAt, completedAt, statusBeforeProjectArchive, completedAtBeforeProjectArchive, isFocusedTodayBeforeProjectArchive, projectArchivedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
+        "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, relativeStartOffset, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, textDirection, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, repeatReminderMinutes, reviewAt, completedAt, statusBeforeProjectArchive, completedAtBeforeProjectArchive, isFocusedTodayBeforeProjectArchive, projectArchivedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41)",
         params![
             task.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
             task.get("title").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -659,6 +662,7 @@ fn upsert_task_row(conn: &Connection, task: &Value) -> Result<(), String> {
             task.get("assignedTo").and_then(|v| v.as_str()),
             task.get("taskMode").and_then(|v| v.as_str()),
             task.get("startTime").and_then(|v| v.as_str()),
+            relative_start_offset_json,
             task.get("dueDate").and_then(|v| v.as_str()),
             recurrence_json,
             task.get("showFutureRecurrence").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
@@ -680,6 +684,7 @@ fn upsert_task_row(conn: &Connection, task: &Value) -> Result<(), String> {
             task.get("isFocusedToday").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
             task.get("timeEstimate").and_then(|v| v.as_str()),
             task.get("suppressMindwtrReminders").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
+            task.get("repeatReminderMinutes").and_then(|v| v.as_i64()),
             task.get("reviewAt").and_then(|v| v.as_str()),
             task.get("completedAt").and_then(|v| v.as_str()),
             task
@@ -778,6 +783,11 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
             map.insert("startTime".to_string(), Value::String(v));
         }
     }
+    let relative_start_offset_raw: Option<String> = row.get("relativeStartOffset")?;
+    let relative_start_offset_val = parse_json_value(relative_start_offset_raw);
+    if !relative_start_offset_val.is_null() {
+        map.insert("relativeStartOffset".to_string(), relative_start_offset_val);
+    }
     if let Ok(val) = row.get::<_, Option<String>>("dueDate") {
         if let Some(v) = val {
             map.insert("dueDate".to_string(), Value::String(v));
@@ -864,6 +874,11 @@ fn row_to_task_value(row: &rusqlite::Row<'_>) -> Result<Value, rusqlite::Error> 
             "suppressMindwtrReminders".to_string(),
             Value::Bool(val != 0),
         );
+    }
+    if let Ok(val) = row.get::<_, Option<i64>>("repeatReminderMinutes") {
+        if let Some(v) = val {
+            map.insert("repeatReminderMinutes".to_string(), Value::Number(v.into()));
+        }
     }
     if let Ok(val) = row.get::<_, Option<String>>("reviewAt") {
         if let Some(v) = val {
@@ -1155,11 +1170,12 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
     for task in tasks {
         let tags_json = json_str_or_default(task.get("tags"), "[]");
         let contexts_json = json_str_or_default(task.get("contexts"), "[]");
+        let relative_start_offset_json = json_str(task.get("relativeStartOffset"));
         let recurrence_json = json_str(task.get("recurrence"));
         let checklist_json = json_str(task.get("checklist"));
         let attachments_json = json_str(task.get("attachments"));
         tx.execute(
-            "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, textDirection, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, reviewAt, completedAt, statusBeforeProjectArchive, completedAtBeforeProjectArchive, isFocusedTodayBeforeProjectArchive, projectArchivedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
+            "INSERT OR REPLACE INTO tasks (id, title, status, priority, energyLevel, assignedTo, taskMode, startTime, relativeStartOffset, dueDate, recurrence, showFutureRecurrence, pushCount, tags, contexts, checklist, description, textDirection, attachments, location, projectId, sectionId, areaId, orderNum, boardOrder, isFocusedToday, timeEstimate, suppressMindwtrReminders, repeatReminderMinutes, reviewAt, completedAt, statusBeforeProjectArchive, completedAtBeforeProjectArchive, isFocusedTodayBeforeProjectArchive, projectArchivedAt, rev, revBy, createdAt, updatedAt, deletedAt, purgedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41)",
             params![
                 task.get("id").and_then(|v| v.as_str()).unwrap_or_default(),
                 task.get("title").and_then(|v| v.as_str()).unwrap_or_default(),
@@ -1169,6 +1185,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 task.get("assignedTo").and_then(|v| v.as_str()),
                 task.get("taskMode").and_then(|v| v.as_str()),
                 task.get("startTime").and_then(|v| v.as_str()),
+                relative_start_offset_json,
                 task.get("dueDate").and_then(|v| v.as_str()),
                 recurrence_json,
                 task.get("showFutureRecurrence").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
@@ -1190,6 +1207,7 @@ fn migrate_json_to_sqlite(conn: &mut Connection, data: &Value) -> Result<(), Str
                 task.get("isFocusedToday").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
                 task.get("timeEstimate").and_then(|v| v.as_str()),
                 task.get("suppressMindwtrReminders").and_then(|v| v.as_bool()).unwrap_or(false) as i32,
+                task.get("repeatReminderMinutes").and_then(|v| v.as_i64()),
                 task.get("reviewAt").and_then(|v| v.as_str()),
                 task.get("completedAt").and_then(|v| v.as_str()),
                 task
@@ -2509,6 +2527,10 @@ mod tests {
             "assignedTo": "person-1",
             "taskMode": "deep",
             "startTime": "2026-06-01T08:30:00.000Z",
+            "relativeStartOffset": {
+                "amount": -2,
+                "unit": "day"
+            },
             "dueDate": "2026-06-02T12:00:00.000Z",
             "recurrence": {
                 "type": "weekly",
@@ -2545,6 +2567,7 @@ mod tests {
             "isFocusedToday": true,
             "timeEstimate": "45m",
             "suppressMindwtrReminders": true,
+            "repeatReminderMinutes": 15,
             "reviewAt": "2026-06-03T09:00:00.000Z",
             "completedAt": "2026-06-04T10:00:00.000Z",
             "statusBeforeProjectArchive": "next",
@@ -2621,6 +2644,7 @@ mod tests {
             "assignedTo",
             "taskMode",
             "startTime",
+            "relativeStartOffset",
             "dueDate",
             "recurrence",
             "showFutureRecurrence",
@@ -2640,6 +2664,7 @@ mod tests {
             "isFocusedToday",
             "timeEstimate",
             "suppressMindwtrReminders",
+            "repeatReminderMinutes",
             "reviewAt",
             "completedAt",
             "statusBeforeProjectArchive",
