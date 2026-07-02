@@ -172,6 +172,8 @@ Linux desktop releases need an extra smoke pass when Tauri, TLS, WebDAV, AppImag
   - mobile usually 2 spaces
 - Keep code comments concise and only where logic is non-obvious.
 - Favor accessibility-oriented test queries (`getByRole`, `getByLabelText`).
+- Mobile popups: any transparent-modal popup that contains a `TextInput` must use the shared `useAndroidKeyboardInset` hook so it stays above the Android soft keyboard.
+- Markdown editor changes need regression tests for the historical failure modes (cursor jump on tap, scroll-into-view, keyboard-height padding, toolbar timing) — these have each shipped as production bugs before.
 
 Naming:
 
