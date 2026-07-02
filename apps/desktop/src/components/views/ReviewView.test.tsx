@@ -207,7 +207,7 @@ describe('ReviewView', () => {
                 },
             },
         });
-        const { getByRole, getByText, queryByRole, queryByText } = renderWithProviders(<ReviewView />);
+        const { getByRole, getByText, queryByRole } = renderWithProviders(<ReviewView />);
 
         fireEvent.click(getByText('Weekly Review'));
         await waitForExternalCalendarIdle();
@@ -216,11 +216,8 @@ describe('ReviewView', () => {
         expect(getByRole('button', { name: 'Process Inbox (1)' })).toBeInTheDocument();
 
         fireEvent.click(getByText('Next Step'));
-        const aiVisible = queryByText('AI insight');
-        if (aiVisible) {
-            expect(aiVisible).toBeInTheDocument();
-            fireEvent.click(getByText('Next Step'));
-        }
+        expect(getByRole('heading', { level: 1, name: 'Stale items' })).toBeInTheDocument();
+        fireEvent.click(getByText('Next Step'));
 
         expect(getByRole('heading', { level: 1, name: 'Review Calendar' })).toBeInTheDocument();
         expect(getByText('Events')).toBeInTheDocument();
@@ -246,9 +243,10 @@ describe('ReviewView', () => {
     });
 
     it('can navigate back', async () => {
+        const freshIso = new Date().toISOString();
         const tasks = [
             makeTask('inbox-1', { title: 'Inbox item', status: 'inbox' }),
-            makeTask('waiting-1', { title: 'Waiting item', status: 'waiting' }),
+            makeTask('waiting-1', { title: 'Waiting item', status: 'waiting', updatedAt: freshIso }),
         ];
         useTaskStore.setState({
             tasks,
@@ -320,7 +318,7 @@ describe('ReviewView', () => {
         const { getByRole, getByText } = renderWithProviders(<ReviewView />);
 
         fireEvent.click(getByText('Weekly Review'));
-        await waitFor(() => expect(getByRole('heading', { level: 1, name: 'AI insight' })).toBeInTheDocument());
+        await waitFor(() => expect(getByRole('heading', { level: 1, name: 'Stale items' })).toBeInTheDocument());
 
         fireEvent.click(getByRole('button', { name: 'Run analysis' }));
 
@@ -340,7 +338,7 @@ describe('ReviewView', () => {
 
     it('parses quick-add date commands when adding a task during project review', async () => {
         const addTask = vi.fn(async () => ({ success: true }));
-        const project = makeProject('project-1', { title: 'Launch Project' });
+        const project = makeProject('project-1', { title: 'Launch Project', updatedAt: new Date().toISOString() });
         useTaskStore.setState({
             projects: [project],
             _allProjects: [project],

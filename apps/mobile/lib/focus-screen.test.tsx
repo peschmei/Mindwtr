@@ -944,6 +944,9 @@ describe('FocusScreen', () => {
   });
 
   it('marks a review-due Focus task reviewed from the row action and offers undo', async () => {
+    const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      buttons?.find((button) => button.text === 'Mark reviewed')?.onPress?.();
+    });
     const reviewAt = '2000-01-01T00:00:00.000Z';
     storeState.tasks = [
       makeTask('waiting-review', {
@@ -968,6 +971,7 @@ describe('FocusScreen', () => {
       await Promise.resolve();
     });
 
+    expect(alertSpy).toHaveBeenCalled();
     expect(storeState.updateTask).toHaveBeenCalledWith('waiting-review', { reviewAt: undefined });
     expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Waiting review',
@@ -982,6 +986,46 @@ describe('FocusScreen', () => {
     });
 
     expect(storeState.updateTask).toHaveBeenLastCalledWith('waiting-review', { reviewAt });
+    alertSpy.mockRestore();
+  });
+
+  it('advances a review-due Focus task by one week from the row action', async () => {
+    const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      buttons?.find((button) => button.text === 'Review in 1 week')?.onPress?.();
+    });
+    const reviewAt = '2000-01-01T00:00:00.000Z';
+    storeState.tasks = [
+      makeTask('waiting-review', {
+        status: 'waiting',
+        title: 'Waiting review',
+        reviewAt,
+      }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const row = tree.root.findAllByType(SwipeableTaskItem).find((node) => node.props.task.id === 'waiting-review');
+
+    await act(async () => {
+      row?.props.onLongPressAction();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateTask).toHaveBeenCalledWith(
+      'waiting-review',
+      { reviewAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/) },
+    );
+    const nextReviewAt = (storeState.updateTask.mock.calls[0]?.[1] as { reviewAt?: string }).reviewAt;
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 7);
+    expect(nextReviewAt?.slice(0, 10)).toBe(
+      `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}-${String(expected.getDate()).padStart(2, '0')}`,
+    );
+    alertSpy.mockRestore();
   });
 
   it('does not duplicate review-due next actions in earlier Focus sections', () => {

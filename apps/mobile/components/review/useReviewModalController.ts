@@ -20,9 +20,9 @@ import {
     CheckCircle2,
     Clock,
     FolderOpen,
+    History,
     Inbox,
     Lightbulb,
-    Sparkles,
     Tag,
     type LucideIcon,
 } from 'lucide-react-native';
@@ -40,7 +40,7 @@ import { getReviewLabels } from '../review-modal.labels';
 
 export type ReviewStep =
     | 'inbox'
-    | 'ai'
+    | 'stale'
     | 'calendar'
     | 'waiting'
     | 'contexts'
@@ -244,6 +244,16 @@ export function useReviewModalController({
         acc[item.id] = item.title;
         return acc;
     }, {} as Record<string, string>), [staleItems]);
+    const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
+    const staleTasks = useMemo(() => staleItems.flatMap((item) => {
+        if (item.id.startsWith('project:')) return [];
+        const task = taskById.get(item.id);
+        return task ? [task] : [];
+    }), [staleItems, taskById]);
+    const staleProjectItems = useMemo(
+        () => staleItems.filter((item) => item.id.startsWith('project:')),
+        [staleItems],
+    );
 
     const isActionableSuggestion = useCallback((suggestion: ReviewSuggestion) => {
         if (suggestion.id.startsWith('project:')) return false;
@@ -483,10 +493,8 @@ export function useReviewModalController({
             || Boolean(externalCalendarError);
         const list: ReviewStepDefinition[] = [
             { id: 'inbox', title: labels.inbox, Icon: Inbox, hasWork: inboxTasks.length > 0 },
+            { id: 'stale', title: labels.stale, Icon: History, hasWork: staleItems.length > 0 },
         ];
-        if (aiEnabled) {
-            list.push({ id: 'ai', title: labels.ai, Icon: Sparkles, hasWork: staleItems.length > 0 });
-        }
         list.push(
             { id: 'calendar', title: labels.calendar, Icon: CalendarIcon, hasWork: calendarHasWork },
             { id: 'waiting', title: labels.waiting, Icon: Clock, hasWork: waitingTasks.length > 0 },
@@ -501,7 +509,6 @@ export function useReviewModalController({
         );
         return list;
     }, [
-        aiEnabled,
         calendarReviewItems.length,
         contextReviewGroups.length,
         externalCalendarError,
@@ -611,6 +618,8 @@ export function useReviewModalController({
         showEditModal,
         somedayTasks,
         staleItemTitleMap,
+        staleProjectItems,
+        staleTasks,
         steps,
         submitProjectTask,
         tc,

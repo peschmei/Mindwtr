@@ -251,12 +251,31 @@ describe('TaskQuickActionMenu', () => {
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
+    it('advances a review-due task one week from the quick action menu', async () => {
+        const onUpdateTask = vi.fn(async () => ({ success: true as const }));
+        const props = renderMenu({
+            task: { ...task, reviewAt: '2000-01-01' },
+            onUpdateTask,
+        });
+
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Review in 1 week' }));
+
+        const expected = new Date();
+        expected.setDate(expected.getDate() + 7);
+        const expectedDate = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}-${String(expected.getDate()).padStart(2, '0')}`;
+        await waitFor(() => {
+            expect(onUpdateTask).toHaveBeenCalledWith({ reviewAt: expectedDate });
+        });
+        expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+
     it('does not show mark reviewed for future review dates', () => {
         renderMenu({
             task: { ...task, reviewAt: '2999-01-01T00:00:00.000Z' },
         });
 
         expect(screen.queryByRole('menuitem', { name: 'Mark reviewed' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: 'Review in 1 week' })).not.toBeInTheDocument();
         expect(screen.getByRole('menuitem', { name: /review date/i })).toBeInTheDocument();
     });
 

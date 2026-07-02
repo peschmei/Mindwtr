@@ -92,6 +92,8 @@ vi.mock('@mindwtr/core', () => ({
         },
     ]),
     createAIProvider: vi.fn(),
+    formatI18nTemplate: vi.fn((template: string, values: Record<string, string | number>) =>
+        template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, key) => String(values[key] ?? match))),
     getStaleItems: vi.fn(() => []),
     isDueForReview: vi.fn(() => false),
     isTaskInActiveProject: vi.fn(() => true),
@@ -178,6 +180,7 @@ vi.mock('lucide-react-native', () => {
     return {
         Brain: icon('Brain'),
         X: icon('X'),
+        History: icon('History'),
         Inbox: icon('Inbox'),
         Sparkles: icon('Sparkles'),
         Calendar: icon('Calendar'),

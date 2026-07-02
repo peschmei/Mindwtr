@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import { createPortal } from 'react-dom';
 import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, FolderPlus, MapPin, Tag, Trash2 } from 'lucide-react';
 import {
+    getAdvancedReviewDate,
     hasTimeComponent,
     isDueForReview,
     safeFormatDate,
@@ -133,6 +134,7 @@ export function TaskQuickActionMenu({
     const deleteLabel = tFallback(t, 'common.delete', 'Delete');
     const convertToReferenceLabel = tFallback(t, 'task.convertToReference', 'Convert to Reference');
     const markReviewedLabel = tFallback(t, 'review.markReviewed', 'Mark reviewed');
+    const advanceReviewLabel = tFallback(t, 'review.advanceWeek', 'Review in 1 week');
     const saveLabel = tFallback(t, 'common.save', 'Save');
     const cancelLabel = tFallback(t, 'common.cancel', 'Cancel');
     const moreOptionsLabel = tFallback(t, 'taskEdit.moreOptions', 'More options');
@@ -394,6 +396,21 @@ export function TaskQuickActionMenu({
         }
     };
 
+    const handleAdvanceReview = async () => {
+        setSavingPanel('reviewAt');
+        try {
+            const result = await onUpdateTask({ reviewAt: getAdvancedReviewDate(task.reviewAt) });
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to advance task review date');
+            }
+            onClose();
+        } catch (error) {
+            reportError('Failed to advance task review date from quick actions', error);
+        } finally {
+            setSavingPanel(null);
+        }
+    };
+
     const handleAreaSave = async () => {
         setSavingPanel('area');
         try {
@@ -525,6 +542,11 @@ export function TaskQuickActionMenu({
                     icon: <CalendarClock className="h-4 w-4" />,
                     label: markReviewedLabel,
                     onClick: () => { void handleMarkReviewed(); },
+                })}
+                {!readOnly && canMarkReviewed && renderMenuAction({
+                    icon: <CalendarClock className="h-4 w-4" />,
+                    label: advanceReviewLabel,
+                    onClick: () => { void handleAdvanceReview(); },
                 })}
                 {!readOnly && canEditArea && renderMenuAction({
                     ref: areaButtonRef,

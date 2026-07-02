@@ -11,6 +11,7 @@ Changes collected after `v1.0.5` and before the next version tag.
 
 ## Full Change List
 
+- feat(review): surface stale tasks and projects as a Weekly Review step without requiring AI, and add a "Review in 1 week" action beside "Mark reviewed".
 - fix(mobile): keep the task description field visible when the Android keyboard opens.
 - fix(mobile): keep full task titles visible in inbox and task lists after editing.
 - fix(desktop): preserve relative start offsets and repeat reminder minutes through desktop SQLite restarts and sync cycles.

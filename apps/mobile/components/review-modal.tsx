@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { safeFormatDate, safeParseDate, type Task } from '@mindwtr/core';
+import { formatI18nTemplate, safeFormatDate, safeParseDate, type Task } from '@mindwtr/core';
 import {
     Brain,
     Calendar as CalendarIcon,
     CheckCircle2,
     Clock,
     FolderOpen,
+    History,
     Inbox,
     Lightbulb,
     PartyPopper,
@@ -88,6 +89,8 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
         projectTaskPrompt,
         projectTaskTitle,
         runAiAnalysis,
+        staleProjectItems,
+        staleTasks,
         safeStepIndex,
         setProjectTaskTitle,
         showEditModal,
@@ -405,43 +408,71 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                     </View>
                 );
 
-            case 'ai':
+            case 'stale':
                 return (
                     <View style={styles.stepContent}>
                         <View style={styles.stepTitleRow}>
-                            <Sparkles size={22} color={tc.text} strokeWidth={2} />
+                            <History size={22} color={tc.text} strokeWidth={2} />
                             <Text style={[styles.stepTitleInline, { color: tc.text }]}>
-                                {labels.ai}
+                                {labels.stale}
                             </Text>
                         </View>
                         <Text style={[styles.hint, { color: tc.secondaryText }]}>
-                            {labels.aiDesc}
+                            {labels.staleDesc}
                         </Text>
-                        <TouchableOpacity
-                            style={[styles.primaryButton, { backgroundColor: filledButton.backgroundColor, marginTop: 12 }]}
-                            onPress={runAiAnalysis}
-                            disabled={aiLoading}
-                        >
-                            <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
-                                {aiLoading ? labels.aiRunning : labels.aiRun}
-                            </Text>
-                        </TouchableOpacity>
+                        <ScrollView style={styles.taskList}>
+                            {staleTasks.map((task) => (
+                                <SwipeableTaskItem
+                                    key={task.id}
+                                    task={task}
+                                    isDark={isDark}
+                                    tc={tc}
+                                    onPress={() => handleTaskPress(task)}
+                                    onStatusChange={(status) => handleStatusChange(task.id, status)}
+                                    onDelete={() => handleDelete(task.id)}
+                                />
+                            ))}
+                            {staleProjectItems.map((item) => (
+                                <View key={item.id} style={[styles.calendarDayCard, { borderColor: tc.border }]}>
+                                    <Text style={[styles.calendarEventTitle, { color: tc.text }]} numberOfLines={1}>
+                                        {item.title}
+                                    </Text>
+                                    <Text style={[styles.calendarEventMeta, { color: tc.secondaryText }]}>
+                                        {formatI18nTemplate(labels.staleDaysInactive, { days: item.daysStale })}
+                                    </Text>
+                                </View>
+                            ))}
+                            {aiEnabled && (
+                                <>
+                                    <View style={[styles.stepTitleRow, { marginTop: 16 }]}>
+                                        <Sparkles size={18} color={tc.text} strokeWidth={2} />
+                                        <Text style={[styles.hint, { color: tc.secondaryText }]}>
+                                            {labels.aiDesc}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={[styles.primaryButton, { backgroundColor: filledButton.backgroundColor, marginTop: 12 }]}
+                                        onPress={runAiAnalysis}
+                                        disabled={aiLoading}
+                                    >
+                                        <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
+                                            {aiLoading ? labels.aiRunning : labels.aiRun}
+                                        </Text>
+                                    </TouchableOpacity>
 
-                        {aiError && (
-                            <Text style={[styles.hint, { color: '#EF4444', marginTop: 12 }]}>
-                                {aiError}
-                            </Text>
-                        )}
+                                    {aiError && (
+                                        <Text style={[styles.hint, { color: '#EF4444', marginTop: 12 }]}>
+                                            {aiError}
+                                        </Text>
+                                    )}
 
-                        {aiRan && !aiLoading && aiSuggestions.length === 0 && !aiError && (
-                            <Text style={[styles.hint, { color: tc.secondaryText, marginTop: 12 }]}>
-                                {labels.aiEmpty}
-                            </Text>
-                        )}
+                                    {aiRan && !aiLoading && aiSuggestions.length === 0 && !aiError && (
+                                        <Text style={[styles.hint, { color: tc.secondaryText, marginTop: 12 }]}>
+                                            {labels.aiEmpty}
+                                        </Text>
+                                    )}
 
-                        {aiSuggestions.length > 0 && (
-                            <ScrollView style={styles.taskList}>
-                                {aiSuggestions.map((suggestion) => {
+                                    {aiSuggestions.map((suggestion) => {
                                     const actionable = isActionableSuggestion(suggestion);
                                     const label = suggestion.action === 'someday'
                                         ? labels.aiActionSomeday
@@ -479,17 +510,20 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                                         </TouchableOpacity>
                                     );
                                 })}
-                                <TouchableOpacity
-                                    style={[styles.primaryButton, { backgroundColor: filledButton.backgroundColor, marginTop: 12 }]}
-                                    onPress={applyAiSuggestions}
-                                    disabled={aiSelectedIds.size === 0}
-                                >
-                                    <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
-                                        {labels.aiApply} ({aiSelectedIds.size})
-                                    </Text>
-                                </TouchableOpacity>
-                            </ScrollView>
-                        )}
+                                    {aiSuggestions.length > 0 && (
+                                        <TouchableOpacity
+                                            style={[styles.primaryButton, { backgroundColor: filledButton.backgroundColor, marginTop: 12 }]}
+                                            onPress={applyAiSuggestions}
+                                            disabled={aiSelectedIds.size === 0}
+                                        >
+                                            <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>
+                                                {labels.aiApply} ({aiSelectedIds.size})
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </>
+                            )}
+                        </ScrollView>
                     </View>
                 );
 

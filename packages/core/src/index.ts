@@ -485,6 +485,8 @@ export {
 } from './recurrence-constants';
 
 export {
+    DEFAULT_REVIEW_ADVANCE_DAYS,
+    getAdvancedReviewDate,
     getStaleItems,
 } from './review-utils';
 

@@ -35,6 +35,7 @@ import {
   sortTasksBySavedPreference,
   translateWithFallback,
   useTaskStore,
+  getAdvancedReviewDate,
   isTaskInActiveProject,
   isDueForReview,
   safeFormatDate,
@@ -589,6 +590,49 @@ export default function FocusScreen() {
       })
       .catch((error) => showTaskUpdateError(getUnknownErrorMessage(error)));
   }, [resolveText, showTaskUpdateError, showToast, updateTask]);
+  const advanceTaskReview = useCallback((task: Task) => {
+    const previousReviewAt = task.reviewAt;
+
+    void Promise.resolve(updateTask(task.id, { reviewAt: getAdvancedReviewDate(task.reviewAt) }))
+      .then((result: TaskActionResult) => {
+        const failure = getActionFailureMessage(result);
+        if (failure) {
+          showTaskUpdateError(failure);
+          return;
+        }
+        showToast({
+          title: task.title,
+          message: resolveText('review.advanceWeekDone', 'Next review in 1 week'),
+          tone: 'success',
+          actionLabel: resolveText('common.undo', 'Undo'),
+          onAction: async () => {
+            const undoResult = await updateTask(task.id, { reviewAt: previousReviewAt });
+            const undoFailure = getActionFailureMessage(undoResult);
+            if (undoFailure) throw new Error(undoFailure);
+          },
+          durationMs: 5200,
+        });
+      })
+      .catch((error) => showTaskUpdateError(getUnknownErrorMessage(error)));
+  }, [resolveText, showTaskUpdateError, showToast, updateTask]);
+  const openReviewMenu = useCallback((task: Task) => {
+    Alert.alert(
+      task.title,
+      undefined,
+      [
+        {
+          text: resolveText('review.markReviewed', 'Mark reviewed'),
+          onPress: () => markTaskReviewed(task),
+        },
+        {
+          text: resolveText('review.advanceWeek', 'Review in 1 week'),
+          onPress: () => advanceTaskReview(task),
+        },
+        { text: resolveText('common.cancel', 'Cancel'), style: 'cancel' },
+      ],
+      { cancelable: true },
+    );
+  }, [advanceTaskReview, markTaskReviewed, resolveText]);
   const openDeferDatePicker = useCallback((task: Task) => {
     setDeferPickerDate(getStartDateOffset(1));
     setDeferPickerTask(task);
@@ -1437,7 +1481,7 @@ export default function FocusScreen() {
     const canMarkReviewed = section.type === 'reviewDue' && Boolean(item.task.reviewAt);
     const canDeferTask = !canMarkReviewed && !item.task.dueDate && (item.task.isFocusedToday === true || item.task.status === 'next');
     const longPressAction = canMarkReviewed
-      ? () => markTaskReviewed(item.task)
+      ? () => openReviewMenu(item.task)
       : canDeferTask
         ? () => openDeferMenu(item.task)
         : undefined;

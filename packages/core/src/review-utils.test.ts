@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getStaleItems } from './review-utils';
+import { getAdvancedReviewDate, getStaleItems } from './review-utils';
 import type { Project, Task } from './types';
 
 const staleUpdatedAt = '2026-01-01T00:00:00.000Z';
@@ -55,5 +55,30 @@ describe('getStaleItems', () => {
                 reviewAt: project.reviewAt,
             }),
         ]));
+    });
+});
+
+describe('getAdvancedReviewDate', () => {
+    const localNow = new Date(2026, 5, 10, 15, 30); // 2026-06-10 15:30 local
+
+    it('returns a date-only value one week out for date-only review dates', () => {
+        expect(getAdvancedReviewDate('2026-06-01', localNow)).toBe('2026-06-17');
+    });
+
+    it('keeps the original time of day for datetime review dates', () => {
+        expect(getAdvancedReviewDate('2026-06-01T09:15', localNow)).toBe('2026-06-17T09:15');
+    });
+
+    it('falls back to date-only when the review date is missing or invalid', () => {
+        expect(getAdvancedReviewDate(undefined, localNow)).toBe('2026-06-17');
+        expect(getAdvancedReviewDate('not a date T00:00', localNow)).toBe('2026-06-17');
+    });
+
+    it('advances from now, not from an overdue review date', () => {
+        expect(getAdvancedReviewDate('2025-01-01', localNow)).toBe('2026-06-17');
+    });
+
+    it('honors a custom day count', () => {
+        expect(getAdvancedReviewDate('2026-06-01', localNow, 14)).toBe('2026-06-24');
     });
 });

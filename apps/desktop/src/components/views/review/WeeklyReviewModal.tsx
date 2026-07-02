@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
     createAIProvider,
     DEFAULT_AREA_COLOR,
+    formatI18nTemplate,
     getStaleItems,
     getUsedTaskTokens,
     isDueForReview,
@@ -19,7 +20,7 @@ import {
     type TaskStatus,
     type AIProviderId,
 } from '@mindwtr/core';
-import { Archive, ArrowRight, Calendar, Check, CheckSquare, ChevronLeft, Layers, MapPin, RefreshCw, Sparkles, X, type LucideIcon } from 'lucide-react';
+import { Archive, ArrowRight, Calendar, Check, CheckSquare, ChevronLeft, History, Layers, MapPin, RefreshCw, X, type LucideIcon } from 'lucide-react';
 
 import { TaskItem } from '../../TaskItem';
 import { ModalPortal } from '../../ModalPortal';
@@ -32,7 +33,7 @@ import { buildAIConfig, isAIKeyRequired, loadAIKey } from '../../../lib/ai-confi
 import { fetchExternalCalendarEvents, summarizeExternalCalendarWarnings } from '../../../lib/external-calendar-events';
 import { useUiStore } from '../../../store/ui-store';
 
-type ReviewStep = 'inbox' | 'ai' | 'calendar' | 'waiting' | 'contexts' | 'projects' | 'someday' | 'completed';
+type ReviewStep = 'inbox' | 'stale' | 'calendar' | 'waiting' | 'contexts' | 'projects' | 'someday' | 'completed';
 type ReviewStepDefinition = {
     id: ReviewStep;
     title: string;
@@ -109,6 +110,17 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
             return acc;
         }, {} as Record<string, string>);
     }, [staleItems]);
+    const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
+    const staleTaskEntries = useMemo(() => staleItems
+        .filter((item) => !item.id.startsWith('project:'))
+        .flatMap((item) => {
+            const task = taskById.get(item.id);
+            return task ? [{ daysStale: item.daysStale, task }] : [];
+        }), [staleItems, taskById]);
+    const staleProjectItems = useMemo(
+        () => staleItems.filter((item) => item.id.startsWith('project:')),
+        [staleItems],
+    );
     const calendarReviewItems = useMemo(() => {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -217,10 +229,8 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
             || Boolean(externalCalendarError);
         const list: ReviewStepDefinition[] = [
             { id: 'inbox', title: t('review.inboxStep'), description: t('review.inboxStepDesc'), icon: CheckSquare, hasWork: inboxTasks.length > 0 },
+            { id: 'stale', title: t('review.staleStep'), description: t('review.staleStepDesc'), icon: History, hasWork: staleItems.length > 0 },
         ];
-        if (aiEnabled) {
-            list.push({ id: 'ai', title: t('review.aiStep'), description: t('review.aiStepDesc'), icon: Sparkles, hasWork: staleItems.length > 0 });
-        }
         list.push(
             { id: 'calendar', title: t('review.calendarStep'), description: t('review.calendarStepDesc'), icon: Calendar, hasWork: calendarHasWork },
             { id: 'waiting', title: t('review.waitingStep'), description: t('review.waitingStepDesc'), icon: ArrowRight, hasWork: waitingTasks.length > 0 },
@@ -235,7 +245,6 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
         );
         return list;
     }, [
-        aiEnabled,
         calendarReviewItems.length,
         contextReviewGroups.length,
         externalCalendarError,
@@ -761,9 +770,41 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                 );
             }
 
-            case 'ai': {
+            case 'stale': {
                 return (
                     <div className="space-y-4">
+                        <p className="text-muted-foreground">{t('review.staleStepDesc')}</p>
+                        {staleItems.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground">
+                                <p>{t('review.aiEmpty')}</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {staleTaskEntries.map(({ daysStale, task }) => (
+                                    <div key={task.id} className="flex items-center gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <TaskItem task={task} showProjectBadgeInActions={false} />
+                                        </div>
+                                        <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                                            {formatI18nTemplate(t('review.staleDaysInactive'), { days: daysStale })}
+                                        </span>
+                                    </div>
+                                ))}
+                                {staleProjectItems.map((item) => (
+                                    <div key={item.id} className="border border-border rounded-lg p-3 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                            <span className="text-sm font-medium truncate">{item.title}</span>
+                                        </div>
+                                        <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                                            {formatI18nTemplate(t('review.staleDaysInactive'), { days: item.daysStale })}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {aiEnabled && (
+                    <div className="space-y-4 border-t border-border pt-4">
                         <div className="flex items-center justify-between gap-4">
                             <div className="text-sm text-muted-foreground">
                                 {t('review.aiStepDesc')}
@@ -838,6 +879,8 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                                     </button>
                                 </div>
                             </div>
+                        )}
+                    </div>
                         )}
                     </div>
                 );
