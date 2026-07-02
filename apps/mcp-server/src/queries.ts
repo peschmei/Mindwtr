@@ -87,8 +87,6 @@ export type AddTaskInput = {
   timeEstimate?: CoreTimeEstimate;
 };
 
-export type CompleteTaskInput = { id: string };
-
 export type TaskRow = Task;
 
 type ColumnInfoRow = { name?: unknown };
@@ -738,28 +736,6 @@ export function addTask(db: DbClient, input: AddTaskInput): TaskRow {
   });
 }
 
-export function completeTask(db: DbClient, input: CompleteTaskInput): TaskRow {
-  return runInTransaction(db, () => {
-    const now = new Date().toISOString();
-    const update = db.prepare(`
-      UPDATE tasks
-      SET status = 'done', completedAt = ?, updatedAt = ?
-      WHERE id = ? AND deletedAt IS NULL
-    `);
-    const info = update.run(now, now, input.id);
-    if (!info.changes || info.changes === 0) {
-      throw new NotFoundError(`Task not found: ${input.id}`);
-    }
-
-    const { selectColumns } = getTaskColumns(db);
-    const row = db.prepare(`SELECT ${selectColumns.join(', ')} FROM tasks WHERE id = ?`).get<TaskSqliteRow>(input.id);
-    if (!row) {
-      throw new NotFoundError(`Task not found after update: ${input.id}`);
-    }
-    return mapTaskRow(row);
-  });
-}
-
 export type UpdateTaskInput = {
   id: string;
   title?: string;
@@ -778,125 +754,3 @@ export type UpdateTaskInput = {
   reviewAt?: string | null;
   isFocusedToday?: boolean;
 };
-
-export function updateTask(db: DbClient, input: UpdateTaskInput): TaskRow {
-  return runInTransaction(db, () => {
-    const { selectColumns } = getTaskColumns(db);
-    const existing = db.prepare(`SELECT ${selectColumns.join(', ')} FROM tasks WHERE id = ? AND deletedAt IS NULL`).get<TaskSqliteRow>(input.id);
-    if (!existing) {
-      throw new NotFoundError(`Task not found: ${input.id}`);
-    }
-    const current = mapTaskRow(existing);
-    const now = new Date().toISOString();
-
-    const updated: TaskRow = {
-      ...current,
-      title: input.title ?? current.title,
-      status: parseTaskStatusInput(input.status) ?? current.status,
-      projectId: input.projectId === null ? undefined : input.projectId ?? current.projectId,
-      dueDate: input.dueDate === null ? undefined : input.dueDate ?? current.dueDate,
-      startTime: input.startTime === null ? undefined : input.startTime ?? current.startTime,
-      contexts: input.contexts === null ? [] : input.contexts ?? current.contexts ?? [],
-      tags: input.tags === null ? [] : input.tags ?? current.tags ?? [],
-      description: input.description === null ? undefined : input.description ?? current.description,
-      priority: input.priority === null ? undefined : input.priority ?? current.priority,
-      energyLevel: input.energyLevel === null ? undefined : input.energyLevel ?? current.energyLevel,
-      assignedTo: input.assignedTo === null ? undefined : input.assignedTo ?? current.assignedTo,
-      timeEstimate: input.timeEstimate === null ? undefined : input.timeEstimate ?? current.timeEstimate,
-      reviewAt: input.reviewAt === null ? undefined : input.reviewAt ?? current.reviewAt,
-      isFocusedToday: input.isFocusedToday ?? current.isFocusedToday,
-      updatedAt: now,
-    };
-
-    const update = db.prepare(`
-      UPDATE tasks
-      SET title = @title,
-          status = @status,
-          projectId = @projectId,
-          dueDate = @dueDate,
-          startTime = @startTime,
-          contexts = @contexts,
-          tags = @tags,
-          description = @description,
-          priority = @priority,
-          energyLevel = @energyLevel,
-          assignedTo = @assignedTo,
-          timeEstimate = @timeEstimate,
-          reviewAt = @reviewAt,
-          isFocusedToday = @isFocusedToday,
-          updatedAt = @updatedAt
-      WHERE id = @id
-    `);
-
-    update.run({
-      id: updated.id,
-      title: updated.title,
-      status: updated.status,
-      projectId: updated.projectId ?? null,
-      dueDate: updated.dueDate ?? null,
-      startTime: updated.startTime ?? null,
-      contexts: JSON.stringify(updated.contexts ?? []),
-      tags: JSON.stringify(updated.tags ?? []),
-      description: updated.description ?? null,
-      priority: updated.priority ?? null,
-      energyLevel: updated.energyLevel ?? null,
-      assignedTo: updated.assignedTo ?? null,
-      timeEstimate: updated.timeEstimate ?? null,
-      reviewAt: updated.reviewAt ?? null,
-      isFocusedToday: updated.isFocusedToday ? 1 : 0,
-      updatedAt: updated.updatedAt,
-    });
-
-    const row = db.prepare(`SELECT ${selectColumns.join(', ')} FROM tasks WHERE id = ?`).get<TaskSqliteRow>(input.id);
-    if (!row) {
-      throw new NotFoundError(`Task not found after update: ${input.id}`);
-    }
-    return mapTaskRow(row);
-  });
-}
-
-export type DeleteTaskInput = { id: string };
-
-export function deleteTask(db: DbClient, input: DeleteTaskInput): TaskRow {
-  return runInTransaction(db, () => {
-    const now = new Date().toISOString();
-    const update = db.prepare(`
-      UPDATE tasks
-      SET deletedAt = ?, updatedAt = ?
-      WHERE id = ? AND deletedAt IS NULL
-    `);
-    const info = update.run(now, now, input.id);
-    if (!info.changes || info.changes === 0) {
-      throw new NotFoundError(`Task not found or already deleted: ${input.id}`);
-    }
-    const { selectColumns } = getTaskColumns(db);
-    const row = db.prepare(`SELECT ${selectColumns.join(', ')} FROM tasks WHERE id = ?`).get<TaskSqliteRow>(input.id);
-    if (!row) {
-      throw new NotFoundError(`Task not found after delete: ${input.id}`);
-    }
-    return mapTaskRow(row);
-  });
-}
-
-export type RestoreTaskInput = { id: string };
-
-export function restoreTask(db: DbClient, input: RestoreTaskInput): TaskRow {
-  return runInTransaction(db, () => {
-    const now = new Date().toISOString();
-    const update = db.prepare(`
-      UPDATE tasks
-      SET deletedAt = NULL, updatedAt = ?
-      WHERE id = ? AND deletedAt IS NOT NULL
-    `);
-    const info = update.run(now, input.id);
-    if (!info.changes || info.changes === 0) {
-      throw new NotFoundError(`Task not found or not deleted: ${input.id}`);
-    }
-    const { selectColumns } = getTaskColumns(db);
-    const row = db.prepare(`SELECT ${selectColumns.join(', ')} FROM tasks WHERE id = ?`).get(input.id);
-    if (!row) {
-      throw new NotFoundError(`Task not found after restore: ${input.id}`);
-    }
-    return mapTaskRow(row);
-  });
-}

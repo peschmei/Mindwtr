@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { addTask, deleteTask, getPerson, listPeople, listTasks, parseQuickAdd, updateTask, type ProjectRef } from './queries.js';
+import { addTask, getPerson, listPeople, listTasks, parseQuickAdd, type ProjectRef } from './queries.js';
 import type { DbClient } from './db.js';
 
 const createMockDb = (
@@ -281,70 +281,6 @@ describe('mcp queries', () => {
 
         expect(calls.some((call) => call.sql === 'BEGIN IMMEDIATE')).toBe(true);
         expect(calls.some((call) => call.sql === 'ROLLBACK')).toBe(true);
-    });
-
-    test('wraps updateTask and deleteTask in transactions', () => {
-        const now = '2026-02-01T00:00:00.000Z';
-        const { db, calls } = createMockDb([
-            {
-                id: 't1',
-                title: 'Task',
-                status: 'inbox',
-                createdAt: now,
-                updatedAt: now,
-                isFocusedToday: 0,
-            },
-        ]);
-
-        updateTask(db, { id: 't1', title: 'Updated' });
-        deleteTask(db, { id: 't1' });
-
-        const beginCount = calls.filter((call) => call.sql === 'BEGIN IMMEDIATE').length;
-        const commitCount = calls.filter((call) => call.sql === 'COMMIT').length;
-        expect(beginCount).toBe(2);
-        expect(commitCount).toBe(2);
-    });
-
-    test('rejects invalid status when updating tasks', () => {
-        const now = '2026-02-01T00:00:00.000Z';
-        const { db, calls } = createMockDb([
-            {
-                id: 't1',
-                title: 'Task',
-                status: 'inbox',
-                createdAt: now,
-                updatedAt: now,
-                isFocusedToday: 0,
-            },
-        ]);
-
-        expect(() => updateTask(db, { id: 't1', status: 'bad-status' as any })).toThrow('Invalid task status: bad-status');
-
-        const rollbackCount = calls.filter((call) => call.sql === 'ROLLBACK').length;
-        expect(rollbackCount).toBe(1);
-    });
-
-    test('updates energyLevel and assignedTo when provided', () => {
-        const now = '2026-02-01T00:00:00.000Z';
-        const { db, calls } = createMockDb([
-            {
-                id: 't1',
-                title: 'Task',
-                status: 'inbox',
-                createdAt: now,
-                updatedAt: now,
-                isFocusedToday: 0,
-            },
-        ]);
-
-        updateTask(db, { id: 't1', energyLevel: 'high', assignedTo: 'Alex' });
-
-        const updateCall = calls.find((call) => call.sql.includes('UPDATE tasks'));
-        expect(updateCall).toBeTruthy();
-        expect(updateCall?.params[0]).toMatchObject({
-            energyLevel: 'high',
-            assignedTo: 'Alex',
-        });
     });
 
     test('maps area, section, text direction, and location fields from task rows', () => {
