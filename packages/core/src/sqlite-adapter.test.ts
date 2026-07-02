@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 
 import { SqliteAdapter, type SqliteClient } from './sqlite-adapter';
 import { consoleLogger, setLogger, type LogPayload } from './logger';
+import { SQLITE_BASE_SCHEMA } from './sqlite-schema';
 import type { AppData } from './types';
 
 const require = createRequire(import.meta.url);
@@ -316,6 +317,15 @@ describeSqlite('SqliteAdapter', () => {
         expect(area.order).toBe(0);
         expect(area.rev).toBe(3);
         expect(area.revBy).toBe('device-desktop');
+    });
+
+    it('declares repeat reminder minutes in the base task schema', () => {
+        db.exec(SQLITE_BASE_SCHEMA);
+
+        const taskColumns = allSql<{ name: string }>(db, 'PRAGMA table_info(tasks)')
+            .map((column) => column.name);
+
+        expect(taskColumns).toContain('repeatReminderMinutes');
     });
 
     it('updates a single task row through saveTask while preserving unrelated data', async () => {
