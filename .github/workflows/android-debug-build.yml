@@ -65,10 +65,10 @@ jobs:
       - name: Install dependencies
         run: |
           set -euo pipefail
-          bun install || (
+          bun install --frozen-lockfile || (
             echo "bun install failed, clearing cache and retrying..."
             (bun pm cache rm || bun pm cache clean)
-            bun install
+            bun install --frozen-lockfile
           )
 
       - name: Build debug APK

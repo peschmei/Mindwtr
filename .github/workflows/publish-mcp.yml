@@ -73,7 +73,7 @@ jobs:
       - name: Install dependencies
         run: |
           set -euo pipefail
-          bun install || (echo "bun install failed, clearing cache and retrying..." && (bun pm cache rm || bun pm cache clean || true) && bun install)
+          bun install --frozen-lockfile || (echo "bun install failed, clearing cache and retrying..." && (bun pm cache rm || bun pm cache clean || true) && bun install --frozen-lockfile)
 
       - name: MCP typecheck
         run: bun run --filter mindwtr-mcp typecheck
