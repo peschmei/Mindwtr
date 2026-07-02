@@ -143,7 +143,10 @@ const clearPreferJsonBackup = () => {
 };
 
 const createLegacyClient = (db: any): SqliteClient => {
-    const execSql = (sql: string, params: unknown[] = []) =>
+    const isConnectionPragmaAssignment = (sql: string) =>
+        /^\s*PRAGMA\s+(journal_mode|foreign_keys|busy_timeout)\s*=/i.test(sql);
+
+    const execSqlInTransaction = (sql: string, params: unknown[] = []) =>
         new Promise<any>((resolve, reject) => {
             db.transaction(
                 (tx: any) => {
@@ -160,6 +163,28 @@ const createLegacyClient = (db: any): SqliteClient => {
                 (error: any) => reject(error)
             );
         });
+
+    const execSqlDirect = (sql: string) =>
+        new Promise<any>((resolve, reject) => {
+            try {
+                db.exec([{ sql, args: [] }], false, (error: any, result: any) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+                    resolve(Array.isArray(result) ? result[0] : result);
+                });
+            } catch (error) {
+                reject(error);
+            }
+        });
+
+    const execSql = (sql: string, params: unknown[] = []) => {
+        if (params.length === 0 && isConnectionPragmaAssignment(sql) && typeof db.exec === 'function') {
+            return execSqlDirect(sql);
+        }
+        return execSqlInTransaction(sql, params);
+    };
 
     const exec = async (sql: string) => {
         const statements = sql
@@ -690,6 +715,7 @@ const createStorage = (): StorageAdapter => {
 export const mobileStorage = createStorage();
 
 export const __mobileStorageTestUtils = {
+    createLegacyClientForTests: createLegacyClient,
     reset: () => {
         saveQueue = Promise.resolve();
         sqliteStatePromise = null;

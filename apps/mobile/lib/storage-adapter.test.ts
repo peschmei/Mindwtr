@@ -239,6 +239,36 @@ describe('mobile storage adapter', () => {
     }
   }, 10_000);
 
+  it('runs legacy SQLite connection pragmas outside transactions', async () => {
+    const directExec = vi.fn((_queries, _readOnly, callback) => callback(null, []));
+    const transactionStatements: string[] = [];
+    const db = {
+      exec: directExec,
+      transaction: vi.fn((work) => {
+        work({
+          executeSql: (sql: string, _params: unknown[], success: (_tx: unknown, result: unknown) => void) => {
+            transactionStatements.push(sql);
+            success(null, { rows: { length: 0, item: () => undefined, _array: [] } });
+          },
+        });
+      }),
+    };
+
+    const { __mobileStorageTestUtils } = await import('./storage-adapter');
+    const { SQLITE_BASE_SCHEMA } = await import('@mindwtr/core');
+    const client = __mobileStorageTestUtils.createLegacyClientForTests(db);
+
+    await client.exec(SQLITE_BASE_SCHEMA);
+
+    expect(directExec.mock.calls.map(([queries]) => queries[0].sql)).toEqual([
+      'PRAGMA journal_mode = WAL',
+      'PRAGMA foreign_keys = ON',
+      'PRAGMA busy_timeout = 5000',
+    ]);
+    expect(transactionStatements.some((statement) => statement.startsWith('CREATE TABLE IF NOT EXISTS tasks'))).toBe(true);
+    expect(transactionStatements.filter((statement) => statement.startsWith('PRAGMA '))).toEqual([]);
+  }, 10_000);
+
   it('ignores an unmarked JSON backup startup snapshot', async () => {
     const staleBackup = {
       tasks: [
