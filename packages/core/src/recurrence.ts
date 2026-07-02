@@ -1106,6 +1106,7 @@ export function createNextRecurringTask(
         contexts: [...(task.contexts || [])],
         checklist: resetChecklist(task.checklist),
         description: task.description,
+        textDirection: task.textDirection,
         attachments: duplicatedAttachments.length > 0 ? duplicatedAttachments : undefined,
         location: task.location,
         projectId: task.projectId,

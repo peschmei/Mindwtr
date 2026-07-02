@@ -122,6 +122,15 @@ const findExistingRecurringFollowUp = (tasks: readonly Task[], candidate: Task |
     return tasks.find((task) => isExistingRecurringFollowUp(task, candidate)) ?? null;
 };
 
+const stampNewRecurringFollowUp = (task: Task | null, deviceId: string): Task | null => {
+    if (!task) return null;
+    return {
+        ...task,
+        rev: nextRevision(undefined),
+        revBy: deviceId,
+    };
+};
+
 type TaskActions = Pick<
     TaskStore,
     | 'addTask'
@@ -825,9 +834,10 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 { ...preparedUpdates.updates, ...revisionPatch },
                 now
             );
-            const recurringFollowUpTask = findExistingRecurringFollowUp(state._allTasks, nextRecurringTask)
+            const stampedNextRecurringTask = stampNewRecurringFollowUp(nextRecurringTask, deviceState.deviceId);
+            const recurringFollowUpTask = findExistingRecurringFollowUp(state._allTasks, stampedNextRecurringTask)
                 ? null
-                : nextRecurringTask;
+                : stampedNextRecurringTask;
             incrementalPersistence.task = updatedTask;
             incrementalPersistence.hasRecurringFollowUp = recurringFollowUpTask !== null;
 
@@ -1272,12 +1282,13 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                     },
                     now
                 );
+                const stampedNextRecurringTask = stampNewRecurringFollowUp(nextRecurringTask, deviceState.deviceId);
                 const duplicateFollowUp = findExistingRecurringFollowUp(
                     [...newAllTasksBase, ...nextRecurringTasks],
-                    nextRecurringTask
+                    stampedNextRecurringTask
                 );
-                if (nextRecurringTask && !duplicateFollowUp) {
-                    nextRecurringTasks = [...nextRecurringTasks, nextRecurringTask];
+                if (stampedNextRecurringTask && !duplicateFollowUp) {
+                    nextRecurringTasks = [...nextRecurringTasks, stampedNextRecurringTask];
                 }
                 newAllTasksBase[index] = updatedTask;
                 changedTasks.push(updatedTask);

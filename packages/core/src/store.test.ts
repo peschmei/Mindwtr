@@ -2924,6 +2924,26 @@ describe('TaskStore', () => {
         expect(nextInstance.dueDate).toBe('2023-01-02T09:00');
     });
 
+    it('stamps a recurring follow-up task with revision metadata', async () => {
+        vi.setSystemTime(new Date('2026-07-01T12:00:00.000Z'));
+        const { addTask, moveTask } = useTaskStore.getState();
+        await addTask('Daily stamped task', {
+            status: 'next',
+            recurrence: 'daily',
+            dueDate: '2026-07-01T09:00:00.000Z',
+        });
+
+        const original = useTaskStore.getState().tasks[0];
+        await moveTask(original.id, 'done');
+
+        const state = useTaskStore.getState();
+        const nextInstance = state._allTasks.find((task) => task.id !== original.id);
+
+        expect(nextInstance?.rev).toBe(1);
+        expect(nextInstance?.revBy).toBe(state.settings.deviceId);
+        expect(nextInstance?.revBy).toBeTruthy();
+    });
+
     it('does not append a duplicate recurring follow-up when one already exists', async () => {
         vi.setSystemTime(new Date('2026-06-09T00:00:00.000Z'));
 

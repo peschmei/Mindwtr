@@ -164,6 +164,25 @@ describe('recurrence', () => {
         expect(next?.status).toBe('next');
     });
 
+    it('preserves text direction on the next recurring task', () => {
+        const task: Task = {
+            id: 't1-rtl',
+            title: 'RTL reading',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            textDirection: 'rtl',
+            dueDate: '2025-01-06T10:00:00.000Z',
+            recurrence: { rule: 'daily' },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+        };
+
+        const next = createNextRecurringTask(task, '2025-01-06T12:00:00.000Z', 'done');
+
+        expect(next?.textDirection).toBe('rtl');
+    });
+
     it('uses completion date for fluid recurrence', () => {
         const task: Task = {
             id: 't2',
