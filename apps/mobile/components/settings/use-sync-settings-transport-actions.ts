@@ -823,6 +823,7 @@ export function useSyncSettingsTransportActions({
         isFossBuild,
         lastSyncStats,
         lastSyncStatus,
+        t,
         tr,
         formatText,
         resetSyncStatusForBackendSwitch,

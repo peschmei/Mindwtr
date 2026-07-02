@@ -52,9 +52,11 @@ export function MarkdownReferenceAutocomplete({
         projects: state.projects,
     }), shallow);
     const markdownEditorAssist = useTaskStore((state) => isMarkdownEditorAssistEnabled(state.settings));
+    const selectionStart = selection.start;
+    const selectionEnd = selection.end;
     const activeQuery = React.useMemo(
-        () => getActiveMarkdownReferenceQuery(value, selection, { assist: markdownEditorAssist }),
-        [markdownEditorAssist, selection.end, selection.start, value],
+        () => getActiveMarkdownReferenceQuery(value, { start: selectionStart, end: selectionEnd }, { assist: markdownEditorAssist }),
+        [markdownEditorAssist, selectionEnd, selectionStart, value],
     );
     const suggestions = React.useMemo(
         () => (activeQuery

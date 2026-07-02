@@ -433,6 +433,7 @@ export default function FocusScreen() {
     selectedProjects,
     selectedTimeEstimates,
     selectedTokens,
+    showLocationFilter,
     showTimeEstimateFilters,
   ]);
   const rawEffectiveFilterCriteria = activeSavedFilter?.criteria ?? currentFilterCriteria;

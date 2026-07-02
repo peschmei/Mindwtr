@@ -83,8 +83,9 @@ export function KeyboardAccessoryPortal({
 
     React.useLayoutEffect(() => {
         if (!host) return;
-        host.mount(portalKeyRef.current, children);
-        return () => host.unmount(portalKeyRef.current);
+        const portalKey = portalKeyRef.current;
+        host.mount(portalKey, children);
+        return () => host.unmount(portalKey);
     }, [children, host]);
 
     if (host) {

@@ -194,7 +194,7 @@ export default function ArchivedScreen() {
             completedLabel={t('list.done') || 'Completed'}
             isHighlighted={item.id === highlightTaskId}
         />
-    ), [tc, handleDelete, handleOpenTask, handleRestore, highlightTaskId]);
+    ), [tc, handleDelete, handleOpenTask, handleRestore, highlightTaskId, t]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, FlatList, Modal, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -125,7 +125,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
         };
     }, [today]);
 
-    const getExternalEventsForDate = (date: Date) => {
+    const getExternalEventsForDate = useCallback((date: Date) => {
         const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
         const end = new Date(start);
         end.setDate(end.getDate() + 1);
@@ -141,9 +141,9 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                 const bStart = safeParseDate(b.start)?.getTime() ?? Number.POSITIVE_INFINITY;
                 return aStart - bStart;
             });
-    };
-    const todayEvents = useMemo(() => getExternalEventsForDate(today), [externalEvents, today]);
-    const tomorrowEvents = useMemo(() => getExternalEventsForDate(tomorrow), [externalEvents, tomorrow]);
+    }, [externalEvents]);
+    const todayEvents = useMemo(() => getExternalEventsForDate(today), [getExternalEventsForDate, today]);
+    const tomorrowEvents = useMemo(() => getExternalEventsForDate(tomorrow), [getExternalEventsForDate, tomorrow]);
 
     const activeTasks = useMemo(
         () => tasks.filter((task) => (

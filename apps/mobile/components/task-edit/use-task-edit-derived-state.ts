@@ -108,9 +108,10 @@ export function useTaskEditDerivedState({
         const parsed = parseRRuleString(recurrenceRRuleValue);
         return parsed.interval && parsed.interval > 0 ? parsed.interval : 1;
     }, [recurrenceRRuleValue, recurrenceRuleValue]);
+    const monthlyAnchorSource = editedTask.dueDate || editedTask.startTime || task?.dueDate || task?.startTime;
     const monthlyAnchorDate = useMemo(
-        () => getMonthlyRecurrenceAnchorDate(editedTask, task),
-        [editedTask.dueDate, editedTask.startTime, task?.dueDate, task?.startTime]
+        () => safeParseDate(monthlyAnchorSource) ?? new Date(),
+        [monthlyAnchorSource]
     );
     const monthlyWeekdayCode = WEEKDAY_ORDER[monthlyAnchorDate.getDay()] as RecurrenceWeekday;
     const monthlyPattern = useMemo<'date' | 'custom'>(() => {
@@ -125,7 +126,6 @@ export function useTaskEditDerivedState({
 
     const formatTimeEstimateLabel = useCallback((value: TimeEstimate) => formatCoreTimeEstimateLabel(value), []);
 
-    const savedPresetsKey = settings.gtd?.timeEstimatePresets?.join('|') ?? '';
     const currentEstimate = editedTask.timeEstimate as TimeEstimate | undefined;
     const timeEstimateOptions: { value: TimeEstimate | ''; label: string }[] = useMemo(
         () => {
@@ -140,7 +140,7 @@ export function useTaskEditDerivedState({
                 ...effectivePresets.map((value) => ({ value, label: formatTimeEstimateLabel(value) })),
             ];
         },
-        [currentEstimate, formatTimeEstimateLabel, savedPresetsKey, settings.gtd?.timeEstimatePresets, t]
+        [currentEstimate, formatTimeEstimateLabel, settings.gtd?.timeEstimatePresets, t]
     );
 
     const savedOrder = useMemo(() => settings.gtd?.taskEditor?.order ?? [], [settings.gtd?.taskEditor?.order]);
@@ -193,16 +193,18 @@ export function useTaskEditDerivedState({
         },
         [taskEditorOrder]
     );
+    const activeSectionId = getEditedTaskValue(editedTask, task, 'sectionId');
+    const activeAreaId = getEditedTaskValue(editedTask, task, 'areaId');
     const hasValue = useCallback((fieldId: TaskEditorFieldId) => {
         switch (fieldId) {
             case 'status':
                 return false;
             case 'project':
-                return Boolean(getEditedTaskValue(editedTask, task, 'projectId'));
+                return Boolean(activeProjectId);
             case 'section':
-                return Boolean(getEditedTaskValue(editedTask, task, 'sectionId'));
+                return Boolean(activeSectionId);
             case 'area':
-                return Boolean(getEditedTaskValue(editedTask, task, 'areaId'));
+                return Boolean(activeAreaId);
             case 'priority':
                 if (!prioritiesEnabled) return false;
                 return Boolean(editedTask.priority ?? task?.priority);
@@ -237,37 +239,32 @@ export function useTaskEditDerivedState({
                 return false;
         }
     }, [
+        activeAreaId,
+        activeProjectId,
+        activeSectionId,
         contextInputDraft,
         descriptionDraft,
         editedTask.assignedTo,
-        editedTask.areaId,
         editedTask.checklist,
         editedTask.dueDate,
         editedTask.energyLevel,
         editedTask.location,
         editedTask.priority,
-        editedTask.projectId,
         editedTask.recurrence,
         editedTask.reviewAt,
-        editedTask.sectionId,
         editedTask.startTime,
-        editedTask.status,
         editedTask.timeEstimate,
         prioritiesEnabled,
         tagInputDraft,
         task?.assignedTo,
-        task?.areaId,
         task?.checklist,
         task?.dueDate,
         task?.energyLevel,
         task?.location,
         task?.priority,
-        task?.projectId,
         task?.recurrence,
         task?.reviewAt,
-        task?.sectionId,
         task?.startTime,
-        task?.status,
         task?.timeEstimate,
         timeEstimatesEnabled,
         visibleAttachmentsLength,

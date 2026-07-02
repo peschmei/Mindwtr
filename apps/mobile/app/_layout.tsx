@@ -483,9 +483,10 @@ function RootLayoutContentInner() {
     SplashScreen.setOptions({ duration: 0, fade: false });
   }, [isExpoGo]);
 
+  const systemBarsBg = tc.bg;
   useEffect(() => {
-    void applyAndroidSystemBars(tc, isDark);
-  }, [isDark, tc.bg]);
+    void applyAndroidSystemBars({ bg: systemBarsBg }, isDark);
+  }, [isDark, systemBarsBg]);
 
   useEffect(() => {
     if (!settingsLanguage || !isSupportedLanguage(settingsLanguage)) return;

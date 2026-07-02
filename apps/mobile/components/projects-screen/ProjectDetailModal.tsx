@@ -844,38 +844,6 @@ export function ProjectDetailModal({
         setSectionManagerVisible(false);
     }, [overlayVisible, selectedProject?.id]);
 
-    React.useEffect(() => {
-        if (Platform.OS !== 'android') return;
-        if (typeof Keyboard?.addListener !== 'function') return;
-        const updateKeyboardTop = (event: { endCoordinates?: { screenY?: number; height?: number } }) => {
-            const frame = getAndroidKeyboardFrame(event);
-            projectDetailKeyboardTopRef.current = frame.keyboardTop;
-            projectDetailKeyboardVisibleRef.current = frame.visible;
-            setProjectDetailKeyboardBottomInset(frame.inset);
-            const focusedInputHandle = projectDetailFocusedInputHandleRef.current;
-            if (projectDetailKeyboardVisibleRef.current && focusedInputHandle) {
-                if (typeof requestAnimationFrame === 'function') {
-                    requestAnimationFrame(() => scrollProjectInputIntoView(focusedInputHandle));
-                } else {
-                    setTimeout(() => scrollProjectInputIntoView(focusedInputHandle), 0);
-                }
-            }
-        };
-        const resetKeyboardTop = () => {
-            projectDetailKeyboardTopRef.current = Dimensions.get('window').height;
-            projectDetailKeyboardVisibleRef.current = false;
-            setProjectDetailKeyboardBottomInset(0);
-        };
-        const showListener = Keyboard.addListener('keyboardDidShow', updateKeyboardTop);
-        const changeListener = Keyboard.addListener('keyboardDidChangeFrame', updateKeyboardTop);
-        const hideListener = Keyboard.addListener('keyboardDidHide', resetKeyboardTop);
-        return () => {
-            showListener.remove();
-            changeListener.remove();
-            hideListener.remove();
-        };
-    }, []);
-
     const scrollProjectInputIntoView = React.useCallback((targetInput?: number | string) => {
         if (Platform.OS !== 'android') return;
         const targetHandle = typeof targetInput === 'number'
@@ -920,6 +888,38 @@ export function ProjectDetailModal({
             setTimeout(measureAndScroll, 0);
         }
     }, []);
+
+    React.useEffect(() => {
+        if (Platform.OS !== 'android') return;
+        if (typeof Keyboard?.addListener !== 'function') return;
+        const updateKeyboardTop = (event: { endCoordinates?: { screenY?: number; height?: number } }) => {
+            const frame = getAndroidKeyboardFrame(event);
+            projectDetailKeyboardTopRef.current = frame.keyboardTop;
+            projectDetailKeyboardVisibleRef.current = frame.visible;
+            setProjectDetailKeyboardBottomInset(frame.inset);
+            const focusedInputHandle = projectDetailFocusedInputHandleRef.current;
+            if (projectDetailKeyboardVisibleRef.current && focusedInputHandle) {
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => scrollProjectInputIntoView(focusedInputHandle));
+                } else {
+                    setTimeout(() => scrollProjectInputIntoView(focusedInputHandle), 0);
+                }
+            }
+        };
+        const resetKeyboardTop = () => {
+            projectDetailKeyboardTopRef.current = Dimensions.get('window').height;
+            projectDetailKeyboardVisibleRef.current = false;
+            setProjectDetailKeyboardBottomInset(0);
+        };
+        const showListener = Keyboard.addListener('keyboardDidShow', updateKeyboardTop);
+        const changeListener = Keyboard.addListener('keyboardDidChangeFrame', updateKeyboardTop);
+        const hideListener = Keyboard.addListener('keyboardDidHide', resetKeyboardTop);
+        return () => {
+            showListener.remove();
+            changeListener.remove();
+            hideListener.remove();
+        };
+    }, [scrollProjectInputIntoView]);
 
     React.useEffect(() => {
         if (Platform.OS !== 'android' || projectDetailKeyboardBottomInset <= 0) return;

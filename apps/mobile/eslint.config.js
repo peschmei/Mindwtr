@@ -7,4 +7,10 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    rules: {
+      // Stale-closure bugs shipped as mere warnings (#768); keep the tree at zero.
+      'react-hooks/exhaustive-deps': 'error',
+    },
+  },
 ]);

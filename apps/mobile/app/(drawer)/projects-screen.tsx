@@ -319,21 +319,23 @@ export default function ProjectsScreen() {
     ? t('projects.empty')
     : resolveText('common.loading', 'Loading...');
 
+  // Memos key off the id so a project object refresh with the same id reuses results.
+  const selectedProjectIdForLists = selectedProject?.id ?? null;
   const selectedProjectTasks = useMemo(
-    () => (selectedProject ? tasksByProjectId.get(selectedProject.id) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
-    [tasksByProjectId, selectedProject?.id]
+    () => (selectedProjectIdForLists ? tasksByProjectId.get(selectedProjectIdForLists) ?? EMPTY_PROJECT_TASKS : EMPTY_PROJECT_TASKS),
+    [tasksByProjectId, selectedProjectIdForLists]
   );
   const selectedProjectSections = useMemo<Section[]>(() => {
-    if (!selectedProject) return [];
+    if (!selectedProjectIdForLists) return [];
     return sections
-      .filter((section) => section.projectId === selectedProject.id && !section.deletedAt)
+      .filter((section) => section.projectId === selectedProjectIdForLists && !section.deletedAt)
       .sort((a, b) => {
         const aOrder = Number.isFinite(a.order) ? a.order : 0;
         const bOrder = Number.isFinite(b.order) ? b.order : 0;
         if (aOrder !== bOrder) return aOrder - bOrder;
         return a.title.localeCompare(b.title);
       });
-  }, [sections, selectedProject?.id]);
+  }, [sections, selectedProjectIdForLists]);
 
   const openProject = useCallback((project: Project) => {
     setSelectedProject(project);

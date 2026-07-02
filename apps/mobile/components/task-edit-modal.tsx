@@ -128,24 +128,18 @@ function TaskEditModalInner({
         };
     }, shallow);
     const { t, language } = useLanguage();
-    const rawThemeColors = useThemeColors();
-    const tc = useMemo(() => rawThemeColors, [
-        rawThemeColors.bg,
-        rawThemeColors.border,
-        rawThemeColors.cardBg,
-        rawThemeColors.danger,
-        rawThemeColors.filterBg,
-        rawThemeColors.icon,
-        rawThemeColors.inputBg,
-        rawThemeColors.onTint,
-        rawThemeColors.secondaryText,
-        rawThemeColors.success,
-        rawThemeColors.tabIconDefault,
-        rawThemeColors.tabIconSelected,
-        rawThemeColors.taskItemBg,
-        rawThemeColors.text,
-        rawThemeColors.tint,
-        rawThemeColors.warning,
+    // useThemeColors returns a fresh object per render; rebuild from the color values so
+    // tc keeps a stable identity until an actual color changes (ThemeColors is exactly these fields).
+    const {
+        bg, border, cardBg, danger, filterBg, icon, inputBg, onTint,
+        secondaryText, success, tabIconDefault, tabIconSelected, taskItemBg, text, tint, warning,
+    } = useThemeColors();
+    const tc = useMemo(() => ({
+        bg, border, cardBg, danger, filterBg, icon, inputBg, onTint,
+        secondaryText, success, tabIconDefault, tabIconSelected, taskItemBg, text, tint, warning,
+    }), [
+        bg, border, cardBg, danger, filterBg, icon, inputBg, onTint,
+        secondaryText, success, tabIconDefault, tabIconSelected, taskItemBg, text, tint, warning,
     ]);
     const prioritiesEnabled = settings.features?.priorities !== false;
     const timeEstimatesEnabled = settings.features?.timeEstimates !== false;
@@ -323,7 +317,7 @@ function TaskEditModalInner({
         titleDraftRef.current = text;
         setTitleDraft(text);
         setEditedTask((prev) => ({ ...prev, title: text }));
-    }, [setEditedTask]);
+    }, [setEditedTask, setTitleDraft, titleDebounceRef, titleDraftRef]);
     const handleTitleDraftChange = useCallback((text: string) => {
         titleDraftRef.current = text;
         setTitleDraft(text);
@@ -334,7 +328,7 @@ function TaskEditModalInner({
         titleDebounceRef.current = setTimeout(() => {
             setEditedTask((prev) => ({ ...prev, title: text }));
         }, 250);
-    }, [resetCopilotDraft, setEditedTask]);
+    }, [resetCopilotDraft, setEditedTask, setTitleDraft, titleDebounceRef, titleDraftRef]);
     const {
         activeProjectId,
         availableStatusOptions,
@@ -375,25 +369,25 @@ function TaskEditModalInner({
     });
     const isReference = (editedTask.status ?? task?.status) === 'reference';
 
+    const editedTaskProjectId = getEditedTaskValue(editedTask, task, 'projectId');
+    const editedTaskSectionId = getEditedTaskValue(editedTask, task, 'sectionId');
     useEffect(() => {
-        const projectId = getEditedTaskValue(editedTask, task, 'projectId');
-        const sectionId = getEditedTaskValue(editedTask, task, 'sectionId');
-        if (!sectionId) return;
-        if (!projectId) {
+        if (!editedTaskSectionId) return;
+        if (!editedTaskProjectId) {
             setEditedTask(prev => ({ ...prev, sectionId: undefined }));
             return;
         }
-        const isValid = sections.some((section) => section.id === sectionId && section.projectId === projectId && !section.deletedAt);
+        const isValid = sections.some((section) => section.id === editedTaskSectionId && section.projectId === editedTaskProjectId && !section.deletedAt);
         if (!isValid) {
             setEditedTask(prev => ({ ...prev, sectionId: undefined }));
         }
-    }, [editedTask.projectId, editedTask.sectionId, sections, setEditedTask, task?.projectId, task?.sectionId]);
+    }, [editedTaskProjectId, editedTaskSectionId, sections, setEditedTask]);
 
     useEffect(() => {
         if (!activeProjectId) {
             setShowSectionPicker(false);
         }
-    }, [activeProjectId]);
+    }, [activeProjectId, setShowSectionPicker]);
 
     const {
         applyQuickDate,
@@ -523,11 +517,11 @@ function TaskEditModalInner({
     const updateContextInput = useCallback((text: string) => {
         setContextInputDraft(text);
         setEditedTask((prev) => ({ ...prev, contexts: parseTokenList(text, '@') }));
-    }, [setEditedTask]);
+    }, [setContextInputDraft, setEditedTask]);
     const updateTagInput = useCallback((text: string) => {
         setTagInputDraft(text);
         setEditedTask((prev) => ({ ...prev, tags: parseTokenList(text, '#') }));
-    }, [setEditedTask]);
+    }, [setEditedTask, setTagInputDraft]);
     const applyContextSuggestion = useCallback((token: string) => {
         updateContextInput(replaceTrailingToken(contextInputDraft, token));
     }, [contextInputDraft, updateContextInput]);
@@ -582,11 +576,11 @@ function TaskEditModalInner({
     const commitContextDraft = useCallback(() => {
         setIsContextInputFocused(false);
         updateContextInput(parseTokenList(contextInputDraft, '@').join(', '));
-    }, [contextInputDraft, updateContextInput]);
+    }, [contextInputDraft, setIsContextInputFocused, updateContextInput]);
     const commitTagDraft = useCallback(() => {
         setIsTagInputFocused(false);
         updateTagInput(parseTokenList(tagInputDraft, '#').join(', '));
-    }, [tagInputDraft, updateTagInput]);
+    }, [setIsTagInputFocused, tagInputDraft, updateTagInput]);
 
     const {
         applyChecklistUpdate,
@@ -761,6 +755,7 @@ function TaskEditModalInner({
         addImageAttachment,
         applyAssignedToSuggestion,
         applyContextSuggestion,
+        applyQuickDate,
         applyTagSuggestion,
         areas,
         assignedToSuggestions,
@@ -830,7 +825,6 @@ function TaskEditModalInner({
         setShowSectionPicker,
         showDatePicker,
         showDescriptionPreview,
-        styles,
         tagInputDraft,
         tagTokenSuggestions,
         task,
