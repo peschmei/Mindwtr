@@ -15,6 +15,7 @@ import {
 } from '@mindwtr/core';
 
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { CompactText } from '@/components/compact-text';
 
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
 import { SettingsTopBar } from './settings.shell';
@@ -480,9 +481,9 @@ export function ManageSettingsScreen() {
         <View style={styles.settingRow}>
             <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: DEFAULT_AREA_COLOR, marginRight: 12 }} />
             <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.settingLabel, { color: tc.text }]} numberOfLines={1}>
+                <CompactText style={[styles.settingLabel, { color: tc.text }]} numberOfLines={1}>
                     {resolveText('areas.new', 'New Area')}
-                </Text>
+                </CompactText>
                 <Text style={[styles.settingDescription, { color: tc.secondaryText }]} numberOfLines={2}>
                     {resolveText('areas.newHint', 'Create an area for related projects and tasks.')}
                 </Text>

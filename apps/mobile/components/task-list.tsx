@@ -38,6 +38,7 @@ import {
 
 import { TaskEditModal } from './task-edit-modal';
 import { ErrorBoundary } from './ErrorBoundary';
+import { CompactText } from './compact-text';
 import { ListEmptyState } from './list-empty-state';
 import { SwipeableTaskItem, type SwipeableTaskItemRowContext } from './swipeable-task-item';
 import { useTheme } from '../contexts/theme-context';
@@ -1577,12 +1578,12 @@ function TaskListComponent({
           >
             {item.title}
           </Text>
-          <Text
+          <CompactText
             numberOfLines={1}
             style={[styles.projectReorderTaskMeta, { color: themeColorsMemo.secondaryText }]}
           >
             {statusLabel}
-          </Text>
+          </CompactText>
         </View>
         <TouchableOpacity
           accessibilityLabel={`${tFallback(t, 'board.dragTask', 'Drag task')}: ${item.title}`}

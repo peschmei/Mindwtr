@@ -20,6 +20,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useLanguage } from '../contexts/language-context';
+import { CompactText } from './compact-text';
 import { SwipeableTaskItem } from './swipeable-task-item';
 import { TaskEditModal } from './task-edit-modal';
 import { InboxProcessingModal } from './inbox-processing-modal';
@@ -188,7 +189,7 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                                 <Text style={styles.stepRailBadgeText}>{index + 1}</Text>
                             )}
                         </View>
-                        <Text
+                        <CompactText
                             style={[
                                 styles.stepRailText,
                                 { color: current ? tc.text : tc.secondaryText },
@@ -196,7 +197,7 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                             numberOfLines={1}
                         >
                             {step.title}
-                        </Text>
+                        </CompactText>
                     </View>
                 );
             })}
