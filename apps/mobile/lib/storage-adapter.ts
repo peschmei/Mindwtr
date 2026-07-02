@@ -52,6 +52,7 @@ type SqliteState = {
 
 let sqliteStatePromise: Promise<SqliteState> | null = null;
 let sqliteOpenMode = 'unknown';
+let sqliteJournalDiagnostics: Record<string, string> | null = null;
 let preferJsonBackup = false;
 let preferJsonBackupUntil = 0;
 let didWarnPreferJsonBackup = false;
@@ -132,6 +133,7 @@ const awaitQueuedSqliteWrites = async (phase: string): Promise<void> => {
         logStorageInfo('[Storage] Read waited for queued SQLite writes', {
             phase,
             waitedMs: String(waitedMs),
+            ...(sqliteJournalDiagnostics ?? {}),
         });
     }
 };
@@ -151,9 +153,6 @@ const clearPreferJsonBackup = () => {
 };
 
 const createLegacyClient = (db: any): SqliteClient => {
-    const isConnectionPragmaAssignment = (sql: string) =>
-        /^\s*PRAGMA\s+(journal_mode|foreign_keys|busy_timeout)\s*=/i.test(sql);
-
     const execSqlInTransaction = (sql: string, params: unknown[] = []) =>
         new Promise<any>((resolve, reject) => {
             db.transaction(
@@ -172,24 +171,34 @@ const createLegacyClient = (db: any): SqliteClient => {
             );
         });
 
-    const execSqlDirect = (sql: string) =>
+    const execSqlDirect = (sql: string, params: unknown[] = []) =>
         new Promise<any>((resolve, reject) => {
             try {
-                db.exec([{ sql, args: [] }], false, (error: any, result: any) => {
+                db.exec([{ sql, args: params }], false, (error: any, result: any) => {
                     if (error) {
                         reject(error);
                         return;
                     }
-                    resolve(Array.isArray(result) ? result[0] : result);
+                    const first = Array.isArray(result) ? result[0] : result;
+                    if (first && typeof first === 'object' && 'error' in first && first.error) {
+                        reject(first.error);
+                        return;
+                    }
+                    resolve(first);
                 });
             } catch (error) {
                 reject(error);
             }
         });
 
+    // Every statement goes through the raw exec API when available. The db.transaction
+    // wrapper issues its own BEGIN/COMMIT around each statement, which both no-ops
+    // connection pragmas (journal_mode) and breaks the adapter's explicit
+    // BEGIN IMMEDIATE…COMMIT — a full save then commits (and fsyncs) per statement
+    // instead of once, which took seconds per action on-device (#766).
     const execSql = (sql: string, params: unknown[] = []) => {
-        if (params.length === 0 && isConnectionPragmaAssignment(sql) && typeof db.exec === 'function') {
-            return execSqlDirect(sql);
+        if (typeof db.exec === 'function') {
+            return execSqlDirect(sql, params);
         }
         return execSqlInTransaction(sql, params);
     };
@@ -212,6 +221,8 @@ const createLegacyClient = (db: any): SqliteClient => {
             const result = await execSql(sql, params);
             const rows = result?.rows;
             if (!rows) return [] as T[];
+            // Raw exec results carry rows as a plain array; executeSql results wrap them.
+            if (Array.isArray(rows)) return rows as T[];
             if (Array.isArray(rows._array)) return rows._array as T[];
             const collected: T[] = [];
             for (let i = 0; i < rows.length; i += 1) {
@@ -223,6 +234,7 @@ const createLegacyClient = (db: any): SqliteClient => {
             const result = await execSql(sql, params);
             const rows = result?.rows;
             if (!rows || rows.length === 0) return undefined;
+            if (Array.isArray(rows)) return rows[0] as T;
             if (Array.isArray(rows._array)) return rows._array[0] as T;
             return rows.item(0) as T;
         },
@@ -413,17 +425,19 @@ const initSqliteState = async (): Promise<SqliteState> => {
         adapter = new SqliteAdapter(client);
         await measureStartupPhase('mobile.storage.sqlite_init.ensure_schema_legacy_retry', async () => adapter.ensureSchema());
     }
-    // Diagnostic: confirm whether WAL actually took effect on this device. The schema PRAGMA
-    // may not switch journal mode on the legacy client (it runs each statement in its own
-    // transaction), so the shared beta log should report the real mode rather than assume WAL.
+    // Diagnostic: confirm whether WAL actually took effect on this device. Init runs
+    // during the getData that loads the settings which enable diagnostic logging, so a
+    // log line written here is dropped — capture the values and attach them to the
+    // slow-save/read-wait logs that fire later instead.
     try {
         const journalRow = await client.get<{ journal_mode?: string }>('PRAGMA journal_mode');
         const busyRow = await client.get<{ timeout?: number }>('PRAGMA busy_timeout');
-        logStorageInfo('[Storage] SQLite journal mode ready', {
+        sqliteJournalDiagnostics = {
             journalMode: String(journalRow?.journal_mode ?? 'unknown'),
             busyTimeoutMs: String(busyRow?.timeout ?? 'unknown'),
             openMode: sqliteOpenMode,
-        });
+        };
+        logStorageInfo('[Storage] SQLite journal mode ready', sqliteJournalDiagnostics);
     } catch (error) {
         logStorageWarn('[Storage] Failed to read SQLite journal mode', error);
     }
@@ -617,7 +631,7 @@ const createStorage = (): StorageAdapter => {
                     await measureStartupPhase('mobile.storage.save_data.sqlite_write', async () => adapter.saveData(data));
                     const writeMs = Date.now() - writeStartedAt;
                     if (writeMs >= SQLITE_SLOW_WRITE_LOG_THRESHOLD_MS) {
-                        logStorageInfo('[Storage] Slow SQLite save', { writeMs: String(writeMs) });
+                        logStorageInfo('[Storage] Slow SQLite save', { writeMs: String(writeMs), ...(sqliteJournalDiagnostics ?? {}) });
                     }
                     clearPreferJsonBackup();
                 } catch (error) {

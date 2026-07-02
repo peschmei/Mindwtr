@@ -305,11 +305,47 @@ describe('mobile storage adapter', () => {
     }
   }, 10_000);
 
-  it('runs legacy SQLite connection pragmas outside transactions', async () => {
-    const directExec = vi.fn((_queries, _readOnly, callback) => callback?.(null, []));
+  it('runs every legacy SQLite statement outside the per-statement transaction wrapper', async () => {
+    const directStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const directExec = vi.fn((queries, _readOnly, callback) => {
+      directStatements.push(queries[0]);
+      callback?.(null, [{ rows: [] }]);
+    });
+    const transaction = vi.fn();
+    const db = { exec: directExec, transaction };
+
+    const { __mobileStorageTestUtils } = await import('./storage-adapter');
+    const { SQLITE_BASE_SCHEMA } = await import('@mindwtr/core');
+    const client = __mobileStorageTestUtils.createLegacyClientForTests(db);
+    expect(client.exec).toBeDefined();
+
+    await client.exec?.(SQLITE_BASE_SCHEMA);
+    await client.run('BEGIN IMMEDIATE');
+    await client.run('INSERT INTO tasks (id) VALUES (?)', ['task-1']);
+    await client.run('COMMIT');
+
+    const statements = directStatements.map((entry) => entry.sql);
+    // Connection pragmas apply for real (a transaction wrapper would no-op them)…
+    expect(statements.slice(0, 3)).toEqual([
+      'PRAGMA journal_mode = WAL',
+      'PRAGMA foreign_keys = ON',
+      'PRAGMA busy_timeout = 5000',
+    ]);
+    // …the schema flows through the same direct path…
+    expect(statements.some((statement) => statement.startsWith('CREATE TABLE IF NOT EXISTS tasks'))).toBe(true);
+    // …and adapter-managed transactions stay intact instead of committing per statement (#766).
+    expect(statements.slice(-3)).toEqual([
+      'BEGIN IMMEDIATE',
+      'INSERT INTO tasks (id) VALUES (?)',
+      'COMMIT',
+    ]);
+    expect(directStatements[directStatements.length - 2]?.args).toEqual(['task-1']);
+    expect(transaction).not.toHaveBeenCalled();
+  }, 10_000);
+
+  it('falls back to the transaction wrapper when the legacy exec API is missing', async () => {
     const transactionStatements: string[] = [];
     const db = {
-      exec: directExec,
       transaction: vi.fn((work) => {
         work({
           executeSql: (sql: string, _params: unknown[], success: (_tx: unknown, result: unknown) => void) => {
@@ -321,19 +357,10 @@ describe('mobile storage adapter', () => {
     };
 
     const { __mobileStorageTestUtils } = await import('./storage-adapter');
-    const { SQLITE_BASE_SCHEMA } = await import('@mindwtr/core');
     const client = __mobileStorageTestUtils.createLegacyClientForTests(db);
-    expect(client.exec).toBeDefined();
+    await client.run('SELECT 1');
 
-    await client.exec?.(SQLITE_BASE_SCHEMA);
-
-    expect(directExec.mock.calls.map(([queries]) => queries[0].sql)).toEqual([
-      'PRAGMA journal_mode = WAL',
-      'PRAGMA foreign_keys = ON',
-      'PRAGMA busy_timeout = 5000',
-    ]);
-    expect(transactionStatements.some((statement) => statement.startsWith('CREATE TABLE IF NOT EXISTS tasks'))).toBe(true);
-    expect(transactionStatements.filter((statement) => statement.startsWith('PRAGMA '))).toEqual([]);
+    expect(transactionStatements).toEqual(['SELECT 1']);
   }, 10_000);
 
   it('ignores an unmarked JSON backup startup snapshot', async () => {
