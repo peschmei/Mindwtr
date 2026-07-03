@@ -120,6 +120,7 @@ export default function ProjectsScreen() {
     archived: { text: tc.secondaryText, bg: tc.filterBg, border: tc.border },
   };
   const [newProjectTitle, setNewProjectTitle] = useState('');
+  const [newProjectAreaId, setNewProjectAreaId] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectTaskSortBy, setProjectTaskSortBy] = useState<ProjectTaskSortBy>('default');
   const [showProjectMeta, setShowProjectMeta] = useState(false);
@@ -154,6 +155,12 @@ export default function ProjectsScreen() {
     resolvedAreaFilter: selectedAreaFilter,
     sortedAreas,
   } = useMobileAreaFilter();
+
+  useEffect(() => {
+    setNewProjectAreaId(
+      selectedAreaFilter !== ALL_AREAS && selectedAreaFilter !== NO_AREA ? selectedAreaFilter : ''
+    );
+  }, [selectedAreaFilter, ALL_AREAS, NO_AREA]);
 
   const logProjectError = useCallback((message: string, error?: unknown) => {
     if (!error) return;
@@ -604,15 +611,16 @@ export default function ProjectsScreen() {
 
   const handleAddProject = () => {
     if (newProjectTitle.trim()) {
-      const inferredAreaId =
-        selectedAreaFilter !== ALL_AREAS && selectedAreaFilter !== NO_AREA && areaById.has(selectedAreaFilter)
-          ? selectedAreaFilter
-          : undefined;
-      const areaColor = inferredAreaId ? areaById.get(inferredAreaId)?.color : undefined;
+      const resolvedAreaId =
+        newProjectAreaId && areaById.has(newProjectAreaId) ? newProjectAreaId : undefined;
+      const areaColor = resolvedAreaId ? areaById.get(resolvedAreaId)?.color : undefined;
       addProject(newProjectTitle, areaColor || DEFAULT_PROJECT_COLOR, {
-        areaId: inferredAreaId,
+        areaId: resolvedAreaId,
       });
       setNewProjectTitle('');
+      setNewProjectAreaId(
+        selectedAreaFilter !== ALL_AREAS && selectedAreaFilter !== NO_AREA ? selectedAreaFilter : ''
+      );
     }
   };
 
@@ -766,6 +774,55 @@ export default function ProjectsScreen() {
             <Plus size={22} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.4} />
           </TouchableOpacity>
         </View>
+        {newProjectTitle.trim().length > 0 && sortedAreas.length > 0 && (
+          <View style={styles.tagFilterChips}>
+            <TouchableOpacity
+              style={[
+                styles.tagFilterChip,
+                newProjectAreaId === ''
+                  ? { borderColor: tc.tint, backgroundColor: tc.tint }
+                  : { borderColor: tc.border, backgroundColor: tc.cardBg },
+              ]}
+              onPress={() => setNewProjectAreaId('')}
+              accessibilityRole="button"
+              accessibilityLabel={t('projects.noArea')}
+              accessibilityState={{ selected: newProjectAreaId === '' }}
+            >
+              <Text
+                style={[
+                  styles.tagFilterText,
+                  { color: newProjectAreaId === '' ? tc.onTint : tc.text },
+                ]}
+              >
+                {t('projects.noArea')}
+              </Text>
+            </TouchableOpacity>
+            {sortedAreas.map((area) => (
+              <TouchableOpacity
+                key={area.id}
+                style={[
+                  styles.tagFilterChip,
+                  newProjectAreaId === area.id
+                    ? { borderColor: tc.tint, backgroundColor: tc.tint }
+                    : { borderColor: tc.border, backgroundColor: tc.cardBg },
+                ]}
+                onPress={() => setNewProjectAreaId(area.id)}
+                accessibilityRole="button"
+                accessibilityLabel={area.name}
+                accessibilityState={{ selected: newProjectAreaId === area.id }}
+              >
+                <Text
+                  style={[
+                    styles.tagFilterText,
+                    { color: newProjectAreaId === area.id ? tc.onTint : tc.text },
+                  ]}
+                >
+                  {area.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         <View style={styles.filterSection}>
           <TouchableOpacity
             style={styles.filterHeader}

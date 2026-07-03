@@ -165,6 +165,7 @@ export function ProjectsView() {
     );
     const [isCreating, setIsCreating] = useState(false);
     const [newProjectTitle, setNewProjectTitle] = useState('');
+    const [newProjectAreaId, setNewProjectAreaId] = useState('');
     const [persistedViewState, setPersistedViewState] = usePersistedViewState(
         PROJECTS_VIEW_STATE_STORAGE_KEY,
         DEFAULT_PROJECTS_VIEW_STATE,
@@ -421,6 +422,10 @@ export function ProjectsView() {
 
     const getProjectColorForTask = (project: Project) => getProjectColor(project, areaById, DEFAULT_AREA_COLOR);
 
+    useEffect(() => {
+        setNewProjectAreaId(selectedArea !== ALL_AREAS && selectedArea !== NO_AREA ? selectedArea : '');
+    }, [selectedArea, ALL_AREAS, NO_AREA]);
+
     const sortAreasByName = () => reorderAreas(sortAreasByNameIds(sortedAreas));
     const sortAreasByColor = () => reorderAreas(sortAreasByColorIds(sortedAreas));
 
@@ -525,7 +530,7 @@ export function ProjectsView() {
         setIsCreatingProject(true);
         try {
             const resolvedAreaId =
-                selectedArea !== ALL_AREAS && selectedArea !== NO_AREA ? selectedArea : undefined;
+                newProjectAreaId && areaById.has(newProjectAreaId) ? newProjectAreaId : undefined;
             const areaColor = resolvedAreaId ? areaById.get(resolvedAreaId)?.color : undefined;
             await addProject(
                 newProjectTitle,
@@ -534,6 +539,7 @@ export function ProjectsView() {
             );
             setNewProjectTitle('');
             setIsCreating(false);
+            setNewProjectAreaId(selectedArea !== ALL_AREAS && selectedArea !== NO_AREA ? selectedArea : '');
         } catch (error) {
             reportError('Failed to create project', error);
             showToast(t('projects.createFailed') || 'Failed to create project', 'error');
@@ -586,10 +592,16 @@ export function ProjectsView() {
                                     isCreating={isCreating}
                                     isCreatingProject={isCreatingProject}
                                     newProjectTitle={newProjectTitle}
+                                    newProjectAreaId={newProjectAreaId}
+                                    areaOptions={sortedAreas}
                                     onStartCreate={() => setIsCreating(true)}
-                                    onCancelCreate={() => setIsCreating(false)}
+                                    onCancelCreate={() => {
+                                        setIsCreating(false);
+                                        setNewProjectAreaId(selectedArea !== ALL_AREAS && selectedArea !== NO_AREA ? selectedArea : '');
+                                    }}
                                     onCreateProject={handleCreateProject}
                                     onChangeNewProjectTitle={setNewProjectTitle}
+                                    onChangeNewProjectAreaId={setNewProjectAreaId}
                                     onSelectTag={setSelectedTag}
                                     groupedActiveProjects={groupedActiveProjects}
                                     groupedDeferredProjects={groupedDeferredProjects}

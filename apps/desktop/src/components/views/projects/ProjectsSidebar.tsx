@@ -49,10 +49,13 @@ interface ProjectsSidebarProps {
     isCreating: boolean;
     isCreatingProject: boolean;
     newProjectTitle: string;
+    newProjectAreaId: string;
+    areaOptions: Area[];
     onStartCreate: () => void;
     onCancelCreate: () => void;
     onCreateProject: (event: React.FormEvent) => void;
     onChangeNewProjectTitle: (value: string) => void;
+    onChangeNewProjectAreaId: (value: string) => void;
     onSelectTag: (value: string) => void;
     groupedActiveProjects: GroupedProjects;
     groupedDeferredProjects: GroupedProjects;
@@ -90,10 +93,13 @@ export function ProjectsSidebar({
     isCreating,
     isCreatingProject,
     newProjectTitle,
+    newProjectAreaId,
+    areaOptions,
     onStartCreate,
     onCancelCreate,
     onCreateProject,
     onChangeNewProjectTitle,
+    onChangeNewProjectAreaId,
     onSelectTag,
     groupedActiveProjects,
     groupedDeferredProjects,
@@ -341,6 +347,22 @@ export function ProjectsSidebar({
                         <Plus className="w-4 h-4" />
                     </button>
                 </div>
+                {(isCreating || newProjectTitle.trim().length > 0) && areaOptions.length > 0 && (
+                    <select
+                        aria-label={t('projects.areaLabel')}
+                        value={newProjectAreaId}
+                        onChange={(e) => onChangeNewProjectAreaId(e.target.value)}
+                        className="w-full h-8 text-xs bg-background border border-border rounded px-2 text-foreground"
+                        disabled={isCreatingProject}
+                    >
+                        <option value="">{t('projects.noArea')}</option>
+                        {areaOptions.map((area) => (
+                            <option key={area.id} value={area.id}>
+                                {area.name}
+                            </option>
+                        ))}
+                    </select>
+                )}
                 {(isCreating || newProjectTitle.trim().length > 0) && (
                     <div className="flex justify-end">
                         <button
