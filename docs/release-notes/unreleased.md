@@ -54,3 +54,4 @@ Changes collected after `v1.0.5` and before the next version tag.
 - feat(projects): pick a project's area directly in the create form on desktop and mobile, defaulting to the active area filter.
 - fix(desktop): quick add and capture fields keep the caret visible after accepting a suggestion, and long suggestion lists scroll to keep the highlighted entry in view.
 - fix(quick-add): `+project` and `!area` shortcuts now match existing multi-word names without swallowing the rest of the title, an unrecognized `!area` token no longer silently disappears, and quoted names (`+"New Project Name"`) delimit multi-word project creation mid-sentence.
+- feat(desktop): double-clicking a task title now renames it in place (Enter saves, Esc cancels); double-clicking elsewhere on the row still opens the full editor.
