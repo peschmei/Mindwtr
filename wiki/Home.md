@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/dongdongbh/Mindwtr/main/apps/mobile/assets/images/icon.png" width="120" alt="Mindwtr Logo">
 
-# Mindwtr Wiki
+# Mindwtr Documentation
 
 **A complete Getting Things Done (GTD) productivity system for desktop and mobile.**
 
@@ -15,151 +15,79 @@
 
 ---
 
-> **New docs site:** Mindwtr documentation is gradually moving to [docs.mindwtr.app](https://docs.mindwtr.app/) for better search and navigation. The GitHub Wiki remains available during the transition.
+> **This wiki has moved.** All documentation now lives at **[docs.mindwtr.app](https://docs.mindwtr.app/)** — searchable, always current, and mobile-friendly.
 >
 > **Main website:** [mindwtr.app](https://mindwtr.app/)
 
-## 🧠 Design Philosophy
+Use the table of contents below to jump straight to the page you need.
 
-Mindwtr is **simple by default and powerful when needed**. We focus on reducing cognitive load, cutting the fat, and keeping you in flow.
+## 🚀 Getting Started
 
-- **Progressive disclosure** keeps advanced controls out of sight until you need them.
-- **Less by default** means fewer fields and fewer distractions.
-- **Avoid feature creep** so the UI stays calm and purposeful.
+- [Getting Started](https://docs.mindwtr.app/start/getting-started)
+- [Desktop Installation](https://docs.mindwtr.app/start/desktop-installation)
+- [Mobile Installation](https://docs.mindwtr.app/start/mobile-installation)
+- [Beta Channels](https://docs.mindwtr.app/start/beta-channels)
+- [FAQ](https://docs.mindwtr.app/start/faq)
 
-*Don’t show me a cockpit when I just want to ride a bike.*
+## ✅ Using Mindwtr
 
-## 📚 Table of Contents
+- [GTD Overview](https://docs.mindwtr.app/use/gtd-overview)
+- [GTD Workflow in Mindwtr](https://docs.mindwtr.app/use/gtd-workflow)
+- [Desktop User Guide](https://docs.mindwtr.app/use/desktop)
+- [Mobile User Guide](https://docs.mindwtr.app/use/mobile)
+- [Keyboard Shortcuts](https://docs.mindwtr.app/use/keyboard-shortcuts)
+- [Contexts & Tags](https://docs.mindwtr.app/use/contexts-tags)
+- [Areas & People](https://docs.mindwtr.app/use/areas-people)
+- [Recurring Tasks](https://docs.mindwtr.app/use/recurring-tasks)
+- [Reusable Lists](https://docs.mindwtr.app/use/reusable-lists)
+- [Attachments](https://docs.mindwtr.app/use/attachments)
+- [Markdown & Links](https://docs.mindwtr.app/use/markdown-links)
+- [Calendar Integration](https://docs.mindwtr.app/use/calendar-integration)
+- [Daily Review](https://docs.mindwtr.app/use/daily-review)
+- [Weekly Review](https://docs.mindwtr.app/use/weekly-review)
+- [Pomodoro & Focus](https://docs.mindwtr.app/use/pomodoro-focus)
 
-### Getting Started
-- [[Getting Started]] — Quick installation and first steps
-- [[FAQ]] — Frequently asked questions
+## 🔄 Data & Sync
 
-### User Guides
-- [[User Guide Desktop]] — Complete desktop app documentation
-  - [[Desktop Installation]] — Install on Linux, Windows, macOS
-  - Keyboard shortcuts now live in [[User Guide Desktop]]
-- [[User Guide Mobile]] — Complete mobile app documentation
-  - [[Mobile Installation]] — Install on Android and iOS (App Store/TestFlight)
-  - [[Apple Shortcuts]] — Capture tasks and open GTD views from Apple Shortcuts
-- [[Pomodoro Focus]] — Optional deep-work timer in Focus view
-- [[Docker Deployment]] — Run PWA and Cloud Server with Docker
+- [Data & Sync Overview](https://docs.mindwtr.app/data-sync/)
+- [Self-Hosted Cloud](https://docs.mindwtr.app/data-sync/self-hosted-cloud)
+- [Cloud Deployment](https://docs.mindwtr.app/data-sync/cloud-deployment)
+- [WebDAV](https://docs.mindwtr.app/data-sync/webdav)
+- [Dropbox](https://docs.mindwtr.app/data-sync/dropbox)
+- [iCloud](https://docs.mindwtr.app/data-sync/icloud)
+- [Backup & Restore](https://docs.mindwtr.app/data-sync/backup-restore)
+- [Data Lifecycle](https://docs.mindwtr.app/data-sync/data-lifecycle)
+- [Sync Algorithm](https://docs.mindwtr.app/data-sync/sync-algorithm)
+- [Diagnostics & Logs](https://docs.mindwtr.app/data-sync/diagnostics-logs)
 
-### GTD Methodology
-- [[GTD Overview]] — Introduction to Getting Things Done
-- [[GTD Workflow in Mindwtr]] — How to implement GTD with this app
-- [[Contexts and Tags]] — Location and energy-based contexts
-- [[Weekly Review]] — Step-by-step review process
+## 📥 Importing Data
 
-### Data & Sync
-- [[Data and Sync]] — Storage locations and sync setup
-- [[Backup and Restore]] — Export backups, restore local data, and use recovery snapshots
-- [[Importing Data From Other Apps]] — Native importers plus paste, text, script, and API migration paths
-- [[TickTick Import]] — Import TickTick CSV or ZIP backups into Mindwtr
-- [[Todoist Import]] — Import Todoist CSV or ZIP exports into Mindwtr
-- [[DGT GTD Import]] — Import DGT GTD JSON or ZIP exports into Mindwtr
-- [[OmniFocus Import]] — Import OmniFocus CSV, JSON, or ZIP exports into Mindwtr
-- [[iCloud Sync]] — Native Apple-only iCloud / CloudKit backend
-- [[Sync Algorithm]] — Conflict rules, tombstones, and merge behavior
-- Self-hosted cloud setup is split between [[Data and Sync]] (client setup) and [[Cloud Deployment]] (server operations)
-- [[Dropbox Sync]] — Native Dropbox OAuth sync setup
-- [[Cloud Deployment]] — Cloud deployment and operations runbook
-- [[Obsidian Integration]] — Desktop vault import and deep links
-- [[Calendar Integration]] — External calendars and mobile task push
-- [[AI Assistant]] — Optional BYOK assistant
-- [[Reusable Lists]] — Templates and checklist reset
-- [[Attachments]] — Files, links, and audio notes
-- [[Diagnostics and Logs]] — Debug logging and log locations
+- [Import Overview](https://docs.mindwtr.app/import/)
+- [Todoist](https://docs.mindwtr.app/import/todoist)
+- [TickTick](https://docs.mindwtr.app/import/ticktick)
+- [OmniFocus](https://docs.mindwtr.app/import/omnifocus)
+- [DGT GTD](https://docs.mindwtr.app/import/dgt-gtd)
 
-### Developer Documentation
-- [[Developer Guide]] — Development setup and overview
-- [[Architecture]] — Technical architecture and design
-- [[Core API]] — `@mindwtr/core` package documentation
-- [[MCP Server]] — Local MCP server setup and tool usage
-- [[Docker Deployment]] — Self-hosted deployment entry point
-- [[Cloud Deployment]] — Operations reference for self-hosted sync
-- [[Performance Guide]] — Performance-focused implementation notes
-- [[Testing Strategy]] — Test layers, release gates, and manual smoke checks
-- [Release Notes (Repository)](https://github.com/dongdongbh/Mindwtr/tree/main/docs/release-notes) — Version-by-version release notes
-- [Contributing (Repository Guide)](https://github.com/dongdongbh/Mindwtr/blob/main/docs/CONTRIBUTING.md) — How to contribute to Mindwtr
+## ⚡ Power Users
 
----
+- [AI Assistant](https://docs.mindwtr.app/power-users/ai-assistant)
+- [MCP Server](https://docs.mindwtr.app/power-users/mcp)
+- [Local API](https://docs.mindwtr.app/power-users/local-api)
+- [Apple Shortcuts](https://docs.mindwtr.app/power-users/apple-shortcuts)
+- [Obsidian Integration](https://docs.mindwtr.app/power-users/obsidian)
+- [Docker Deployment](https://docs.mindwtr.app/power-users/docker-deployment)
+- [Web App / PWA](https://docs.mindwtr.app/power-users/web-app-pwa)
 
-## ✨ Key Features
+## 🛠️ Developers
 
-| Feature               | Description                                        |
-| --------------------- | -------------------------------------------------- |
-| 📥 **Inbox**           | Capture everything with quick-add                  |
-| 🎯 **Focus**           | Daily agenda and available next actions            |
-| 🍅 **Pomodoro Focus**  | Optional focus/break timer in Focus view            |
-| 📁 **Projects**        | Multi-step outcomes with sequential/parallel modes |
-| 🧭 **Areas of Focus**  | Group projects by higher-level areas               |
-| 🏷️ **Contexts & Tags** | @home, @work, #focused, #lowenergy                 |
-| 📋 **Board View**      | Kanban-style drag-and-drop                         |
-| 📅 **Calendar**        | Time-based planning + external calendars           |
-| 📋 **Weekly Review**   | Guided GTD review wizard                           |
-| 🔁 **Recurring Tasks** | Daily/weekly/monthly + completion-based            |
-| 📎 **Attachments**     | Files, links, and audio notes                      |
-| 🎙️ **Audio Capture**   | Voice-to-text with local Whisper or Cloud AI       |
-| 🤖 **AI Assistant**    | Clarify, break down, review (optional)             |
-| 🧩 **Copilot**         | Context/tag/time suggestions while typing          |
-| ♻️ **Reusable Lists**  | Duplicate projects or reset checklists             |
-| 🔄 **Sync Options**    | iCloud (Apple), File, WebDAV, Cloud                |
-| 📲 **Android Widget**  | Home screen focus/next widget                      |
-| **Apple Shortcuts** | iOS capture and GTD navigation actions             |
-| 🌐 **Web App (PWA)**   | Offline-capable browser version                    |
-| 🌍 **i18n**            | EN, VI, 中文, ES, HI, AR, DE, RU, JA, FR, PT, PL, KO, CS, IT, TR, NL |
-| 🖥️ **Cross-Platform**  | Desktop (Tauri) + Mobile (React Native)            |
-
-## 📱 Feature Parity Matrix
-
-| Feature | Desktop (Tauri) | Mobile (React Native) |
-| :--- | :---: | :---: |
-| **Core GTD Views** | ✅ | ✅ |
-| **Inbox & Capture** | ✅ (Global Hotkey) | ✅ (Share Sheet, Widget) |
-| **Focus View** | ✅ (configurable focus limit + available Next) | ✅ (Zen Mode) |
-| **Projects** | ✅ | ✅ |
-| **Areas of Focus** | ✅ | ✅ |
-| **Contexts & Tags** | ✅ | ✅ |
-| **Board View (Kanban)** | ✅ | ✅ |
-| **Calendar View** | ✅ | ✅ |
-| **Weekly Review** | ✅ | ✅ |
-| **Focus/Zen Mode** | ✅ (Sidebar toggle + focus limit) | ✅ (Zen toggle) |
-| **Pomodoro Focus** | ✅ (Optional in Focus) | ✅ (Optional in Focus) |
-| **Notifications** | ✅ | ✅ |
-| **Widgets** | ❌ | ✅ (Android) |
-| **Global Hotkey** | ✅ | ❌ |
-| **Share Sheet** | ❌ | ✅ |
-| **Apple Shortcuts** | ❌ | ✅ |
-| **Keyboard Shortcuts** | ✅ (Vim/Emacs) | ❌ |
-| **File Sync** | ✅ | ✅ |
-| **WebDAV Sync** | ✅ | ✅ |
-| **External Calendars** | ✅ (ICS + macOS Apple Calendar) | ✅ (System calendars + ICS) |
-| **Audio Capture** | ✅ (Whisper/Cloud) | ✅ |
-| **AI Assistant** | ✅ | ✅ |
-
----
-
-## 🚀 Quick Links
-
-- **New to GTD?** Start with [[GTD Overview]]
-- **Installing the app?** See [[Getting Started]]
-- **Want to contribute?** Check [[Developer Guide]]
-
----
-
-## Google Play
-
-Mindwtr is available on Google Play:
-https://play.google.com/store/apps/details?id=tech.dongdongbh.mindwtr
-
-## App Store (iOS)
-
-Mindwtr is available on the Apple App Store:
-https://apps.apple.com/app/mindwtr/id6758597144
-
-<div align="center">
-
-*Built with ❤️ by [dongdongbh](https://dongdongbh.tech)*
-
-</div>
+- [Developer Guide](https://docs.mindwtr.app/developers/developer-guide)
+- [Architecture](https://docs.mindwtr.app/developers/architecture)
+- [Engineering Principles](https://docs.mindwtr.app/developers/engineering-principles)
+- [Core API](https://docs.mindwtr.app/developers/core-api)
+- [Cloud API](https://docs.mindwtr.app/developers/cloud-api)
+- [Database Schema](https://docs.mindwtr.app/developers/database-schema)
+- [Testing Strategy](https://docs.mindwtr.app/developers/testing-strategy)
+- [Performance](https://docs.mindwtr.app/developers/performance)
+- [Release Process](https://docs.mindwtr.app/developers/release-process)
+- [Troubleshooting](https://docs.mindwtr.app/developers/troubleshooting)
+- [Contributing](https://docs.mindwtr.app/developers/contributing)
