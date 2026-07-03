@@ -42,3 +42,5 @@ Changes collected after `v1.0.5` and before the next version tag.
 - fix(release): check out requested tags in platform workflows and fail closed on untracked Android versionCode overrides.
 - fix(i18n): localize new active-area and desktop search-scope strings.
 - ci(release): publish RC Play uploads to internal testing and open testing by default, and run Android FOSS in parallel from the same versionCode preflight.
+- fix(checklist): stop task checklist items from being silently lost when the description contains markdown checkbox lines, and keep in-progress checklist typing safe during background refreshes.
+- feat(checklist): paste multi-line text into a checklist item to create one item per line, recognizing bullets, numbering, and `[x]` completion markers.

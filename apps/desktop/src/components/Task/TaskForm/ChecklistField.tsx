@@ -22,6 +22,7 @@ import {
     applyMarkdownPairInsertion,
     generateUUID,
     isMarkdownEditorAssistEnabled,
+    parsePastedChecklistItems,
     syncMarkdownChecklistWithCanonical,
     useTaskStore,
     type MarkdownSelection,
@@ -278,6 +279,47 @@ export function ChecklistField({
         restoreInputSelection(source, result.selection);
     }, [restoreInputSelection, updateChecklistItemTitle]);
 
+    const handleChecklistPaste = useCallback((index: number, event: React.ClipboardEvent<HTMLInputElement>) => {
+        const text = event.clipboardData?.getData('text/plain') ?? '';
+        const normalized = text.replace(/\r\n?/g, '\n');
+        if (!normalized.includes('\n')) return;
+        event.preventDefault();
+        const list = checklistDraftRef.current || [];
+        const current = list[index];
+        if (!current) return;
+        const selection = getInputSelection(event.currentTarget);
+        const newlineIndex = normalized.indexOf('\n');
+        const firstSegment = normalized.slice(0, newlineIndex);
+        const restItems = parsePastedChecklistItems(normalized.slice(newlineIndex + 1));
+        const replacingWholeTitle = selection.start === 0 && selection.end === current.title.length;
+        // Replacing the whole title is a list import (markers stripped); a
+        // mid-text paste splices the raw first segment like a plain text edit.
+        const firstParsed = parsePastedChecklistItems(firstSegment)[0];
+        const updatedCurrent = replacingWholeTitle
+            ? {
+                ...current,
+                title: firstParsed?.title ?? '',
+                isCompleted: current.isCompleted || (firstParsed?.isCompleted ?? false),
+            }
+            : {
+                ...current,
+                title: `${current.title.slice(0, selection.start)}${firstSegment}${current.title.slice(selection.end)}`,
+            };
+        const cursor = replacingWholeTitle ? updatedCurrent.title.length : selection.start + firstSegment.length;
+        checklistSelectionRefs.current[index] = { start: cursor, end: cursor };
+        lastChecklistPairSelectionRefs.current[index] = null;
+        const inserted = restItems.map((item) => ({
+            id: generateUUID(),
+            title: item.title,
+            isCompleted: item.isCompleted,
+        }));
+        const nextList = [...list.slice(0, index), updatedCurrent, ...inserted, ...list.slice(index + 1)];
+        setChecklistDraft(nextList);
+        checklistDraftRef.current = nextList;
+        checklistDirtyRef.current = false;
+        commitChecklistUpdate(nextList);
+    }, [commitChecklistUpdate, getInputSelection]);
+
     const handleChecklistDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -355,6 +397,9 @@ export function ChecklistField({
                                                 lastChecklistPairSelectionRefs.current[index] = null;
                                                 updateChecklistItemTitle(index, event.target.value);
                                                 checklistSelectionRefs.current[index] = getInputSelection(event.currentTarget);
+                                            }}
+                                            onPaste={(event) => {
+                                                handleChecklistPaste(index, event);
                                             }}
                                             onBlur={() => {
                                                 commitChecklistDraft();

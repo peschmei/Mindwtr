@@ -700,6 +700,7 @@ export {
     MARKDOWN_TOOLBAR_ACTIONS,
     normalizeMarkdownInternalLinks,
     parseInlineMarkdown,
+    parsePastedChecklistItems,
     parseMarkdownReferenceHref,
     parseMarkdownReferenceToken,
     sanitizeMarkdownReferenceLabel,

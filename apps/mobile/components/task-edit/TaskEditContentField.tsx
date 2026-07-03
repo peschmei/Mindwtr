@@ -12,6 +12,7 @@ import {
     generateUUID,
     getAttachmentDisplayTitle,
     isMarkdownEditorAssistEnabled,
+    parsePastedChecklistItems,
     resolveAutoTextDirection,
     useTaskStore,
     type MarkdownSelection,
@@ -238,6 +239,32 @@ export function TaskEditContentField({
     ]);
 
     const handleChecklistTitleChange = React.useCallback((index: number, key: string, text: string) => {
+        if (/[\r\n]/.test(text)) {
+            // Multi-line paste: split into one checklist item per line. The
+            // first line replaces this item's title; the rest insert after it.
+            const [first, ...rest] = parsePastedChecklistItems(text);
+            const list = editedTask.checklist || [];
+            const current = list[index];
+            if (!current) return;
+            const updatedCurrent = {
+                ...current,
+                title: first?.title ?? '',
+                isCompleted: current.isCompleted || (first?.isCompleted ?? false),
+            };
+            const inserted = rest.map((item) => ({
+                id: generateUUID(),
+                title: item.title,
+                isCompleted: item.isCompleted,
+            }));
+            checklistTitleRefs.current[key] = updatedCurrent.title;
+            checklistSelectionRefs.current[key] = {
+                start: updatedCurrent.title.length,
+                end: updatedCurrent.title.length,
+            };
+            lastChecklistRangeRefs.current[key] = null;
+            applyChecklistUpdate([...list.slice(0, index), updatedCurrent, ...inserted, ...list.slice(index + 1)]);
+            return;
+        }
         const previousValue = checklistTitleRefs.current[key] ?? '';
         const ignoredNativeChange = ignoredNativePairChangeRefs.current[key];
         if (ignoredNativeChange) {
@@ -279,7 +306,7 @@ export function TaskEditContentField({
 
         lastChecklistRangeRefs.current[key] = null;
         updateChecklistTitle(index, key, text);
-    }, [getChecklistSelection, restoreChecklistSelection, updateChecklistTitle]);
+    }, [applyChecklistUpdate, editedTask.checklist, getChecklistSelection, restoreChecklistSelection, updateChecklistTitle]);
 
     // Checklist auto-pairing intentionally lives only in handleChecklistTitleChange. On
     // Android the keyPress event is synthesized from the same native edit as the text

@@ -693,6 +693,25 @@ export function reconcileChecklistWithMarkdown(
     return merged;
 }
 
+const PASTED_CHECKLIST_LINE_RE = /^\s*(?:(?:[-*+]|\d+[.)])\s+)?(?:\[( |x|X)\]\s*)?/;
+
+/**
+ * Split pasted multi-line plain text into checklist items. Bullet, numbered,
+ * and checkbox markers are stripped; `[x]` marks an item completed. Empty and
+ * marker-only lines are dropped.
+ */
+export function parsePastedChecklistItems(text: string): MarkdownChecklistItem[] {
+    if (!text) return [];
+    const items: MarkdownChecklistItem[] = [];
+    for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+        const match = PASTED_CHECKLIST_LINE_RE.exec(line);
+        const title = line.slice(match?.[0].length ?? 0).trim();
+        if (!title) continue;
+        items.push({ title, isCompleted: match?.[1]?.toLowerCase() === 'x' });
+    }
+    return items;
+}
+
 /**
  * Absorb markdown task-list lines the user typed into the description that the
  * canonical checklist does not know about yet. Without this, mirroring the

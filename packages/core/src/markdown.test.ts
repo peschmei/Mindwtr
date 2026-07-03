@@ -12,6 +12,7 @@ import {
     syncMarkdownChecklistWithCanonical,
     reconcileChecklistWithMarkdown,
     absorbMarkdownChecklistItems,
+    parsePastedChecklistItems,
 } from './markdown';
 import type { Project, Task } from './types';
 
@@ -203,6 +204,40 @@ describe('reconcileChecklistWithMarkdown', () => {
         const first = reconcileChecklistWithMarkdown(description, 'note', uiChecklist);
         const second = reconcileChecklistWithMarkdown(description, description, first);
         expect(second).toEqual(first);
+    });
+});
+
+describe('parsePastedChecklistItems', () => {
+    it('splits plain multi-line text into checklist items', () => {
+        expect(parsePastedChecklistItems('buy milk\nbuy bread\ncall mom')).toEqual([
+            { title: 'buy milk', isCompleted: false },
+            { title: 'buy bread', isCompleted: false },
+            { title: 'call mom', isCompleted: false },
+        ]);
+    });
+
+    it('strips bullet, numbered, and checkbox markers and keeps completion state', () => {
+        expect(parsePastedChecklistItems('- [x] done item\n* [ ] open item\n+ plain bullet\n1. numbered\n[X] bare checkbox')).toEqual([
+            { title: 'done item', isCompleted: true },
+            { title: 'open item', isCompleted: false },
+            { title: 'plain bullet', isCompleted: false },
+            { title: 'numbered', isCompleted: false },
+            { title: 'bare checkbox', isCompleted: true },
+        ]);
+    });
+
+    it('drops empty lines and marker-only lines, and handles CRLF', () => {
+        expect(parsePastedChecklistItems('first\r\n\r\n- [ ]\n   \nsecond')).toEqual([
+            { title: 'first', isCompleted: false },
+            { title: 'second', isCompleted: false },
+        ]);
+    });
+
+    it('does not treat hyphenated words as bullets', () => {
+        expect(parsePastedChecklistItems('-nospace\nreal item')).toEqual([
+            { title: '-nospace', isCompleted: false },
+            { title: 'real item', isCompleted: false },
+        ]);
     });
 });
 

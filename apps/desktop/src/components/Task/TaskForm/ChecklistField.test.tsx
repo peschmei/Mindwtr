@@ -201,6 +201,51 @@ describe('ChecklistField', () => {
         }
     });
 
+    it('splits multi-line pasted text into separate checklist items', () => {
+        const updates: Partial<Task>[] = [];
+        const { getAllByRole } = render(<ChecklistHarness onUpdateTask={(next) => updates.push(next)} />);
+
+        const input = getAllByRole('textbox')[0] as HTMLInputElement;
+        input.setSelectionRange(0, input.value.length);
+        fireEvent.paste(input, {
+            clipboardData: { getData: () => 'buy milk\nbuy bread\n- [x] call mom' },
+        });
+
+        const titles = (getAllByRole('textbox') as HTMLInputElement[]).map((node) => node.value);
+        expect(titles).toEqual(['buy milk', 'buy bread', 'call mom', 'Item 2', 'Item 3']);
+
+        const committed = updates[updates.length - 1]?.checklist;
+        expect(committed?.map((item) => item.title)).toEqual(['buy milk', 'buy bread', 'call mom', 'Item 2', 'Item 3']);
+        expect(committed?.[0]?.id).toBe('1');
+        expect(committed?.[2]?.isCompleted).toBe(true);
+    });
+
+    it('inserts pasted lines at the cursor position within the current item title', () => {
+        const { getAllByRole } = render(<ChecklistHarness />);
+
+        const input = getAllByRole('textbox')[0] as HTMLInputElement;
+        input.setSelectionRange(input.value.length, input.value.length);
+        fireEvent.paste(input, {
+            clipboardData: { getData: () => ' extended\nsecond line' },
+        });
+
+        const titles = (getAllByRole('textbox') as HTMLInputElement[]).map((node) => node.value);
+        expect(titles).toEqual(['Item 1 extended', 'second line', 'Item 2', 'Item 3']);
+    });
+
+    it('leaves single-line pastes to the native input behavior', () => {
+        const updates: Partial<Task>[] = [];
+        const { getAllByRole } = render(<ChecklistHarness onUpdateTask={(next) => updates.push(next)} />);
+
+        const input = getAllByRole('textbox')[0] as HTMLInputElement;
+        fireEvent.paste(input, {
+            clipboardData: { getData: () => 'just one line' },
+        });
+
+        expect(updates).toHaveLength(0);
+        expect(getAllByRole('textbox')).toHaveLength(3);
+    });
+
     it('keeps in-progress checklist typing when the checklist prop refreshes with a new identity', () => {
         const props = {
             t: (key: string) => key,
