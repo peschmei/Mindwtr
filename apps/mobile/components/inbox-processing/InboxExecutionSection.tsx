@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { styles } from '../inbox-processing-modal.styles';
+import { EmojiLabel } from '../ui/emoji-label';
 import { InboxDateSelectorRow } from './InboxDateSelectorRow';
 import { InboxSuggestionList } from './InboxSuggestionList';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
@@ -54,26 +55,20 @@ export function InboxExecutionSection({
             style={[styles.bigButton, executionChoice === 'defer' ? styles.buttonPrimary : { backgroundColor: tc.border }]}
             onPress={() => setExecutionChoice('defer')}
           >
-            <Text style={[styles.bigButtonText, executionChoice !== 'defer' && { color: tc.text }]}>
-              {t('inbox.illDoIt')}
-            </Text>
+            <EmojiLabel emoji="📋" label={t('inbox.illDoIt')} textStyle={[styles.bigButtonText, executionChoice !== 'defer' && { color: tc.text }]} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.bigButton, executionChoice === 'delegate' ? { backgroundColor: '#F59E0B' } : { backgroundColor: tc.border }]}
             onPress={() => setExecutionChoice('delegate')}
           >
-            <Text style={[styles.bigButtonText, executionChoice !== 'delegate' && { color: tc.text }]}>
-              {t('inbox.delegate')}
-            </Text>
+            <EmojiLabel emoji="👤" label={t('inbox.delegate')} textStyle={[styles.bigButtonText, executionChoice !== 'delegate' && { color: tc.text }]} />
           </TouchableOpacity>
         </View>
       </View>
 
       {executionChoice === 'delegate' && (
         <View style={[styles.singleSection, { borderBottomColor: tc.border }]}>
-          <Text style={[styles.stepQuestion, { color: tc.text }]}>
-            {t('process.delegateTitle')}
-          </Text>
+          <EmojiLabel emoji="👤" label={t('process.delegateTitle')} textStyle={[styles.stepQuestion, { color: tc.text }]} />
           <Text style={[styles.stepHint, { color: tc.secondaryText }]}>
             {t('process.delegateDesc')}
           </Text>

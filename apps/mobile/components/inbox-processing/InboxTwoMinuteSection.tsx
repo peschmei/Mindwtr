@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { styles } from '../inbox-processing-modal.styles';
+import { EmojiLabel } from '../ui/emoji-label';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
 
 type Props = {
@@ -14,9 +15,7 @@ type Props = {
 export function InboxTwoMinuteSection({ t, tc, twoMinuteChoice, setTwoMinuteChoice }: Props) {
   return (
     <View style={[styles.singleSection, { borderBottomColor: tc.border }]}>
-      <Text style={[styles.stepQuestion, { color: tc.text }]}>
-        {t('inbox.twoMinRule')}
-      </Text>
+      <EmojiLabel emoji="⏱️" label={t('inbox.twoMinRule')} textStyle={[styles.stepQuestion, { color: tc.text }]} />
       <Text style={[styles.stepHint, { color: tc.secondaryText }]}>
         {t('inbox.twoMinHint')}
       </Text>
@@ -25,7 +24,7 @@ export function InboxTwoMinuteSection({ t, tc, twoMinuteChoice, setTwoMinuteChoi
           style={[styles.bigButton, twoMinuteChoice === 'yes' ? styles.buttonSuccess : { backgroundColor: tc.border }]}
           onPress={() => setTwoMinuteChoice('yes')}
         >
-          <Text style={[styles.bigButtonText, twoMinuteChoice !== 'yes' && { color: tc.text }]}>{t('inbox.doneIt')}</Text>
+          <EmojiLabel emoji="✅" label={t('inbox.doneIt')} textStyle={[styles.bigButtonText, twoMinuteChoice !== 'yes' && { color: tc.text }]} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.bigButton, twoMinuteChoice === 'no' ? styles.buttonPrimary : { backgroundColor: tc.border }]}

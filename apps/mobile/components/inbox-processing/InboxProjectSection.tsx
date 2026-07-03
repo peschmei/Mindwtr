@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { styles } from '../inbox-processing-modal.styles';
+import { EmojiLabel } from '../ui/emoji-label';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
 
@@ -247,9 +248,7 @@ export function InboxProjectSection({
 
   return (
     <View style={[styles.singleSection, { borderBottomColor: tc.border }]}>
-      <Text style={[styles.stepQuestion, { color: tc.text }]}>
-        {showProjectField ? t('process.moreThanOneStep') : t('inbox.assignProjectQuestion')}
-      </Text>
+      <EmojiLabel emoji="📁" label={showProjectField ? t('process.moreThanOneStep') : t('inbox.assignProjectQuestion')} textStyle={[styles.stepQuestion, { color: tc.text }]} />
       {showProjectField && (
         <>
           <Text style={[styles.stepHint, { color: tc.secondaryText }]}>

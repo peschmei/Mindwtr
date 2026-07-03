@@ -554,12 +554,15 @@ export default function CaptureScreen() {
                 setCopilotApplied(true);
               }}
             >
-              <Text style={[styles.copilotText, { color: tc.text }]}>
-                {t('copilot.suggested')}{' '}
-                {copilotSuggestion.context ? `${copilotSuggestion.context} ` : ''}
-                {timeEstimatesEnabled && copilotSuggestion.timeEstimate ? `${copilotSuggestion.timeEstimate}` : ''}
-                {copilotSuggestion.tags?.length ? copilotSuggestion.tags.join(' ') : ''}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', columnGap: 4 }}>
+                <Text style={[styles.copilotText, { color: tc.text }]}>✨</Text>
+                <Text style={[styles.copilotText, { color: tc.text, flexShrink: 1 }]}>
+                  {t('copilot.suggested')}{' '}
+                  {copilotSuggestion.context ? `${copilotSuggestion.context} ` : ''}
+                  {timeEstimatesEnabled && copilotSuggestion.timeEstimate ? `${copilotSuggestion.timeEstimate}` : ''}
+                  {copilotSuggestion.tags?.length ? copilotSuggestion.tags.join(' ') : ''}
+                </Text>
+              </View>
               <Text style={[styles.copilotHint, { color: tc.secondaryText }]}>
                 {t('copilot.applyHint')}
               </Text>
@@ -567,12 +570,15 @@ export default function CaptureScreen() {
           )}
           {copilotApplied && (
             <View style={[styles.copilotPill, { borderColor: tc.border, backgroundColor: tc.inputBg }]}>
-              <Text style={[styles.copilotText, { color: tc.text }]}>
-                {t('copilot.applied')}{' '}
-                {copilotContext ? `${copilotContext} ` : ''}
-                {timeEstimatesEnabled && copilotEstimate ? `${copilotEstimate}` : ''}
-                {copilotTags.length ? copilotTags.join(' ') : ''}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', columnGap: 4 }}>
+                <Text style={[styles.copilotText, { color: tc.text }]}>✅</Text>
+                <Text style={[styles.copilotText, { color: tc.text, flexShrink: 1 }]}>
+                  {t('copilot.applied')}{' '}
+                  {copilotContext ? `${copilotContext} ` : ''}
+                  {timeEstimatesEnabled && copilotEstimate ? `${copilotEstimate}` : ''}
+                  {copilotTags.length ? copilotTags.join(' ') : ''}
+                </Text>
+              </View>
             </View>
           )}
           {showHelp && (

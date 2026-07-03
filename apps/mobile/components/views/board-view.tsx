@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { TaskEditModal } from '../task-edit-modal';
 import { BOARD_DUE_DATE_PRESETS, countActiveBoardFilters, resolveBoardColumnReorder, resolveBoardDropColumnIndex, resolveBoardDropColumnIndexFromY, toggleCriteriaDuePreset, toggleCriteriaToken, type BoardDuePreset } from './board-view.utils';
+import { EmojiLabel } from '../ui/emoji-label';
 
 const COLUMNS: { id: TaskStatus; label: string; labelKey: string; color: string }[] = [
   { id: 'inbox', label: 'Inbox', labelKey: 'status.inbox', color: '#6B7280' },
@@ -194,9 +195,7 @@ function DraggableTask({
                 <View style={styles.contextsRow}>
                   {projectTitle && (
                     <View style={[styles.projectBadge, { backgroundColor: resolvedProjectColor + '20', borderColor: resolvedProjectColor }]}>
-                      <Text style={[styles.projectBadgeText, { color: resolvedProjectColor }]} numberOfLines={1}>
-                        {projectTitle}
-                      </Text>
+                      <EmojiLabel emoji="📁" label={projectTitle} numberOfLines={1} textStyle={[styles.projectBadgeText, { color: resolvedProjectColor }]} />
                     </View>
                   )}
                   {(task.tags || []).slice(0, 6).map((tag, idx) => (

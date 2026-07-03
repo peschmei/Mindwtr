@@ -4,6 +4,7 @@ import type { QuickDatePreset } from '@mindwtr/core';
 
 import { styles } from '../inbox-processing-modal.styles';
 import { InboxDateSelectorRow } from './InboxDateSelectorRow';
+import { EmojiLabel } from '../ui/emoji-label';
 import type { ThemeColors } from '@/hooks/use-theme-colors';
 
 type ActionabilityChoice = 'actionable' | 'later' | 'trash' | 'someday' | 'reference';
@@ -69,9 +70,7 @@ export function InboxActionabilitySection({
             ]}
             onPress={() => chooseActionability('actionable')}
           >
-            <Text style={[styles.bigButtonText, actionabilityChoice !== 'actionable' && { color: tc.text }]}>
-              {t('inbox.yesActionable')}
-            </Text>
+            <EmojiLabel emoji="✅" label={t('inbox.yesActionable')} textStyle={[styles.bigButtonText, actionabilityChoice !== 'actionable' && { color: tc.text }]} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -80,29 +79,27 @@ export function InboxActionabilitySection({
             ]}
             onPress={() => chooseActionability('later')}
           >
-            <Text style={[styles.bigButtonText, actionabilityChoice !== 'later' && { color: tc.text }]}>
-              {laterLabel}
-            </Text>
+            <EmojiLabel emoji="🕒" label={laterLabel} textStyle={[styles.bigButtonText, actionabilityChoice !== 'later' && { color: tc.text }]} />
           </TouchableOpacity>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: actionabilityChoice === 'trash' ? '#EF4444' : tc.border }]}
               onPress={() => chooseActionability('trash')}
             >
-              <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'trash' && { color: tc.text }]}>{t('inbox.trash')}</Text>
+              <EmojiLabel emoji="🗑️" label={t('inbox.trash')} textStyle={[styles.buttonPrimaryText, actionabilityChoice !== 'trash' && { color: tc.text }]} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: actionabilityChoice === 'someday' ? '#8B5CF6' : tc.border }]}
               onPress={() => chooseActionability('someday')}
             >
-              <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'someday' && { color: tc.text }]}>{t('inbox.someday')}</Text>
+              <EmojiLabel emoji="💭" label={t('inbox.someday')} textStyle={[styles.buttonPrimaryText, actionabilityChoice !== 'someday' && { color: tc.text }]} />
             </TouchableOpacity>
             {referenceEnabled && (
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: actionabilityChoice === 'reference' ? '#3B82F6' : tc.border }]}
                 onPress={() => chooseActionability('reference')}
               >
-                <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'reference' && { color: tc.text }]}>{t('nav.reference')}</Text>
+                <EmojiLabel emoji="📚" label={t('nav.reference')} textStyle={[styles.buttonPrimaryText, actionabilityChoice !== 'reference' && { color: tc.text }]} />
               </TouchableOpacity>
             )}
           </View>

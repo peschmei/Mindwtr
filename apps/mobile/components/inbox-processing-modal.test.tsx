@@ -793,8 +793,7 @@ describe('InboxProcessingModal', () => {
     });
 
     const root = tree!.root;
-    const laterLabel = findNodeWithText(root, 'Later');
-    const laterButton = laterLabel.parent;
+    const laterButton = findPressableWithText(root, 'Later');
 
     if (!laterButton) {
       throw new Error('Later button not found');
@@ -852,7 +851,7 @@ describe('InboxProcessingModal', () => {
     });
 
     const root = tree!.root;
-    const laterButton = findNodeWithText(root, 'Later').parent;
+    const laterButton = findPressableWithText(root, 'Later');
 
     if (!laterButton) {
       throw new Error('Later button not found');
@@ -907,7 +906,7 @@ describe('InboxProcessingModal', () => {
     });
 
     const root = tree!.root;
-    const laterButton = findNodeWithText(root, 'Later').parent;
+    const laterButton = findPressableWithText(root, 'Later');
 
     if (!laterButton) {
       throw new Error('Later button not found');
@@ -972,7 +971,7 @@ describe('InboxProcessingModal', () => {
     });
 
     const root = tree!.root;
-    const laterButton = findNodeWithText(root, 'Later').parent;
+    const laterButton = findPressableWithText(root, 'Later');
 
     if (!laterButton) {
       throw new Error('Later button not found');
@@ -1042,7 +1041,7 @@ describe('InboxProcessingModal', () => {
     });
 
     const root = tree!.root;
-    const laterButton = findNodeWithText(root, 'Later').parent;
+    const laterButton = findPressableWithText(root, 'Later');
 
     if (!laterButton) {
       throw new Error('Later button not found');
@@ -1203,8 +1202,7 @@ describe('InboxProcessingModal', () => {
     });
 
     const root = tree!.root;
-    const delegateLabel = findNodeWithText(root, 'inbox.delegate');
-    const delegateButton = delegateLabel.parent;
+    const delegateButton = findPressableWithText(root, 'inbox.delegate');
 
     if (!delegateButton) {
       throw new Error('Delegate button not found');
@@ -1268,8 +1266,7 @@ describe('InboxProcessingModal', () => {
       priorityButton.props.onPress();
     });
 
-    const delegateLabel = findNodeWithText(root, 'inbox.delegate');
-    const delegateButton = delegateLabel.parent;
+    const delegateButton = findPressableWithText(root, 'inbox.delegate');
 
     if (!delegateButton) {
       throw new Error('Delegate button not found');
@@ -1333,8 +1330,7 @@ describe('InboxProcessingModal', () => {
       priorityButton.props.onPress();
     });
 
-    const delegateLabel = findNodeWithText(root, 'inbox.delegate');
-    const delegateButton = delegateLabel.parent;
+    const delegateButton = findPressableWithText(root, 'inbox.delegate');
 
     if (!delegateButton) {
       throw new Error('Delegate button not found');
@@ -1386,8 +1382,7 @@ describe('InboxProcessingModal', () => {
     });
 
     const root = tree!.root;
-    const delegateLabel = findNodeWithText(root, 'inbox.delegate');
-    const delegateButton = delegateLabel.parent;
+    const delegateButton = findPressableWithText(root, 'inbox.delegate');
 
     if (!delegateButton) {
       throw new Error('Delegate button not found');
