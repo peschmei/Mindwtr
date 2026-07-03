@@ -55,7 +55,7 @@ export function InboxExecutionSection({
             onPress={() => setExecutionChoice('defer')}
           >
             <Text style={[styles.bigButtonText, executionChoice !== 'defer' && { color: tc.text }]}>
-              📋 {t('inbox.illDoIt')}
+              {t('inbox.illDoIt')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -63,7 +63,7 @@ export function InboxExecutionSection({
             onPress={() => setExecutionChoice('delegate')}
           >
             <Text style={[styles.bigButtonText, executionChoice !== 'delegate' && { color: tc.text }]}>
-              👤 {t('inbox.delegate')}
+              {t('inbox.delegate')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -72,7 +72,7 @@ export function InboxExecutionSection({
       {executionChoice === 'delegate' && (
         <View style={[styles.singleSection, { borderBottomColor: tc.border }]}>
           <Text style={[styles.stepQuestion, { color: tc.text }]}>
-            👤 {t('process.delegateTitle')}
+            {t('process.delegateTitle')}
           </Text>
           <Text style={[styles.stepHint, { color: tc.secondaryText }]}>
             {t('process.delegateDesc')}

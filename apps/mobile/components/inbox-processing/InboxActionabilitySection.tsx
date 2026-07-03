@@ -70,7 +70,7 @@ export function InboxActionabilitySection({
             onPress={() => chooseActionability('actionable')}
           >
             <Text style={[styles.bigButtonText, actionabilityChoice !== 'actionable' && { color: tc.text }]}>
-              ✅ {t('inbox.yesActionable')}
+              {t('inbox.yesActionable')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -81,7 +81,7 @@ export function InboxActionabilitySection({
             onPress={() => chooseActionability('later')}
           >
             <Text style={[styles.bigButtonText, actionabilityChoice !== 'later' && { color: tc.text }]}>
-              🕒 {laterLabel}
+              {laterLabel}
             </Text>
           </TouchableOpacity>
           <View style={styles.buttonRow}>
@@ -89,20 +89,20 @@ export function InboxActionabilitySection({
               style={[styles.button, { backgroundColor: actionabilityChoice === 'trash' ? '#EF4444' : tc.border }]}
               onPress={() => chooseActionability('trash')}
             >
-              <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'trash' && { color: tc.text }]}>🗑️ {t('inbox.trash')}</Text>
+              <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'trash' && { color: tc.text }]}>{t('inbox.trash')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: actionabilityChoice === 'someday' ? '#8B5CF6' : tc.border }]}
               onPress={() => chooseActionability('someday')}
             >
-              <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'someday' && { color: tc.text }]}>💭 {t('inbox.someday')}</Text>
+              <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'someday' && { color: tc.text }]}>{t('inbox.someday')}</Text>
             </TouchableOpacity>
             {referenceEnabled && (
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: actionabilityChoice === 'reference' ? '#3B82F6' : tc.border }]}
                 onPress={() => chooseActionability('reference')}
               >
-                <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'reference' && { color: tc.text }]}>📚 {t('nav.reference')}</Text>
+                <Text style={[styles.buttonPrimaryText, actionabilityChoice !== 'reference' && { color: tc.text }]}>{t('nav.reference')}</Text>
               </TouchableOpacity>
             )}
           </View>

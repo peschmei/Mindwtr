@@ -15,7 +15,7 @@ export function InboxTwoMinuteSection({ t, tc, twoMinuteChoice, setTwoMinuteChoi
   return (
     <View style={[styles.singleSection, { borderBottomColor: tc.border }]}>
       <Text style={[styles.stepQuestion, { color: tc.text }]}>
-        ⏱️ {t('inbox.twoMinRule')}
+        {t('inbox.twoMinRule')}
       </Text>
       <Text style={[styles.stepHint, { color: tc.secondaryText }]}>
         {t('inbox.twoMinHint')}
@@ -25,7 +25,7 @@ export function InboxTwoMinuteSection({ t, tc, twoMinuteChoice, setTwoMinuteChoi
           style={[styles.bigButton, twoMinuteChoice === 'yes' ? styles.buttonSuccess : { backgroundColor: tc.border }]}
           onPress={() => setTwoMinuteChoice('yes')}
         >
-          <Text style={[styles.bigButtonText, twoMinuteChoice !== 'yes' && { color: tc.text }]}>✅ {t('inbox.doneIt')}</Text>
+          <Text style={[styles.bigButtonText, twoMinuteChoice !== 'yes' && { color: tc.text }]}>{t('inbox.doneIt')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.bigButton, twoMinuteChoice === 'no' ? styles.buttonPrimary : { backgroundColor: tc.border }]}
