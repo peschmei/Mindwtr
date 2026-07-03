@@ -18,6 +18,7 @@ import { Check, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
     applyMarkdownKeyboardShortcut,
+    absorbMarkdownChecklistItems,
     applyMarkdownPairInsertion,
     generateUUID,
     isMarkdownEditorAssistEnabled,
@@ -164,11 +165,7 @@ export function ChecklistField({
     const checklistSelectionRefs = useRef<Array<MarkdownSelection>>([]);
     const lastChecklistPairSelectionRefs = useRef<Array<{ value: string; selection: MarkdownSelection } | null>>([]);
 
-    useEffect(() => {
-        setChecklistDraft(checklist || []);
-        checklistDraftRef.current = checklist || [];
-        checklistDirtyRef.current = false;
-    }, [taskId, checklist]);
+    const lastTaskIdRef = useRef(taskId);
 
     useEffect(() => {
         checklistInputRefs.current = [];
@@ -176,13 +173,18 @@ export function ChecklistField({
         lastChecklistPairSelectionRefs.current = [];
     }, [taskId]);
 
+    // Adopt external checklist changes, but never clobber in-progress typing:
+    // a dirty draft only resets when switching to a different task.
     useEffect(() => {
-        if (checklistDirtyRef.current) return;
+        const taskChanged = lastTaskIdRef.current !== taskId;
+        lastTaskIdRef.current = taskId;
+        if (!taskChanged && checklistDirtyRef.current) return;
         const incoming = checklist || [];
-        if (areChecklistsEqual(incoming, checklistDraftRef.current)) return;
+        if (!taskChanged && areChecklistsEqual(incoming, checklistDraftRef.current)) return;
         setChecklistDraft(incoming);
         checklistDraftRef.current = incoming;
-    }, [checklist]);
+        checklistDirtyRef.current = false;
+    }, [taskId, checklist]);
 
     const updateChecklistDraft = useCallback((next: Task['checklist']) => {
         setChecklistDraft(next);
@@ -191,15 +193,16 @@ export function ChecklistField({
     }, []);
 
     const commitChecklistUpdate = useCallback((nextChecklist: Task['checklist']) => {
-        const nextDescription = syncMarkdownChecklistWithCanonical(description, nextChecklist);
+        const mergedChecklist = absorbMarkdownChecklistItems(description, checklist, nextChecklist) ?? nextChecklist;
+        const nextDescription = syncMarkdownChecklistWithCanonical(description, mergedChecklist);
         if (nextDescription !== description) {
             onDescriptionSync?.(nextDescription ?? '');
         }
         updateTask(taskId, {
-            checklist: nextChecklist,
+            checklist: mergedChecklist,
             ...(nextDescription !== description ? { description: nextDescription } : {}),
         });
-    }, [description, onDescriptionSync, taskId, updateTask]);
+    }, [checklist, description, onDescriptionSync, taskId, updateTask]);
 
     const commitChecklistDraft = useCallback((next?: Task['checklist']) => {
         const payload = next ?? checklistDraftRef.current;

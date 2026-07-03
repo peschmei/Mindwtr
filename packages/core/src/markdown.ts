@@ -5,7 +5,8 @@
  * Apps can use `stripMarkdown` for previews and notifications.
  */
 
-import type { Project, Task } from './types';
+import type { ChecklistItem, Project, Task } from './types';
+import { generateUUID } from './uuid';
 
 const CODE_BLOCK_RE = /```[\s\S]*?```/g;
 const INLINE_CODE_RE = /`([^`]+)`/g;
@@ -618,6 +619,114 @@ export function syncMarkdownChecklistWithCanonical(
 
     const nextMarkdown = nextLines.join('\n');
     return nextMarkdown === markdown ? markdown : nextMarkdown;
+}
+
+const bucketChecklistByTitle = <T extends { title: string }>(items: readonly T[]): Map<string, T[]> => {
+    const buckets = new Map<string, T[]>();
+    for (const item of items) {
+        if (!item?.title) continue;
+        const key = normalizeChecklistTitle(item.title);
+        const bucket = buckets.get(key);
+        if (bucket) {
+            bucket.push(item);
+        } else {
+            buckets.set(key, [item]);
+        }
+    }
+    return buckets;
+};
+
+/**
+ * Reconcile the canonical checklist with the description's markdown task-list
+ * lines at save time. Markdown is authoritative for the items it represents,
+ * but items that were never mirrored into the description (built via the
+ * checklist UI while the notes had no task-list lines) must survive markdown
+ * edits — replacing the whole list with the markdown-derived one loses them.
+ */
+export function reconcileChecklistWithMarkdown(
+    description: string | undefined,
+    previousDescription: string | undefined,
+    checklist: ChecklistItem[] | undefined,
+): ChecklistItem[] | undefined {
+    const markdownItems = extractChecklistFromMarkdown(String(description ?? ''));
+    const previousMarkdownItems = extractChecklistFromMarkdown(String(previousDescription ?? ''));
+    if (markdownItems.length === 0 && previousMarkdownItems.length === 0) return checklist;
+
+    const current = checklist || [];
+    const previousMarkdownBuckets = bucketChecklistByTitle(previousMarkdownItems);
+
+    if (markdownItems.length === 0) {
+        return current.filter((item) => {
+            const bucket = previousMarkdownBuckets.get(normalizeChecklistTitle(item.title));
+            if (bucket?.length) {
+                bucket.shift();
+                return false;
+            }
+            return true;
+        });
+    }
+
+    const currentBuckets = bucketChecklistByTitle(current);
+    const usedIds = new Set<string>();
+    const merged: ChecklistItem[] = [];
+    for (const item of markdownItems) {
+        const bucket = currentBuckets.get(normalizeChecklistTitle(item.title)) || [];
+        const reusable = bucket.find((entry) => !usedIds.has(entry.id));
+        if (reusable) {
+            usedIds.add(reusable.id);
+        }
+        merged.push({
+            id: reusable?.id ?? generateUUID(),
+            title: item.title,
+            isCompleted: item.isCompleted,
+        });
+    }
+    for (const item of current) {
+        if (usedIds.has(item.id)) continue;
+        const bucket = previousMarkdownBuckets.get(normalizeChecklistTitle(item.title));
+        if (bucket?.length) {
+            bucket.shift();
+            continue;
+        }
+        merged.push(item);
+    }
+    return merged;
+}
+
+/**
+ * Absorb markdown task-list lines the user typed into the description that the
+ * canonical checklist does not know about yet. Without this, mirroring the
+ * canonical checklist back into the description deletes those typed lines.
+ * Lines matching `previousChecklist` but absent from `nextChecklist` are items
+ * the user just deleted via the checklist UI and are intentionally dropped.
+ */
+export function absorbMarkdownChecklistItems(
+    description: string | undefined,
+    previousChecklist: ChecklistItem[] | undefined,
+    nextChecklist: ChecklistItem[] | undefined,
+): ChecklistItem[] | undefined {
+    const markdownItems = extractChecklistFromMarkdown(String(description ?? ''));
+    if (markdownItems.length === 0) return nextChecklist;
+
+    const previousBuckets = bucketChecklistByTitle(previousChecklist || []);
+    const nextBuckets = bucketChecklistByTitle(nextChecklist || []);
+    const unknown: ChecklistItem[] = [];
+    for (const item of markdownItems) {
+        const key = normalizeChecklistTitle(item.title);
+        const nextBucket = nextBuckets.get(key);
+        if (nextBucket?.length) {
+            nextBucket.shift();
+            continue;
+        }
+        const previousBucket = previousBuckets.get(key);
+        if (previousBucket?.length) {
+            previousBucket.shift();
+            continue;
+        }
+        unknown.push({ id: generateUUID(), title: item.title, isCompleted: item.isCompleted });
+    }
+    if (unknown.length === 0) return nextChecklist;
+    return [...(nextChecklist || []), ...unknown];
 }
 
 const normalizeSelection = (value: string, selection: MarkdownSelection): MarkdownSelection => {

@@ -10,6 +10,8 @@ import {
     stripMarkdown,
     syncMarkdownChecklistCompletion,
     syncMarkdownChecklistWithCanonical,
+    reconcileChecklistWithMarkdown,
+    absorbMarkdownChecklistItems,
 } from './markdown';
 import type { Project, Task } from './types';
 
@@ -144,6 +146,95 @@ describe('syncMarkdownChecklistWithCanonical', () => {
             { title: 'Desktop layout', isCompleted: false },
             { title: 'Tablet layout', isCompleted: true },
         ])).toBe('Intro\n- [ ] Desktop layout\n- [x] Tablet layout\nOutro');
+    });
+});
+
+describe('reconcileChecklistWithMarkdown', () => {
+    const uiChecklist = [
+        { id: '1', title: 'call venue', isCompleted: false },
+        { id: '2', title: 'send invites', isCompleted: true },
+    ];
+
+    it('keeps the edited checklist when neither description has task-list lines', () => {
+        expect(reconcileChecklistWithMarkdown('plain notes', 'old notes', uiChecklist)).toBe(uiChecklist);
+    });
+
+    it('preserves checklist items never represented in markdown when a new markdown line appears', () => {
+        const result = reconcileChecklistWithMarkdown('note\n- [ ] pick up cake', 'note', uiChecklist);
+        expect(result?.map((item) => item.title)).toEqual(['pick up cake', 'call venue', 'send invites']);
+        expect(result?.[1]).toEqual(uiChecklist[0]);
+        expect(result?.[2]).toEqual(uiChecklist[1]);
+    });
+
+    it('reuses ids for checklist items that match markdown lines', () => {
+        const result = reconcileChecklistWithMarkdown('- [x] call venue\n- [ ] new item', '- [ ] call venue', uiChecklist);
+        expect(result?.map((item) => item.title)).toEqual(['call venue', 'new item', 'send invites']);
+        expect(result?.[0]).toEqual({ id: '1', title: 'call venue', isCompleted: true });
+    });
+
+    it('removes items whose markdown lines were deleted but keeps items markdown never had', () => {
+        const result = reconcileChecklistWithMarkdown(
+            'rewrote my notes',
+            '- [ ] call venue\nnote',
+            [...uiChecklist, { id: '3', title: 'ui only', isCompleted: false }],
+        );
+        expect(result?.map((item) => item.title)).toEqual(['send invites', 'ui only']);
+    });
+
+    it('wipes the checklist when every item was mirrored and all lines were deleted', () => {
+        expect(reconcileChecklistWithMarkdown(
+            'rewrote my notes',
+            '- [ ] call venue\n- [x] send invites',
+            uiChecklist,
+        )).toEqual([]);
+    });
+
+    it('handles duplicate titles without collapsing them', () => {
+        const twice = [
+            { id: '1', title: 'milk', isCompleted: false },
+            { id: '2', title: 'milk', isCompleted: true },
+        ];
+        const result = reconcileChecklistWithMarkdown('- [ ] milk\n- [x] milk', '- [ ] milk\n- [x] milk', twice);
+        expect(result?.map((item) => item.id)).toEqual(['1', '2']);
+    });
+
+    it('is idempotent once description and checklist are reconciled', () => {
+        const description = 'note\n- [ ] pick up cake';
+        const first = reconcileChecklistWithMarkdown(description, 'note', uiChecklist);
+        const second = reconcileChecklistWithMarkdown(description, description, first);
+        expect(second).toEqual(first);
+    });
+});
+
+describe('absorbMarkdownChecklistItems', () => {
+    it('returns the next checklist unchanged when the description has no task-list lines', () => {
+        const next = [{ id: '1', title: 'a', isCompleted: false }];
+        expect(absorbMarkdownChecklistItems('plain notes', [], next)).toBe(next);
+    });
+
+    it('appends description task-list lines unknown to both checklists', () => {
+        const result = absorbMarkdownChecklistItems(
+            'notes\n- [ ] buy milk\n- [x] buy bread',
+            [],
+            [{ id: 'new', title: '', isCompleted: false }],
+        );
+        expect(result?.map((item) => ({ title: item.title, isCompleted: item.isCompleted }))).toEqual([
+            { title: '', isCompleted: false },
+            { title: 'buy milk', isCompleted: false },
+            { title: 'buy bread', isCompleted: true },
+        ]);
+    });
+
+    it('does not resurrect items the user just deleted from the checklist', () => {
+        const previous = [{ id: '1', title: 'call venue', isCompleted: false }];
+        const result = absorbMarkdownChecklistItems('- [ ] call venue', previous, []);
+        expect(result).toEqual([]);
+    });
+
+    it('does not duplicate lines already represented in the next checklist', () => {
+        const next = [{ id: '1', title: 'call venue', isCompleted: true }];
+        const result = absorbMarkdownChecklistItems('- [ ] call venue', next, next);
+        expect(result).toBe(next);
     });
 });
 

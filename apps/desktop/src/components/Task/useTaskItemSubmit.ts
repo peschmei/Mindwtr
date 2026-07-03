@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import {
-    extractChecklistFromMarkdown,
+    reconcileChecklistWithMarkdown,
     getRecurrenceCompletedOccurrencesValue,
     parseRRuleString,
     type Recurrence,
@@ -11,8 +11,6 @@ import {
     type TaskStatus,
     type TimeEstimate,
 } from '@mindwtr/core';
-
-import { mergeMarkdownChecklist } from './task-item-checklist';
 
 type UseTaskItemSubmitParams = {
     editAreaId: string;
@@ -113,13 +111,7 @@ export function useTaskItemSubmit({
         const currentContexts = editContexts.split(',').map((context) => context.trim()).filter(Boolean);
         const currentTags = editTags.split(',').map((tag) => tag.trim()).filter(Boolean);
         const resolvedDescription = editDescription || undefined;
-        const markdownChecklist = extractChecklistFromMarkdown(String(resolvedDescription ?? ''));
-        const previousMarkdownChecklist = extractChecklistFromMarkdown(String(task.description ?? ''));
-        const resolvedChecklist = markdownChecklist.length > 0
-            ? mergeMarkdownChecklist(markdownChecklist, task.checklist)
-            : previousMarkdownChecklist.length > 0
-                ? []
-                : undefined;
+        const resolvedChecklist = reconcileChecklistWithMarkdown(resolvedDescription, task.description, task.checklist);
         const resolvedSectionId = resolvedProjectId ? (editSectionId || undefined) : undefined;
         const resolvedAreaId = resolvedProjectId ? undefined : (editAreaId || undefined);
 

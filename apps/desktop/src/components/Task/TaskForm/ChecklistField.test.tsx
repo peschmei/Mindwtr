@@ -201,6 +201,52 @@ describe('ChecklistField', () => {
         }
     });
 
+    it('keeps in-progress checklist typing when the checklist prop refreshes with a new identity', () => {
+        const props = {
+            t: (key: string) => key,
+            taskId: 'task-1',
+            checklist: initialChecklist,
+            description: undefined,
+            updateTask: () => {},
+            resetTaskChecklist: () => {},
+        };
+        const { getAllByRole, rerender } = render(<ChecklistField {...props} />);
+
+        const input = getAllByRole('textbox')[0] as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Item 1 edited' } });
+        expect((getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('Item 1 edited');
+
+        // Simulate a background store refresh (e.g. after sync) delivering an
+        // equal checklist with fresh object identity while the user is typing.
+        rerender(<ChecklistField {...props} checklist={initialChecklist.map((item) => ({ ...item }))} />);
+
+        expect((getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('Item 1 edited');
+    });
+
+    it('resets the checklist draft when switching to another task', () => {
+        const props = {
+            t: (key: string) => key,
+            taskId: 'task-1',
+            checklist: initialChecklist,
+            description: undefined,
+            updateTask: () => {},
+            resetTaskChecklist: () => {},
+        };
+        const { getAllByRole, rerender } = render(<ChecklistField {...props} />);
+
+        fireEvent.change(getAllByRole('textbox')[0], { target: { value: 'Item 1 edited' } });
+
+        rerender(
+            <ChecklistField
+                {...props}
+                taskId="task-2"
+                checklist={[{ id: '9', title: 'Other task item', isCompleted: false }]}
+            />
+        );
+
+        expect((getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('Other task item');
+    });
+
     it('keeps the add-item click from blurring the current editor control first', () => {
         const { getByRole } = render(<ChecklistHarness />);
         const addButton = getByRole('button', { name: /taskEdit.addItem/i });

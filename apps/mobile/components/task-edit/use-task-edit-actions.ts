@@ -15,7 +15,8 @@ import {
     getRecurrenceCompletedOccurrencesValue,
     parseRRuleString,
     getUsedTaskTokens,
-    extractChecklistFromMarkdown,
+    absorbMarkdownChecklistItems,
+    reconcileChecklistWithMarkdown,
     syncMarkdownChecklistWithCanonical,
     tFallback,
     type StoreActionResult,
@@ -25,7 +26,7 @@ import type { AIResponseAction } from '../ai-response-modal';
 import { buildAIConfig, isAIKeyRequired, loadAIKey } from '../../lib/ai-config';
 import { areTaskFieldValuesEqual } from './task-edit-modal.helpers';
 import { getEditedTaskValue, logTaskError, logTaskWarn } from './task-edit-modal.utils';
-import { applyMarkdownChecklistToTask, parseTokenList } from './task-edit-token-utils';
+import { parseTokenList } from './task-edit-token-utils';
 import { buildRecurrenceValue } from './recurrence-utils';
 import { openProjectScreen, openTaskScreen } from '../../lib/task-meta-navigation';
 
@@ -135,19 +136,20 @@ export function useTaskEditActions({
 }: TaskEditActionsParams) {
     const applyChecklistUpdate = useCallback((nextChecklist: NonNullable<Task['checklist']>) => {
         setEditedTask((prev) => {
+            const currentDescription = descriptionDraftRef.current ?? String(prev.description ?? task?.description ?? '');
+            const mergedChecklist = absorbMarkdownChecklistItems(currentDescription, prev.checklist, nextChecklist) ?? nextChecklist;
             const currentStatus = (prev.status ?? task?.status ?? 'inbox') as TaskStatus;
             let nextStatus = currentStatus;
             const isListMode = (prev.taskMode ?? task?.taskMode) === 'list';
             if (isListMode) {
-                const allComplete = nextChecklist.length > 0 && nextChecklist.every((item) => item.isCompleted);
+                const allComplete = mergedChecklist.length > 0 && mergedChecklist.every((item) => item.isCompleted);
                 if (allComplete) {
                     nextStatus = 'done';
                 } else if (currentStatus === 'done') {
                     nextStatus = 'next';
                 }
             }
-            const currentDescription = descriptionDraftRef.current || String(prev.description ?? task?.description ?? '');
-            const nextDescription = syncMarkdownChecklistWithCanonical(currentDescription, nextChecklist) ?? '';
+            const nextDescription = syncMarkdownChecklistWithCanonical(currentDescription, mergedChecklist) ?? '';
             if (nextDescription !== currentDescription) {
                 if (descriptionDebounceRef.current) {
                     clearTimeout(descriptionDebounceRef.current);
@@ -158,7 +160,7 @@ export function useTaskEditActions({
             }
             return {
                 ...prev,
-                checklist: nextChecklist,
+                checklist: mergedChecklist,
                 ...(nextDescription !== currentDescription ? { description: nextDescription } : {}),
                 status: nextStatus,
             };
@@ -196,13 +198,7 @@ export function useTaskEditActions({
             tags: editedTask.tags,
         };
         updates.location = String(updates.location ?? '').trim() || undefined;
-        const markdownChecklist = extractChecklistFromMarkdown(String(baseDescription ?? ''));
-        const previousMarkdownChecklist = extractChecklistFromMarkdown(String(task.description ?? ''));
-        updates.checklist = markdownChecklist.length > 0
-            ? applyMarkdownChecklistToTask(baseDescription, updates.checklist)
-            : previousMarkdownChecklist.length > 0
-                ? []
-                : updates.checklist;
+        updates.checklist = reconcileChecklistWithMarkdown(baseDescription, task.description, updates.checklist);
 
         const recurrenceRule = recurrenceRuleValue || undefined;
         if (recurrenceRule) {

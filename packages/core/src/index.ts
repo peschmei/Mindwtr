@@ -684,6 +684,7 @@ export {
 } from './hierarchy-utils';
 
 export {
+    absorbMarkdownChecklistItems,
     applyMarkdownToolbarAction,
     applyMarkdownKeyboardShortcut,
     applyMarkdownPairInsertion,
@@ -691,6 +692,7 @@ export {
     continueMarkdownOnEnter,
     continueMarkdownOnTextChange,
     extractChecklistFromMarkdown,
+    reconcileChecklistWithMarkdown,
     getActiveMarkdownReferenceQuery,
     getInlineMarkdownPreview,
     insertMarkdownReferenceAtQuery,
