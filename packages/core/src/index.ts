@@ -684,15 +684,12 @@ export {
 } from './hierarchy-utils';
 
 export {
-    absorbMarkdownChecklistItems,
     applyMarkdownToolbarAction,
     applyMarkdownKeyboardShortcut,
     applyMarkdownPairInsertion,
     applyMarkdownUrlPaste,
     continueMarkdownOnEnter,
     continueMarkdownOnTextChange,
-    extractChecklistFromMarkdown,
-    reconcileChecklistWithMarkdown,
     getActiveMarkdownReferenceQuery,
     getInlineMarkdownPreview,
     insertMarkdownReferenceAtQuery,
@@ -708,8 +705,6 @@ export {
     serializeMarkdownReference,
     serializeMarkdownReferenceHref,
     stripMarkdown,
-    syncMarkdownChecklistCompletion,
-    syncMarkdownChecklistWithCanonical,
 } from './markdown';
 export type {
     ActiveMarkdownReferenceQuery,

@@ -13,7 +13,6 @@ import {
     generateUUID,
     normalizeClockTimeInput,
     normalizeFocusTaskLimit,
-    syncMarkdownChecklistWithCanonical,
     tFallback,
     formatFocusTaskLimitText,
     FOCUS_ELIGIBILITY_ACTIVE_STATUSES,
@@ -393,11 +392,7 @@ export const TaskItem = memo(function TaskItem({
         const nextChecklist = checklist.map((item, i) =>
             i === index ? { ...item, isCompleted: !item.isCompleted } : item
         );
-        const nextDescription = syncMarkdownChecklistWithCanonical(task.description, nextChecklist);
-        void updateTask(task.id, {
-            checklist: nextChecklist,
-            ...(nextDescription !== task.description ? { description: nextDescription } : {}),
-        });
+        void updateTask(task.id, { checklist: nextChecklist });
     }, [effectiveReadOnly, task, updateTask]);
     const {
         monthlyRecurrence,

@@ -15,9 +15,6 @@ import {
     getRecurrenceCompletedOccurrencesValue,
     parseRRuleString,
     getUsedTaskTokens,
-    absorbMarkdownChecklistItems,
-    reconcileChecklistWithMarkdown,
-    syncMarkdownChecklistWithCanonical,
     tFallback,
     type StoreActionResult,
 } from '@mindwtr/core';
@@ -75,7 +72,6 @@ type TaskEditActionsParams = {
     restoreTask: (taskId: string) => Promise<unknown>;
     sections: Array<{ id: string; projectId?: string; deletedAt?: string | null }>;
     setAiModal: React.Dispatch<React.SetStateAction<AIResponseModalState>>;
-    setDescriptionDraft: React.Dispatch<React.SetStateAction<string>>;
     setEditedTask: React.Dispatch<React.SetStateAction<Partial<Task>>>;
     setIsAIWorking: React.Dispatch<React.SetStateAction<boolean>>;
     setTitleImmediate: (text: string) => void;
@@ -120,7 +116,6 @@ export function useTaskEditActions({
     restoreTask,
     sections,
     setAiModal,
-    setDescriptionDraft,
     setEditedTask,
     setIsAIWorking,
     setTitleImmediate,
@@ -136,36 +131,24 @@ export function useTaskEditActions({
 }: TaskEditActionsParams) {
     const applyChecklistUpdate = useCallback((nextChecklist: NonNullable<Task['checklist']>) => {
         setEditedTask((prev) => {
-            const currentDescription = descriptionDraftRef.current ?? String(prev.description ?? task?.description ?? '');
-            const mergedChecklist = absorbMarkdownChecklistItems(currentDescription, prev.checklist, nextChecklist) ?? nextChecklist;
             const currentStatus = (prev.status ?? task?.status ?? 'inbox') as TaskStatus;
             let nextStatus = currentStatus;
             const isListMode = (prev.taskMode ?? task?.taskMode) === 'list';
             if (isListMode) {
-                const allComplete = mergedChecklist.length > 0 && mergedChecklist.every((item) => item.isCompleted);
+                const allComplete = nextChecklist.length > 0 && nextChecklist.every((item) => item.isCompleted);
                 if (allComplete) {
                     nextStatus = 'done';
                 } else if (currentStatus === 'done') {
                     nextStatus = 'next';
                 }
             }
-            const nextDescription = syncMarkdownChecklistWithCanonical(currentDescription, mergedChecklist) ?? '';
-            if (nextDescription !== currentDescription) {
-                if (descriptionDebounceRef.current) {
-                    clearTimeout(descriptionDebounceRef.current);
-                    descriptionDebounceRef.current = null;
-                }
-                descriptionDraftRef.current = nextDescription;
-                setDescriptionDraft(nextDescription);
-            }
             return {
                 ...prev,
-                checklist: mergedChecklist,
-                ...(nextDescription !== currentDescription ? { description: nextDescription } : {}),
+                checklist: nextChecklist,
                 status: nextStatus,
             };
         });
-    }, [descriptionDebounceRef, descriptionDraftRef, setDescriptionDraft, setEditedTask, task?.description, task?.status, task?.taskMode]);
+    }, [setEditedTask, task?.status, task?.taskMode]);
 
     const handleResetChecklist = useCallback(() => {
         const current = editedTask.checklist || [];
@@ -198,7 +181,6 @@ export function useTaskEditActions({
             tags: editedTask.tags,
         };
         updates.location = String(updates.location ?? '').trim() || undefined;
-        updates.checklist = reconcileChecklistWithMarkdown(baseDescription, task.description, updates.checklist);
 
         const recurrenceRule = recurrenceRuleValue || undefined;
         if (recurrenceRule) {

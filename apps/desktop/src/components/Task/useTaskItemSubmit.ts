@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import {
-    reconcileChecklistWithMarkdown,
     getRecurrenceCompletedOccurrencesValue,
     parseRRuleString,
     type Recurrence,
@@ -111,7 +110,6 @@ export function useTaskItemSubmit({
         const currentContexts = editContexts.split(',').map((context) => context.trim()).filter(Boolean);
         const currentTags = editTags.split(',').map((tag) => tag.trim()).filter(Boolean);
         const resolvedDescription = editDescription || undefined;
-        const resolvedChecklist = reconcileChecklistWithMarkdown(resolvedDescription, task.description, task.checklist);
         const resolvedSectionId = resolvedProjectId ? (editSectionId || undefined) : undefined;
         const resolvedAreaId = resolvedProjectId ? undefined : (editAreaId || undefined);
 
@@ -127,7 +125,6 @@ export function useTaskItemSubmit({
             contexts: currentContexts,
             tags: currentTags,
             description: resolvedDescription,
-            ...(resolvedChecklist ? { checklist: resolvedChecklist } : {}),
             location: editLocation || undefined,
             recurrence: recurrenceValue,
             showFutureRecurrence: recurrenceValue && editShowFutureRecurrence ? true : undefined,

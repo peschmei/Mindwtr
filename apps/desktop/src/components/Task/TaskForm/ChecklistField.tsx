@@ -18,12 +18,10 @@ import { Check, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
     applyMarkdownKeyboardShortcut,
-    absorbMarkdownChecklistItems,
     applyMarkdownPairInsertion,
     generateUUID,
     isMarkdownEditorAssistEnabled,
     parsePastedChecklistItems,
-    syncMarkdownChecklistWithCanonical,
     useTaskStore,
     type MarkdownSelection,
     type MarkdownToolbarResult,
@@ -41,8 +39,6 @@ type ChecklistFieldProps = {
     t: (key: string) => string;
     taskId: string;
     checklist: Task['checklist'];
-    description?: string;
-    onDescriptionSync?: (description: string) => void;
     updateTask: (taskId: string, updates: Partial<Task>) => void;
     resetTaskChecklist: (taskId: string) => void;
 };
@@ -153,8 +149,6 @@ export function ChecklistField({
     t,
     taskId,
     checklist,
-    description,
-    onDescriptionSync,
     updateTask,
     resetTaskChecklist,
 }: ChecklistFieldProps) {
@@ -194,16 +188,8 @@ export function ChecklistField({
     }, []);
 
     const commitChecklistUpdate = useCallback((nextChecklist: Task['checklist']) => {
-        const mergedChecklist = absorbMarkdownChecklistItems(description, checklist, nextChecklist) ?? nextChecklist;
-        const nextDescription = syncMarkdownChecklistWithCanonical(description, mergedChecklist);
-        if (nextDescription !== description) {
-            onDescriptionSync?.(nextDescription ?? '');
-        }
-        updateTask(taskId, {
-            checklist: mergedChecklist,
-            ...(nextDescription !== description ? { description: nextDescription } : {}),
-        });
-    }, [checklist, description, onDescriptionSync, taskId, updateTask]);
+        updateTask(taskId, { checklist: nextChecklist });
+    }, [taskId, updateTask]);
 
     const commitChecklistDraft = useCallback((next?: Task['checklist']) => {
         const payload = next ?? checklistDraftRef.current;

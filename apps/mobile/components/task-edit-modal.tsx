@@ -624,7 +624,6 @@ function TaskEditModalInner({
         restoreTask,
         sections,
         setAiModal,
-        setDescriptionDraft,
         setEditedTask,
         setIsAIWorking,
         setTitleImmediate,

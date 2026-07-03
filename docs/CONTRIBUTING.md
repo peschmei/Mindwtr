@@ -257,7 +257,7 @@ OSI-approved open-source license.
 
 Documentation updates are welcome in the docs site repo, `README.md`, `README_zh.md`, and repository-local docs.
 
-Most user-facing documentation should go in the Mindwtr web docs source, which builds the public docs site at https://docs.mindwtr.app/. Use this repository's `docs/` directory for repository-local documentation such as contribution guides, architecture summaries, ADRs, and release notes. The `wiki/` directory is legacy GitHub Wiki source while the docs migration continues; update it only when a page still needs to stay mirrored there.
+Most user-facing documentation should go in the Mindwtr web docs source, which builds the public docs site at https://docs.mindwtr.app/. Use this repository's `docs/` directory for repository-local documentation such as contribution guides, architecture summaries, ADRs, and release notes. The `wiki/` directory holds only the retired GitHub Wiki's landing page, which points readers to the docs site; do not add content pages there.
 
 When changing docs:
 

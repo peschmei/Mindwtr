@@ -12,11 +12,9 @@ const initialChecklist: NonNullable<Task['checklist']> = [
 
 function ChecklistHarness({
     initial = initialChecklist,
-    description,
     onUpdateTask,
 }: {
     initial?: Task['checklist'];
-    description?: string;
     onUpdateTask?: (updates: Partial<Task>) => void;
 }) {
     const [checklist, setChecklist] = useState<Task['checklist']>(initial);
@@ -25,7 +23,6 @@ function ChecklistHarness({
             t={(key) => key}
             taskId="task-1"
             checklist={checklist}
-            description={description}
             updateTask={(_taskId, updates) => {
                 onUpdateTask?.(updates);
                 setChecklist(updates.checklist ?? []);
@@ -51,13 +48,10 @@ describe('ChecklistField', () => {
         expect(reordered?.map((item) => item.isCompleted)).toEqual([false, false, true]);
     });
 
-    it('syncs existing markdown task-list lines when checklist completion changes', () => {
+    it('never touches the description when checklist completion changes', () => {
         const updates: Partial<Task>[] = [];
         const { getByRole } = render(
-            <ChecklistHarness
-                description={'Intro\n- [ ] Item 1\n- [ ] Item 2\n- [ ] Item 3\nOutro'}
-                onUpdateTask={(next) => updates.push(next)}
-            />
+            <ChecklistHarness onUpdateTask={(next) => updates.push(next)} />
         );
 
         fireEvent.click(getByRole('button', { name: 'taskEdit.checklist 1' }));
@@ -68,7 +62,6 @@ describe('ChecklistField', () => {
                 { id: '2', title: 'Item 2', isCompleted: false },
                 { id: '3', title: 'Item 3', isCompleted: false },
             ],
-            description: 'Intro\n- [x] Item 1\n- [ ] Item 2\n- [ ] Item 3\nOutro',
         });
     });
 
@@ -251,7 +244,6 @@ describe('ChecklistField', () => {
             t: (key: string) => key,
             taskId: 'task-1',
             checklist: initialChecklist,
-            description: undefined,
             updateTask: () => {},
             resetTaskChecklist: () => {},
         };
@@ -273,7 +265,6 @@ describe('ChecklistField', () => {
             t: (key: string) => key,
             taskId: 'task-1',
             checklist: initialChecklist,
-            description: undefined,
             updateTask: () => {},
             resetTaskChecklist: () => {},
         };
