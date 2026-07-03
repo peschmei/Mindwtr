@@ -344,6 +344,35 @@ describe('TaskInput autocomplete', () => {
         expect(input.value).toBe('@wo');
     });
 
+    it('keeps the highlighted suggestion scrolled into view while navigating with arrows', async () => {
+        const scrollIntoView = vi.fn();
+        Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+            configurable: true,
+            writable: true,
+            value: scrollIntoView,
+        });
+
+        try {
+            const { getByRole } = render(
+                <TaskInputHarness initialValue="@t" contexts={['@t1', '@t2', '@t3', '@t4', '@t5']} />
+            );
+            const input = getByRole('combobox') as HTMLInputElement;
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+            fireEvent.click(input);
+
+            fireEvent.keyDown(input, { key: 'ArrowDown' });
+            fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+            await waitFor(() => {
+                expect(getByRole('option', { name: '@t3' }).getAttribute('aria-selected')).toBe('true');
+                expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+            });
+        } finally {
+            delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+        }
+    });
+
     it('undoes task title edits with Ctrl+Z', async () => {
         const { getByRole } = render(<TaskInputHarness initialValue="Draft task" />);
         const input = getByRole('combobox') as HTMLInputElement;

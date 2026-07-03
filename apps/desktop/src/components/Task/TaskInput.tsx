@@ -42,6 +42,32 @@ type Option =
     | { kind: 'area'; label: string; value: string; id: string }
     | { kind: 'command'; label: string; value: string; command: SlashCommand; requiresArgument: boolean };
 
+// WebKit does not scroll an input to a caret set via setSelectionRange, so we
+// measure the caret's pixel offset and adjust scrollLeft ourselves (LTR only).
+let caretMeasureContext: CanvasRenderingContext2D | null | undefined;
+
+const ensureCaretVisible = (input: HTMLInputElement, caret: number) => {
+    if (typeof window === 'undefined') return;
+    const style = window.getComputedStyle(input);
+    if (style.direction === 'rtl') return;
+    if (caretMeasureContext === undefined) {
+        caretMeasureContext = document.createElement('canvas').getContext('2d');
+    }
+    const context = caretMeasureContext;
+    if (!context) return;
+    context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const caretX = context.measureText(input.value.slice(0, caret)).width;
+    const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+    const visibleWidth = input.clientWidth - paddingLeft - paddingRight;
+    if (visibleWidth <= 0) return;
+    if (caretX < input.scrollLeft) {
+        input.scrollLeft = Math.max(0, caretX - visibleWidth / 4);
+    } else if (caretX > input.scrollLeft + visibleWidth) {
+        input.scrollLeft = caretX - (visibleWidth * 3) / 4;
+    }
+};
+
 export type TaskInputAcceptedSuggestion =
     | { kind: 'project'; label: string; value: string; projectId: string }
     | { kind: 'createProject'; label: string; value: string; projectId: string | null }
@@ -299,8 +325,12 @@ export function TaskInput({
     };
 
     const restoreSelection = (selection: InputSelection) => {
-        mergedRef.current?.focus();
-        mergedRef.current?.setSelectionRange(selection.start, selection.end);
+        const input = mergedRef.current;
+        if (input) {
+            input.focus();
+            input.setSelectionRange(selection.start, selection.end);
+            ensureCaretVisible(input, selection.end);
+        }
         selectionRef.current = selection;
     };
 
@@ -498,6 +528,14 @@ export function TaskInput({
     const hasOptions = trigger && options.length > 0;
     const activeDescendantId = hasOptions ? `${listboxId}-option-${selectedIndex}` : undefined;
 
+    useEffect(() => {
+        if (!activeDescendantId) return;
+        const activeOption = document.getElementById(activeDescendantId);
+        if (activeOption && typeof activeOption.scrollIntoView === 'function') {
+            activeOption.scrollIntoView({ block: 'nearest' });
+        }
+    }, [activeDescendantId]);
+
     return (
         <div className={cn('relative', containerClassName)}>
             <input
@@ -549,7 +587,7 @@ export function TaskInput({
                 <div
                     id={listboxId}
                     role="listbox"
-                    className="absolute z-20 mt-2 w-64 rounded-md border border-border bg-popover shadow-lg p-1 text-xs"
+                    className="absolute z-20 mt-2 w-64 max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-lg p-1 text-xs"
                 >
                     {options.map((option, index) => (
                         <button
