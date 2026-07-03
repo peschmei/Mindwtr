@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { AlertTriangle, ChevronDown, ChevronRight, ChevronsLeft, CornerDownRight, Folder, Plus } from 'lucide-react';
 import { cn } from '../../../lib/utils';
@@ -10,6 +10,7 @@ import { reportError } from '../../../lib/report-error';
 import {
     computeProjectAreaDragResult,
     getProjectAreaContainerId,
+    projectAreaCollisionDetection,
     ProjectAreaDropZone,
 } from './project-area-dnd';
 import {
@@ -229,12 +230,47 @@ export function ProjectsSidebar({
     const activeProjectDnd = useMemo(() => buildProjectDndState(groupedActiveProjects), [buildProjectDndState, groupedActiveProjects]);
     const deferredProjectDnd = useMemo(() => buildProjectDndState(groupedDeferredProjects), [buildProjectDndState, groupedDeferredProjects]);
     const archivedProjectDnd = useMemo(() => buildProjectDndState(groupedArchivedProjects), [buildProjectDndState, groupedArchivedProjects]);
+    const [draggingSection, setDraggingSection] = useState<ProjectAreaSection | null>(null);
+
+    const renderMissingAreaDropTargets = (section: ProjectAreaSection, groups: GroupedProjects) => {
+        if (draggingSection !== section) return null;
+        const present = new Set(groups.map(([groupAreaId]) => groupAreaId));
+        const targets = [
+            ...(present.has(noAreaId) ? [] : [{ id: noAreaId, name: t('projects.noArea'), color: undefined as string | undefined }]),
+            ...areaOptions
+                .filter((area) => !present.has(area.id))
+                .map((area) => ({ id: area.id, name: area.name, color: area.color })),
+        ];
+        if (targets.length === 0) return null;
+        return (
+            <div className="space-y-1 pt-1">
+                {targets.map((target) => (
+                    <ProjectAreaDropZone
+                        key={`${section}-target-${target.id}`}
+                        id={getProjectAreaContainerId(target.id)}
+                        className="rounded-lg border border-dashed border-border/60 px-2 py-1.5"
+                    >
+                        <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {target.color && (
+                                <span
+                                    className="w-2 h-2 rounded-full border border-border/50"
+                                    style={{ backgroundColor: target.color }}
+                                />
+                            )}
+                            {target.name}
+                        </span>
+                    </ProjectAreaDropZone>
+                ))}
+            </div>
+        );
+    };
     const removeFromFocusLabel = t('projects.removeFromFocus');
     const addToFocusLabel = t('projects.addToFocus');
     const maxFocusedProjectsLabel = t('projects.maxFocusedProjects');
     const createProjectLabel = `${tFallback(t, 'projects.create', 'Create')} ${tFallback(t, 'taskEdit.projectLabel', 'Project')}`;
 
     const handleProjectDragEnd = useCallback((dndState: ReturnType<typeof buildProjectDndState>) => (event: DragEndEvent) => {
+        setDraggingSection(null);
         const failProjectMove = (error: unknown) => {
             reportError('Failed to move project between areas', error);
             showToast?.(t('projects.moveProjectFailed') || 'Failed to move project', 'error');
@@ -389,7 +425,9 @@ export function ProjectsSidebar({
                 {groupedActiveProjects.length > 0 && (
                     <DndContext
                         sensors={projectSensors}
-                        collisionDetection={closestCenter}
+                        collisionDetection={projectAreaCollisionDetection}
+                        onDragStart={() => setDraggingSection('active')}
+                        onDragCancel={() => setDraggingSection(null)}
                         onDragEnd={handleProjectDragEnd(activeProjectDnd)}
                     >
                         {groupedActiveProjects.map(([areaId, areaProjects]) => {
@@ -398,7 +436,7 @@ export function ProjectsSidebar({
                             const isCollapsed = isProjectAreaCollapsed(collapsedAreas, 'active', areaId);
 
                             return (
-                                <div key={areaId} className="space-y-1">
+                                <ProjectAreaDropZone key={areaId} id={getProjectAreaContainerId(areaId)} className="space-y-1 rounded-lg">
                                     <button
                                         type="button"
                                         onClick={() => onToggleAreaCollapse('active', areaId)}
@@ -417,7 +455,6 @@ export function ProjectsSidebar({
                                         {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                     </button>
                                     {!isCollapsed && (
-                                        <ProjectAreaDropZone id={getProjectAreaContainerId(areaId)} className="space-y-1 rounded-lg">
                                             <SortableContext items={areaProjects.map((project) => project.id)} strategy={verticalListSortingStrategy}>
                                                 {areaProjects.map((project) => {
                                             const projTasks = tasksByProject[project.id] || [];
@@ -508,11 +545,11 @@ export function ProjectsSidebar({
                                             );
                                                 })}
                                             </SortableContext>
-                                        </ProjectAreaDropZone>
                                     )}
-                                </div>
+                                </ProjectAreaDropZone>
                             );
                         })}
+                        {renderMissingAreaDropTargets('active', groupedActiveProjects)}
                     </DndContext>
                 )}
 
@@ -530,7 +567,9 @@ export function ProjectsSidebar({
                             <div className="space-y-3">
                                 <DndContext
                                     sensors={projectSensors}
-                                    collisionDetection={closestCenter}
+                                    collisionDetection={projectAreaCollisionDetection}
+                                    onDragStart={() => setDraggingSection('deferred')}
+                                    onDragCancel={() => setDraggingSection(null)}
                                     onDragEnd={handleProjectDragEnd(deferredProjectDnd)}
                                 >
                                     {groupedDeferredProjects.map(([areaId, areaProjects]) => {
@@ -539,7 +578,7 @@ export function ProjectsSidebar({
                                         const isCollapsed = isProjectAreaCollapsed(collapsedAreas, 'deferred', areaId);
 
                                         return (
-                                            <div key={`deferred-${areaId}`} className="space-y-1">
+                                            <ProjectAreaDropZone key={`deferred-${areaId}`} id={getProjectAreaContainerId(areaId)} className="space-y-1 rounded-lg">
                                                 <button
                                                     type="button"
                                                     onClick={() => onToggleAreaCollapse('deferred', areaId)}
@@ -558,7 +597,6 @@ export function ProjectsSidebar({
                                                     {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                                 </button>
                                                 {!isCollapsed && (
-                                                    <ProjectAreaDropZone id={getProjectAreaContainerId(areaId)} className="space-y-1 rounded-lg">
                                                         <SortableContext items={areaProjects.map((project) => project.id)} strategy={verticalListSortingStrategy}>
                                                             {areaProjects.map((project) => (
                                                             <SortableProjectRow key={project.id} projectId={project.id}>
@@ -603,11 +641,11 @@ export function ProjectsSidebar({
                                                             </SortableProjectRow>
                                                             ))}
                                                         </SortableContext>
-                                                    </ProjectAreaDropZone>
                                                 )}
-                                            </div>
+                                            </ProjectAreaDropZone>
                                         );
                                     })}
+                                    {renderMissingAreaDropTargets('deferred', groupedDeferredProjects)}
                                 </DndContext>
                             </div>
                         )}
@@ -628,7 +666,9 @@ export function ProjectsSidebar({
                             <div className="space-y-3">
                                 <DndContext
                                     sensors={projectSensors}
-                                    collisionDetection={closestCenter}
+                                    collisionDetection={projectAreaCollisionDetection}
+                                    onDragStart={() => setDraggingSection('archived')}
+                                    onDragCancel={() => setDraggingSection(null)}
                                     onDragEnd={handleProjectDragEnd(archivedProjectDnd)}
                                 >
                                     {groupedArchivedProjects.map(([areaId, areaProjects]) => {
@@ -637,7 +677,7 @@ export function ProjectsSidebar({
                                         const isCollapsed = isProjectAreaCollapsed(collapsedAreas, 'archived', areaId);
 
                                         return (
-                                            <div key={`archived-${areaId}`} className="space-y-1">
+                                            <ProjectAreaDropZone key={`archived-${areaId}`} id={getProjectAreaContainerId(areaId)} className="space-y-1 rounded-lg">
                                                 <button
                                                     type="button"
                                                     onClick={() => onToggleAreaCollapse('archived', areaId)}
@@ -656,7 +696,6 @@ export function ProjectsSidebar({
                                                     {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                                 </button>
                                                 {!isCollapsed && (
-                                                    <ProjectAreaDropZone id={getProjectAreaContainerId(areaId)} className="space-y-1 rounded-lg">
                                                         <SortableContext items={areaProjects.map((project) => project.id)} strategy={verticalListSortingStrategy}>
                                                             {areaProjects.map((project) => (
                                                                 <SortableProjectRow key={project.id} projectId={project.id}>
@@ -701,11 +740,11 @@ export function ProjectsSidebar({
                                                                 </SortableProjectRow>
                                                             ))}
                                                         </SortableContext>
-                                                    </ProjectAreaDropZone>
                                                 )}
-                                            </div>
+                                            </ProjectAreaDropZone>
                                         );
                                     })}
+                                    {renderMissingAreaDropTargets('archived', groupedArchivedProjects)}
                                 </DndContext>
                             </div>
                         )}

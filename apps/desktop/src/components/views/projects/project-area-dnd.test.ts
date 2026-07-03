@@ -3,6 +3,7 @@ import {
     computeProjectAreaDragResult,
     getProjectAreaContainerId,
     getProjectAreaIdFromContainer,
+    projectAreaCollisionDetection,
 } from './project-area-dnd';
 
 describe('project-area-dnd', () => {
@@ -63,6 +64,58 @@ describe('project-area-dnd', () => {
             movedProjectId: 'p1',
             movedAcrossAreas: true,
         });
+    });
+
+    it('moves a project into an area that has no projects yet', () => {
+        const result = computeProjectAreaDragResult({
+            activeId: 'p1',
+            overId: getProjectAreaContainerId('a-empty'),
+            projectIdsByArea: new Map([
+                ['a1', ['p1', 'p2']],
+            ]),
+            projectAreaById: new Map([
+                ['p1', 'a1'],
+                ['p2', 'a1'],
+            ]),
+        });
+
+        expect(result).toEqual({
+            sourceAreaId: 'a1',
+            destinationAreaId: 'a-empty',
+            nextSourceIds: ['p2'],
+            nextDestinationIds: ['p1'],
+            movedProjectId: 'p1',
+            movedAcrossAreas: true,
+        });
+    });
+
+    it('prefers project rows over area containers when both are under the pointer', () => {
+        const rowRect = { top: 10, left: 0, width: 200, height: 30, bottom: 40, right: 200 };
+        const containerRect = { top: 0, left: 0, width: 200, height: 300, bottom: 300, right: 200 };
+        const buildContainer = (id: string, rect: typeof rowRect) => ({
+            id,
+            key: id,
+            data: { current: {} },
+            disabled: false,
+            node: { current: null },
+            rect: { current: rect },
+        });
+        const args = {
+            active: { id: 'p9', data: { current: {} }, rect: { current: { initial: rowRect, translated: rowRect } } },
+            collisionRect: { ...rowRect },
+            droppableRects: new Map([
+                ['p1', rowRect],
+                [getProjectAreaContainerId('a1'), containerRect],
+            ]),
+            droppableContainers: [
+                buildContainer('p1', rowRect),
+                buildContainer(getProjectAreaContainerId('a1'), containerRect),
+            ],
+            pointerCoordinates: { x: 100, y: 25 },
+        };
+
+        const collisions = projectAreaCollisionDetection(args as never);
+        expect(collisions.map((collision) => String(collision.id))).toEqual(['p1']);
     });
 
     it('appends a project when dropped on an area container', () => {

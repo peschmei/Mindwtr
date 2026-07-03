@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useDroppable } from '@dnd-kit/core';
+import { closestCenter, pointerWithin, useDroppable, type CollisionDetection } from '@dnd-kit/core';
 import { cn } from '../../../lib/utils';
 
 const PROJECT_AREA_CONTAINER_PREFIX = 'project-area:';
@@ -10,6 +10,20 @@ export const getProjectAreaIdFromContainer = (containerId: string) =>
     containerId.startsWith(PROJECT_AREA_CONTAINER_PREFIX)
         ? containerId.slice(PROJECT_AREA_CONTAINER_PREFIX.length)
         : null;
+
+// Area groups are droppable as whole blocks (header included, so collapsed and
+// empty areas accept drops). Prefer project-row hits under the pointer so
+// within-list reordering is not hijacked by the surrounding group container.
+export const projectAreaCollisionDetection: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+        const rowCollisions = pointerCollisions.filter(
+            (collision) => getProjectAreaIdFromContainer(String(collision.id)) === null
+        );
+        return rowCollisions.length > 0 ? rowCollisions : pointerCollisions;
+    }
+    return closestCenter(args);
+};
 
 type ComputeProjectAreaDragResultArgs = {
     activeId: string;
