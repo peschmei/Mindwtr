@@ -59,4 +59,4 @@ Changes collected after `v1.0.5` and before the next version tag.
 - fix(desktop): text in an expanded task description can now be selected and copied with the mouse (expanded rows no longer double as calendar drag sources; collapse the row to drag it onto the calendar).
 - fix(mobile): description text in the task view tab can now be selected and copied with a long-press.
 - fix(desktop): guided inbox processing buttons now use one font weight throughout, "No project needed" is neutral instead of completion-green, and text arrows/checkmarks were replaced with proper icons.
-- fix(mobile): inbox processing buttons now use plain text labels — Samsung's system font dropped the text after certain emoji, leaving icon-only buttons.
+- fix(mobile): inbox processing, board, and capture labels keep their emoji AND their text on Samsung devices — non-stock Samsung fonts dropped the text that followed an emoji, leaving icon-only buttons.
