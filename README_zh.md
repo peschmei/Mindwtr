@@ -289,7 +289,7 @@ Mindwtr 的发展离不开用户与贡献者的支持，感谢大家一起把它
     <img src="docs/assets/sponsors/davibicudo.png" width="60" height="60" alt="@davibicudo" />
   </a>
   <a href="https://github.com/PLPeeters" title="@PLPeeters">
-    <img src="docs/assets/sponsors/plpeeters.png" width="60" height="60" alt="@PLPeeters" />
+    <img src="docs/assets/sponsors/plpeeters-avatar.png" width="60" height="60" alt="@PLPeeters" />
   </a>
 </p>
 
