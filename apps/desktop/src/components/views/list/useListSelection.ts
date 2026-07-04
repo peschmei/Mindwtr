@@ -18,6 +18,7 @@ import type {
 } from '@mindwtr/core';
 
 import { reportError } from '../../../lib/report-error';
+import { undoTaskCompletion } from '../../../lib/undo-task-completion';
 import type { NextGroupBy } from './next-grouping';
 
 type ShowToast = (
@@ -346,6 +347,7 @@ export function useListSelection({
         const task = filteredTasks[selectedIndex];
         if (!task) return;
         const nextStatus: TaskStatus = task.status === 'done' ? 'inbox' : 'done';
+        const wasFocusedToday = task.isFocusedToday === true;
         void Promise.resolve(moveTask(task.id, nextStatus))
             .then(() => {
                 if (!undoNotificationsEnabled || nextStatus !== 'done') return;
@@ -356,7 +358,8 @@ export function useListSelection({
                     {
                         label: t('common.undo') || 'Undo',
                         onClick: () => {
-                            void Promise.resolve(moveTask(task.id, task.status));
+                            void undoTaskCompletion(task.id, task.status, wasFocusedToday)
+                                .catch((error) => reportError('Failed to undo task completion', error));
                         },
                     },
                 );

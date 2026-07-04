@@ -46,6 +46,7 @@ import { useTaskItemSubmit } from './Task/useTaskItemSubmit';
 import { dispatchNavigateEvent } from '../lib/navigation-events';
 import { dispatchContextsTokenSelection } from '../lib/contexts-view-state';
 import { reportError } from '../lib/report-error';
+import { undoTaskCompletion } from '../lib/undo-task-completion';
 import { resolveNativeDateInputLocale } from '../lib/native-date-input-locale';
 import { setCalendarTaskDragData } from '../lib/calendar-task-drag';
 import { useTaskItemStoreState, useTaskItemUiState } from './Task/useTaskItemStoreState';
@@ -980,7 +981,7 @@ export const TaskItem = memo(function TaskItem({
             })
             .catch((error) => reportError('Failed to move task to waiting', error));
     }, [moveTask, task.id, updateTask]);
-    const handleTaskCompleted = useCallback((previousStatus: TaskStatus) => {
+    const handleTaskCompleted = useCallback((previousStatus: TaskStatus, wasFocusedToday: boolean) => {
         if (undoNotificationsEnabled) {
             showToast(
                 `${task.title} marked Done`,
@@ -990,7 +991,8 @@ export const TaskItem = memo(function TaskItem({
                     label: undoLabel,
                     onClick: () => {
                         closeProjectNextActionPrompt();
-                        void moveTask(task.id, previousStatus);
+                        void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
+                            .catch((error) => reportError('Failed to undo task completion', error));
                     },
                 }
             );
@@ -998,7 +1000,6 @@ export const TaskItem = memo(function TaskItem({
         openProjectNextActionPromptIfNeeded(task.id);
     }, [
         closeProjectNextActionPrompt,
-        moveTask,
         openProjectNextActionPromptIfNeeded,
         showToast,
         task.id,
@@ -1012,13 +1013,14 @@ export const TaskItem = memo(function TaskItem({
             return;
         }
         const previousStatus = task.status;
+        const wasFocusedToday = task.isFocusedToday === true;
         void moveTask(task.id, nextStatus)
             .then((result) => {
                 if (!result.success) {
                     throw new Error(result.error || 'Failed to change task status');
                 }
                 if (nextStatus === 'done' && previousStatus !== 'done') {
-                    handleTaskCompleted(previousStatus);
+                    handleTaskCompleted(previousStatus, wasFocusedToday);
                 }
             })
             .catch((error) => reportError('Failed to change task status', error));
@@ -1026,18 +1028,20 @@ export const TaskItem = memo(function TaskItem({
         handleTaskCompleted,
         moveTask,
         task.id,
+        task.isFocusedToday,
         task.status,
     ]);
     const handleEditorMarkDone = useCallback(() => {
         if (task.status === 'done' || task.status === 'archived' || task.status === 'reference') return;
         const previousStatus = task.status;
+        const wasFocusedToday = task.isFocusedToday === true;
         void handleSubmit(undefined, { statusOverride: 'done' })
             .then((result) => {
                 if (!result?.success) return;
-                handleTaskCompleted(previousStatus);
+                handleTaskCompleted(previousStatus, wasFocusedToday);
             })
             .catch((error) => reportError('Failed to mark task done from editor', error));
-    }, [handleSubmit, handleTaskCompleted, task.status]);
+    }, [handleSubmit, handleTaskCompleted, task.isFocusedToday, task.status]);
     const hasPendingEdits = useCallback(() => {
         if (editTitle !== task.title) return true;
         if (editDescription !== (task.description || '')) return true;

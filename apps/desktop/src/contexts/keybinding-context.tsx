@@ -4,6 +4,7 @@ import { useLanguage } from './language-context';
 import { KeybindingHelpModal } from '../components/KeybindingHelpModal';
 import { isFlatpakRuntime, isTauriRuntime } from '../lib/runtime';
 import { reportError } from '../lib/report-error';
+import { undoTaskCompletion } from '../lib/undo-task-completion';
 import { logWarn } from '../lib/app-log';
 import { useUiStore } from '../store/ui-store';
 import { saveStoredFullscreen } from '../lib/window-state';
@@ -366,6 +367,7 @@ export function KeybindingProvider({
         if (!task) return;
         const nextStatus = task.status === 'done' ? 'inbox' : 'done';
         const previousStatus = task.status;
+        const wasFocusedToday = task.isFocusedToday === true;
         void state.moveTask(task.id, nextStatus)
             .then((result) => {
                 if (!result.success) {
@@ -379,7 +381,8 @@ export function KeybindingProvider({
                     {
                         label: undoLabel,
                         onClick: () => {
-                            void state.moveTask(task.id, previousStatus);
+                            void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
+                                .catch((error) => reportError('Failed to undo task completion', error));
                         },
                     }
                 );
