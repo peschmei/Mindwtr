@@ -17,8 +17,6 @@ const jsonFiles = [
     'apps/desktop/package.json',
     'apps/mobile/package.json',
     'apps/cloud/package.json',
-    'apps/mcp-server/package.json',
-    'apps/mcp-server/server.json',
     'packages/core/package.json',
     'apps/mobile/app.json',
     'apps/desktop/src-tauri/tauri.conf.json'

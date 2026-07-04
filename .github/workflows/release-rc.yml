@@ -130,8 +130,6 @@ jobs:
             ['apps/desktop/package.json', json => json.version],
             ['apps/mobile/package.json', json => json.version],
             ['apps/cloud/package.json', json => json.version],
-            ['apps/mcp-server/package.json', json => json.version],
-            ['apps/mcp-server/server.json', json => json.version],
             ['packages/core/package.json', json => json.version],
             ['apps/mobile/app.json', json => json.expo && json.expo.version],
             ['apps/desktop/src-tauri/tauri.conf.json', json => json.version],
@@ -143,20 +141,13 @@ jobs:
             if (value !== base) {
               failures.push(`${file}: expected ${base}, got ${value || '<missing>'}`);
             }
-            if (file === 'apps/mcp-server/server.json' && Array.isArray(json.packages)) {
-              for (const pkg of json.packages) {
-                if (pkg.version !== base) {
-                  failures.push(`${file} package ${pkg.identifier || pkg.name || '<unknown>'}: expected ${base}, got ${pkg.version || '<missing>'}`);
-                }
-              }
-            }
           }
           if (failures.length) {
-            console.error('RC tags carry the -rc suffix, but app/package versions must stay on the stable base version for store compatibility.');
+            console.error('RC tags carry the -rc suffix, but app/store versions must stay on the stable base version for store compatibility.');
             console.error(failures.join('\n'));
             process.exit(1);
           }
-          console.log(`Verified app/package versions use stable base ${base}.`);
+          console.log(`Verified app/store versions use stable base ${base}.`);
           NODE
 
       - name: Verify RC tag points at this commit

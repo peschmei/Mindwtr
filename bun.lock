@@ -133,7 +133,7 @@
     },
     "apps/mcp-server": {
       "name": "mindwtr-mcp",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "bin": {
         "mindwtr-mcp": "dist/index.js",
       },

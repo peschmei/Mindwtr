@@ -11,7 +11,7 @@ INPUT_VERSION="${1:-}"
 
 if [ -z "$INPUT_VERSION" ]; then
     echo "Current versions:"
-    grep '"version"' package.json apps/*/package.json packages/*/package.json apps/mobile/app.json apps/mcp-server/server.json apps/desktop/src-tauri/tauri.conf.json 2>/dev/null | head -10
+    grep '"version"' package.json apps/desktop/package.json apps/mobile/package.json apps/cloud/package.json packages/*/package.json apps/mobile/app.json apps/desktop/src-tauri/tauri.conf.json 2>/dev/null | head -10
     echo ""
     read -p "Enter new version or RC tag (e.g., 0.2.5 or v1.0.5-rc.1): " INPUT_VERSION
 fi

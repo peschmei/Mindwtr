@@ -310,6 +310,44 @@ jobs:
       - name: Cloud TypeScript check
         run: bun run --filter mindwtr-cloud typecheck
 
+      - name: MCP version metadata check
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const packageJson = JSON.parse(fs.readFileSync('apps/mcp-server/package.json', 'utf8'));
+          const serverJson = JSON.parse(fs.readFileSync('apps/mcp-server/server.json', 'utf8'));
+          const version = packageJson.version;
+          const failures = [];
+
+          if (!version) {
+            failures.push('apps/mcp-server/package.json: missing version');
+          }
+
+          if (serverJson.version !== version) {
+            failures.push(`apps/mcp-server/server.json: expected ${version}, got ${serverJson.version || '<missing>'}`);
+          }
+
+          if (!Array.isArray(serverJson.packages)) {
+            failures.push('apps/mcp-server/server.json: missing packages array');
+          } else {
+            for (const entry of serverJson.packages) {
+              if (entry.version !== version) {
+                failures.push(
+                  `apps/mcp-server/server.json package ${entry.identifier || entry.name || '<unknown>'}: expected ${version}, got ${entry.version || '<missing>'}`
+                );
+              }
+            }
+          }
+
+          if (failures.length) {
+            console.error('MCP npm package and registry metadata versions must match.');
+            console.error(failures.join('\n'));
+            process.exit(1);
+          }
+          console.log(`Verified MCP package and registry metadata use ${version}.`);
+          NODE
+
       - name: MCP TypeScript check
         run: bun run --filter mindwtr-mcp typecheck
 

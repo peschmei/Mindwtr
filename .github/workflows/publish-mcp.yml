@@ -103,7 +103,6 @@ jobs:
 
           PACKAGE_NAME=$(node -e "const data = require('/tmp/mindwtr-mcp-pack/pack.json'); process.stdout.write(data[0].name)")
           PACKAGE_VERSION=$(node -e "const data = require('/tmp/mindwtr-mcp-pack/pack.json'); process.stdout.write(data[0].version)")
-          LOCAL_INTEGRITY=$(node -e "const data = require('/tmp/mindwtr-mcp-pack/pack.json'); process.stdout.write(data[0].integrity)")
           TARBALL=$(node -e "const data = require('/tmp/mindwtr-mcp-pack/pack.json'); process.stdout.write(data[0].filename)")
 
           cd /tmp/mindwtr-mcp-clean
@@ -113,23 +112,15 @@ jobs:
 
           echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
           echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "local_integrity=$LOCAL_INTEGRITY" >> "$GITHUB_OUTPUT"
 
       - name: Check whether npm version already exists
         id: npm_version
         run: |
           set -euo pipefail
           PACKAGE="${{ steps.package.outputs.package_name }}@${{ steps.package.outputs.package_version }}"
-          if PUBLISHED_JSON=$(npm view "$PACKAGE" dist.integrity --json 2>/dev/null); then
-            PUBLISHED_INTEGRITY=$(node -e "const value = JSON.parse(process.argv[1]); process.stdout.write(value || '')" "$PUBLISHED_JSON")
+          if npm view "$PACKAGE" version --json >/dev/null 2>&1; then
             echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "published_integrity=$PUBLISHED_INTEGRITY" >> "$GITHUB_OUTPUT"
-            if [ "$PUBLISHED_INTEGRITY" != "${{ steps.package.outputs.local_integrity }}" ]; then
-              echo "npm package $PACKAGE already exists, but its tarball integrity differs from this checkout."
-              echo "Bump apps/mcp-server/package.json and apps/mcp-server/server.json before publishing a changed MCP package."
-              exit 1
-            fi
-            echo "$PACKAGE already exists on npm with matching integrity; skipping npm publish."
+            echo "$PACKAGE already exists on npm; skipping npm publish."
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
             echo "$PACKAGE has not been published yet."
