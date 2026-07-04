@@ -72,4 +72,6 @@ Changes collected after `v1.0.5` and before the next version tag.
 - fix(mobile): the persistent "Quick add" notification channel name in Android system settings now follows the app language instead of staying in the language active when it was first created.
 - fix(sync): the default area for new tasks (fixed area and follow-active-area modes) now syncs between devices — the setting was merged correctly when received but was never included in the uploaded sync document.
 - ci(release): desktop builds use the prebuilt `@tauri-apps/cli` npm package pinned in the lockfile instead of compiling tauri-cli from source, cutting up to 9 minutes from cold release builds.
+- fix(mobile): tapping the persistent "Quick add" notification now opens Quick Capture directly instead of just bringing the app to the foreground (it now uses the same launch path as the quick-settings tile).
+- fix(mobile): the persistent "Quick add" notification re-pins itself when swiped away — Android 14 lets users dismiss ongoing notifications, so a swipe no longer silently removes the capture handle; turn the setting off in Settings → Notifications to remove it.
 - fix(release): app version bump tooling no longer overwrites the independently published `mindwtr-mcp` package version, and existing MCP npm versions now skip publish cleanly.
