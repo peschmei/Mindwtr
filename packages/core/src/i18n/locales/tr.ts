@@ -1245,7 +1245,7 @@ export const trOverrides: Record<string, string> = {
         'settings.webdavUrlPlaceholder': 'https://example.com/remote.php/dav/files/<username>/mindwtr',
         'settings.persistentCaptureLabel': 'Bildirim çubuğunda hızlı ekleme',
         'settings.persistentCaptureDesc': 'Kilit ekranı dahil her yerden yakalamak için kalıcı bir bildirim tutun.',
-        'captureNotification.title': 'Hızlı ekle',
+        'captureNotification.title': 'Hızlı yakalama',
         'captureNotification.text': 'Gelen kutunuza kaydetmek için dokunun',
         'captureNotification.channelName': 'Hızlı yakalama',
 

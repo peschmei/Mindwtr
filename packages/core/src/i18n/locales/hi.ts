@@ -1279,7 +1279,7 @@ export const hiOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick CSV या ZIP बैकअप को Mindwtr क्षेत्रों, प्रोजेक्टों और कार्यों में आयात करें।',
         'settings.persistentCaptureLabel': 'सूचना बार में त्वरित जोड़ें',
         'settings.persistentCaptureDesc': 'कहीं से भी कैप्चर करने के लिए स्थायी सूचना रखें, लॉक स्क्रीन से भी।',
-        'captureNotification.title': 'त्वरित जोड़ें',
+        'captureNotification.title': 'त्वरित कैप्चर',
         'captureNotification.text': 'इनबॉक्स में कैप्चर करने के लिए टैप करें',
         'captureNotification.channelName': 'त्वरित कैप्चर',
         'obsidian.title': 'Obsidian कार्य',

@@ -1360,7 +1360,7 @@ export const ptOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'Importe backups CSV ou ZIP do TickTick para áreas, projetos e tarefas do Mindwtr.',
         'settings.persistentCaptureLabel': 'Adição rápida na barra de notificações',
         'settings.persistentCaptureDesc': 'Mantenha uma notificação persistente para capturar de qualquer lugar, inclusive na tela de bloqueio.',
-        'captureNotification.title': 'Adicionar rápido',
+        'captureNotification.title': 'Captura rápida',
         'captureNotification.text': 'Toque para capturar na sua Caixa de entrada',
         'captureNotification.channelName': 'Captura rápida',
         'obsidian.title': 'Tarefas do Obsidian',

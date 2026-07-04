@@ -454,7 +454,7 @@ export const nlOverrides: Record<string, string> = {
         'settings.defaultAreaNone': 'Geen gebied',
         'settings.persistentCaptureLabel': 'Snel toevoegen in de notificatiebalk',
         'settings.persistentCaptureDesc': 'Houd een permanente melding om overal vast te leggen, ook op het vergrendelscherm.',
-        'captureNotification.title': 'Snel toevoegen',
+        'captureNotification.title': 'Snelle invoer',
         'captureNotification.text': 'Tik om vast te leggen in je Inbox',
         'captureNotification.channelName': 'Snelle invoer',
         'taskEdit.contextsPlaceholder': '@home, @work',

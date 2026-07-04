@@ -1798,7 +1798,7 @@ export const frOverrides: Record<string, string> = {
 'settings.syncMobile.webdavEndpointIsReachable': 'Le point de terminaison WebDAV est joignable.',
 'settings.persistentCaptureLabel': 'Ajout rapide dans la barre de notifications',
 'settings.persistentCaptureDesc': 'Garde une notification persistante pour capturer depuis n\'importe où, y compris l\'écran de verrouillage.',
-'captureNotification.title': 'Ajout rapide',
+'captureNotification.title': 'Capture rapide',
 'captureNotification.text': 'Touchez pour capturer dans votre boîte d\'entrée',
 'captureNotification.channelName': 'Capture rapide',
 

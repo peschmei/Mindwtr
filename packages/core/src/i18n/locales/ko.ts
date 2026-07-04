@@ -1264,7 +1264,7 @@ export const koOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick CSV 또는 ZIP 백업을 Mindwtr 영역, 프로젝트, 작업으로 가져옵니다.',
         'settings.persistentCaptureLabel': '알림 표시줄에서 빠른 추가',
         'settings.persistentCaptureDesc': '잠금 화면을 포함해 어디서나 캡처할 수 있는 고정 알림을 유지합니다.',
-        'captureNotification.title': '빠른 추가',
+        'captureNotification.title': '빠른 캡처',
         'captureNotification.text': '탭하여 수신함에 캡처',
         'captureNotification.channelName': '빠른 캡처',
         'obsidian.title': 'Obsidian 작업',

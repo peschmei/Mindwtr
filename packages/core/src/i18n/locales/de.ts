@@ -1366,7 +1366,7 @@ export const deOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick-CSV- oder ZIP-Backups in Mindwtr-Bereiche, Projekte und Aufgaben importieren.',
         'settings.persistentCaptureLabel': 'Schnelleingabe in der Benachrichtigungsleiste',
         'settings.persistentCaptureDesc': 'Dauerhafte Benachrichtigung zum Erfassen von überall, auch vom Sperrbildschirm.',
-        'captureNotification.title': 'Schnell hinzufügen',
+        'captureNotification.title': 'Schnellerfassung',
         'captureNotification.text': 'Tippen, um in den Eingang zu erfassen',
         'captureNotification.channelName': 'Schnellerfassung',
         'obsidian.title': 'Obsidian-Aufgaben',

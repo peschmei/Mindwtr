@@ -1279,7 +1279,7 @@ export const jaOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'TickTick の CSV または ZIP バックアップを Mindwtr のエリア、プロジェクト、タスクにインポートします。',
         'settings.persistentCaptureLabel': '通知バーからクイック追加',
         'settings.persistentCaptureDesc': 'ロック画面を含め、どこからでもキャプチャできる常駐通知を表示します。',
-        'captureNotification.title': 'クイック追加',
+        'captureNotification.title': 'クイックキャプチャ',
         'captureNotification.text': 'タップしてインボックスにキャプチャ',
         'captureNotification.channelName': 'クイックキャプチャ',
         'obsidian.title': 'Obsidianタスク',

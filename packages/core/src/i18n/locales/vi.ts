@@ -1812,7 +1812,7 @@ export const viOverrides: Record<string, string> = {
         'settings.syncMobile.webdavEndpointIsReachable': 'Điểm cuối WebDAV có thể truy cập.',
         'settings.persistentCaptureLabel': 'Thêm nhanh trên thanh thông báo',
         'settings.persistentCaptureDesc': 'Giữ một thông báo cố định để ghi lại từ bất cứ đâu, kể cả màn hình khóa.',
-        'captureNotification.title': 'Thêm nhanh',
+        'captureNotification.title': 'Ghi nhanh',
         'captureNotification.text': 'Nhấn để ghi vào Hộp thư đến',
         'captureNotification.channelName': 'Ghi nhanh',
 

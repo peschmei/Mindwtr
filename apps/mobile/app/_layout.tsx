@@ -447,7 +447,7 @@ function RootLayoutContentInner() {
   useEffect(() => {
     if (!languageReady || Platform.OS !== 'android') return;
     void restorePersistentCaptureNotificationOnStartup({
-      title: resolveText('captureNotification.title', 'Quick add'),
+      title: resolveText('captureNotification.title', 'Quick capture'),
       text: resolveText('captureNotification.text', 'Tap to capture to your Inbox'),
       channelName: resolveText('captureNotification.channelName', 'Quick capture'),
     });

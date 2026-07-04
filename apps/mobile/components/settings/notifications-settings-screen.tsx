@@ -88,7 +88,7 @@ export function NotificationsSettingsScreen() {
         readPersistentCaptureEnabled().then(setPersistentCaptureEnabled).catch(console.error);
     }, []);
     const persistentCaptureStrings = useCallback(() => ({
-        title: t('captureNotification.title') || 'Quick add',
+        title: t('captureNotification.title') || 'Quick capture',
         text: t('captureNotification.text') || 'Tap to capture to your Inbox',
         channelName: t('captureNotification.channelName') || 'Quick capture',
     }), [t]);

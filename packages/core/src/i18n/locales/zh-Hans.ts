@@ -1764,7 +1764,7 @@ export const zhHans: Record<string, string> = {
         'settings.syncMobile.webdavEndpointIsReachable': 'WebDAV 端点可访问。',
         'settings.persistentCaptureLabel': '通知栏快速添加',
         'settings.persistentCaptureDesc': '保留常驻通知，随时随地（包括锁屏）快速收集。',
-        'captureNotification.title': '快速添加',
+        'captureNotification.title': '快速收集',
         'captureNotification.text': '点按即可收集到收件箱',
         'captureNotification.channelName': '快速收集',
 

@@ -1831,7 +1831,7 @@ export const csOverrides: Record<string, string> = {
         'settings.syncMobile.importTicktickCsvOrZipBackupsIntoMindwtrAreas': 'Importujte CSV nebo ZIP zálohy TickTick do oblastí, projektů a úkolů Mindwtr.',
         'settings.persistentCaptureLabel': 'Rychlé přidání v oznamovací liště',
         'settings.persistentCaptureDesc': 'Trvalé oznámení pro zachycení odkudkoli, včetně zamčené obrazovky.',
-        'captureNotification.title': 'Rychle přidat',
+        'captureNotification.title': 'Rychlé zachycení',
         'captureNotification.text': 'Klepnutím zachytíte do Doručené',
         'captureNotification.channelName': 'Rychlé zachycení',
         'obsidian.title': 'Úkoly z Obsidianu',
