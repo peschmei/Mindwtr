@@ -66,7 +66,7 @@ Changes collected after `v1.0.5` and before the next version tag.
 - fix(desktop): a manual "Sync now" always reads the remote data instead of trusting the unchanged-check cache, so tasks added on another device can no longer be missed by a forced sync.
 - fix(desktop): undoing a completed task restores its Today star along with its status (completing clears the star, and Undo used to bring the task back unstarred).
 - fix(mobile): pull-to-refresh sync now works on short task lists (Inbox with a few tasks no longer refuses the pull gesture on iOS; it previously only worked on scrollable screens like Focus).
-- fix(mcp): `npm i -g mindwtr-mcp` no longer needs a C++ compiler on Windows — better-sqlite3 is now ^12 with prebuilt binaries for current Node (mindwtr-mcp 1.1.1, Node 20+).
+- fix(mcp): `npm i -g mindwtr-mcp` no longer needs a C++ compiler on Windows — better-sqlite3 is now ^12 with prebuilt binaries for Node 22+ (mindwtr-mcp 1.1.1; Node 20 still works but needs build tools).
 - feat(mobile): optional persistent "Quick add" notification on Android (Settings → Notifications) — one swipe from anywhere, including the lock screen, opens Quick Capture.
 - fix(mobile): pull-to-refresh and Settings "Sync now" always read the remote data instead of trusting the unchanged-check cache, matching the desktop manual-sync fix.
 - fix(mobile): the persistent "Quick add" notification channel name in Android system settings now follows the app language instead of staying in the language active when it was first created.
