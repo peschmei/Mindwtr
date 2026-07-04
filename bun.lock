@@ -76,14 +76,14 @@
     },
     "apps/cloud": {
       "name": "mindwtr-cloud",
-      "version": "0.9.10",
+      "version": "1.1.0",
       "dependencies": {
         "@mindwtr/core": "workspace:*",
       },
     },
     "apps/desktop": {
       "name": "mindwtr",
-      "version": "0.9.10",
+      "version": "1.1.0",
       "dependencies": {
         "@dnd-kit/core": "^6.1.0",
         "@dnd-kit/sortable": "^8.0.0",
@@ -133,12 +133,12 @@
     },
     "apps/mcp-server": {
       "name": "mindwtr-mcp",
-      "version": "0.9.10",
+      "version": "1.1.1",
       "bin": {
         "mindwtr-mcp": "dist/index.js",
       },
       "dependencies": {
-        "better-sqlite3": "9.6.0",
+        "better-sqlite3": "^12.0.0",
       },
       "devDependencies": {
         "@modelcontextprotocol/sdk": "^1.29.0",
@@ -147,7 +147,7 @@
     },
     "apps/mobile": {
       "name": "mobile",
-      "version": "0.9.10",
+      "version": "1.1.0",
       "dependencies": {
         "@babel/runtime": "^7.28.4",
         "@expo/metro-runtime": "^6.1.2",
@@ -232,7 +232,7 @@
     },
     "packages/core": {
       "name": "@mindwtr/core",
-      "version": "0.9.10",
+      "version": "1.1.0",
       "dependencies": {
         "@babel/runtime": "^7.28.4",
         "chrono-node": "^2.9.0",
@@ -1109,7 +1109,7 @@
 
     "better-opn": ["better-opn@3.0.2", "", { "dependencies": { "open": "^8.0.4" } }, "sha512-aVNobHnJqLiUelTaHat9DZ1qM2w0C0Eym4LPI/3JxOnSokGVdsl1T1kN7TFvsEAD8G47A6VKQ0TVHqbBnYMJlQ=="],
 
-    "better-sqlite3": ["better-sqlite3@9.6.0", "", { "dependencies": { "bindings": "^1.5.0", "prebuild-install": "^7.1.1" } }, "sha512-yR5HATnqeYNVnkaUTf4bOP2dJSnyhP4puJN/QPRyx4YkBEEUxib422n2XzPqDEHjQQqazoYoADdAm5vE15+dAQ=="],
+    "better-sqlite3": ["better-sqlite3@12.11.1", "", { "dependencies": { "bindings": "^1.5.0", "prebuild-install": "^7.1.1" } }, "sha512-dq9AtApgg5PGFtBzPFSBl3HZQjHok5gaQCM6zh2Yk0aSmDCs1CbnVI8/HgASQkNKsWFpseIO9beg5xxpYhbIfA=="],
 
     "bidi-js": ["bidi-js@1.0.3", "", { "dependencies": { "require-from-string": "^2.0.2" } }, "sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw=="],
 

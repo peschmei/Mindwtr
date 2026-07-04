@@ -66,3 +66,4 @@ Changes collected after `v1.0.5` and before the next version tag.
 - fix(desktop): a manual "Sync now" always reads the remote data instead of trusting the unchanged-check cache, so tasks added on another device can no longer be missed by a forced sync.
 - fix(desktop): undoing a completed task restores its Today star along with its status (completing clears the star, and Undo used to bring the task back unstarred).
 - fix(mobile): pull-to-refresh sync now works on short task lists (Inbox with a few tasks no longer refuses the pull gesture on iOS; it previously only worked on scrollable screens like Focus).
+- fix(mcp): `npm i -g mindwtr-mcp` no longer needs a C++ compiler on Windows — better-sqlite3 is now ^12 with prebuilt binaries for current Node (mindwtr-mcp 1.1.1, Node 20+).
