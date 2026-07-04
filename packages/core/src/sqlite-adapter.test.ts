@@ -1188,6 +1188,138 @@ describeSqlite('SqliteAdapter', () => {
     });
 });
 
+describeSqlite('SqliteAdapter incremental saveData', () => {
+    let db: Database;
+    let adapter: SqliteAdapter;
+    let statements: { sql: string; params: unknown[] }[];
+
+    const baseData = (): AppData => {
+        const now = '2026-07-01T08:00:00.000Z';
+        return {
+            tasks: [
+                { id: 'task-1', title: 'First', status: 'next', tags: [], contexts: [], createdAt: now, updatedAt: now, rev: 1, revBy: 'dev-a' },
+                { id: 'task-2', title: 'Second', status: 'inbox', tags: [], contexts: [], createdAt: now, updatedAt: now, rev: 1, revBy: 'dev-a' },
+            ],
+            projects: [
+                { id: 'project-1', title: 'Project', status: 'active', color: '#2563EB', order: 0, createdAt: now, updatedAt: now, rev: 1, revBy: 'dev-a' },
+            ],
+            sections: [],
+            areas: [],
+            people: [],
+            settings: { gtd: { autoArchiveDays: 3 } },
+        };
+    };
+
+    beforeEach(() => {
+        if (!RuntimeDatabase) {
+            throw new Error('No compatible sqlite runtime available for tests');
+        }
+        db = new RuntimeDatabase(':memory:');
+        statements = [];
+        const base = createClient(db);
+        adapter = new SqliteAdapter({
+            ...base,
+            run: async (sql: string, params: unknown[] = []) => {
+                statements.push({ sql, params });
+                return base.run(sql, params);
+            },
+        });
+    });
+
+    afterEach(() => {
+        db.close();
+    });
+
+    it('performs no table writes when a second identical saveData runs', async () => {
+        const data = baseData();
+        await adapter.saveData(data);
+        statements = [];
+        await adapter.saveData(data);
+        const writes = statements.filter(({ sql }) =>
+            sql.startsWith('INSERT INTO') || sql.startsWith('DELETE FROM') || sql.startsWith('CREATE TEMP TABLE'));
+        expect(writes).toEqual([]);
+    });
+
+    it('writes only the rows that changed since the last save', async () => {
+        const data = baseData();
+        await adapter.saveData(data);
+        statements = [];
+        await adapter.saveData({
+            ...data,
+            tasks: [
+                data.tasks[0],
+                { ...data.tasks[1], title: 'Second edited', rev: 2, updatedAt: '2026-07-01T09:00:00.000Z' },
+            ],
+        });
+        const taskInserts = statements.filter(({ sql }) => sql.startsWith('INSERT INTO tasks'));
+        expect(taskInserts).toHaveLength(1);
+        expect(taskInserts[0].params).toContain('task-2');
+        expect(taskInserts[0].params).not.toContain('task-1');
+        expect(statements.filter(({ sql }) => sql.startsWith('INSERT INTO projects'))).toEqual([]);
+        expect(statements.filter(({ sql }) => sql.startsWith('INSERT INTO settings'))).toEqual([]);
+        const rows = allSql<{ id: string; title: string }>(db, 'SELECT id, title FROM tasks ORDER BY id');
+        expect(rows).toEqual([
+            { id: 'task-1', title: 'First' },
+            { id: 'task-2', title: 'Second edited' },
+        ]);
+    });
+
+    it('removes dropped rows with targeted deletes instead of temp-table scans', async () => {
+        const data = baseData();
+        await adapter.saveData(data);
+        statements = [];
+        await adapter.saveData({ ...data, tasks: [data.tasks[0]] });
+        const deletes = statements.filter(({ sql }) => sql.startsWith('DELETE FROM tasks'));
+        expect(deletes).toHaveLength(1);
+        expect(deletes[0].params).toEqual(['task-2']);
+        expect(statements.filter(({ sql }) => sql.startsWith('CREATE TEMP TABLE'))).toEqual([]);
+        const rows = allSql<{ id: string }>(db, 'SELECT id FROM tasks');
+        expect(rows).toEqual([{ id: 'task-1' }]);
+    });
+
+    it('prunes a task created through saveTask when a later snapshot omits it', async () => {
+        const data = baseData();
+        await adapter.saveData(data);
+        await adapter.saveTask({
+            id: 'task-3', title: 'Incremental', status: 'inbox', tags: [], contexts: [],
+            createdAt: '2026-07-01T10:00:00.000Z', updatedAt: '2026-07-01T10:00:00.000Z', rev: 1, revBy: 'dev-a',
+        });
+        await adapter.saveData(data);
+        const rows = allSql<{ id: string }>(db, 'SELECT id FROM tasks ORDER BY id');
+        expect(rows).toEqual([{ id: 'task-1' }, { id: 'task-2' }]);
+    });
+
+    it('falls back to a full write after a failed save', async () => {
+        const data = baseData();
+        await adapter.saveData(data);
+        await expect(adapter.saveData({
+            ...data,
+            tasks: [{ ...data.tasks[0], status: 'not-a-status', rev: 2 }],
+        })).rejects.toThrow();
+        statements = [];
+        await adapter.saveData(data);
+        const taskInserts = statements.filter(({ sql }) => sql.startsWith('INSERT INTO tasks'));
+        expect(taskInserts).toHaveLength(1);
+        expect(taskInserts[0].params).toContain('task-1');
+        expect(taskInserts[0].params).toContain('task-2');
+        const rows = allSql<{ id: string; status: string }>(db, 'SELECT id, status FROM tasks ORDER BY id');
+        expect(rows).toEqual([
+            { id: 'task-1', status: 'next' },
+            { id: 'task-2', status: 'inbox' },
+        ]);
+    });
+
+    it('still skips stale rows the revision guard would reject', async () => {
+        const data = baseData();
+        await adapter.saveData(data);
+        await adapter.saveTask({ ...data.tasks[0], title: 'Newer', rev: 5, updatedAt: '2026-07-01T11:00:00.000Z' });
+        await adapter.saveData(data);
+        await adapter.saveData(data);
+        const row = getSql<{ title: string; rev: number }>(db, 'SELECT title, rev FROM tasks WHERE id = ?', ['task-1']);
+        expect(row).toMatchObject({ title: 'Newer', rev: 5 });
+    });
+});
+
 describe('SqliteAdapter saveData pruning', () => {
     it('batches temp id table inserts and uses unique temp names', async () => {
         const run = vi.fn().mockResolvedValue(undefined);

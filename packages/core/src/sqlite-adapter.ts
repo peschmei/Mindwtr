@@ -413,6 +413,12 @@ export function mapSqliteTaskRow(row: Record<string, unknown>): Task {
 export class SqliteAdapter {
     private client: SqliteClient;
     private schemaReadyPromise: Promise<void> | null = null;
+    // Fingerprints of every row as of the last committed save. Valid only because
+    // this adapter is the database's sole entity-table writer: a row whose bound
+    // values are byte-identical to the last committed save can be skipped without
+    // changing what the rev-guarded upsert would have produced. Must be nulled
+    // whenever a transaction fails, and only repopulated after a successful COMMIT.
+    private lastSavedFingerprints: { tables: Map<string, Map<string, string>>; settingsJson: string | null } | null = null;
 
     constructor(client: SqliteClient) {
         this.client = client;
@@ -1229,12 +1235,15 @@ export class SqliteAdapter {
         try {
             const columnList = TASK_UPSERT_COLUMNS.join(', ');
             const placeholders = TASK_UPSERT_COLUMNS.map(() => '?').join(', ');
+            const row = taskToSqliteRow(task);
             await this.client.run(
                 `INSERT INTO tasks (${columnList}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${TASK_UPSERT_UPDATE_CLAUSE}`,
-                taskToSqliteRow(task)
+                row
             );
             await this.client.run('COMMIT');
+            this.lastSavedFingerprints?.tables.get('tasks')?.set(String(row[0]), JSON.stringify(row));
         } catch (error) {
+            this.lastSavedFingerprints = null;
             await this.client.run('ROLLBACK').catch(() => undefined);
             throw error;
         }
@@ -1242,6 +1251,12 @@ export class SqliteAdapter {
 
     async saveData(data: AppData): Promise<void> {
         await this.ensureSchema();
+        const previousSave = this.lastSavedFingerprints;
+        const nextSave: { tables: Map<string, Map<string, string>>; settingsJson: string | null } = {
+            tables: new Map(),
+            settingsJson: null,
+        };
+        this.lastSavedFingerprints = null;
         await this.client.run('BEGIN IMMEDIATE');
         let saveStep = 'begin';
         try {
@@ -1261,10 +1276,22 @@ export class SqliteAdapter {
                 updateClause: string,
                 chunkSize = 200,
             ) => {
-                if (rows.length === 0) return;
+                const previousRows = previousSave?.tables.get(table);
+                const fingerprints = new Map<string, string>();
+                const changedRows: unknown[][] = [];
+                for (const row of rows) {
+                    const id = String(row[0]);
+                    const fingerprint = JSON.stringify(row);
+                    fingerprints.set(id, fingerprint);
+                    if (previousRows?.get(id) !== fingerprint) {
+                        changedRows.push(row);
+                    }
+                }
+                nextSave.tables.set(table, fingerprints);
+                if (changedRows.length === 0) return;
                 const columnList = columns.join(', ');
                 const placeholders = `(${columns.map(() => '?').join(', ')})`;
-                for (const batch of chunkArray(rows, chunkSize)) {
+                for (const batch of chunkArray(changedRows, chunkSize)) {
                     const values: unknown[] = [];
                     const valuePlaceholders = batch
                         .map((row) => {
@@ -1280,6 +1307,19 @@ export class SqliteAdapter {
             };
 
             const syncIds = async (table: 'tasks' | 'projects' | 'sections' | 'areas' | 'people' | 'saved_filters', ids: string[]) => {
+                const previousRows = previousSave?.tables.get(table);
+                if (previousRows) {
+                    const keptIds = new Set(ids);
+                    const removedIds: string[] = [];
+                    for (const id of previousRows.keys()) {
+                        if (!keptIds.has(id)) removedIds.push(id);
+                    }
+                    for (const batch of chunkArray(removedIds, SQLITE_ID_INSERT_BATCH_SIZE)) {
+                        const placeholders = batch.map(() => '?').join(', ');
+                        await this.client.run(`DELETE FROM ${table} WHERE id IN (${placeholders})`, batch);
+                    }
+                    return;
+                }
                 const tempTable = createTempIdTableName(table);
                 try {
                     await this.client.run(`CREATE TEMP TABLE ${tempTable} (id TEXT PRIMARY KEY)`);
@@ -1580,13 +1620,18 @@ export class SqliteAdapter {
             }
 
             saveStep = 'settings';
-            await this.client.run(
-                'INSERT INTO settings (id, data) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET data=excluded.data',
-                [toJson(settingsForSave)]
-            );
+            const settingsJson = toJson(settingsForSave);
+            nextSave.settingsJson = settingsJson;
+            if (previousSave?.settingsJson !== settingsJson) {
+                await this.client.run(
+                    'INSERT INTO settings (id, data) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET data=excluded.data',
+                    [settingsJson]
+                );
+            }
 
             saveStep = 'commit';
             await this.client.run('COMMIT');
+            this.lastSavedFingerprints = nextSave;
         } catch (error) {
             await this.client.run('ROLLBACK').catch((rollbackError) => {
                 logWarn('SQLite saveData rollback failed', {
