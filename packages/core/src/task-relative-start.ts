@@ -3,7 +3,8 @@ import type { RelativeStartOffset, RelativeStartOffsetUnit, Task } from './types
 
 const RELATIVE_START_OFFSET_UNITS = new Set<RelativeStartOffsetUnit>(['minute', 'hour', 'day', 'week']);
 const RELATIVE_START_OFFSET_MIN_AMOUNT = -10_000;
-const RELATIVE_START_OFFSET_MAX_AMOUNT = -1;
+// 0 means "start on the due date itself" (#776 follow-up); positive stays invalid.
+const RELATIVE_START_OFFSET_MAX_AMOUNT = 0;
 
 const pad2 = (value: number): string => String(value).padStart(2, '0');
 
@@ -29,7 +30,7 @@ export const normalizeRelativeStartOffset = (value: unknown): RelativeStartOffse
     if (typeof unit !== 'string' || !RELATIVE_START_OFFSET_UNITS.has(unit as RelativeStartOffsetUnit)) return undefined;
     if (typeof amount !== 'number' || !Number.isFinite(amount) || !Number.isInteger(amount)) return undefined;
     if (amount < RELATIVE_START_OFFSET_MIN_AMOUNT || amount > RELATIVE_START_OFFSET_MAX_AMOUNT) return undefined;
-    return { amount, unit: unit as RelativeStartOffsetUnit };
+    return { amount: amount === 0 ? 0 : amount, unit: unit as RelativeStartOffsetUnit };
 };
 
 const addOffset = (date: Date, offset: RelativeStartOffset): Date => {

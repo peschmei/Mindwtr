@@ -1,8 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeRelativeStartTime, resolveRelativeStartUpdates } from './task-relative-start';
+import { computeRelativeStartTime, normalizeRelativeStartOffset, resolveRelativeStartUpdates } from './task-relative-start';
 
 describe('relative task starts', () => {
+    it('accepts a zero offset (start on the due date) but rejects positive amounts', () => {
+        expect(normalizeRelativeStartOffset({ amount: 0, unit: 'day' })).toEqual({ amount: 0, unit: 'day' });
+        expect(normalizeRelativeStartOffset({ amount: -0, unit: 'day' })).toEqual({ amount: 0, unit: 'day' });
+        expect(normalizeRelativeStartOffset({ amount: 1, unit: 'day' })).toBeUndefined();
+    });
+
+    it('starts on the due date itself for zero offsets', () => {
+        expect(computeRelativeStartTime('2026-03-12', { amount: 0, unit: 'day' })).toBe('2026-03-12');
+        expect(computeRelativeStartTime('2026-03-12T09:30', { amount: 0, unit: 'hour' })).toBe('2026-03-12T09:30');
+    });
+
+    it('keeps a zero offset tracking a moved due date', () => {
+        expect(resolveRelativeStartUpdates(
+            { dueDate: '2026-03-12', startTime: '2026-03-12', relativeStartOffset: { amount: 0, unit: 'day' } },
+            { dueDate: '2026-03-19' }
+        )).toEqual({
+            dueDate: '2026-03-19',
+            startTime: '2026-03-19',
+            relativeStartOffset: { amount: 0, unit: 'day' },
+        });
+    });
+
     it('does not create midnight-anchored sub-day starts from date-only due dates', () => {
         expect(computeRelativeStartTime('2026-03-12', { amount: -30, unit: 'minute' })).toBeUndefined();
         expect(computeRelativeStartTime('2026-03-12', { amount: -2, unit: 'hour' })).toBeUndefined();

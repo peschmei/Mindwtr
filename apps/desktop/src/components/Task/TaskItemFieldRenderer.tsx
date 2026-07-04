@@ -1351,7 +1351,9 @@ export function TaskItemFieldRenderer({
                     ];
                 const applyRelativeStartOffset = (amountValue: number, unitValue: NonNullable<Task['relativeStartOffset']>['unit']) => {
                     if (!editDueDate || !Number.isFinite(amountValue)) return;
-                    const offset = { amount: -Math.max(1, Math.floor(amountValue)), unit: unitValue };
+                    // 0 is valid: start on the due date itself.
+                    const magnitude = Math.max(0, Math.floor(amountValue));
+                    const offset = { amount: magnitude === 0 ? 0 : -magnitude, unit: unitValue };
                     const computedStart = computeRelativeStartTime(editDueDate, offset);
                     if (!computedStart) {
                         setEditRelativeStartOffset(undefined);
@@ -1410,7 +1412,7 @@ export function TaskItemFieldRenderer({
                                     <>
                                         <input
                                             type="number"
-                                            min={1}
+                                            min={0}
                                             max={10000}
                                             value={relativeAmount}
                                             onChange={(event) => applyRelativeStartOffset(Number(event.target.value), relativeUnitForDueDate)}

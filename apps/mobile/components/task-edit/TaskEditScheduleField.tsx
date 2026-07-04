@@ -340,7 +340,9 @@ export function TaskEditScheduleField({
     const applyRelativeStartOffset = (amountValue: number, unitValue: NonNullable<Task['relativeStartOffset']>['unit']) => {
         if (!editedTask.dueDate || !Number.isFinite(amountValue)) return;
         const unit = normalizeRelativeStartUnitForDueDate(editedTask.dueDate, unitValue);
-        const offset = { amount: -Math.max(1, Math.floor(amountValue)), unit };
+        // 0 is valid: start on the due date itself.
+        const magnitude = Math.max(0, Math.floor(amountValue));
+        const offset = { amount: magnitude === 0 ? 0 : -magnitude, unit };
         const computedStart = computeRelativeStartTime(editedTask.dueDate, offset);
         if (!computedStart) {
             setEditedTask((prev) => ({ ...prev, relativeStartOffset: undefined }));
