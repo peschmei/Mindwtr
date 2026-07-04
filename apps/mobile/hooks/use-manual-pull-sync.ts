@@ -85,7 +85,7 @@ export function useManualPullSync() {
         return;
       }
 
-      const result = await performMobileSync();
+      const result = await performMobileSync(undefined, { manual: true });
       if (result.skipped === 'offline' || isLikelyOfflineSyncError(result.error)) {
         finishIndicator('error');
         showToast({

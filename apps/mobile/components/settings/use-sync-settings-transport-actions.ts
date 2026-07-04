@@ -746,7 +746,10 @@ export function useSyncSettingsTransportActions({
             }
             resetSyncStatusForBackendSwitch();
             reconcileBackgroundSyncRegistration();
-            const result = await performMobileSync(effectiveBackend === 'file' ? syncPath || undefined : undefined);
+            const result = await performMobileSync(
+                effectiveBackend === 'file' ? syncPath || undefined : undefined,
+                { manual: true }
+            );
             if (result.skipped === 'offline' || isLikelyOfflineSyncError(result.error)) {
                 showToast({
                     title: t('common.offline'),

@@ -411,6 +411,47 @@ describe('mobile sync-service runtime', () => {
     expect(asyncStorageMocks.setItem.mock.calls.some(([key]) => key === '@mindwtr_local_sync_status_v1')).toBe(true);
   });
 
+  it('manual sync reads the remote even when cached fast-check fingerprints claim no changes', async () => {
+    const remoteFingerprint = 'webdav:v1:etag="fast"';
+    const scope = computeStableValueFingerprint({
+      backend: 'webdav',
+      url: 'https://sync.example.com/data.json',
+      username: 'user',
+    });
+    asyncStorageMocks.getItem.mockImplementation(async (key: string) => {
+      const values: Record<string, string | null> = {
+        '@mindwtr_sync_backend': 'webdav',
+        '@mindwtr_webdav_url': 'https://sync.example.com/data.json',
+        '@mindwtr_webdav_username': 'user',
+        '@mindwtr_webdav_password': 'pass',
+        '@mindwtr_fast_sync_state_v1': JSON.stringify({
+          scope,
+          localFingerprint: computeSyncPayloadFingerprint(emptyData),
+          remoteFingerprint,
+          checkedAt: '2026-05-07T00:00:00.000Z',
+        }),
+      };
+      return values[key] ?? null;
+    });
+    // A stale cached pair would satisfy the fast check even though the remote
+    // actually has new data; the manual flag must force a real read instead.
+    coreMocks.webdavHeadFile.mockResolvedValue({
+      exists: true,
+      fingerprint: remoteFingerprint,
+      etag: '"fast"',
+      lastModified: null,
+      contentLength: '2',
+    });
+    coreMocks.webdavGetJson.mockResolvedValue(remoteChangedData);
+
+    const result = await syncServiceModule.performMobileSync(undefined, { manual: true });
+
+    expect(result.success).toBe(true);
+    expect(result.skipped).toBeUndefined();
+    expect(coreMocks.webdavGetJson).toHaveBeenCalled();
+    expect(coreMocks.performSyncCycle).toHaveBeenCalledTimes(1);
+  });
+
   it('does not run attachment sync for unchanged WebDAV data with stable uploaded attachments', async () => {
     const syncedData: AppData = {
       ...emptyData,

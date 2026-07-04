@@ -468,7 +468,9 @@ const shouldSkipSyncForOfflineState = async (
   return false;
 };
 
-type MobileRequestFollowUp = (nextArg?: string) => void;
+type MobileSyncRequest = { syncPathOverride?: string; manual?: boolean };
+
+type MobileRequestFollowUp = (nextArg?: MobileSyncRequest) => void;
 
 // One sync cycle. Mirrors the desktop SyncRun structure: shared cycle state lives in
 // fields, backend config and sync phases are methods, and run() sequences them inside
@@ -477,6 +479,7 @@ type MobileRequestFollowUp = (nextArg?: string) => void;
 class MobileSyncRun {
   private readonly backend: SyncBackend;
   private readonly syncPathOverride: string | undefined;
+  private readonly manual: boolean;
   private readonly requestFollowUp: MobileRequestFollowUp;
 
   private step = 'init';
@@ -509,9 +512,10 @@ class MobileSyncRun {
   private webdavRemoteCorrupted = false;
   private fastSyncScope: ReturnType<typeof buildFastSyncScope> = null;
 
-  constructor(backend: SyncBackend, syncPathOverride: string | undefined, requestFollowUp: MobileRequestFollowUp) {
+  constructor(backend: SyncBackend, request: MobileSyncRequest | undefined, requestFollowUp: MobileRequestFollowUp) {
     this.backend = backend;
-    this.syncPathOverride = syncPathOverride;
+    this.syncPathOverride = request?.syncPathOverride;
+    this.manual = request?.manual === true;
     this.requestFollowUp = requestFollowUp;
     activeMobileSyncAbortController = this.requestAbortController;
     activeMobileSyncAbortReason = null;
@@ -575,7 +579,7 @@ class MobileSyncRun {
   }
 
   private queueFollowUp(): void {
-    this.requestFollowUp(this.syncPathOverride);
+    this.requestFollowUp({ syncPathOverride: this.syncPathOverride, manual: this.manual });
   }
 
   private logPhaseDiagnostic(phase: string, extra?: Record<string, string>): void {
@@ -1157,6 +1161,9 @@ class MobileSyncRun {
   }
 
   private async trySkipUnchangedFastSync(): Promise<MobileSyncResult | null> {
+    // User-initiated sync: never trust the cached fingerprint pair — fall through
+    // to the read check, which compares against actually-fetched remote data.
+    if (this.manual) return null;
     const fastSyncScope = this.fastSyncScope;
     if (!fastSyncScope) return null;
     const fastCheckStartedAt = Date.now();
@@ -1549,8 +1556,8 @@ class MobileSyncRun {
   }
 }
 
-const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, MobileSyncResult>({
-  runCycle: async (syncPathOverride, { requestFollowUp }) => {
+const mobileSyncOrchestrator = createSyncOrchestrator<MobileSyncRequest | undefined, MobileSyncResult>({
+  runCycle: async (request, { requestFollowUp }) => {
     const rawBackend = (await getCachedConfigValue(SYNC_BACKEND_KEY))?.trim() ?? null;
     const backend: SyncBackend = getSupportedBackend(rawBackend);
 
@@ -1561,7 +1568,7 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
       return buildOfflineSkipResult();
     }
 
-    return new MobileSyncRun(backend, syncPathOverride, requestFollowUp).run();
+    return new MobileSyncRun(backend, request, requestFollowUp).run();
   },
   onQueuedRunComplete: (queuedResult) => {
     if (!queuedResult.success) {
@@ -1576,8 +1583,13 @@ const mobileSyncOrchestrator = createSyncOrchestrator<string | undefined, Mobile
   },
 });
 
-export async function performMobileSync(syncPathOverride?: string): Promise<MobileSyncResult> {
-  return mobileSyncOrchestrator.run(syncPathOverride);
+/** `manual` marks a user-initiated sync: it always runs the full read/merge cycle,
+ *  never the fast-check skip, so a stale cached fingerprint can't hide remote data. */
+export async function performMobileSync(
+  syncPathOverride?: string,
+  options?: { manual?: boolean }
+): Promise<MobileSyncResult> {
+  return mobileSyncOrchestrator.run({ syncPathOverride, manual: options?.manual });
 }
 
 export function abortMobileSync(): boolean {
