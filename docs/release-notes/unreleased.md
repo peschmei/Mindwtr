@@ -63,3 +63,6 @@ Changes collected after `v1.0.5` and before the next version tag.
 - feat(desktop): drag a task from the open project's list onto another project in the sidebar to move it there (it lands after the target's existing tasks), or onto an area header to make it a direct area task; a "Moved to …" toast offers one-click Undo. Works in every sort mode; archived projects don't accept drops (ADR 0023).
 - feat(tasks): relative start dates now accept 0 (start on the due date itself), so a task like "Wheel trash cans to curb" can stay hidden until the day it is due.
 - feat(mobile): task rows, the swipe Done/Delete buttons, and the task editor's ••• menu items now darken while pressed on every theme (Material 3 keeps its ripple), so common taps give visible feedback.
+- fix(desktop): a manual "Sync now" always reads the remote data instead of trusting the unchanged-check cache, so tasks added on another device can no longer be missed by a forced sync.
+- fix(desktop): undoing a completed task restores its Today star along with its status (completing clears the star, and Undo used to bring the task back unstarred).
+- fix(mobile): pull-to-refresh sync now works on short task lists (Inbox with a few tasks no longer refuses the pull gesture on iOS; it previously only worked on scrollable screens like Focus).

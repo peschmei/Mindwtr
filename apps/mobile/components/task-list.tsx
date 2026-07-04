@@ -1996,6 +1996,10 @@ function TaskListComponent({
           windowSize={5}
           updateCellsBatchingPeriod={50}
           removeClippedSubviews={listItems.length >= REMOVE_CLIPPED_SUBVIEWS_MIN_ITEMS}
+          // iOS only bounces (and thus allows pull-to-refresh) when content
+          // exceeds the viewport unless bounce is forced; short lists like a
+          // freshly processed Inbox must still be able to pull to sync.
+          alwaysBounceVertical
           refreshControl={
             <RefreshControl
               refreshing={pullSync.refreshing}
