@@ -35,7 +35,7 @@ describe('task-draft', () => {
     });
 
     it('compares relative start offsets structurally', () => {
-        const withOffset: Task = { ...baseTask, relativeStartOffset: { amount: 2, unit: 'days' } as Task['relativeStartOffset'] };
+        const withOffset: Task = { ...baseTask, relativeStartOffset: { amount: 2, unit: 'day' } };
         const draft = createTaskDraft(withOffset);
         expect(isTaskDraftDirty(draft, withOffset)).toBe(false);
         expect(isTaskDraftDirty({ ...draft, relativeStartOffset: undefined }, withOffset)).toBe(true);
@@ -44,7 +44,7 @@ describe('task-draft', () => {
     it('counts attachment record changes as dirty', () => {
         const withAttachment: Task = {
             ...baseTask,
-            attachments: [{ id: 'a1', type: 'link', uri: 'https://a', title: 'A', createdAt: baseTask.createdAt }] as Task['attachments'],
+            attachments: [{ id: 'a1', kind: 'link', uri: 'https://a', title: 'A', createdAt: baseTask.createdAt, updatedAt: baseTask.updatedAt }],
         };
         const same = withAttachment.attachments;
         expect(areDraftAttachmentsDirty(same, withAttachment)).toBe(false);

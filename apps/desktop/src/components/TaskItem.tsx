@@ -14,9 +14,9 @@ import {
     normalizeClockTimeInput,
     normalizeFocusTaskLimit,
     tFallback,
-    formatFocusTaskLimitText,
-    FOCUS_ELIGIBILITY_ACTIVE_STATUSES,
-    getTaskFocusEligibility,
+    collectFocusEligibilityTasks,
+    getFocusStarBlockedText,
+    resolveFocusStarAction,
     parseQuickAddDateCommands,
     useTaskStore,
 } from '@mindwtr/core';
@@ -305,109 +305,46 @@ export const TaskItem = memo(function TaskItem({
     // An HTML5-draggable ancestor swallows mouse text selection, so rows stop
     // being calendar-drag sources while their read view is expanded (#815).
     const canCalendarDrag = !actionsOverlay && !dragHandle && !selectionMode && !isEditing && !effectiveReadOnly && !isTaskExpanded;
-    const quickActionFocus = useMemo(() => {
-        // Also computed while the editor is open: the editor header shows the same
-        // focus star (toggles immediately, like the row star — not part of the draft).
-        if ((!quickActionMenu && !isEditing) || effectiveReadOnly) return undefined;
-
-        const now = new Date();
-        const isFocused = Boolean(task.isFocusedToday);
-        const addLabel = tFallback(t, 'agenda.addToFocus', "Add to today's focus");
-        const removeLabel = tFallback(t, 'agenda.removeFromFocus', "Remove from today's focus");
-        const limitMessage = formatFocusTaskLimitText(
-            tFallback(t, 'agenda.maxFocusItems', 'Max {{count}} focus items.'),
-            focusTaskLimit,
-        );
-        const clarifyReason = tFallback(
-            t,
-            'agenda.focusUnavailableClarifyFirst',
-            'Clarify this task before adding it to Focus.',
-        );
-        const deferredReason = tFallback(
-            t,
-            'agenda.focusUnavailableDeferred',
-            'This task is deferred; change its start date before focusing it.',
-        );
-        const sequentialReason = tFallback(
-            t,
-            'agenda.focusUnavailableSequential',
-            'Complete the earlier sequential action before focusing this task.',
-        );
-        const activeFocusBaseTasks = FOCUS_ELIGIBILITY_ACTIVE_STATUSES
-            .flatMap((status) => activeTasksByStatus.get(status) ?? [])
-        const focusEligibility = getTaskFocusEligibility(task, {
-            tasks: activeFocusBaseTasks,
-            projects: projectMap,
-            now,
-            showFutureStarts,
-            sequentialProjectIds,
-            sectionScopedProjectIds: sequentialWithinSectionProjectIds,
-        });
-        const isEligible = focusEligibility.eligible;
-        const ineligibleReason = focusEligibility.reason === 'deferred'
-            ? deferredReason
-            : focusEligibility.reason === 'sequential'
-                ? sequentialReason
-                : clarifyReason;
-        const canToggle = isFocused || (isEligible && focusedCount < focusTaskLimit);
-        const title = isFocused
-            ? removeLabel
-            : !isEligible
-                ? ineligibleReason
-                : focusedCount >= focusTaskLimit
-                    ? limitMessage
-                    : addLabel;
-        const applyFocus = (nextFocused: boolean) => {
-            void updateTask(task.id, { isFocusedToday: nextFocused })
-                .then((result) => {
-                    if (!result.success) showToast(result.error || 'Failed to update task', 'error');
-                });
-        };
-        // The editor is the clarifying surface, so its star may focus unclarified
-        // tasks (core promotes them to Next on save). Deferred/sequential stay
-        // blocked: starring those would drop the task into a Focus list that
-        // then hides it.
-        const editorCanAdd = isEligible || focusEligibility.reason === 'clarify';
-
-        return {
-            isFocused,
-            canToggle,
-            label: isFocused ? removeLabel : addLabel,
-            title,
-            onToggle: () => {
-                if (isFocused) {
-                    applyFocus(false);
-                    return;
-                }
-                if (!isEligible) {
-                    showToast(ineligibleReason, 'info');
-                    return;
-                }
-                if (focusedCount >= focusTaskLimit) {
-                    showToast(limitMessage, 'info');
-                    return;
-                }
-                applyFocus(true);
-            },
-            editorCanAdd,
-            labels: { addLabel, removeLabel, ineligibleReason, limitMessage },
-        };
-    }, [
-        activeTasksByStatus,
-        effectiveReadOnly,
-        focusTaskLimit,
+    // Adapter over the core focus-star module: TaskItem supplies its subscribed
+    // store slices as context; eligibility, cap, and labels are decided in core.
+    const resolveFocusStar = useCallback((options?: { allowUnclarified?: boolean }) => resolveFocusStarAction(task, {
+        tasks: collectFocusEligibilityTasks(activeTasksByStatus),
+        projects: projectMap,
         focusedCount,
-        isEditing,
-        projectMap,
-        quickActionMenu,
-        sequentialProjectIds,
-        sequentialWithinSectionProjectIds,
+        focusTaskLimit,
         showFutureStarts,
-        showToast,
-        t,
-        task,
-        updateTask,
-    ]);
+        sequentialProjectIds,
+        sectionScopedProjectIds: sequentialWithinSectionProjectIds,
+        allowUnclarified: options?.allowUnclarified,
+    }), [activeTasksByStatus, focusTaskLimit, focusedCount, projectMap, sequentialProjectIds, sequentialWithinSectionProjectIds, showFutureStarts, task]);
+    const quickActionFocus = useMemo(() => {
+        // Also computed while the editor is open: the editor header shows the
+        // same focus star (as a draft field there).
+        if ((!quickActionMenu && !isEditing) || effectiveReadOnly) return undefined;
+        const action = resolveFocusStar();
+        const blockedText = getFocusStarBlockedText(t, action, focusTaskLimit);
+        const label = tFallback(
+            t,
+            action.labelKey,
+            action.isFocused ? "Remove from today's focus" : "Add to today's focus",
+        );
+        return {
+            isFocused: action.isFocused,
+            canToggle: action.canToggle,
+            label,
+            title: blockedText ?? label,
+            onToggle: () => {
+                if (!action.canToggle) {
+                    if (blockedText) showToast(blockedText, 'info');
+                    return;
+                }
+                void updateTask(task.id, action.patch)
+                    .then((result) => {
+                        if (!result.success) showToast(result.error || 'Failed to update task', 'error');
+                    });
+            },
+        };
+    }, [effectiveReadOnly, focusTaskLimit, isEditing, quickActionMenu, resolveFocusStar, showToast, t, task.id, updateTask]);
     const handleToggleChecklistItem = useCallback((index: number) => {
         if (effectiveReadOnly) return;
         const checklist = task.checklist || [];
@@ -1271,36 +1208,34 @@ export const TaskItem = memo(function TaskItem({
             onAcceptTitleSuggestion={handleTitleSuggestionAccept}
             isDoneActionActive={editStatus === 'done'}
             onMarkDone={task.status !== 'done' && task.status !== 'archived' && task.status !== 'reference' ? handleEditorMarkDone : undefined}
-            focusStar={quickActionFocus && task.status !== 'done' && task.status !== 'archived' && task.status !== 'reference' ? {
+            focusStar={quickActionFocus && task.status !== 'done' && task.status !== 'archived' && task.status !== 'reference' ? (() => {
                 // Draft toggle, applied on Save like every other editor field —
                 // an immediate write would re-filter the list mid-edit and yank
-                // the row (and its open editor) into another view.
-                isFocused: editFocusedToday,
-                title: editFocusedToday
-                    ? quickActionFocus.labels.removeLabel
-                    : !quickActionFocus.editorCanAdd
-                        ? quickActionFocus.labels.ineligibleReason
-                        : !task.isFocusedToday && focusedCount >= focusTaskLimit
-                            ? quickActionFocus.labels.limitMessage
-                            : quickActionFocus.labels.addLabel,
-                onToggle: () => {
-                    if (editFocusedToday) {
-                        setEditFocusedToday(false);
-                        return;
-                    }
-                    if (!quickActionFocus.editorCanAdd) {
-                        showToast(quickActionFocus.labels.ineligibleReason, 'info');
-                        return;
-                    }
-                    if (!task.isFocusedToday && focusedCount >= focusTaskLimit) {
-                        showToast(quickActionFocus.labels.limitMessage, 'info');
-                        return;
-                    }
-                    setEditFocusedToday(true);
-                    // Draft mirror of the core star↔status rule: starring clarifies.
-                    if (editStatus === 'inbox') setEditStatus('next');
-                },
-            } : undefined}
+                // the row (and its open editor) into another view. The editor is
+                // the clarifying surface, so unclarified tasks may be starred.
+                const action = resolveFocusStar({ allowUnclarified: true });
+                const blockedText = getFocusStarBlockedText(t, action, focusTaskLimit);
+                const addLabel = tFallback(t, 'agenda.addToFocus', "Add to today's focus");
+                const removeLabel = tFallback(t, 'agenda.removeFromFocus', "Remove from today's focus");
+                return {
+                    isFocused: editFocusedToday,
+                    title: editFocusedToday ? removeLabel : (blockedText ?? addLabel),
+                    onToggle: () => {
+                        if (editFocusedToday) {
+                            setEditFocusedToday(false);
+                            return;
+                        }
+                        if (!action.canToggle) {
+                            if (blockedText) showToast(blockedText, 'info');
+                            return;
+                        }
+                        setEditFocusedToday(true);
+                        // Draft mirror of the core star↔status rule: starring
+                        // clarifies an inbox draft to Next.
+                        if (editStatus === 'inbox') setEditStatus('next');
+                    },
+                };
+            })() : undefined}
             onDuplicateTask={handleDuplicateTask}
             onDeleteTask={task.status === 'inbox' ? () => setShowDeleteConfirm(true) : undefined}
             onCancel={handleEditorCancel}

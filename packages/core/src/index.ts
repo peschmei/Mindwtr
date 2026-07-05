@@ -1186,3 +1186,5 @@ export {
     type MindSweepGroupScope,
     type MindSweepScope,
 } from './mind-sweep';
+
+export * from './focus-star';

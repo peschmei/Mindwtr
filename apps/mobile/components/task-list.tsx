@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, GripVertical, MoveVertical } from 'lucide-react-native';
 import DraggableFlatList, { NestableDraggableFlatList, type DragEndParams, type RenderItemParams } from 'react-native-draggable-flatlist';
 import {
+  canStarNewCapture,
   useTaskStore,
   Task,
   TaskStatus,
@@ -420,7 +421,7 @@ function TaskListComponent({
   const quickAddCopilotEnabled = quickAddAvailable && enableCopilot && aiEnabled;
   const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
   const focusedCount = getDerivedState().focusedCount;
-  const canQuickAddFocus = quickAddFocus || focusedCount < focusTaskLimit;
+  const canQuickAddFocus = quickAddFocus || canStarNewCapture({ focusedCount, focusTaskLimit });
   const quickAddFocusDisabledReason = formatFocusTaskLimitText(
     tFallback(t, 'agenda.maxFocusItems', 'Max {{count}} focus items.'),
     focusTaskLimit,

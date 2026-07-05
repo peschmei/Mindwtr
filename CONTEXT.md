@@ -30,3 +30,9 @@ _Avoid_: paused project, inactive project
 **Archived project**:
 A closed project. It accepts no new tasks; tasks are only read there.
 _Avoid_: deleted project, hidden project
+
+### Today's Focus
+
+**Focus star**:
+The per-task mark that commits a task to Today's Focus. Removing a star is always allowed; adding one is gated by focus eligibility and the focus cap. Starring an unprocessed inbox task clarifies it to next; starring a review-due waiting/someday task keeps its status — "chase this today" does not stop the task being waiting-for.
+_Avoid_: favorite, pin, priority flag

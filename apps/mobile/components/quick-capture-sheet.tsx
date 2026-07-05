@@ -10,6 +10,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
 import {
+  canStarNewCapture,
   DEFAULT_AREA_COLOR,
   DEFAULT_PROJECT_COLOR,
   formatFocusTaskLimitText,
@@ -176,7 +177,7 @@ export function QuickCaptureSheet({
   const contextOptionsRequestRef = useRef(0);
   const initialFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
-  const canFocusNewTask = focusNewTask || getDerivedState().focusedCount < focusTaskLimit;
+  const canFocusNewTask = focusNewTask || canStarNewCapture({ focusedCount: getDerivedState().focusedCount, focusTaskLimit });
   const focusNewTaskDisabledReason = formatFocusTaskLimitText(
     tFallback(t, 'agenda.maxFocusItems', 'Max {{count}} focus items'),
     focusTaskLimit,

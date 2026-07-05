@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import {
-    formatFocusTaskLimitText,
+    getFocusStarBlockedText,
     formatRecurrenceLabel,
     getProjectNextActionPromptData,
     getStatusColor,
@@ -314,26 +314,21 @@ function SwipeableTaskItemInner({
 
     const toggleFocus = () => {
         if (selectionMode) return;
-        if (task.isFocusedToday) {
-            updateTask(task.id, { isFocusedToday: false });
+        // Core focus-star module decides eligibility, cap, and the patch;
+        // status promotion happens in the store's star↔status rules.
+        const action = useTaskStore.getState().getFocusStarAction(task);
+        if (!action.canToggle) {
+            const blockedText = getFocusStarBlockedText(t, action, focusTaskLimit);
+            if (blockedText) {
+                showToast({
+                    title: t('digest.focus') || 'Focus',
+                    message: blockedText,
+                    tone: 'warning',
+                });
+            }
             return;
         }
-        if (focusedCount >= focusTaskLimit) {
-            showToast({
-                title: t('digest.focus') || 'Focus',
-                message: formatFocusTaskLimitText(
-                    tFallback(t, 'agenda.maxFocusItems', 'Max {{count}} focus items.'),
-                    focusTaskLimit
-                ),
-                tone: 'warning',
-            });
-            return;
-        }
-        const updates: Partial<Task> = {
-            isFocusedToday: true,
-            ...(task.status !== 'next' ? { status: 'next' } : {}),
-        };
-        updateTask(task.id, updates);
+        updateTask(task.id, action.patch);
     };
 
     // Status-aware left swipe action

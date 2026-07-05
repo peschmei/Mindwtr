@@ -450,11 +450,10 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    if (task.isFocusedToday) {
-                                        updateTask(task.id, { isFocusedToday: false });
-                                    } else if (focusedCount < focusTaskLimit) {
-                                        updateTask(task.id, { isFocusedToday: true });
-                                    }
+                                    // Core focus-star module: eligibility + cap + patch.
+                                    const action = useTaskStore.getState().getFocusStarAction(task);
+                                    if (!action.canToggle) return;
+                                    updateTask(task.id, action.patch);
                                 }}
                                 disabled={!canFocus}
                                 className={cn(

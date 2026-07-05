@@ -1,3 +1,4 @@
+import type { FocusStarAction } from './focus-star';
 import type { AppData, Area, Person, Project, Section, Task, TaskStatus } from './types';
 import type { TaskQueryOptions } from './storage';
 import type { TaskDateCoherenceIssue } from './task-date-coherence';
@@ -82,6 +83,8 @@ export interface TaskStore {
     batchDeleteTasks: (ids: string[]) => Promise<StoreActionResult>;
     /** Query tasks using storage adapter when available */
     queryTasks: (options: TaskQueryOptions) => Promise<Task[]>;
+    /** Resolve the Today's Focus star action for a task: eligibility, cap, label key, patch */
+    getFocusStarAction: (task: Task, options?: { allowUnclarified?: boolean }) => FocusStarAction;
     /** Set or clear global error state */
     setError: (error: string | null) => void;
     /** Increment edit lock count */

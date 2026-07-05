@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent } from 'react';
 import {
+    canStarNewCapture,
     shallow,
     useTaskStore,
     buildTaskUpdatesFromSpeechResult,
@@ -227,7 +228,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         [pastedImageAttachments],
     );
     const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
-    const canFocusNewTask = focusNewTask || derivedState.focusedCount < focusTaskLimit;
+    const canFocusNewTask = focusNewTask || canStarNewCapture({ focusedCount: derivedState.focusedCount, focusTaskLimit });
     const focusDisabled = !focusNewTask && !canFocusNewTask;
     const addFocusLabel = tFallback(t, 'agenda.addToFocus', "Add to today's focus");
     const removeFocusLabel = tFallback(t, 'agenda.removeFromFocus', 'Remove from focus');

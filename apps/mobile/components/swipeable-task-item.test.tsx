@@ -26,6 +26,11 @@ const { addTask, updateTask, restoreTask, showToast, getChecklistProgress, getTa
     areas: [] as any[],
     settings: { features: {}, appearance: {} },
     getDerivedState: () => ({ focusedCount: 0 }),
+    getFocusStarAction: (task: any) => (
+      task.isFocusedToday
+        ? { isFocused: true, canToggle: true, blockedReason: null, labelKey: 'agenda.removeFromFocus', patch: { isFocusedToday: false } }
+        : { isFocused: false, canToggle: true, blockedReason: null, labelKey: 'agenda.addToFocus', patch: { isFocusedToday: true } }
+    ),
     tasks: [] as any[],
     _allTasks: [] as any[],
     _tasksById: new Map<string, any>(),
@@ -85,6 +90,9 @@ vi.mock('@mindwtr/core', () => {
 
   return {
     useTaskStore,
+    getFocusStarBlockedText: (_t: unknown, action: { blockedReason: string | null }, limit: number) => (
+      action.blockedReason === 'limit' ? `Max ${limit} focus items.` : action.blockedReason
+    ),
     getProjectNextActionPromptData: (completedTask: any, tasks: any[], projects: any[]) => {
       if (!completedTask?.projectId || completedTask.status !== 'done') return null;
       const project = projects.find((candidate) => candidate.id === completedTask.projectId);

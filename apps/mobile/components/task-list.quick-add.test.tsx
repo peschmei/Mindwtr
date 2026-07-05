@@ -142,6 +142,7 @@ vi.mock('@mindwtr/core', () => {
     formatFocusTaskLimitText: (template: string, limit: number) => (
       template.includes('{{count}}') ? template.replace('{{count}}', String(limit)) : `Max ${limit} focus items.`
     ),
+    canStarNewCapture: ({ focusedCount, focusTaskLimit }: { focusedCount: number; focusTaskLimit: number }) => focusedCount < focusTaskLimit,
     getDefaultTaskAreaMode: (settings: any) => {
       const mode = settings?.gtd?.defaultAreaMode;
       if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;

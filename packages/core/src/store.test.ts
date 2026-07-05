@@ -719,6 +719,32 @@ describe('TaskStore', () => {
         task = useTaskStore.getState()._tasksById.get(id);
         expect(task?.status).toBe('inbox');
         expect(task?.isFocusedToday).toBe(false);
+
+        // Starring a waiting task keeps its status: "chase this today" does
+        // not stop the task being waiting-for.
+        await updateTask(id, { status: 'waiting', isFocusedToday: false });
+        const starWaiting = await updateTask(id, { isFocusedToday: true });
+        expect(starWaiting).toEqual({ success: true });
+        task = useTaskStore.getState()._tasksById.get(id);
+        expect(task?.status).toBe('waiting');
+        expect(task?.isFocusedToday).toBe(true);
+    });
+
+    it('resolves the focus star action from store state', async () => {
+        const { addTask, getFocusStarAction } = useTaskStore.getState();
+        const created = await addTask('Starrable', { status: 'next' });
+        const task = useTaskStore.getState()._tasksById.get(created.id!)!;
+
+        expect(getFocusStarAction(task)).toMatchObject({
+            isFocused: false,
+            canToggle: true,
+            blockedReason: null,
+        });
+
+        const inbox = await addTask('Unclarified', {});
+        const inboxTask = useTaskStore.getState()._tasksById.get(inbox.id!)!;
+        expect(useTaskStore.getState().getFocusStarAction(inboxTask).blockedReason).toBe('clarify');
+        expect(useTaskStore.getState().getFocusStarAction(inboxTask, { allowUnclarified: true }).canToggle).toBe(true);
     });
 
     it('uses the configured today focus limit when promoting tasks', async () => {

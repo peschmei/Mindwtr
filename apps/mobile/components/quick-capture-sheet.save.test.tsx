@@ -87,6 +87,7 @@ vi.mock('@mindwtr/core', () => ({
   },
   getUsedTaskTokens,
   formatFocusTaskLimitText: (template: string, limit: number) => template.replace('{{count}}', String(limit)),
+  canStarNewCapture: ({ focusedCount, focusTaskLimit }: { focusedCount: number; focusTaskLimit: number }) => focusedCount < focusTaskLimit,
   hasTimeComponent: (value?: string | null) => Boolean(value && /[T\s]\d{2}:\d{2}/.test(value)),
   isSelectableProjectForTaskAssignment: (project: any) => (
     !project.deletedAt && project.status !== 'archived' && project.status !== 'completed'

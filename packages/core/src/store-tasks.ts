@@ -1,3 +1,4 @@
+import { collectFocusEligibilityTasks, resolveFocusStarAction, type FocusStarAction } from './focus-star';
 import type { AppData, PendingRemoteAttachmentDelete, Task, TaskStatus } from './types';
 import type { StorageAdapter, TaskQueryOptions } from './storage';
 import type { StoreActionResult, TaskStore } from './store-types';
@@ -148,6 +149,7 @@ type TaskActions = Pick<
     | 'batchMoveTasks'
     | 'batchDeleteTasks'
     | 'queryTasks'
+    | 'getFocusStarAction'
 >;
 
 type TaskActionContext = {
@@ -523,12 +525,13 @@ const normalizeTaskUpdateForStore = ({
             isFocusedToday: false,
         };
     }
-    // Star ↔ status invariant: a starred task is by definition a clarified Next
-    // Action, so Focus never accumulates unprocessed Inbox items. Starring an
-    // inbox task promotes it to next; demoting a starred task to inbox takes the
-    // star with it. When one patch does both, the star (the more deliberate
-    // action) wins. Creation-side promotion lives in addTask, where focus
-    // eligibility is evaluated before the star commits.
+    // Star ↔ status invariant: starring an unprocessed inbox task promotes it
+    // to next (committing to do it today is a clarify decision), and demoting a
+    // starred task to inbox takes the star with it. When one patch does both,
+    // the star (the more deliberate action) wins. Review-due waiting/someday
+    // tasks deliberately KEEP their status when starred — "chase this today"
+    // does not stop the task being waiting-for. Creation-side promotion lives
+    // in addTask, where focus eligibility is evaluated before the star commits.
     const starTurningOn = adjustedUpdates.isFocusedToday === true && task.isFocusedToday !== true;
     const statusBecomingInbox = hasOwnField(updates, 'status') && updates.status === 'inbox' && task.status !== 'inbox';
     if (statusBecomingInbox && !starTurningOn) {
@@ -1362,6 +1365,21 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
         return mutateTasks({ set, debouncedSave }, {
             selectTasks: (state) => state._allTasks.filter((task) => idSet.has(task.id)),
             buildUpdates: (_task, { now }) => ({ deletedAt: now }),
+        });
+    },
+
+    getFocusStarAction: (task: Task, options?: { allowUnclarified?: boolean }): FocusStarAction => {
+        const state = get();
+        const derived = state.getDerivedState();
+        return resolveFocusStarAction(task, {
+            tasks: collectFocusEligibilityTasks(derived.activeTasksByStatus),
+            projects: derived.projectMap,
+            focusedCount: derived.focusedCount,
+            focusTaskLimit: normalizeFocusTaskLimit(state.settings.gtd?.focusTaskLimit),
+            showFutureStarts: state.settings.appearance?.showFutureStarts,
+            sequentialProjectIds: derived.sequentialProjectIds,
+            sectionScopedProjectIds: derived.sequentialWithinSectionProjectIds,
+            allowUnclarified: options?.allowUnclarified,
         });
     },
 
