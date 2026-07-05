@@ -7,14 +7,19 @@ export const CONTEXTS_TOKEN_SELECTION_EVENT = 'mindwtr:contexts-token-selection'
 const CONTEXT_STATUS_VALUES: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'reference', 'done'];
 const LEGACY_CONTEXT_STATUS_VALUES: Array<TaskStatus | 'all'> = ['all', ...CONTEXT_STATUS_VALUES];
 
+export const CONTEXTS_GROUP_BY_VALUES = ['none', 'status', 'context', 'area', 'project', 'tag'] as const;
+export type ContextsViewGroupBy = (typeof CONTEXTS_GROUP_BY_VALUES)[number];
+
 export type ContextsPersistedViewState = {
     selectedContext: string | null;
     statusFilters: TaskStatus[];
+    groupBy: ContextsViewGroupBy;
 };
 
 export const DEFAULT_CONTEXTS_VIEW_STATE: ContextsPersistedViewState = {
     selectedContext: null,
     statusFilters: [],
+    groupBy: 'none',
 };
 
 export type ContextsTokenSelectionEventDetail = {
@@ -46,9 +51,13 @@ export function sanitizeContextsViewState(
     const legacyFallback = parsed.statusFilter === undefined
         ? fallback.statusFilters
         : normalizeStatusFilters(parsed.statusFilter, fallback.statusFilters);
+    const groupBy = CONTEXTS_GROUP_BY_VALUES.includes(parsed.groupBy as ContextsViewGroupBy)
+        ? parsed.groupBy as ContextsViewGroupBy
+        : fallback.groupBy;
     return {
         selectedContext,
         statusFilters: normalizeStatusFilters(parsed.statusFilters, legacyFallback),
+        groupBy,
     };
 }
 

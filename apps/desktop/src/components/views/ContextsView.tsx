@@ -42,7 +42,16 @@ import {
     NO_CONTEXT_TOKEN,
     sanitizeContextsViewState,
     subscribeContextsTokenSelection,
+    type ContextsViewGroupBy,
 } from '../../lib/contexts-view-state';
+import {
+    groupTasksByArea,
+    groupTasksByContext,
+    groupTasksByProject,
+    groupTasksByStatus,
+    groupTasksByTag,
+    type TaskGroup,
+} from './list/next-grouping';
 
 type BulkTokenPickerState = {
     field: 'tags' | 'contexts';
@@ -195,10 +204,53 @@ export function ContextsView() {
         ? contextFilteredTasks.filter((task) => task.title.toLowerCase().includes(normalizedSearchQuery))
         : contextFilteredTasks;
     const sortedTasks = sortTasksBy(filteredTasks, sortBy);
+    const groupBy = persistedViewState.groupBy;
+    const setGroupBy = useCallback((value: ContextsViewGroupBy) => {
+        setPersistedViewState((current) => ({
+            ...current,
+            groupBy: value,
+        }));
+    }, [setPersistedViewState]);
+    const resolveText = useCallback((key: string, fallback: string) => tFallback(t, key, fallback), [t]);
+    const groupedTasks = useMemo<TaskGroup[]>(() => {
+        if (groupBy === 'none') return [];
+        if (groupBy === 'status') {
+            return groupTasksByStatus({
+                tasks: sortedTasks,
+                getStatusLabel: (status) => t(`status.${status}`),
+            });
+        }
+        if (groupBy === 'area') {
+            return groupTasksByArea({
+                areas,
+                tasks: sortedTasks,
+                projectMap,
+                generalLabel: resolveText('settings.general', 'General'),
+            });
+        }
+        if (groupBy === 'project') {
+            return groupTasksByProject({
+                tasks: sortedTasks,
+                projectMap,
+                noProjectLabel: resolveText('taskEdit.noProjectOption', 'No project'),
+            });
+        }
+        if (groupBy === 'tag') {
+            return groupTasksByTag({
+                tasks: sortedTasks,
+                noTagLabel: resolveText('projects.noTags', 'No tags'),
+            });
+        }
+        return groupTasksByContext({
+            tasks: sortedTasks,
+            noContextLabel: resolveText('contexts.none', 'No context'),
+        });
+    }, [areas, groupBy, projectMap, resolveText, sortedTasks, t]);
+    const isGrouping = groupBy !== 'none';
     const filteredTaskIds = sortedTasks.map((task) => task.id);
     const selectedVisibleCount = filteredTaskIds.filter((id) => multiSelectedIds.has(id)).length;
     const allVisibleTasksSelected = filteredTaskIds.length > 0 && selectedVisibleCount === filteredTaskIds.length;
-    const shouldVirtualize = filteredTasks.length > LIST_VIRTUALIZATION_THRESHOLD;
+    const shouldVirtualize = !isGrouping && filteredTasks.length > LIST_VIRTUALIZATION_THRESHOLD;
     const handleVirtualRowMeasure = useCallback((id: string, height: number) => {
         if (rowHeightsRef.current.get(id) === height) return;
         rowHeightsRef.current.set(id, height);
@@ -398,6 +450,7 @@ export function ContextsView() {
     const tagsLabel = tFallback(t, 'taskEdit.tagsLabel', 'Tags');
     const allTokensLabel = `${contextsLabel} & ${tagsLabel}`;
     const sortLabel = tFallback(t, 'sort.label', 'Sort');
+    const groupLabel = tFallback(t, 'list.groupBy', 'Group');
 
     const renderTokenRow = (token: string, marker: '@' | '#') => {
         const taskCount = scopedTasks.filter(t => matchesSelected(t, token)).length;
@@ -612,6 +665,28 @@ export function ContextsView() {
                                             aria-hidden="true"
                                         />
                                     </div>
+                                    <div className="relative flex h-9 min-w-[150px] items-center rounded-lg border border-border bg-card pl-2 text-xs transition-colors hover:bg-muted/70 focus-within:ring-2 focus-within:ring-primary/40">
+                                        <span className="mr-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                            {groupLabel}
+                                        </span>
+                                        <select
+                                            value={groupBy}
+                                            onChange={(event) => setGroupBy(event.target.value as ContextsViewGroupBy)}
+                                            aria-label={groupLabel}
+                                            className="h-full min-w-0 flex-1 appearance-none bg-transparent pr-8 text-xs text-foreground focus:outline-none"
+                                        >
+                                            <option value="none">{resolveText('list.groupByNone', 'No grouping')}</option>
+                                            <option value="status">{resolveText('taskEdit.statusLabel', 'Status')}</option>
+                                            <option value="tag">{resolveText('taskEdit.tagsLabel', 'Tags')}</option>
+                                            <option value="context">{resolveText('list.groupByContext', 'Context')}</option>
+                                            <option value="area">{resolveText('list.groupByArea', 'Area')}</option>
+                                            <option value="project">{resolveText('list.groupByProject', 'Project')}</option>
+                                        </select>
+                                        <ChevronDown
+                                            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                            aria-hidden="true"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </header>
@@ -693,7 +768,7 @@ export function ContextsView() {
                             onScroll={handleVirtualScroll}
                             className={cn(
                                 "flex-1 min-h-0 overflow-y-auto pr-2",
-                                !shouldVirtualize && "divide-y divide-border/30",
+                                !shouldVirtualize && !isGrouping && "divide-y divide-border/30",
                             )}
                         >
                             {sortedTasks.length > 0 ? (
@@ -715,6 +790,37 @@ export function ContextsView() {
                                                 />
                                             );
                                         })}
+                                    </div>
+                                ) : isGrouping ? (
+                                    <div className="space-y-2">
+                                        {groupedTasks.map((group) => (
+                                            <div key={group.id} className="rounded-md border border-border/40 bg-card/30">
+                                                <div className={cn(
+                                                    'flex items-center justify-between gap-3 border-b border-border/30 px-3 py-2 text-xs font-semibold uppercase tracking-wide',
+                                                    group.muted ? 'text-muted-foreground' : 'text-foreground/90',
+                                                )}>
+                                                    <span className="inline-flex min-w-0 items-center gap-1.5">
+                                                        {group.dotColor && (
+                                                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: group.dotColor }} aria-hidden="true" />
+                                                        )}
+                                                        <span className="truncate">{group.title}</span>
+                                                    </span>
+                                                    <span className="shrink-0 text-muted-foreground">{group.tasks.length}</span>
+                                                </div>
+                                                <div className="divide-y divide-border/30">
+                                                    {group.tasks.map((task) => (
+                                                        <StoreTaskItem
+                                                            key={task.id}
+                                                            taskId={task.id}
+                                                            selectionMode={selectionMode}
+                                                            isMultiSelected={multiSelectedIds.has(task.id)}
+                                                            onToggleSelectId={toggleMultiSelect}
+                                                            showProjectBadgeInActions={false}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 ) : (
                                     sortedTasks.map(task => (

@@ -1,10 +1,13 @@
 import { DEFAULT_AREA_COLOR } from '@mindwtr/core';
-import type { Area, Project, Task, TaskEnergyLevel, TaskPriority } from '@mindwtr/core';
+import type { Area, Project, Task, TaskEnergyLevel, TaskPriority, TaskStatus } from '@mindwtr/core';
 import { getContextColor } from '../../../lib/context-color';
 
 export type NextGroupBy = 'none' | 'context' | 'area' | 'project' | 'energy' | 'priority' | 'person' | 'tag';
 export type ReferenceGroupBy = 'none' | 'context' | 'area' | 'project' | 'tag';
 export type TaskListGroupBy = NextGroupBy | ReferenceGroupBy;
+// Contexts view spans every status, so status itself is a useful axis there
+// (see one #topic across Next / Waiting / Someday / Reference at a glance).
+export type ContextsGroupBy = 'none' | 'status' | 'context' | 'area' | 'project' | 'tag';
 
 export interface TaskGroup {
     id: string;
@@ -328,6 +331,38 @@ export function groupTasksByPerson({
             muted: true,
         });
     }
+    return groups;
+}
+
+interface GroupByStatusParams {
+    tasks: Task[];
+    getStatusLabel: (status: TaskStatus) => string;
+}
+
+const STATUS_GROUP_ORDER: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'reference', 'done', 'archived'];
+
+export function groupTasksByStatus({
+    tasks,
+    getStatusLabel,
+}: GroupByStatusParams): TaskGroup[] {
+    const grouped = new Map<TaskStatus, Task[]>();
+
+    tasks.forEach((task) => {
+        const statusTasks = grouped.get(task.status) ?? [];
+        statusTasks.push(task);
+        grouped.set(task.status, statusTasks);
+    });
+
+    const groups: TaskGroup[] = [];
+    STATUS_GROUP_ORDER.forEach((status) => {
+        const statusTasks = grouped.get(status) ?? [];
+        if (statusTasks.length === 0) return;
+        groups.push({
+            id: `status:${status}`,
+            title: getStatusLabel(status),
+            tasks: statusTasks,
+        });
+    });
     return groups;
 }
 

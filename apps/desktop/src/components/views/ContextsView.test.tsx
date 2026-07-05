@@ -94,6 +94,32 @@ describe('ContextsView', () => {
         expect(getByTestId('contexts-sort-icon')).toBeInTheDocument();
     });
 
+    it('groups the task list by status and by tag from the Group control', () => {
+        const tasks = [
+            makeTask('grp-next', { title: 'Next task', tags: ['#ERP'] }),
+            makeTask('grp-waiting', { title: 'Waiting task', status: 'waiting', tags: ['#ERP'] }),
+            makeTask('grp-someday', { title: 'Someday task', status: 'someday', tags: ['#Finance'] }),
+        ];
+        useTaskStore.setState({ tasks, _allTasks: tasks });
+        const { getByRole, getByText, getAllByText } = renderContextsView();
+
+        const groupSelect = getByRole('combobox', { name: 'Group' });
+        fireEvent.change(groupSelect, { target: { value: 'status' } });
+
+        // Status names also appear as filter chips, so assert on the group
+        // header shape (a span next to the count) via duplicate presence.
+        expect(getAllByText('Next').length).toBeGreaterThan(1);
+        expect(getAllByText('Waiting').length).toBeGreaterThan(1);
+        expect(getAllByText('Someday').length).toBeGreaterThan(1);
+        expect(getByText('Next task')).toBeInTheDocument();
+        expect(getByText('Waiting task')).toBeInTheDocument();
+
+        fireEvent.change(groupSelect, { target: { value: 'tag' } });
+
+        expect(getAllByText('#ERP').length).toBeGreaterThan(0);
+        expect(getAllByText('#Finance').length).toBeGreaterThan(0);
+    });
+
     it('hides done tasks from the default context filter while keeping the Done status available', () => {
         const tasks = [
             makeTask('active-office', {

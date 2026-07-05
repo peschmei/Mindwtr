@@ -1064,6 +1064,7 @@ export const TaskItem = memo(function TaskItem({
     }, [handleSubmit, handleTaskCompleted, task.isFocusedToday, task.status]);
     const hasPendingEdits = useCallback(() => {
         if (editTitle !== task.title) return true;
+        if (editFocusedToday !== (task.isFocusedToday === true)) return true;
         if (editDescription !== (task.description || '')) return true;
         if (editProjectId !== (task.projectId || '')) return true;
         if (editSectionId !== (task.sectionId || '')) return true;
@@ -1088,6 +1089,7 @@ export const TaskItem = memo(function TaskItem({
         return false;
     }, [
         editTitle,
+        editFocusedToday,
         editDescription,
         editProjectId,
         editSectionId,
@@ -1155,6 +1157,24 @@ export const TaskItem = memo(function TaskItem({
         }
         handleDiscardChanges();
     }, [handleDiscardChanges, hasPendingEdits]);
+    // Clicking outside an untouched inline editor closes it — there is nothing
+    // to lose, so no Save/Cancel trip to the bottom of the form. Once any field
+    // differs from the task, the editor stays until an explicit Save/Cancel/Esc.
+    useEffect(() => {
+        if (!isEditing || isModalEditor) return;
+        const handlePointerDown = (event: PointerEvent) => {
+            const target = event.target;
+            if (!(target instanceof Node)) return;
+            if (taskRootRef.current?.contains(target)) return;
+            // Portaled overlays (quick-action panels, pickers, dialogs) sit
+            // outside the row in the DOM but belong to the editing session.
+            if (target instanceof Element && target.closest('[role="dialog"],[role="alertdialog"],[role="menu"],[role="listbox"]')) return;
+            if (hasPendingEdits()) return;
+            handleDiscardChanges();
+        };
+        document.addEventListener('pointerdown', handlePointerDown, true);
+        return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+    }, [handleDiscardChanges, hasPendingEdits, isEditing, isModalEditor]);
     const handleOpenQuickActionMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (selectionMode || isEditing) return;
         event.preventDefault();

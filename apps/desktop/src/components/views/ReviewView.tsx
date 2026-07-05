@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { ReviewHeader } from './review/ReviewHeader';
+import { ReviewHeader, ReviewListControls } from './review/ReviewHeader';
 import { ReviewFiltersBar } from './review/ReviewFiltersBar';
 import { ReviewBulkActions } from './review/ReviewBulkActions';
 import { ReviewTaskList } from './review/ReviewTaskList';
@@ -18,16 +18,30 @@ import { checkBudget } from '../../config/performanceBudgets';
 import { resolveAreaFilter, taskMatchesAreaFilter } from '@mindwtr/core';
 import { useUiStore } from '../../store/ui-store';
 import { usePersistedViewState } from '../../hooks/usePersistedViewState';
+import { tFallback } from '@mindwtr/core';
+import { cn } from '../../lib/utils';
+import {
+    groupTasksByArea,
+    groupTasksByContext,
+    groupTasksByProject,
+    groupTasksByStatus,
+    groupTasksByTag,
+    type ContextsGroupBy,
+    type TaskGroup,
+} from './list/next-grouping';
 
 const STATUS_OPTIONS: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'done'];
 const REVIEW_VIEW_STATE_STORAGE_KEY = 'mindwtr:view:review:v1';
+const REVIEW_GROUP_BY_VALUES: ContextsGroupBy[] = ['none', 'status', 'context', 'area', 'project', 'tag'];
 
 type ReviewPersistedViewState = {
     filterStatus: TaskStatus | 'all';
+    groupBy: ContextsGroupBy;
 };
 
 const DEFAULT_REVIEW_VIEW_STATE: ReviewPersistedViewState = {
     filterStatus: 'all',
+    groupBy: 'none',
 };
 
 function sanitizeReviewViewState(value: unknown, fallback: ReviewPersistedViewState): ReviewPersistedViewState {
@@ -38,6 +52,9 @@ function sanitizeReviewViewState(value: unknown, fallback: ReviewPersistedViewSt
         filterStatus: parsed.filterStatus === 'all' || STATUS_OPTIONS.includes(parsed.filterStatus as TaskStatus)
             ? parsed.filterStatus as TaskStatus | 'all'
             : fallback.filterStatus,
+        groupBy: REVIEW_GROUP_BY_VALUES.includes(parsed.groupBy as ContextsGroupBy)
+            ? parsed.groupBy as ContextsGroupBy
+            : fallback.groupBy,
     };
 }
 
@@ -68,6 +85,13 @@ export function ReviewView() {
         setPersistedViewState((current) => ({
             ...current,
             filterStatus: value,
+        }));
+    }, [setPersistedViewState]);
+    const groupBy = persistedViewState.groupBy;
+    const setGroupBy = useCallback((value: ContextsGroupBy) => {
+        setPersistedViewState((current) => ({
+            ...current,
+            groupBy: value,
         }));
     }, [setPersistedViewState]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -158,6 +182,42 @@ export function ReviewView() {
         [filteredTaskIds, multiSelectedIds],
     );
     const allVisibleTasksSelected = filteredTaskIds.length > 0 && selectedVisibleCount === filteredTaskIds.length;
+    const resolveText = useCallback((key: string, fallback: string) => tFallback(t, key, fallback), [t]);
+    const groupedTasks = useMemo<TaskGroup[]>(() => {
+        if (groupBy === 'none') return [];
+        if (groupBy === 'status') {
+            return groupTasksByStatus({
+                tasks: filteredTasks,
+                getStatusLabel: (status) => t(`status.${status}`),
+            });
+        }
+        if (groupBy === 'area') {
+            return groupTasksByArea({
+                areas,
+                tasks: filteredTasks,
+                projectMap: projectMapById,
+                generalLabel: resolveText('settings.general', 'General'),
+            });
+        }
+        if (groupBy === 'project') {
+            return groupTasksByProject({
+                tasks: filteredTasks,
+                projectMap: projectMapById,
+                noProjectLabel: resolveText('taskEdit.noProjectOption', 'No project'),
+            });
+        }
+        if (groupBy === 'tag') {
+            return groupTasksByTag({
+                tasks: filteredTasks,
+                noTagLabel: resolveText('projects.noTags', 'No tags'),
+            });
+        }
+        return groupTasksByContext({
+            tasks: filteredTasks,
+            noContextLabel: resolveText('contexts.none', 'No context'),
+        });
+    }, [areas, filteredTasks, groupBy, projectMapById, resolveText, t]);
+    const isGrouping = groupBy !== 'none' && filteredTasks.length > 0;
 
     const bulkStatuses: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'reference', 'done'];
 
@@ -257,33 +317,41 @@ export function ReviewView() {
                 <ReviewHeader
                     title={t('review.title')}
                     taskCountLabel={`${filteredTasks.length} ${t('common.tasks')}`}
-                    selectionMode={selectionMode}
-                    onToggleSelection={() => {
-                        if (selectionMode) exitSelectionMode();
-                        else setSelectionMode(true);
-                    }}
-                    sortBy={sortBy}
-                    onChangeSortBy={(value) => updateSettings({ taskSortBy: value })}
-                    showListDetails={showListDetails}
-                    onToggleDetails={handleToggleDetails}
                     onShowDailyGuide={() => setShowDailyGuide(true)}
                     onShowGuide={() => setShowGuide(true)}
-                    t={t}
                     labels={{
-                        select: t('bulk.select'),
-                        exitSelect: t('bulk.exitSelect'),
                         dailyReview: t('dailyReview.title'),
                         weeklyReview: t('review.openGuide'),
                     }}
                 />
 
-                <ReviewFiltersBar
-                    filterStatus={filterStatus}
-                    statusOptions={statusOptions}
-                    statusCounts={statusCounts}
-                    onSelect={setFilterStatus}
-                    t={t}
-                />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <ReviewFiltersBar
+                        filterStatus={filterStatus}
+                        statusOptions={statusOptions}
+                        statusCounts={statusCounts}
+                        onSelect={setFilterStatus}
+                        t={t}
+                    />
+                    <ReviewListControls
+                        selectionMode={selectionMode}
+                        onToggleSelection={() => {
+                            if (selectionMode) exitSelectionMode();
+                            else setSelectionMode(true);
+                        }}
+                        sortBy={sortBy}
+                        onChangeSortBy={(value) => updateSettings({ taskSortBy: value })}
+                        groupBy={groupBy}
+                        onChangeGroupBy={setGroupBy}
+                        showListDetails={showListDetails}
+                        onToggleDetails={handleToggleDetails}
+                        t={t}
+                        labels={{
+                            select: t('bulk.select'),
+                            exitSelect: t('bulk.exitSelect'),
+                        }}
+                    />
+                </div>
                 <input
                     type="text"
                     data-view-filter-input
@@ -317,16 +385,46 @@ export function ReviewView() {
                     </div>
                 )}
 
-                <ReviewTaskList
-                    tasks={filteredTasks}
-                    showListDetails={showListDetails}
-                    selectionMode={selectionMode}
-                    multiSelectedIds={multiSelectedIds}
-                    highlightTaskId={highlightTaskId}
-                    onToggleSelect={toggleMultiSelect}
-                    emptyMessage={normalizedSearchQuery ? t('filters.noMatch') : t('review.noTasks')}
-                    t={t}
-                />
+                {isGrouping ? (
+                    <div className="space-y-2">
+                        {groupedTasks.map((group) => (
+                            <div key={group.id} className="rounded-md border border-border/40 bg-card/30">
+                                <div className={cn(
+                                    'flex items-center justify-between gap-3 border-b border-border/30 px-3 py-2 text-xs font-semibold uppercase tracking-wide',
+                                    group.muted ? 'text-muted-foreground' : 'text-foreground/90',
+                                )}>
+                                    <span className="inline-flex min-w-0 items-center gap-1.5">
+                                        {group.dotColor && (
+                                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: group.dotColor }} aria-hidden="true" />
+                                        )}
+                                        <span className="truncate">{group.title}</span>
+                                    </span>
+                                    <span className="shrink-0 text-muted-foreground">{group.tasks.length}</span>
+                                </div>
+                                <ReviewTaskList
+                                    tasks={group.tasks}
+                                    showListDetails={showListDetails}
+                                    selectionMode={selectionMode}
+                                    multiSelectedIds={multiSelectedIds}
+                                    highlightTaskId={highlightTaskId}
+                                    onToggleSelect={toggleMultiSelect}
+                                    t={t}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <ReviewTaskList
+                        tasks={filteredTasks}
+                        showListDetails={showListDetails}
+                        selectionMode={selectionMode}
+                        multiSelectedIds={multiSelectedIds}
+                        highlightTaskId={highlightTaskId}
+                        onToggleSelect={toggleMultiSelect}
+                        emptyMessage={normalizedSearchQuery ? t('filters.noMatch') : t('review.noTasks')}
+                        t={t}
+                    />
+                )}
 
                 {showGuide && (
                     <WeeklyReviewGuideModal onClose={() => setShowGuide(false)} />
