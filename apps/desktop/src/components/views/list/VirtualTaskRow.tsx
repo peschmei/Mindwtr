@@ -46,13 +46,17 @@ export const VirtualTaskRow = React.memo(function VirtualTaskRow({
     useLayoutEffect(() => {
         const node = rowRef.current;
         if (!node || !task) return undefined;
-        // `useTaskById` preserves task object identity for unchanged rows, so `[task]`
-        // re-measures only when this row's task actually changes.
         const measure = () => {
             const nextHeight = Math.ceil(node.getBoundingClientRect().height);
             onMeasure(task.id, nextHeight);
         };
         measure();
+        // The row can grow without a task change (inline editor opens, details
+        // expand); stale heights leave later rows painted over it (#825).
+        if (typeof ResizeObserver === 'undefined') return undefined;
+        const observer = new ResizeObserver(measure);
+        observer.observe(node);
+        return () => observer.disconnect();
     }, [task, onMeasure]);
 
     if (!task) return null;
