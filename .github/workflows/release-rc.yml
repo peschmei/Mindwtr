@@ -23,12 +23,12 @@ on:
       run_ios_testflight:
         description: 'Upload and distribute the iOS build to the configured external TestFlight group'
         required: false
-        default: false
+        default: true
         type: boolean
       run_macos_testflight:
         description: 'Upload and distribute the macOS App Store build to the configured external TestFlight group'
         required: false
-        default: false
+        default: true
         type: boolean
       run_flathub_beta:
         description: 'Open a Flathub beta branch PR for the RC'
@@ -290,7 +290,7 @@ jobs:
     secrets: inherit
 
   ios-appstore:
-    if: ${{ needs.validate.outputs.retag_recovery != 'true' && github.event_name == 'workflow_dispatch' && inputs.run_ios_testflight }}
+    if: ${{ needs.validate.outputs.retag_recovery != 'true' && (github.event_name != 'workflow_dispatch' || inputs.run_ios_testflight) }}
     needs: validate
     uses: ./.github/workflows/release-ios-appstore.yml
     with:
@@ -303,7 +303,7 @@ jobs:
     secrets: inherit
 
   macos-appstore:
-    if: ${{ needs.validate.outputs.retag_recovery != 'true' && github.event_name == 'workflow_dispatch' && inputs.run_macos_testflight }}
+    if: ${{ needs.validate.outputs.retag_recovery != 'true' && (github.event_name != 'workflow_dispatch' || inputs.run_macos_testflight) }}
     needs: validate
     uses: ./.github/workflows/release-macos-appstore.yml
     with:
