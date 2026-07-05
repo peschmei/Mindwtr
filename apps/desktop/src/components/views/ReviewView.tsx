@@ -325,13 +325,21 @@ export function ReviewView() {
                     }}
                 />
 
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <ReviewFiltersBar
-                        filterStatus={filterStatus}
-                        statusOptions={statusOptions}
-                        statusCounts={statusCounts}
-                        onSelect={setFilterStatus}
-                        t={t}
+                <ReviewFiltersBar
+                    filterStatus={filterStatus}
+                    statusOptions={statusOptions}
+                    statusCounts={statusCounts}
+                    onSelect={setFilterStatus}
+                    t={t}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                    <input
+                        type="text"
+                        data-view-filter-input
+                        placeholder={t('common.search')}
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        className="h-9 min-w-[200px] flex-1 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                     <ReviewListControls
                         selectionMode={selectionMode}
@@ -352,14 +360,6 @@ export function ReviewView() {
                         }}
                     />
                 </div>
-                <input
-                    type="text"
-                    data-view-filter-input
-                    placeholder={t('common.search')}
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    className="w-full text-sm px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
 
                 {selectionMode && (
                     <div className="space-y-3">
