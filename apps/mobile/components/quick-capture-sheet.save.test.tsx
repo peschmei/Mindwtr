@@ -74,8 +74,13 @@ const {
   };
 });
 
-vi.mock('@mindwtr/core', () => ({
-  DEFAULT_PROJECT_COLOR: '#3B82F6',
+vi.mock('@mindwtr/core', async () => {
+  // Capture assembly is real: it is the pure policy under test-adjacent code.
+  const actual = await vi.importActual<typeof import('@mindwtr/core')>('@mindwtr/core');
+  return {
+  buildCaptureTaskProps: actual.buildCaptureTaskProps,
+  applyCapturedProject: actual.applyCapturedProject,
+  DEFAULT_PROJECT_COLOR: actual.DEFAULT_PROJECT_COLOR,
   getDefaultTaskAreaMode: (settings: any) => {
     const mode = settings?.gtd?.defaultAreaMode;
     if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;
@@ -123,7 +128,8 @@ vi.mock('@mindwtr/core', () => ({
     return value && value !== key ? value : fallback;
   },
   useTaskStore: selectStore,
-}));
+};
+});
 
 const mockThemeTokens = vi.hoisted(() => ({
   value: { isMaterial: false, roles: null, shape: { large: 16 } } as {
@@ -955,7 +961,7 @@ describe('QuickCaptureSheet save handling', () => {
       await Promise.resolve();
     });
 
-    expect(addProject).toHaveBeenCalledWith('Launch', '#3B82F6', { areaId: 'area-work' });
+    expect(addProject).toHaveBeenCalledWith('Launch', '#94a3b8', { areaId: 'area-work' });
     expect(addTask).toHaveBeenCalledWith('Plan campaign', expect.objectContaining({
       projectId: 'project-launch',
       areaId: undefined,

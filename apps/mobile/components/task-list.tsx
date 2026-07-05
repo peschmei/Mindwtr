@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, GripVertical, MoveVertical } from 'lucide-react-native';
 import DraggableFlatList, { NestableDraggableFlatList, type DragEndParams, type RenderItemParams } from 'react-native-draggable-flatlist';
 import {
+  applyCapturedProject,
+  buildCaptureTaskProps,
   canStarNewCapture,
   useTaskStore,
   Task,
@@ -1336,66 +1338,49 @@ function TaskListComponent({
 
     const defaultStatus: TaskStatus = 'inbox';
 
-    const { title: parsedTitle, props, projectTitle, invalidDateCommands } = parseQuickAdd(newTaskTitle, projects, new Date(), areas, {
+    const parsed = parseQuickAdd(newTaskTitle, projects, new Date(), areas, {
       defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
       preserveText: settings.quickAddAutoClean !== true,
     });
-    if (invalidDateCommands && invalidDateCommands.length > 0) {
+    if (parsed.invalidDateCommands && parsed.invalidDateCommands.length > 0) {
       showToast({
         title: t('common.notice'),
-        message: `${t('quickAdd.invalidDateCommand')}: ${invalidDateCommands.join(', ')}`,
+        message: `${t('quickAdd.invalidDateCommand')}: ${parsed.invalidDateCommands.join(', ')}`,
         tone: 'warning',
         durationMs: 4200,
       });
       return;
     }
-    const finalTitle = parsedTitle || newTaskTitle;
-    if (!finalTitle.trim()) return;
 
-    const initialProps: Partial<Task> = { projectId, status: defaultStatus, ...props };
-    if (
-      initialProps.projectId
-      && !projects.some((project) => project.id === initialProps.projectId && isSelectableProjectForTaskAssignment(project))
-    ) {
-      delete initialProps.projectId;
-    }
-    if (!props.status) initialProps.status = defaultStatus;
-    if (!props.projectId && projectId) initialProps.projectId = projectId;
-    if (!initialProps.projectId && projectTitle) {
-      const inactiveProject = projects.find((project) => (
-        project.title.toLowerCase() === projectTitle.toLowerCase()
-        && !isSelectableProjectForTaskAssignment(project)
-      ));
-      if (inactiveProject) return;
+    // Capture policy lives in core buildCaptureTaskProps; this list supplies
+    // the current project as the surface default.
+    const assembly = buildCaptureTaskProps({
+      parsed,
+      rawInput: newTaskTitle,
+      projects,
+      initialProps: { projectId: projectId ?? undefined, status: defaultStatus },
+      selectedAreaId: quickAddNewTaskAreaId,
+      starNewTask: quickAddFocus && canQuickAddFocus,
+    });
+    if (!assembly.ok) return;
+    let taskProps = assembly.props;
+    if (assembly.projectToCreate) {
       const created = await addProject(
-        projectTitle,
-        DEFAULT_PROJECT_COLOR,
-        getQuickAddProjectInitialProps(initialProps, quickAddNewTaskAreaId)
+        assembly.projectToCreate.title,
+        assembly.projectToCreate.color,
+        assembly.projectToCreate.initialProps,
       );
       if (!created) return;
-      initialProps.projectId = created.id;
-    }
-    if (!initialProps.projectId && !props.areaId) {
-      initialProps.areaId = quickAddNewTaskAreaId;
-    }
-    if (initialProps.projectId) {
-      initialProps.areaId = undefined;
+      taskProps = applyCapturedProject(taskProps, created.id);
     }
     if (copilotContext) {
-      const nextContexts = Array.from(new Set([...(initialProps.contexts ?? []), copilotContext]));
-      initialProps.contexts = nextContexts;
+      taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), copilotContext]));
     }
     if (copilotTags.length) {
-      const nextTags = Array.from(new Set([...(initialProps.tags ?? []), ...copilotTags]));
-      initialProps.tags = nextTags;
-    }
-    if (quickAddFocus && canQuickAddFocus) {
-      // Core addTask promotes a starred inbox capture to next (and keeps it
-      // inbox unstarred if the star is refused) — don't pre-promote here.
-      initialProps.isFocusedToday = true;
+      taskProps.tags = Array.from(new Set([...(taskProps.tags ?? []), ...copilotTags]));
     }
 
-    const result = await addTask(finalTitle, initialProps);
+    const result = await addTask(assembly.title, taskProps);
     const resultObject = result && typeof result === 'object'
       ? result as { success?: boolean; id?: string }
       : null;

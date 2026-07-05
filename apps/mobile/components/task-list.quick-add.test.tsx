@@ -130,7 +130,8 @@ vi.mock('react-native-draggable-flatlist', () => ({
   ScaleDecorator: ({ children, ...props }: any) => React.createElement('ScaleDecorator', props, children),
 }));
 
-vi.mock('@mindwtr/core', () => {
+vi.mock('@mindwtr/core', async () => {
+  const actual = await vi.importActual<typeof import('@mindwtr/core')>('@mindwtr/core');
   const useTaskStore = Object.assign(
     (selector: (state: typeof storeState) => unknown) => selector(storeState),
     { getState: () => storeState },
@@ -143,6 +144,8 @@ vi.mock('@mindwtr/core', () => {
       template.includes('{{count}}') ? template.replace('{{count}}', String(limit)) : `Max ${limit} focus items.`
     ),
     canStarNewCapture: ({ focusedCount, focusTaskLimit }: { focusedCount: number; focusTaskLimit: number }) => focusedCount < focusTaskLimit,
+    buildCaptureTaskProps: actual.buildCaptureTaskProps,
+    applyCapturedProject: actual.applyCapturedProject,
     getDefaultTaskAreaMode: (settings: any) => {
       const mode = settings?.gtd?.defaultAreaMode;
       if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;

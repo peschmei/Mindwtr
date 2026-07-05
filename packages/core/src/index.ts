@@ -1188,3 +1188,4 @@ export {
 } from './mind-sweep';
 
 export * from './focus-star';
+export * from './capture';

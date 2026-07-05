@@ -36,3 +36,9 @@ _Avoid_: deleted project, hidden project
 **Focus star**:
 The per-task mark that commits a task to Today's Focus. Removing a star is always allowed; adding one is gated by focus eligibility and the focus cap. Starring an unprocessed inbox task clarifies it to next; starring a review-due waiting/someday task keeps its status — "chase this today" does not stop the task being waiting-for.
 _Avoid_: favorite, pin, priority flag
+
+### Capture
+
+**Capture**:
+Turning quick-add input into a new inbox task. A capture is never dropped: a `+Project` naming only an archived project behaves like an unknown name and creates a fresh project. Parsed tokens are untrusted (validated against assignable projects); the capturing surface's own context (its current project, pickers) is trusted.
+_Avoid_: quick task, note

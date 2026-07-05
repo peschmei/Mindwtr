@@ -10,6 +10,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
 import {
+  applyCapturedProject,
+  buildCaptureTaskProps,
   canStarNewCapture,
   DEFAULT_AREA_COLOR,
   DEFAULT_PROJECT_COLOR,
@@ -420,85 +422,50 @@ export function QuickCaptureSheet({
 
   const buildTaskPropsForInput = useCallback(async (inputValue: string, fallbackTitle: string, extraProps?: Partial<Task>) => {
     const trimmed = inputValue.trim();
-    let finalTitle = trimmed || fallbackTitle;
-    let projectTitle: string | undefined;
-    let parsedProps: Partial<Task> = {};
-    let invalidDateCommands: string[] | undefined;
-    let detectedDate:
-      | {
-          date: string;
-          matchedText: string;
-          titleWithoutDate: string;
-        }
-      | undefined;
-
-    if (trimmed) {
-      const parsed = parseQuickAdd(trimmed, projects, new Date(), areas, {
+    const parsed = trimmed
+      ? parseQuickAdd(trimmed, projects, new Date(), areas, {
         defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
         preserveText: settings.quickAddAutoClean !== true,
-      });
-      finalTitle = parsed.title || trimmed;
-      parsedProps = parsed.props;
-      if (
-        parsedProps.projectId
-        && !projects.some((project) => project.id === parsedProps.projectId && isSelectableProjectForTaskAssignment(project))
-      ) {
-        delete parsedProps.projectId;
-      }
-      projectTitle = parsed.projectTitle;
-      invalidDateCommands = parsed.invalidDateCommands;
-      detectedDate = parsed.detectedDate;
-    }
+      })
+      : { title: '', props: {}, projectTitle: undefined, detectedDate: undefined, invalidDateCommands: undefined };
 
-    const initialPropsMerged: Partial<Task> = { status: 'inbox', ...initialProps, ...parsedProps, ...extraProps };
-    if (
-      initialPropsMerged.projectId
-      && !projects.some((project) => project.id === initialPropsMerged.projectId && isSelectableProjectForTaskAssignment(project))
-    ) {
-      delete initialPropsMerged.projectId;
+    // Capture policy lives in core buildCaptureTaskProps; this sheet only adds
+    // its picker state (project/area/context/priority/date pickers) on top.
+    const assembly = buildCaptureTaskProps({
+      parsed,
+      rawInput: trimmed,
+      fallbackTitle,
+      projects,
+      initialProps,
+      extraProps,
+      selectedAreaId,
+      starNewTask: focusNewTask && canFocusNewTask,
+      suppressDetectedDate: Boolean(dueDate),
+    });
+    if (!assembly.ok) {
+      return { title: '', props: { status: 'inbox' as const, ...initialProps, ...extraProps }, invalidDateCommands: parsed.invalidDateCommands };
     }
-    if (!initialPropsMerged.status) initialPropsMerged.status = 'inbox';
-    const shouldApplyDetectedDate = Boolean(detectedDate?.date && !initialPropsMerged.dueDate && !dueDate);
-    if (shouldApplyDetectedDate && detectedDate) {
-      initialPropsMerged.dueDate = detectedDate.date;
-      finalTitle = detectedDate.titleWithoutDate;
-    }
-
-    if (!initialPropsMerged.projectId && projectTitle) {
-      const existingProject = projects.find((project) => project.title.toLowerCase() === projectTitle.toLowerCase());
-      if (existingProject && !isSelectableProjectForTaskAssignment(existingProject)) {
-        return { title: finalTitle, props: initialPropsMerged, invalidDateCommands };
-      }
+    let taskProps = assembly.props;
+    if (assembly.projectToCreate) {
       const created = await addProject(
-        projectTitle,
-        DEFAULT_PROJECT_COLOR,
-        getQuickAddProjectInitialProps(initialPropsMerged, selectedAreaId)
+        assembly.projectToCreate.title,
+        assembly.projectToCreate.color,
+        assembly.projectToCreate.initialProps,
       );
-      if (!created) return { title: finalTitle, props: initialPropsMerged, invalidDateCommands };
-      initialPropsMerged.projectId = created.id;
+      if (created) taskProps = applyCapturedProject(taskProps, created.id);
     }
-
-    if (projectId) initialPropsMerged.projectId = projectId;
-    if (!initialPropsMerged.projectId && !parsedProps.areaId) {
-      initialPropsMerged.areaId = selectedAreaId || undefined;
-    }
-    if (initialPropsMerged.projectId) initialPropsMerged.areaId = undefined;
+    if (projectId) taskProps = applyCapturedProject(taskProps, projectId);
     if (contextTags.length > 0) {
-      initialPropsMerged.contexts = Array.from(new Set([...(initialPropsMerged.contexts ?? []), ...contextTags]));
+      taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), ...contextTags]));
     }
-    if (prioritiesEnabled && priority) initialPropsMerged.priority = priority;
+    if (prioritiesEnabled && priority) taskProps.priority = priority;
     if (dueDate) {
       const dateOnly = safeFormatDate(dueDate, 'yyyy-MM-dd');
-      if (dateOnly) initialPropsMerged.dueDate = dueDateHasTime ? dueDate.toISOString() : dateOnly;
+      if (dateOnly) taskProps.dueDate = dueDateHasTime ? dueDate.toISOString() : dateOnly;
     }
-    if (startTime) initialPropsMerged.startTime = startTime.toISOString();
-    if (focusNewTask && canFocusNewTask) {
-      // Core addTask promotes a starred inbox capture to next (and keeps it
-      // inbox unstarred if the star is refused) — don't pre-promote here.
-      initialPropsMerged.isFocusedToday = true;
-    }
+    if (startTime) taskProps.startTime = startTime.toISOString();
 
-    return { title: finalTitle, props: initialPropsMerged, invalidDateCommands };
+    return { title: assembly.title, props: taskProps, invalidDateCommands: assembly.invalidDateCommands };
   }, [addProject, areas, canFocusNewTask, contextTags, dueDate, dueDateHasTime, focusNewTask, initialProps, prioritiesEnabled, priority, projectId, projects, selectedAreaId, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, startTime]);
 
   const buildTaskProps = useCallback((fallbackTitle: string, extraProps?: Partial<Task>) => (

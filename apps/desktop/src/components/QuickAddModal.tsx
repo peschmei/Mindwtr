@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent } from 'react';
 import {
+    applyCapturedProject,
+    buildCaptureTaskProps,
     canStarNewCapture,
     shallow,
     useTaskStore,
@@ -910,62 +912,42 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         input: string;
         parsed: QuickAddResult;
     }) => {
-        const { title, props, projectTitle, detectedDate } = parsed;
-        const baseProps: Partial<Task> = { ...initialProps, ...props };
         const mergedAttachments = mergeQuickAddAttachments(
             initialProps?.attachments,
-            props.attachments,
+            parsed.props.attachments,
             extraAttachments,
         );
-        if (mergedAttachments) {
-            baseProps.attachments = mergedAttachments;
-        }
-        if (focusNewTask && canFocusNewTask) {
-            // Core addTask promotes a starred inbox capture to next (and keeps it
-            // inbox unstarred if the star is refused) — don't pre-promote here.
-            baseProps.isFocusedToday = true;
-        }
-        const shouldApplyDetectedDate = Boolean(detectedDate?.date && !baseProps.dueDate);
-        if (shouldApplyDetectedDate && detectedDate) {
-            baseProps.dueDate = detectedDate.date;
-        }
-        const finalTitle = shouldApplyDetectedDate && detectedDate
-            ? detectedDate.titleWithoutDate
-            : (title || input.trim() || extraAttachments?.[0]?.title || tFallback(t, 'quickAdd.pastedImageTitle', 'Screenshot'));
-        if (!finalTitle.trim()) return { success: false, currentProjects, currentAreas };
-        const hasProjectAssignment = Boolean(baseProps.projectId || projectTitle);
-        if (!hasProjectAssignment) {
-            baseProps.areaId = props.areaId || selectedAreaId || undefined;
-        }
-        let projectId = baseProps.projectId;
+        // Capture policy lives in core buildCaptureTaskProps; this surface only
+        // supplies its state and performs the async project creation.
+        const assembly = buildCaptureTaskProps({
+            parsed,
+            rawInput: input,
+            fallbackTitle: extraAttachments?.[0]?.title || tFallback(t, 'quickAdd.pastedImageTitle', 'Screenshot'),
+            projects: currentProjects,
+            initialProps: initialProps ?? undefined,
+            extraProps: mergedAttachments ? { attachments: mergedAttachments } : undefined,
+            selectedAreaId,
+            starNewTask: focusNewTask && canFocusNewTask,
+        });
+        if (!assembly.ok) return { success: false, currentProjects, currentAreas };
+        let taskProps = assembly.props;
         let nextProjects = currentProjects;
-        if (!projectId && projectTitle) {
-            const existing = currentProjects.find((project) => (
-                project.status !== 'archived'
-                && project.title.toLowerCase() === projectTitle.toLowerCase()
-            ));
-            if (existing) {
-                projectId = existing.id;
-            } else {
-                const created = await addProject(
-                    projectTitle,
-                    DEFAULT_PROJECT_COLOR,
-                    getQuickAddProjectInitialProps(baseProps, selectedAreaId)
-                );
-                if (!created) return { success: false, currentProjects, currentAreas };
-                projectId = created.id;
-                nextProjects = [...currentProjects, created];
-            }
+        if (assembly.projectToCreate) {
+            const created = await addProject(
+                assembly.projectToCreate.title,
+                assembly.projectToCreate.color,
+                assembly.projectToCreate.initialProps,
+            );
+            if (!created) return { success: false, currentProjects, currentAreas };
+            taskProps = applyCapturedProject(taskProps, created.id);
+            nextProjects = [...currentProjects, created];
         }
-        const mergedProps: Partial<Task> = { status: 'inbox', ...baseProps, projectId };
-        if (projectId) mergedProps.areaId = undefined;
-        if (!baseProps.status) mergedProps.status = 'inbox';
-        const addTaskResult = await addTask(finalTitle, mergedProps);
+        const addTaskResult = await addTask(assembly.title, taskProps);
         if (!addTaskResult.success) return { success: false, currentProjects: nextProjects, currentAreas };
         return {
             success: true,
             createdTaskId: getCreatedTaskId(addTaskResult),
-            props: mergedProps,
+            props: taskProps,
             currentAreas,
             currentProjects: nextProjects,
         };
