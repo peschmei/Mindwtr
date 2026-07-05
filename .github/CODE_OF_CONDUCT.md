@@ -13,6 +13,7 @@ Expected behavior:
 Unacceptable behavior:
 - Harassment, insults, or personal attacks
 - Trolling, inflammatory comments, or sustained disruption
+- Spam or advertising, including promotion of unrelated products, services, or projects in issues, discussions, or pull requests
 - Publishing others' private information without permission
 - Any conduct that would be inappropriate in a professional setting
 

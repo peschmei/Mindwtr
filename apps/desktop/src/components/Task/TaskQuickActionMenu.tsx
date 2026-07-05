@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, FolderPlus, MapPin, Tag, Trash2 } from 'lucide-react';
+import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, FolderPlus, MapPin, Pencil, Tag, Trash2 } from 'lucide-react';
 import {
     getAdvancedReviewDate,
     hasTimeComponent,
@@ -48,6 +48,7 @@ interface TaskQuickActionMenuProps {
         onToggle: () => void;
     };
     onClose: () => void;
+    onRename?: () => void;
     onDuplicate: () => void;
     onPromoteToProject?: () => void;
     onDelete: () => void;
@@ -91,6 +92,7 @@ export function TaskQuickActionMenu({
     readOnly,
     focusAction,
     onClose,
+    onRename,
     onDuplicate,
     onPromoteToProject,
     onDelete,
@@ -129,6 +131,7 @@ export function TaskQuickActionMenu({
     const areaLabel = tFallback(t, 'taskEdit.areaLabel', 'Area');
     const contextsLabel = tFallback(t, 'taskEdit.contextsLabel', 'Contexts');
     const noAreaLabel = tFallback(t, 'taskEdit.noAreaOption', 'No Area');
+    const renameLabel = tFallback(t, 'task.renameTitle', 'Rename task');
     const duplicateLabel = tFallback(t, 'projects.duplicate', 'Duplicate');
     const promoteToProjectLabel = t('task.createProjectFromTask');
     const deleteLabel = tFallback(t, 'common.delete', 'Delete');
@@ -514,6 +517,14 @@ export function TaskQuickActionMenu({
                     },
                 })}
                 {!readOnly && focusAction ? <div className="my-1 h-px bg-border/70" role="separator" /> : null}
+                {!readOnly && onRename && renderMenuAction({
+                    icon: <Pencil className="h-4 w-4" />,
+                    label: renameLabel,
+                    onClick: () => {
+                        onRename();
+                        onClose();
+                    },
+                })}
                 {!readOnly && renderMenuAction({
                     ref: startButtonRef,
                     icon: <Calendar className="h-4 w-4" />,

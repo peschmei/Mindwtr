@@ -73,39 +73,60 @@ describe('TaskItemDisplay', () => {
         expect(getByText('2周前')).toBeInTheDocument();
     });
 
-    it('renames the title in place on double-click and saves with Enter', () => {
+    const renderWithRename = (props: {
+        onRenameTitle: ReturnType<typeof vi.fn>;
+        onEdit?: ReturnType<typeof vi.fn>;
+        renameRequestToken?: number;
+    }) => (
+        <LanguageProvider>
+            <TaskItemDisplay
+                task={baseTask}
+                language="en"
+                selectionMode={false}
+                isViewOpen={false}
+                actions={{
+                    onToggleView: vi.fn(),
+                    onEdit: props.onEdit ?? vi.fn(),
+                    onRenameTitle: props.onRenameTitle,
+                    onDelete: vi.fn(),
+                    onDuplicate: vi.fn(),
+                    onStatusChange: vi.fn(),
+                    openAttachment: vi.fn(),
+                }}
+                visibleAttachments={[]}
+                recurrenceRule=""
+                recurrenceStrategy="strict"
+                prioritiesEnabled={false}
+                timeEstimatesEnabled={false}
+                isStagnant={false}
+                showQuickDone={false}
+                readOnly={false}
+                renameRequestToken={props.renameRequestToken ?? 0}
+                t={(key: string) => key}
+            />
+        </LanguageProvider>
+    );
+
+    it('opens the full editor on double-click even when inline rename is available', () => {
         const onRenameTitle = vi.fn();
         const onEdit = vi.fn();
-        const { getByText, getByLabelText, queryByLabelText } = render(
-            <LanguageProvider>
-                <TaskItemDisplay
-                    task={baseTask}
-                    language="en"
-                    selectionMode={false}
-                    isViewOpen={false}
-                    actions={{
-                        onToggleView: vi.fn(),
-                        onEdit,
-                        onRenameTitle,
-                        onDelete: vi.fn(),
-                        onDuplicate: vi.fn(),
-                        onStatusChange: vi.fn(),
-                        openAttachment: vi.fn(),
-                    }}
-                    visibleAttachments={[]}
-                    recurrenceRule=""
-                    recurrenceStrategy="strict"
-                    prioritiesEnabled={false}
-                    timeEstimatesEnabled={false}
-                    isStagnant={false}
-                    showQuickDone={false}
-                    readOnly={false}
-                    t={(key: string) => key}
-                />
-            </LanguageProvider>
-        );
+        const { getByText, queryByLabelText } = render(renderWithRename({ onRenameTitle, onEdit }));
 
         fireEvent.doubleClick(getByText('Localized age'));
+
+        expect(onEdit).toHaveBeenCalled();
+        expect(queryByLabelText('Rename task')).not.toBeInTheDocument();
+        expect(onRenameTitle).not.toHaveBeenCalled();
+    });
+
+    it('renames the title in place on rename request and saves with Enter', () => {
+        const onRenameTitle = vi.fn();
+        const onEdit = vi.fn();
+        const { rerender, getByLabelText, queryByLabelText } = render(
+            renderWithRename({ onRenameTitle, onEdit, renameRequestToken: 0 })
+        );
+
+        rerender(renderWithRename({ onRenameTitle, onEdit, renameRequestToken: 1 }));
 
         const input = getByLabelText('Rename task') as HTMLInputElement;
         expect(input.value).toBe('Localized age');
@@ -120,36 +141,11 @@ describe('TaskItemDisplay', () => {
 
     it('cancels the inline rename with Escape without saving', () => {
         const onRenameTitle = vi.fn();
-        const { getByText, getByLabelText, queryByLabelText } = render(
-            <LanguageProvider>
-                <TaskItemDisplay
-                    task={baseTask}
-                    language="en"
-                    selectionMode={false}
-                    isViewOpen={false}
-                    actions={{
-                        onToggleView: vi.fn(),
-                        onEdit: vi.fn(),
-                        onRenameTitle,
-                        onDelete: vi.fn(),
-                        onDuplicate: vi.fn(),
-                        onStatusChange: vi.fn(),
-                        openAttachment: vi.fn(),
-                    }}
-                    visibleAttachments={[]}
-                    recurrenceRule=""
-                    recurrenceStrategy="strict"
-                    prioritiesEnabled={false}
-                    timeEstimatesEnabled={false}
-                    isStagnant={false}
-                    showQuickDone={false}
-                    readOnly={false}
-                    t={(key: string) => key}
-                />
-            </LanguageProvider>
+        const { rerender, getByLabelText, queryByLabelText } = render(
+            renderWithRename({ onRenameTitle, renameRequestToken: 0 })
         );
 
-        fireEvent.doubleClick(getByText('Localized age'));
+        rerender(renderWithRename({ onRenameTitle, renameRequestToken: 1 }));
         const input = getByLabelText('Rename task') as HTMLInputElement;
         fireEvent.change(input, { target: { value: 'Discarded' } });
         fireEvent.keyDown(input, { key: 'Escape' });
@@ -158,7 +154,7 @@ describe('TaskItemDisplay', () => {
         expect(queryByLabelText('Rename task')).not.toBeInTheDocument();
     });
 
-    it('falls back to the full editor on double-click when inline rename is unavailable', () => {
+    it('opens the full editor on double-click when inline rename is unavailable', () => {
         const onEdit = vi.fn();
         const { getByText } = render(
             <LanguageProvider>

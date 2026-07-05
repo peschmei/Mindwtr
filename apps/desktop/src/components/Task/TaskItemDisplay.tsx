@@ -65,6 +65,7 @@ interface TaskItemDisplayProps {
     showTaskAge?: boolean;
     showHoverHint?: boolean;
     projectDeadlineLabel?: string;
+    renameRequestToken?: number;
     t: (key: string) => string;
 }
 
@@ -106,6 +107,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     showTaskAge = false,
     showHoverHint = true,
     projectDeadlineLabel,
+    renameRequestToken = 0,
     t,
 }: TaskItemDisplayProps) {
     const {
@@ -194,13 +196,14 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
     }, []);
     const [renameDraft, setRenameDraft] = useState<string | null>(null);
     const canInlineRename = !readOnly && !selectionMode && Boolean(onRenameTitle);
-    const startTitleEdit = () => {
-        if (canInlineRename) {
-            setRenameDraft(task.title);
-            return;
-        }
-        onEdit();
-    };
+    // Rename is requested from the quick-actions menu (TaskItem bumps the token);
+    // double-click stays reserved for opening the full editor.
+    const lastRenameTokenRef = useRef(renameRequestToken);
+    useEffect(() => {
+        if (renameRequestToken === lastRenameTokenRef.current) return;
+        lastRenameTokenRef.current = renameRequestToken;
+        if (canInlineRename) setRenameDraft(task.title);
+    }, [renameRequestToken, canInlineRename, task.title]);
     const commitInlineRename = () => {
         if (renameDraft === null) return;
         const next = renameDraft.replace(/\s+/g, ' ').trim();
@@ -221,7 +224,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
         if (!readOnly && event.detail >= 2) {
             event.stopPropagation();
             clearClickTimer();
-            startTitleEdit();
+            onEdit();
             return;
         }
         clearClickTimer();
@@ -234,7 +237,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
         if (selectionMode || readOnly) return;
         event.stopPropagation();
         clearClickTimer();
-        startTitleEdit();
+        onEdit();
     };
     const handleProjectClick = (event: MouseEvent<HTMLSpanElement>, projectId: string) => {
         event.stopPropagation();

@@ -115,6 +115,7 @@ export const TaskItem = memo(function TaskItem({
     const [autoFocusTitle, setAutoFocusTitle] = useState(false);
     const showObsidianNoteAttachment = useObsidianStore((state) => state.config.enabled);
     const [quickActionMenu, setQuickActionMenu] = useState<{ x: number; y: number } | null>(null);
+    const [renameRequestToken, setRenameRequestToken] = useState(0);
     const taskRootRef = useRef<HTMLDivElement | null>(null);
     const quickActionReturnFocusRef = useRef<HTMLElement | null>(null);
     const modalEditorRef = useRef<HTMLDivElement | null>(null);
@@ -1423,6 +1424,7 @@ export const TaskItem = memo(function TaskItem({
                                 showTaskAge={showTaskAge}
                                 showHoverHint={showHoverHint}
                                 projectDeadlineLabel={projectDeadlineLabel}
+                                renameRequestToken={renameRequestToken}
                                 t={t}
                             />
                         )}
@@ -1444,6 +1446,7 @@ export const TaskItem = memo(function TaskItem({
                     readOnly={effectiveReadOnly}
                     focusAction={quickActionFocus}
                     onClose={handleCloseQuickActionMenu}
+                    onRename={() => setRenameRequestToken((token) => token + 1)}
                     onDuplicate={handleDuplicateTask}
                     onPromoteToProject={handlePromoteTaskToProject}
                     onDelete={() => {
