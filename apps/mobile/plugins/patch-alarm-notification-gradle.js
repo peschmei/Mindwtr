@@ -254,6 +254,19 @@ const applyAlarmReminderBehaviorPatchToSource = (original) => {
 
 const applyAlarmReminderBehaviorPatch = (filePath) => patchFile(filePath, applyAlarmReminderBehaviorPatchToSource);
 
+const applyAlarmLockScreenPrivacyPatchToSource = (original) => {
+  // Android's lock screen "hide sensitive content" setting only redacts
+  // notifications marked VISIBILITY_PRIVATE; the library ships reminders as
+  // VISIBILITY_PUBLIC, which keeps task titles visible on the locked phone
+  // no matter what the user chose (#823).
+  return original.replace(
+    '.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)',
+    '.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)'
+  );
+};
+
+const applyAlarmLockScreenPrivacyPatch = (filePath) => patchFile(filePath, applyAlarmLockScreenPrivacyPatchToSource);
+
 const applyAlarmAudioInterfacePatchToSource = (original) => {
   return original.replace(
     '        uri = Settings.System.DEFAULT_ALARM_ALERT_URI;',
@@ -820,6 +833,9 @@ function withAlarmNotificationGradlePatch(config) {
         if (applyAlarmReminderBehaviorPatch(candidate)) {
           logPatchedCandidate('alarm-reminder-behavior-patch', candidate);
         }
+        if (applyAlarmLockScreenPrivacyPatch(candidate)) {
+          logPatchedCandidate('alarm-lock-screen-privacy-patch', candidate);
+        }
         if (applyAlarmCompleteUtilPatch(candidate)) {
           logPatchedCandidate('alarm-complete-action-util-patch', candidate);
         }
@@ -879,6 +895,7 @@ module.exports.__testables = {
   applyAlarmDuplicateToastPatchToSource,
   applyAlarmTimingPatchToSource,
   applyAlarmReminderBehaviorPatchToSource,
+  applyAlarmLockScreenPrivacyPatchToSource,
   applyAlarmAudioInterfacePatchToSource,
   applyAlarmDismissReceiverPatchToSource,
   applyAlarmReceiverPatchToSource,

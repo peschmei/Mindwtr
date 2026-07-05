@@ -8,6 +8,7 @@ const {
   applyAlarmDuplicateToastPatchToSource,
   applyAlarmTimingPatchToSource,
   applyAlarmReminderBehaviorPatchToSource,
+  applyAlarmLockScreenPrivacyPatchToSource,
   applyAlarmAudioInterfacePatchToSource,
   applyAlarmDismissReceiverPatchToSource,
   applyAlarmReceiverPatchToSource,
@@ -148,6 +149,19 @@ describe('patch-alarm-notification-gradle', () => {
     expect(output).toContain('.setSound(playSound ? android.provider.Settings.System.DEFAULT_NOTIFICATION_URI : null)');
     expect(output).toContain('mChannel.enableVibration(alarm.isVibrate());');
     expect(output).toContain('mChannel.setSound(playSound ? android.provider.Settings.System.DEFAULT_NOTIFICATION_URI : null, null);');
+  });
+
+  it('marks reminder notifications private so the lock screen can redact them', () => {
+    const input = `            NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(mContext, channelID)
+                    .setSmallIcon(smallIconResId)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setCategory(NotificationCompat.CATEGORY_REMINDER);`;
+
+    const output = applyAlarmLockScreenPrivacyPatchToSource(input);
+
+    expect(output).toContain('.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)');
+    expect(output).not.toContain('VISIBILITY_PUBLIC');
+    expect(applyAlarmLockScreenPrivacyPatchToSource(output)).toBe(output);
   });
 
   it('patches AudioInterface fallback sound away from the alarm tone', () => {
