@@ -441,7 +441,10 @@ jobs:
             find apps/desktop/src-tauri/target -type d -path '*/build/whisper-rs-sys-*' -prune -exec rm -rf {} +
           fi
           cd apps/desktop
-          bunx tauri build \
+          # Pin the scoped CLI package: bare `bunx tauri` on a checkout whose lockfile
+          # lacks @tauri-apps/cli falls back to the npm `tauri` v1 package, which
+          # compiles sharp/libvips from source and fails on macOS runners.
+          bunx @tauri-apps/cli@2.11.3 build \
             --target universal-apple-darwin \
             --bundles app \
             --config src-tauri/tauri.appstore.conf.json
