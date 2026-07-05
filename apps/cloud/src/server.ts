@@ -1496,6 +1496,14 @@ export async function startCloudServer(options: CloudServerOptions = {}): Promis
                                 lastModified: metadata.lastModified,
                                 contentLength,
                             });
+                            // Deliberate second merge: serverMergedRemoteData must be true
+                            // whenever the SERVER's stored data contributed anything to the
+                            // merged result — including settings-level and normalization-level
+                            // contributions that per-entity MergeStats cannot express. Merging
+                            // the incoming payload against an empty base yields the exact
+                            // "client-only" normal form to compare against. Do not replace this
+                            // with a stats-derived heuristic: a false negative makes clients
+                            // skip a needed re-read and diverge silently.
                             const incomingOnlyMerge = mergeAppDataWithStats({
                                 tasks: [],
                                 projects: [],
