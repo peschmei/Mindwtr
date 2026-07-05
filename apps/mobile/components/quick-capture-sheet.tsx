@@ -491,7 +491,14 @@ export function QuickCaptureSheet({
       if (dateOnly) initialPropsMerged.dueDate = dueDateHasTime ? dueDate.toISOString() : dateOnly;
     }
     if (startTime) initialPropsMerged.startTime = startTime.toISOString();
-    if (focusNewTask && canFocusNewTask) initialPropsMerged.isFocusedToday = true;
+    if (focusNewTask && canFocusNewTask) {
+      initialPropsMerged.isFocusedToday = true;
+      // Starring a capture commits it to today, which makes it a Next Action —
+      // Focus should not accumulate unclarified inbox items.
+      if (!initialPropsMerged.status || initialPropsMerged.status === 'inbox') {
+        initialPropsMerged.status = 'next';
+      }
+    }
 
     return { title: finalTitle, props: initialPropsMerged, invalidDateCommands };
   }, [addProject, areas, canFocusNewTask, contextTags, dueDate, dueDateHasTime, focusNewTask, initialProps, prioritiesEnabled, priority, projectId, projects, selectedAreaId, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, startTime]);

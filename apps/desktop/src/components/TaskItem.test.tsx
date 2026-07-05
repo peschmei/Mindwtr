@@ -299,6 +299,7 @@ describe('TaskItem', () => {
         await waitFor(() => {
             const updatedTask = useTaskStore.getState()._tasksById.get('editor-star-task');
             expect(updatedTask?.isFocusedToday).toBe(true);
+            expect(updatedTask?.status).toBe('next');
         });
     });
 

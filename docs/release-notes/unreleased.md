@@ -77,3 +77,4 @@ Changes collected after `v1.0.5` and before the next version tag.
 - feat(ios): lock screen widgets (iOS 16+) showing the current focused task — a rectangular widget with the top Today's Focus task, an inline one-liner above the clock, and a circular focused-task counter; tapping opens Focus.
 - fix(release): app version bump tooling no longer overwrites the independently published `mindwtr-mcp` package version, and existing MCP npm versions now skip publish cleanly.
 - feat(desktop): star a task for Today's Focus from the task editor header, and the Quick Add star is now a compact icon toggle beside the input instead of a full-width labeled button.
+- feat(tasks): starring for Today's Focus now clarifies the task — starred quick-add captures (desktop and mobile) and inbox tasks starred from the desktop editor become Next Actions instead of sitting in Focus as unprocessed Inbox items.

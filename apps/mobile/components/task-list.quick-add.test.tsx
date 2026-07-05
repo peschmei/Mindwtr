@@ -591,7 +591,7 @@ describe('TaskList project quick add', () => {
     expect(addTaskMock).toHaveBeenCalledWith('Focus launch checklist', expect.objectContaining({
       isFocusedToday: true,
       projectId: project.id,
-      status: 'inbox',
+      status: 'next',
     }));
 
     act(() => {

@@ -348,15 +348,15 @@ export const TaskItem = memo(function TaskItem({
                 : focusedCount >= focusTaskLimit
                     ? limitMessage
                     : addLabel;
-        const applyFocus = (nextFocused: boolean) => {
-            void updateTask(task.id, { isFocusedToday: nextFocused })
+        const applyFocus = (updates: Partial<Task>) => {
+            void updateTask(task.id, updates)
                 .then((result) => {
                     if (!result.success) showToast(result.error || 'Failed to update task', 'error');
                 });
         };
-        const makeToggle = (canAdd: boolean, blockedReason: string) => () => {
+        const makeToggle = (canAdd: boolean, blockedReason: string, promoteInbox = false) => () => {
             if (isFocused) {
-                applyFocus(false);
+                applyFocus({ isFocusedToday: false });
                 return;
             }
             if (!canAdd) {
@@ -367,12 +367,21 @@ export const TaskItem = memo(function TaskItem({
                 showToast(limitMessage, 'info');
                 return;
             }
-            applyFocus(true);
+            const updates: Partial<Task> = { isFocusedToday: true };
+            if (promoteInbox && task.status === 'inbox') {
+                // Starring commits the task to today, which makes it a Next
+                // Action — Focus should not accumulate unclarified inbox items.
+                // The open editor's status draft must follow, or Save would
+                // write the stale 'inbox' back.
+                updates.status = 'next';
+                setEditStatus('next');
+            }
+            applyFocus(updates);
         };
         // The editor is the clarifying surface, so its star may focus unclarified
-        // tasks — same sanctioned exception as the Quick Add star (Focus shows
-        // starred inbox tasks). Deferred/sequential stay blocked: starring those
-        // would drop the task into a Focus list that then hides it.
+        // tasks (promoting them to Next) — same as the Quick Add star. Deferred/
+        // sequential stay blocked: starring those would drop the task into a
+        // Focus list that then hides it.
         const editorCanAdd = isEligible || focusEligibility.reason === 'clarify';
         const editorTitle = isFocused
             ? removeLabel
@@ -391,7 +400,7 @@ export const TaskItem = memo(function TaskItem({
             editorStar: {
                 isFocused,
                 title: editorTitle,
-                onToggle: makeToggle(editorCanAdd, ineligibleReason),
+                onToggle: makeToggle(editorCanAdd, ineligibleReason, true),
             },
         };
     }, [
@@ -404,6 +413,7 @@ export const TaskItem = memo(function TaskItem({
         quickActionMenu,
         sequentialProjectIds,
         sequentialWithinSectionProjectIds,
+        setEditStatus,
         showFutureStarts,
         showToast,
         t,

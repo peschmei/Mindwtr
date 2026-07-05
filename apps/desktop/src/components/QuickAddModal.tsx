@@ -921,6 +921,11 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         }
         if (focusNewTask && canFocusNewTask) {
             baseProps.isFocusedToday = true;
+            // Starring a capture commits it to today, which makes it a Next
+            // Action — Focus should not accumulate unclarified inbox items.
+            if (!baseProps.status || baseProps.status === 'inbox') {
+                baseProps.status = 'next';
+            }
         }
         const shouldApplyDetectedDate = Boolean(detectedDate?.date && !baseProps.dueDate);
         if (shouldApplyDetectedDate && detectedDate) {
