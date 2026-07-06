@@ -427,6 +427,8 @@ export const nlOverrides: Record<string, string> = {
         'keybindings.style.emacs': 'Emacs',
         'keybindings.style.vim': 'Vim',
         'process.doIt': '📋 I\'ll do it',
+        'process.addAnotherAction': 'Nog een actie toevoegen',
+        'process.removeAction': 'Actie verwijderen',
         'recurrence.onLabel': 'On',
         'review.of': 'of',
         'review.staleStep': 'Stilgevallen items',

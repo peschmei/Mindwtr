@@ -674,6 +674,8 @@ export const ptOverrides: Record<string, string> = {
         'process.quickDesc': 'Revise os detalhes, escolha o resultado e siga direto para o próximo item.',
         'process.quickApplyHint': 'Aplique essas escolhas e continue para o próximo item da caixa de entrada.',
         'process.quickMoveHint': 'Mova este item e continue para o próximo item da caixa de entrada.',
+        'process.addAnotherAction': 'Adicionar outra ação',
+        'process.removeAction': 'Remover ação',
 
         // Settings
         'settings.title': 'Configurações',

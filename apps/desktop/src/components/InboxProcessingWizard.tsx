@@ -83,6 +83,8 @@ export type InboxProcessingWizardProps = {
     setConvertToProject: (value: boolean) => void;
     setProjectTitleDraft: (value: string) => void;
     setNextActionDraft: (value: string) => void;
+    extraActionDrafts: string[];
+    setExtraActionDrafts: (value: string[]) => void;
     projectTitleDraft: string;
     nextActionDraft: string;
     handleConvertToProject: () => void;
@@ -191,6 +193,8 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
     setConvertToProject,
     setProjectTitleDraft,
     setNextActionDraft,
+    extraActionDrafts,
+    setExtraActionDrafts,
     projectTitleDraft,
     nextActionDraft,
     handleConvertToProject,
@@ -862,6 +866,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                                 if (!convertToProject) {
                                     setProjectTitleDraft(processingTitle);
                                     setNextActionDraft('');
+                                    setExtraActionDrafts([]);
                                 }
                                 setConvertToProject(!convertToProject);
                             }}
@@ -909,9 +914,47 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                                 <input
                                     value={nextActionDraft}
                                     onChange={(e) => setNextActionDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key !== 'Enter' || !nextActionDraft.trim()) return;
+                                        e.preventDefault();
+                                        setExtraActionDrafts([...extraActionDrafts, '']);
+                                    }}
                                     placeholder={t('taskEdit.titleLabel')}
                                     className="w-full bg-card border border-border rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary"
                                 />
+                                {extraActionDrafts.map((draft, index) => (
+                                    <div key={index} className="flex gap-2">
+                                        <input
+                                            autoFocus
+                                            value={draft}
+                                            onChange={(e) => setExtraActionDrafts(
+                                                extraActionDrafts.map((value, i) => (i === index ? e.target.value : value)),
+                                            )}
+                                            onKeyDown={(e) => {
+                                                if (e.key !== 'Enter' || index !== extraActionDrafts.length - 1 || !draft.trim()) return;
+                                                e.preventDefault();
+                                                setExtraActionDrafts([...extraActionDrafts, '']);
+                                            }}
+                                            placeholder={t('taskEdit.titleLabel')}
+                                            className="w-full bg-card border border-border rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-primary"
+                                        />
+                                        <button
+                                            type="button"
+                                            aria-label={t('process.removeAction')}
+                                            onClick={() => setExtraActionDrafts(extraActionDrafts.filter((_, i) => i !== index))}
+                                            className="px-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => setExtraActionDrafts([...extraActionDrafts, ''])}
+                                    className="text-xs font-medium text-primary hover:underline"
+                                >
+                                    + {t('process.addAnotherAction')}
+                                </button>
                             </div>
                             <button
                                 type="button"

@@ -438,6 +438,29 @@ export const styles = StyleSheet.create({
     marginTop: 2,
     paddingVertical: 12,
   },
+  extraActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  extraActionInput: {
+    flex: 1,
+  },
+  extraActionRemove: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  extraActionRemoveText: {
+    fontSize: 16,
+  },
+  addActionButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  addActionText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   createProjectButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,

@@ -8,6 +8,7 @@ import { InboxProcessingModal } from './inbox-processing-modal';
 const updateTask = vi.fn();
 const deleteTask = vi.fn();
 const addProject = vi.fn();
+const addTask = vi.fn();
 const push = vi.fn();
 const clarifyTask = vi.fn();
 const showToast = vi.fn();
@@ -72,6 +73,7 @@ const storeState = {
   updateTask,
   deleteTask,
   addProject,
+  addTask,
 };
 const originalPlatformOs = Platform.OS;
 
@@ -304,6 +306,7 @@ describe('InboxProcessingModal', () => {
     updateTask.mockClear();
     deleteTask.mockClear();
     addProject.mockClear();
+    addTask.mockClear();
     push.mockClear();
     clarifyTask.mockClear();
     showToast.mockClear();
@@ -408,6 +411,7 @@ describe('InboxProcessingModal', () => {
     updateTask.mockClear();
     deleteTask.mockClear();
     addProject.mockClear();
+    addTask.mockClear();
     const onClose = vi.fn();
     let tree: ReturnType<typeof create>;
 
@@ -655,6 +659,74 @@ describe('InboxProcessingModal', () => {
       })
     );
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('creates extra next actions in the new project when added at the split step (#827)', async () => {
+    addProject.mockResolvedValueOnce({
+      id: 'project-created',
+      title: 'Plan Launch',
+      color: '#3b82f6',
+      status: 'active',
+      order: 0,
+      tagIds: [],
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    });
+    const onClose = vi.fn();
+    let tree: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<InboxProcessingModal visible onClose={onClose} />);
+    });
+
+    const root = tree!.root;
+
+    act(() => {
+      findPressableWithText(root, 'process.moreThanOneStepYes').props.onPress();
+    });
+    act(() => {
+      root.findByProps({ accessibilityLabel: 'projects.title' }).props.onChangeText('Plan Launch');
+    });
+    act(() => {
+      findPressableWithText(root, 'process.addAnotherAction').props.onPress();
+    });
+    act(() => {
+      findPressableWithText(root, 'process.addAnotherAction').props.onPress();
+    });
+
+    const findActionInputs = () => root.findAll((node) => (
+      typeof node.type === 'string'
+      && node.props.accessibilityLabel === 'process.nextAction'
+      && typeof node.props.onChangeText === 'function'
+    ));
+    expect(findActionInputs()).toHaveLength(3);
+    act(() => {
+      findActionInputs()[0].props.onChangeText('Draft launch brief');
+    });
+    act(() => {
+      findActionInputs()[1].props.onChangeText('Book venue');
+    });
+    act(() => {
+      findActionInputs()[2].props.onChangeText('   ');
+    });
+
+    await act(async () => {
+      findPressableWithText(root, 'process.createProject').props.onPress();
+    });
+
+    expect(updateTask).toHaveBeenCalledWith(
+      'inbox-1',
+      expect.objectContaining({
+        title: 'Draft launch brief',
+        status: 'next',
+        projectId: 'project-created',
+      })
+    );
+    expect(addTask).toHaveBeenCalledTimes(1);
+    expect(addTask).toHaveBeenCalledWith('Book venue', {
+      status: 'next',
+      projectId: 'project-created',
+    });
   });
 
   it('suggests existing contexts and tags while typing without a prefix', () => {

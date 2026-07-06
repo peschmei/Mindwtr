@@ -711,6 +711,8 @@ export const zhHans: Record<string, string> = {
         'process.nextAction': '下一步行动',
         'process.createProject': '创建项目并添加下一步',
         'process.nextActionRequired': '请先填写下一步行动。',
+        'process.addAnotherAction': '再添加一个行动',
+        'process.removeAction': '移除行动',
         'process.skip': '跳过并添加到下一步',
         'process.addContext': '添加',
         'process.newContextPlaceholder': '新情境...',

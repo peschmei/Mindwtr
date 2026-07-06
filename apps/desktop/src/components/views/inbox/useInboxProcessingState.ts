@@ -70,6 +70,7 @@ export function useInboxProcessingState({
     const [convertToProject, setConvertToProject] = useState(false);
     const [projectTitleDraft, setProjectTitleDraft] = useState('');
     const [nextActionDraft, setNextActionDraft] = useState('');
+    const [extraActionDrafts, setExtraActionDrafts] = useState<string[]>([]);
     const [customContext, setCustomContext] = useState('');
     const [customTag, setCustomTag] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -207,6 +208,7 @@ export function useInboxProcessingState({
         setConvertToProject(false);
         setProjectTitleDraft('');
         setNextActionDraft('');
+        setExtraActionDrafts([]);
         setCustomContext('');
         setCustomTag('');
         setSelectedProjectId(null);
@@ -248,6 +250,7 @@ export function useInboxProcessingState({
         setConvertToProject(false);
         setProjectTitleDraft(task.title);
         setNextActionDraft('');
+        setExtraActionDrafts([]);
         setSelectedProjectId(task.projectId ?? null);
         setSelectedAreaId(null);
         const startDraft = getDateFieldDraft(task.startTime);
@@ -483,6 +486,8 @@ export function useInboxProcessingState({
         setProjectTitleDraft,
         nextActionDraft,
         setNextActionDraft,
+        extraActionDrafts,
+        setExtraActionDrafts,
         customContext,
         setCustomContext,
         customTag,

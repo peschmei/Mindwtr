@@ -711,6 +711,8 @@ export const zhHant: Record<string, string> = {
         'process.nextAction': '下一步行動',
         'process.createProject': '創建項目並添加下一步',
         'process.nextActionRequired': '請先填寫下一步行動。',
+        'process.addAnotherAction': '再新增一個行動',
+        'process.removeAction': '移除行動',
         'process.skip': '跳過並添加到下一步',
         'process.addContext': '添加',
         'process.newContextPlaceholder': '新情境...',

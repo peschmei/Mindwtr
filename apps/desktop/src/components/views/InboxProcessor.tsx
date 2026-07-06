@@ -52,6 +52,7 @@ export function InboxProcessor({
         areas,
         settings,
         addProject,
+        addTask,
         updateTask,
         deleteTask,
         allContexts,

@@ -188,6 +188,36 @@ describe('InboxProcessor', () => {
         });
     });
 
+    it('creates extra next actions in the new project when added at the split step (#827)', async () => {
+        const { getByRole, getByText, getAllByPlaceholderText, addTask, updateTask } = renderInboxProcessor();
+
+        fireEvent.click(getByRole('button', { name: /process\.btn/i }));
+        fireEvent.click(getByText('process.refineNext'));
+        fireEvent.click(getByText('process.yesActionable'));
+        fireEvent.click(getByText('process.moreThanOneStepYes'));
+
+        fireEvent.click(getByText('+ process.addAnotherAction'));
+        fireEvent.click(getByText('+ process.addAnotherAction'));
+        const actionInputs = getAllByPlaceholderText('taskEdit.titleLabel');
+        expect(actionInputs).toHaveLength(3);
+        fireEvent.change(actionInputs[1], { target: { value: 'Book venue' } });
+        fireEvent.change(actionInputs[2], { target: { value: '   ' } });
+
+        fireEvent.click(getByText('process.createProject'));
+
+        await waitFor(() => {
+            expect(updateTask).toHaveBeenCalledWith('task-1', expect.objectContaining({
+                projectId: 'project-1',
+                status: 'next',
+            }));
+            expect(addTask).toHaveBeenCalledTimes(1);
+            expect(addTask).toHaveBeenCalledWith('Book venue', {
+                status: 'next',
+                projectId: 'project-1',
+            });
+        });
+    });
+
     it('opens in quick mode when configured as the default inbox processing mode', () => {
         const { getByRole, getByText, queryByText } = renderInboxProcessor({
             gtd: {

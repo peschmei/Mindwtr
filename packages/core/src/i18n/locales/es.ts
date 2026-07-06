@@ -600,6 +600,8 @@ export const esOverrides: Record<string, string> = {
         'process.nextAction': 'Siguiente acción',
         'process.createProject': 'Crear proyecto y añadir una siguiente acción',
         'process.nextActionRequired': 'Añade una siguiente acción antes de crear el proyecto.',
+        'process.addAnotherAction': 'Añadir otra acción',
+        'process.removeAction': 'Quitar acción',
         'process.skip': 'Omitir y añadir a Siguientes acciones',
         'process.addContext': 'Añadir',
         'process.newContextPlaceholder': 'Nuevo contexto...',

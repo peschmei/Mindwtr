@@ -788,6 +788,8 @@ export const viOverrides: Record<string, string> = {
         'process.quickDesc': 'Xem lại chi tiết, chọn kết quả và chuyển ngay sang mục tiếp theo.',
         'process.quickApplyHint': 'Áp dụng các lựa chọn này và tiếp tục sang mục hộp thư đến tiếp theo.',
         'process.quickMoveHint': 'Di chuyển mục này và tiếp tục sang mục hộp thư đến tiếp theo.',
+        'process.addAnotherAction': 'Thêm hành động khác',
+        'process.removeAction': 'Xóa hành động',
 
         // Settings
         'settings.title': 'Cài đặt',

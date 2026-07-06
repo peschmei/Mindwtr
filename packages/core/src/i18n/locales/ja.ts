@@ -628,6 +628,8 @@ export const jaOverrides: Record<string, string> = {
         'process.nextAction': '次のアクション',
         'process.createProject': 'プロジェクトを作成して次のアクションを追加',
         'process.nextActionRequired': 'プロジェクトを作成する前に次のアクションを追加します。',
+        'process.addAnotherAction': '別のアクションを追加',
+        'process.removeAction': 'アクションを削除',
         'process.skip': 'スキップして次へ追加',
         'process.addContext': '追加',
         'process.newContextPlaceholder': '新しいコンテキスト...',

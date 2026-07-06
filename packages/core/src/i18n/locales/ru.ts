@@ -638,6 +638,8 @@ export const ruOverrides: Record<string, string> = {
         'process.quickDesc': 'Проверьте детали, выберите результат и сразу переходите к следующему элементу.',
         'process.quickApplyHint': 'Примените эти выборы и перейдите к следующему элементу во входящих.',
         'process.quickMoveHint': 'Переместите этот элемент и перейдите к следующему элементу во входящих.',
+        'process.addAnotherAction': 'Добавить ещё одно действие',
+        'process.removeAction': 'Удалить действие',
         'settings.title': 'Настройки',
         'settings.subtitle': 'Настройте свой опыт Mindwtr',
         'settings.appearance': 'Появление',

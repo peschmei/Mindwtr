@@ -769,6 +769,8 @@ export const frOverrides: Record<string, string> = {
         'process.nextAction': 'Prochaine action',
         'process.createProject': 'Créer un projet et ajouter la prochaine action',
         'process.nextActionRequired': 'Ajoutez une prochaine action avant de créer le projet.',
+        'process.addAnotherAction': 'Ajouter une autre action',
+        'process.removeAction': 'Retirer l’action',
         'process.skip': 'Passer et ajouter aux prochaines actions',
         'process.addContext': 'Ajouter',
         'process.newContextPlaceholder': 'Nouveau contexte…',

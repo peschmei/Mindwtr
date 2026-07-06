@@ -788,6 +788,8 @@ export const en: Record<string, string> = {
         'process.nextAction': 'Next action',
         'process.createProject': 'Create project & add next action',
         'process.nextActionRequired': 'Add a next action before creating the project.',
+        'process.addAnotherAction': 'Add another action',
+        'process.removeAction': 'Remove action',
         'process.skip': 'Skip & Add to Next',
         'process.addContext': 'Add',
         'process.newContextPlaceholder': 'New context...',

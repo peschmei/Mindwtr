@@ -645,6 +645,8 @@ export const trOverrides: Record<string, string> = {
         'process.quickDesc': 'Ayrıntıları gözden geçirin, sonucu seçin ve doğrudan sonraki öğeye geçin.',
         'process.quickApplyHint': 'Bu seçimleri uygulayın ve gelen kutusundaki sonraki öğeye geçin.',
         'process.quickMoveHint': 'Bu öğeyi taşıyın ve gelen kutusundaki sonraki öğeye geçin.',
+        'process.addAnotherAction': 'Başka bir eylem ekle',
+        'process.removeAction': 'Eylemi kaldır',
         'settings.title': 'Ayarlar',
         'settings.subtitle': 'Mindwtr deneyiminizi özelleştirin',
         'settings.appearance': 'Dış görünüş',

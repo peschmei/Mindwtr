@@ -30,6 +30,7 @@ type UseInboxProcessingControllerParams = {
     areas: Area[];
     settings?: AppData['settings'];
     addProject: (title: string, color: string, initialProps?: Partial<Project>) => Promise<Project | null>;
+    addTask: (title: string, initialProps?: Partial<Task>) => Promise<unknown>;
     updateTask: (id: string, updates: Partial<Task>) => Promise<unknown>;
     deleteTask: (id: string) => Promise<unknown>;
     allContexts: string[];
@@ -53,6 +54,7 @@ export function useInboxProcessingController({
     areas,
     settings,
     addProject,
+    addTask,
     updateTask,
     deleteTask,
     allContexts,
@@ -108,6 +110,8 @@ export function useInboxProcessingController({
         setProjectTitleDraft,
         nextActionDraft,
         setNextActionDraft,
+        extraActionDrafts,
+        setExtraActionDrafts,
         customContext,
         setCustomContext,
         customTag,
@@ -435,8 +439,9 @@ export function useInboxProcessingController({
         setConvertToProject(true);
         setProjectTitleDraft(baseTitle);
         setNextActionDraft(baseTitle);
+        setExtraActionDrafts([]);
         goToStep('project');
-    }, [goToStep, processingTask?.title, processingTitle, settings?.quickAddAutoClean]);
+    }, [goToStep, processingTask?.title, processingTitle, setExtraActionDrafts, settings?.quickAddAutoClean]);
 
     const handleTwoMinDone = useCallback(() => {
         if (!processingTask) return;
@@ -664,6 +669,13 @@ export function useInboxProcessingController({
                 ...buildScheduleUpdates(),
             }, nextAction, processingTask.title);
             if (applied) {
+                // The converted capture becomes the project's first action;
+                // any extra actions typed at the split step follow it.
+                const extraActions = extraActionDrafts.map((title) => title.trim()).filter(Boolean);
+                for (const title of extraActions) {
+                    await addTask(title, { status: 'next', projectId: project.id });
+                }
+                setExtraActionDrafts([]);
                 processNext();
             }
         } catch (error) {
@@ -672,6 +684,9 @@ export function useInboxProcessingController({
         }
     }, [
         addProject,
+        addTask,
+        extraActionDrafts,
+        setExtraActionDrafts,
         applyProcessingEdits,
         buildScheduleUpdates,
         nextActionDraft,
@@ -898,6 +913,8 @@ export function useInboxProcessingController({
         setNextActionDraft,
         projectTitleDraft,
         nextActionDraft,
+        extraActionDrafts,
+        setExtraActionDrafts,
         handleConvertToProject,
         projectSearch,
         setProjectSearch,

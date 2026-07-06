@@ -711,6 +711,8 @@ export const itOverrides: Record<string, string> = {
         'process.nextAction': 'Prossima azione',
         'process.createProject': 'Crea progetto e aggiungi prossima azione',
         'process.nextActionRequired': 'Aggiungi una prossima azione prima di creare il progetto.',
+        'process.addAnotherAction': 'Aggiungi un’altra azione',
+        'process.removeAction': 'Rimuovi azione',
         'process.skip': 'Salta e aggiungi a Prossime',
         'process.addContext': 'Aggiungi',
         'process.newContextPlaceholder': 'Nuovo contesto...',

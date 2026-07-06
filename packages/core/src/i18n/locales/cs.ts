@@ -760,6 +760,8 @@ export const csOverrides: Record<string, string> = {
         'process.nextAction': 'Další krok',
         'process.createProject': 'Vytvořit projekt a přidat další krok',
         'process.nextActionRequired': 'Před vytvořením projektu přidejte další krok.',
+        'process.addAnotherAction': 'Přidat další akci',
+        'process.removeAction': 'Odebrat akci',
         'process.skip': 'Přeskočit a přidat do Dalších',
         'process.addContext': 'Přidat',
         'process.newContextPlaceholder': 'Nový kontext…',

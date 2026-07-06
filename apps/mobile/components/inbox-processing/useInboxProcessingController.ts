@@ -58,7 +58,7 @@ export function useInboxProcessingController({
   visible,
   onClose,
 }: InboxProcessingControllerParams) {
-  const { tasks, projects, areas, people, settings, updateTask, deleteTask, addProject } = useTaskStore();
+  const { tasks, projects, areas, people, settings, updateTask, deleteTask, addProject, addTask } = useTaskStore();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
   const router = useRouter();
@@ -80,6 +80,7 @@ export function useInboxProcessingController({
   const [convertToProject, setConvertToProject] = useState(false);
   const [projectTitleDraft, setProjectTitleDraft] = useState('');
   const [nextActionDraft, setNextActionDraft] = useState('');
+  const [extraActionDrafts, setExtraActionDrafts] = useState<string[]>([]);
   const [processingTitle, setProcessingTitle] = useState('');
   const [processingDescription, setProcessingDescription] = useState('');
   const [processingTitleFocused, setProcessingTitleFocused] = useState(false);
@@ -364,6 +365,7 @@ export function useInboxProcessingController({
     setConvertToProject(false);
     setProjectTitleDraft('');
     setNextActionDraft('');
+    setExtraActionDrafts([]);
     setSelectedContexts(task?.contexts ?? []);
     setSelectedTags(task?.tags ?? []);
     setSelectedPriority(task?.priority);
@@ -700,6 +702,7 @@ export function useInboxProcessingController({
     setConvertToProject(false);
     setProjectTitleDraft('');
     setNextActionDraft('');
+    setExtraActionDrafts([]);
   }, []);
 
   const finalizeNextAction = useCallback((projectId: string | null) => {
@@ -777,6 +780,13 @@ export function useInboxProcessingController({
       }, nextAction, currentTask.title);
       if (!applied) return;
 
+      // The converted capture becomes the project's first action; any extra
+      // actions typed at the split step follow it.
+      const extraActions = extraActionDrafts.map((title) => title.trim()).filter(Boolean);
+      for (const title of extraActions) {
+        await addTask(title, { status: 'next', projectId: project.id });
+      }
+      setExtraActionDrafts([]);
       setPendingStartDate(null);
       setPendingDueDate(null);
       setPendingReviewDate(null);
@@ -795,9 +805,11 @@ export function useInboxProcessingController({
     }
   }, [
     addProject,
+    addTask,
     applyProcessingEdits,
     buildScheduleUpdates,
     currentTask,
+    extraActionDrafts,
     moveToNext,
     nextActionDraft,
     processingTitle,
@@ -1085,6 +1097,8 @@ export function useInboxProcessingController({
     setProcessingTitleFocused,
     setProjectTitleDraft,
     setNextActionDraft,
+    extraActionDrafts,
+    setExtraActionDrafts,
     setSelectedEnergyLevel,
     setSelectedPriority,
     setSelectedTimeEstimate,

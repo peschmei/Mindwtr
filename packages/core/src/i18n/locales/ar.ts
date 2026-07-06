@@ -691,6 +691,8 @@ export const arOverrides: Record<string, string> = {
         'process.nextAction': 'الإجراء التالي',
         'process.createProject': 'إنشاء مشروع وإضافة الإجراء التالي',
         'process.nextActionRequired': 'أضف الإجراء التالي قبل إنشاء المشروع.',
+        'process.addAnotherAction': 'إضافة إجراء آخر',
+        'process.removeAction': 'إزالة الإجراء',
         'process.skip': 'تخطي وأضف إلى التالي',
         'process.addContext': 'يضيف',
         'process.newContextPlaceholder': 'سياق جديد...',

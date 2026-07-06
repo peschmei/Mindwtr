@@ -669,6 +669,8 @@ export const deOverrides: Record<string, string> = {
         'process.nextAction': 'Nächste Aktion',
         'process.createProject': 'Ein Projekt erstellen & Nächste Aktion hinzufügen',
         'process.nextActionRequired': 'Als nächste Aktion hinzufügen, bevor das Projekt erstellt wird.',
+        'process.addAnotherAction': 'Weitere Aktion hinzufügen',
+        'process.removeAction': 'Aktion entfernen',
         'process.skip': 'Überspringen & zu Nächste Aktionen hinzufügen',
         'process.addContext': 'Hinzufügen',
         'process.newContextPlaceholder': 'Neuer Kontext ...',

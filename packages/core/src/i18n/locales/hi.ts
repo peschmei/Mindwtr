@@ -625,6 +625,8 @@ export const hiOverrides: Record<string, string> = {
         'process.nextAction': 'अगला कदम',
         'process.createProject': 'प्रोजेक्ट बनाएं और अगली कार्रवाई जोड़ें',
         'process.nextActionRequired': 'प्रोजेक्ट बनाने से पहले अगली कार्रवाई जोड़ें.',
+        'process.addAnotherAction': 'एक और कार्रवाई जोड़ें',
+        'process.removeAction': 'कार्रवाई हटाएँ',
         'process.skip': 'छोड़ें और अगले में जोड़ें',
         'process.addContext': 'जोड़ना',
         'process.newContextPlaceholder': 'नया सन्दर्भ...',

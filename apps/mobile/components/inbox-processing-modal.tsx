@@ -65,6 +65,8 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
     isDelegateConfirmationDisabled,
     newContext,
     nextActionDraft,
+    extraActionDrafts,
+    setExtraActionDrafts,
     laterNoDateSelected,
     pendingDueDate,
     pendingDueDateOnly,
@@ -408,6 +410,8 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                           setProjectTitleDraft={setProjectTitleDraft}
                           nextActionDraft={nextActionDraft}
                           setNextActionDraft={setNextActionDraft}
+                          extraActionDrafts={extraActionDrafts}
+                          setExtraActionDrafts={setExtraActionDrafts}
                           filteredProjects={filteredProjects}
                           areaById={areaById}
                           hasExactProjectMatch={hasExactProjectMatch}
@@ -471,6 +475,8 @@ export function InboxProcessingModal({ visible, onClose }: InboxProcessingModalP
                           setProjectTitleDraft={setProjectTitleDraft}
                           nextActionDraft={nextActionDraft}
                           setNextActionDraft={setNextActionDraft}
+                          extraActionDrafts={extraActionDrafts}
+                          setExtraActionDrafts={setExtraActionDrafts}
                           filteredProjects={filteredProjects}
                           areaById={areaById}
                           hasExactProjectMatch={hasExactProjectMatch}

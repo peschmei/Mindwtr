@@ -27,6 +27,8 @@ type Props = {
   setProjectTitleDraft: (v: string) => void;
   nextActionDraft: string;
   setNextActionDraft: (v: string) => void;
+  extraActionDrafts: string[];
+  setExtraActionDrafts: (v: string[]) => void;
   filteredProjects: Project[];
   areaById: Map<string, Area>;
   hasExactProjectMatch: boolean;
@@ -55,6 +57,8 @@ export function InboxProjectSection({
   setProjectTitleDraft,
   nextActionDraft,
   setNextActionDraft,
+  extraActionDrafts,
+  setExtraActionDrafts,
   filteredProjects,
   areaById,
   hasExactProjectMatch,
@@ -235,6 +239,36 @@ export function InboxProjectSection({
             onSubmitEditing={handleConvertToProject}
             returnKeyType="done"
           />
+          {extraActionDrafts.map((draft, index) => (
+            <View key={index} style={styles.extraActionRow}>
+              <TextInput
+                autoFocus
+                value={draft}
+                onChangeText={(value) => setExtraActionDrafts(
+                  extraActionDrafts.map((current, i) => (i === index ? value : current)),
+                )}
+                placeholder={t('taskEdit.titleLabel')}
+                placeholderTextColor={tc.secondaryText}
+                accessibilityLabel={t('process.nextAction')}
+                style={[styles.projectSearchInput, styles.extraActionInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+              />
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t('process.removeAction')}
+                onPress={() => setExtraActionDrafts(extraActionDrafts.filter((_, i) => i !== index))}
+                style={styles.extraActionRemove}
+              >
+                <Text style={[styles.extraActionRemoveText, { color: tc.secondaryText }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => setExtraActionDrafts([...extraActionDrafts, ''])}
+            style={styles.addActionButton}
+          >
+            <Text style={[styles.addActionText, { color: tc.tint }]}>+ {t('process.addAnotherAction')}</Text>
+          </TouchableOpacity>
         </View>
         <TouchableOpacity
           style={[styles.createProjectButton, styles.projectConversionSubmit, { backgroundColor: filledButton.backgroundColor }]}

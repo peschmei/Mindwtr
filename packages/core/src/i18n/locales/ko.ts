@@ -622,6 +622,8 @@ export const koOverrides: Record<string, string> = {
         'process.nextAction': '다음 작업',
         'process.createProject': '프로젝트 생성 및 다음 작업 추가',
         'process.nextActionRequired': '프로젝트를 생성하기 전에 다음 작업을 추가하세요.',
+        'process.addAnotherAction': '다른 작업 추가',
+        'process.removeAction': '작업 제거',
         'process.skip': '건너뛰고 다음 항목에 추가',
         'process.addContext': '추가하다',
         'process.newContextPlaceholder': '새로운 맥락...',

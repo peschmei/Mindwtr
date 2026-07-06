@@ -636,6 +636,8 @@ export const plOverrides: Record<string, string> = {
         'process.quickDesc': 'Sprawdź szczegóły, wybierz wynik i od razu przejdź do następnego elementu.',
         'process.quickApplyHint': 'Zastosuj te wybory i przejdź do następnego elementu w skrzynce odbiorczej.',
         'process.quickMoveHint': 'Przenieś ten element i przejdź do następnego elementu w skrzynce odbiorczej.',
+        'process.addAnotherAction': 'Dodaj kolejną akcję',
+        'process.removeAction': 'Usuń akcję',
         'settings.title': 'Ustawienia',
         'settings.subtitle': 'Dostosuj swoje środowisko Mindwtr',
         'settings.appearance': 'Wygląd',
