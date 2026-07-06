@@ -55,7 +55,7 @@ import { useManualPullSync } from '@/hooks/use-manual-pull-sync';
 import { taskMatchesAreaFilter } from '@mindwtr/core';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 import { buildCopilotConfig, isAIKeyRequired, loadAIKey } from '../lib/ai-config';
-import { logError } from '../lib/app-log';
+import { logError, logWarn } from '../lib/app-log';
 import {
   beginMobilePerformanceDiagnostic,
   finishMobilePerformanceDiagnostic,
@@ -108,6 +108,19 @@ import {
   type MobileTaskListFilters,
 } from './task-list/task-list-filter-utils';
 import { useTaskListSelection } from './use-task-list-selection';
+
+// Diagnostic trap for the unreproduced mid-list gap report (Inbox, 2026-07-06):
+// logs the two events that can leave getItemLayout frames disagreeing with
+// rendered rows. Capped and deduped so it stays quiet in normal use.
+const LIST_LAYOUT_LOG_LIMIT = 40;
+const listLayoutLogState = { count: 0, seen: new Set<string>() };
+const logListLayoutAnomaly = (message: string, extra: Record<string, unknown>) => {
+  const dedupeKey = `${message}:${String(extra.itemKey ?? '')}`;
+  if (listLayoutLogState.count >= LIST_LAYOUT_LOG_LIMIT || listLayoutLogState.seen.has(dedupeKey)) return;
+  listLayoutLogState.seen.add(dedupeKey);
+  listLayoutLogState.count += 1;
+  void logWarn(message, { scope: 'list-layout', extra });
+};
 
 const REMOVE_CLIPPED_SUBVIEWS_MIN_ITEMS = 15;
 const PROJECT_REORDER_ITEM_HEIGHT = 80;
@@ -961,7 +974,15 @@ function TaskListComponent({
   const registerItemHeight = useCallback((itemKey: string, height: number) => {
     const rounded = Math.round(height);
     if (!Number.isFinite(rounded) || rounded <= 0) return;
-    if (itemHeightsRef.current[itemKey] === rounded) return;
+    const previous = itemHeightsRef.current[itemKey];
+    if (previous === rounded) return;
+    if (previous !== undefined && Math.abs(previous - rounded) > 24) {
+      logListLayoutAnomaly('row height diverged from stored frame', {
+        itemKey,
+        previousHeight: previous,
+        nextHeight: rounded,
+      });
+    }
     itemHeightsRef.current[itemKey] = rounded;
     setItemLayoutVersion((prev) => prev + 1);
   }, []);
@@ -982,9 +1003,23 @@ function TaskListComponent({
   }, [getListItemLayoutKey, itemLayoutVersion, listItems]);
   useEffect(() => {
     const activeItemKeys = new Set(listItems.map(getListItemLayoutKey));
+    const activeKeysByPrefix = new Map<string, string>();
+    activeItemKeys.forEach((fullKey) => {
+      activeKeysByPrefix.set(fullKey.split('@layout:')[0], fullKey);
+    });
     let didPrune = false;
     Object.keys(itemHeightsRef.current).forEach((itemKey) => {
       if (!activeItemKeys.has(itemKey)) {
+        // A revision bump re-keys a still-listed row; until its onLayout
+        // re-fires (which needs a pixel-height change), frames serve the
+        // estimate instead of the known height.
+        const successor = activeKeysByPrefix.get(itemKey.split('@layout:')[0]);
+        if (successor !== undefined && itemHeightsRef.current[successor] === undefined) {
+          logListLayoutAnomaly('measured height orphaned by revision change', {
+            itemKey: itemKey.split('@layout:')[0],
+            previousHeight: itemHeightsRef.current[itemKey],
+          });
+        }
         delete itemHeightsRef.current[itemKey];
         didPrune = true;
       }
