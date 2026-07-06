@@ -63,12 +63,14 @@ private struct MindwtrFocusLockView: View {
             Text(focusedTitle ?? entry.payload.emptyMessage)
 
         case .accessoryCircular:
+            // The star counts starred (Today's Focus) tasks, not the truncated
+            // display list — items.count is capped by the payload's maxItems.
             ZStack {
                 AccessoryWidgetBackground()
                 VStack(spacing: 0) {
                     Image(systemName: "star.fill")
                         .font(.system(size: 11, weight: .semibold))
-                    Text("\(entry.payload.items.count)")
+                    Text("\(entry.payload.focusedCount ?? entry.payload.items.count)")
                         .font(.system(size: 16, weight: .bold))
                 }
             }

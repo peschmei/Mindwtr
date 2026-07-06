@@ -31,6 +31,7 @@ const basePayload: TasksWidgetPayload = {
     subtitle: 'Inbox: 1',
     inboxLabel: 'Inbox',
     inboxCount: 1,
+    focusedCount: 0,
     items: [
         {
             id: 'task-1',

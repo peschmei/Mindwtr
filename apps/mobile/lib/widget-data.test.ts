@@ -62,6 +62,36 @@ describe('widget-data', () => {
         expect(payload.subtitle).toBe('Inbox: 0');
     });
 
+    it('puts starred tasks first and counts them in focusedCount regardless of maxItems (#821)', () => {
+        const now = new Date().toISOString();
+        const data: AppData = {
+            ...baseData,
+            tasks: [
+                { id: '1', title: 'Next A', status: 'next', isFocusedToday: false, tags: [], contexts: [], createdAt: now, updatedAt: now },
+                { id: '2', title: 'Starred next', status: 'next', isFocusedToday: true, tags: [], contexts: [], createdAt: now, updatedAt: now },
+                { id: '3', title: 'Starred waiting', status: 'waiting', isFocusedToday: true, tags: [], contexts: [], createdAt: now, updatedAt: now },
+                { id: '4', title: 'Next B', status: 'next', isFocusedToday: false, tags: [], contexts: [], createdAt: now, updatedAt: now },
+            ],
+        };
+        const payload = buildWidgetPayload(data, 'en', { maxItems: 2 });
+        expect(payload.items.map((item) => item.title)).toEqual(['Starred next', 'Starred waiting']);
+        expect(payload.focusedCount).toBe(2);
+    });
+
+    it('reports zero focusedCount when nothing is starred while still listing next actions (#821)', () => {
+        const now = new Date().toISOString();
+        const data: AppData = {
+            ...baseData,
+            tasks: [
+                { id: '1', title: 'Test1', status: 'next', isFocusedToday: false, tags: [], contexts: [], createdAt: now, updatedAt: now },
+                { id: '2', title: 'Test 2', status: 'next', isFocusedToday: false, tags: [], contexts: [], createdAt: now, updatedAt: now },
+            ],
+        };
+        const payload = buildWidgetPayload(data, 'en');
+        expect(payload.items.map((item) => item.title)).toEqual(['Test1', 'Test 2']);
+        expect(payload.focusedCount).toBe(0);
+    });
+
     it('keeps the widget palette aligned with Sepia theme settings', () => {
         const payload = buildWidgetPayload(
             {

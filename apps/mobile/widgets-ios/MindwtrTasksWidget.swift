@@ -52,6 +52,8 @@ extension MindwtrWidgetPalette {
 struct MindwtrTasksWidgetPayload: Decodable {
     let headerTitle: String
     let subtitle: String
+    // Optional: payloads written before the field existed may still be cached.
+    let focusedCount: Int?
     let items: [MindwtrWidgetTaskItem]
     let emptyMessage: String
     let captureLabel: String
@@ -64,6 +66,7 @@ struct MindwtrTasksWidgetPayload: Decodable {
         MindwtrTasksWidgetPayload(
             headerTitle: "Today",
             subtitle: "Inbox: 0",
+            focusedCount: 0,
             items: [],
             emptyMessage: "No tasks",
             captureLabel: "Quick capture",

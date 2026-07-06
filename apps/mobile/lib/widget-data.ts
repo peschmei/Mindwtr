@@ -53,6 +53,7 @@ export interface TasksWidgetPayload {
     subtitle: string;
     inboxLabel: string;
     inboxCount: number;
+    focusedCount: number;
     items: WidgetTaskItem[];
     emptyMessage: string;
     captureLabel: string;
@@ -199,8 +200,22 @@ export function buildWidgetPayload(
         return !scheduleTaskIds.has(task.id);
     });
 
-    const focusTasks = [...scheduleTasks, ...nextTasks];
-    const listSource = sortTasksBy(focusTasks, resolveWidgetTaskSort(data));
+    // Starred tasks mirror core's focusedTasks (activeTasks already excludes
+    // done/reference/archived/deleted and inactive projects) and lead the list,
+    // so "current focused task" surfaces (lock widget, list head) show the task
+    // the user actually starred — including starred waiting/someday tasks,
+    // which keep their status by design.
+    const starredTasks = activeTasks.filter((task) => (
+        task.isFocusedToday === true
+        && (!isPlannedForFuture(task) || isScheduleCandidate(task))
+    ));
+    const starredTaskIds = new Set(starredTasks.map((task) => task.id));
+    const focusTasks = [...scheduleTasks, ...nextTasks].filter((task) => !starredTaskIds.has(task.id));
+    const widgetSort = resolveWidgetTaskSort(data);
+    const listSource = [
+        ...sortTasksBy(starredTasks, widgetSort),
+        ...sortTasksBy(focusTasks, widgetSort),
+    ];
 
     const maxItems = Number.isFinite(options?.maxItems)
         ? Math.max(1, Math.floor(options?.maxItems as number))
@@ -224,6 +239,7 @@ export function buildWidgetPayload(
         subtitle: subtitleParts.join(' · '),
         inboxLabel: tr['nav.inbox'] ?? 'Inbox',
         inboxCount,
+        focusedCount: starredTasks.length,
         items,
         emptyMessage: tr['agenda.noTasks'] ?? 'No tasks',
         captureLabel: tr['widget.capture'] ?? 'Quick capture',
