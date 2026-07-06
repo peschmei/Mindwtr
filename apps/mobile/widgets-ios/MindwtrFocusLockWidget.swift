@@ -76,14 +76,25 @@ private struct MindwtrFocusLockView: View {
             }
 
         default:
+            // accessoryRectangular fits ~3 text rows: caption + two task lines.
+            // A single task keeps the two-line title; with more, the top two
+            // starred tasks get one line each (the circular ★N carries the rest).
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.payload.headerTitle)
                     .font(.system(size: 12, weight: .medium))
                     .opacity(0.75)
                     .lineLimit(1)
-                Text(focusedTitle ?? entry.payload.emptyMessage)
-                    .font(.system(size: 14, weight: .semibold))
-                    .lineLimit(2)
+                if entry.payload.items.count > 1 {
+                    ForEach(entry.payload.items.prefix(2), id: \.id) { item in
+                        Text(item.title)
+                            .font(.system(size: 14, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                } else {
+                    Text(focusedTitle ?? entry.payload.emptyMessage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(2)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
