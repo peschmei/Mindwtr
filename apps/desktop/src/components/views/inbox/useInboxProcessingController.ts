@@ -669,11 +669,14 @@ export function useInboxProcessingController({
                 ...buildScheduleUpdates(),
             }, nextAction, processingTask.title);
             if (applied) {
-                // The converted capture becomes the project's first action;
-                // any extra actions typed at the split step follow it.
+                // The converted capture becomes the project's clarified next
+                // action. Extra actions typed at the split step are raw
+                // captures, so they return to the Inbox (project attached)
+                // for their own clarify pass — same semantics as a quick-add
+                // with a +Project token (#827).
                 const extraActions = extraActionDrafts.map((title) => title.trim()).filter(Boolean);
                 for (const title of extraActions) {
-                    await addTask(title, { status: 'next', projectId: project.id });
+                    await addTask(title, { status: 'inbox', projectId: project.id });
                 }
                 setExtraActionDrafts([]);
                 processNext();

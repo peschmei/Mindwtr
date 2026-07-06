@@ -724,7 +724,7 @@ describe('InboxProcessingModal', () => {
     );
     expect(addTask).toHaveBeenCalledTimes(1);
     expect(addTask).toHaveBeenCalledWith('Book venue', {
-      status: 'next',
+      status: 'inbox',
       projectId: 'project-created',
     });
   });

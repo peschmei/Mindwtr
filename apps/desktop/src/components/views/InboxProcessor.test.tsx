@@ -212,7 +212,7 @@ describe('InboxProcessor', () => {
             }));
             expect(addTask).toHaveBeenCalledTimes(1);
             expect(addTask).toHaveBeenCalledWith('Book venue', {
-                status: 'next',
+                status: 'inbox',
                 projectId: 'project-1',
             });
         });
