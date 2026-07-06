@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 import {
     hidePersistentCaptureNotification,
@@ -74,4 +74,23 @@ export async function restorePersistentCaptureNotificationOnStartup(strings: Per
     if (!enabled) return;
     if (!(await hasNotificationPermission())) return;
     applyPersistentCaptureNotification(true, strings);
+}
+
+/**
+ * Keep the pinned notification alive for the app's lifetime: restore it now
+ * and again on every return to the foreground. OEMs remove an app's status-bar
+ * notifications when they kill its process (swipe-away "close", battery
+ * managers), and that removal does not fire the dismiss re-post intent — so the
+ * next app open must re-assert the handle (#819). Posting with the same id is
+ * an in-place update on a silent channel, so an already-pinned notification
+ * does not flicker or re-alert. Returns an unsubscribe.
+ */
+export function keepPersistentCaptureNotificationArmed(getStrings: () => PersistentCaptureStrings): () => void {
+    if (!isPersistentCaptureSupported()) return () => {};
+    void restorePersistentCaptureNotificationOnStartup(getStrings());
+    const subscription = AppState.addEventListener('change', (state) => {
+        if (state !== 'active') return;
+        void restorePersistentCaptureNotificationOnStartup(getStrings());
+    });
+    return () => subscription.remove();
 }

@@ -42,7 +42,7 @@ import {
   type AppAnnouncementAction,
 } from '@mindwtr/core';
 import { mobileStorage } from '../lib/storage-adapter';
-import { restorePersistentCaptureNotificationOnStartup } from '../lib/persistent-capture-notification';
+import { keepPersistentCaptureNotificationArmed } from '../lib/persistent-capture-notification';
 import { markStartupPhase } from '../lib/startup-profiler';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { logError, logInfo, logWarn, setupGlobalErrorLogging } from '../lib/app-log';
@@ -442,15 +442,16 @@ function RootLayoutContentInner() {
     pathname,
     router,
   });
-  // Android drops notifications on reboot; re-arm the persistent quick-capture
-  // notification (when enabled) once language strings are ready (#819).
+  // Android drops notifications on reboot and OEMs drop them when they kill
+  // the app process; re-arm the persistent quick-capture notification (when
+  // enabled) on start and on every return to the foreground (#819).
   useEffect(() => {
     if (!languageReady || Platform.OS !== 'android') return;
-    void restorePersistentCaptureNotificationOnStartup({
+    return keepPersistentCaptureNotificationArmed(() => ({
       title: resolveText('captureNotification.title', 'Quick capture'),
       text: resolveText('captureNotification.text', 'Tap to capture to your Inbox'),
       channelName: resolveText('captureNotification.channelName', 'Quick capture'),
-    });
+    }));
   }, [languageReady, resolveText]);
   useRootLayoutContextAutomation({
     dataReady,

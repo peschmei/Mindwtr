@@ -16,11 +16,20 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     },
 }));
 
+const appStateListeners = vi.hoisted(() => [] as Array<(state: string) => void>);
+const mockAppStateRemove = vi.hoisted(() => vi.fn());
+
 vi.mock('react-native', () => ({
     Platform: platformState,
     PermissionsAndroid: {
         check: mockPermissionCheck,
         PERMISSIONS: { POST_NOTIFICATIONS: 'android.permission.POST_NOTIFICATIONS' },
+    },
+    AppState: {
+        addEventListener: (_event: string, listener: (state: string) => void) => {
+            appStateListeners.push(listener);
+            return { remove: mockAppStateRemove };
+        },
     },
 }));
 
@@ -31,16 +40,22 @@ vi.mock('@/modules/notification-open-intents', () => ({
 
 import {
     applyPersistentCaptureNotification,
+    keepPersistentCaptureNotificationArmed,
     readPersistentCaptureEnabled,
     restorePersistentCaptureNotificationOnStartup,
     writePersistentCaptureEnabled,
 } from './persistent-capture-notification';
+
+const flushAsync = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+};
 
 const strings = { title: 'Quick add', text: 'Tap to capture', channelName: 'Quick capture' };
 
 describe('persistent-capture-notification', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        appStateListeners.length = 0;
         platformState.OS = 'android';
         platformState.Version = 34;
         mockPermissionCheck.mockResolvedValue(true);
@@ -80,6 +95,30 @@ describe('persistent-capture-notification', () => {
         mockPermissionCheck.mockResolvedValue(false);
         await restorePersistentCaptureNotificationOnStartup(strings);
         expect(mockShow).not.toHaveBeenCalled();
+    });
+
+    it('re-arms on every return to the foreground while enabled (#819)', async () => {
+        mockGetItem.mockResolvedValue('true');
+        const unsubscribe = keepPersistentCaptureNotificationArmed(() => strings);
+        await flushAsync();
+        expect(mockShow).toHaveBeenCalledTimes(1);
+
+        appStateListeners.forEach((listener) => listener('background'));
+        await flushAsync();
+        expect(mockShow).toHaveBeenCalledTimes(1);
+
+        appStateListeners.forEach((listener) => listener('active'));
+        await flushAsync();
+        expect(mockShow).toHaveBeenCalledTimes(2);
+
+        // Turning the preference off makes foreground re-arms no-ops.
+        mockGetItem.mockResolvedValue(null);
+        appStateListeners.forEach((listener) => listener('active'));
+        await flushAsync();
+        expect(mockShow).toHaveBeenCalledTimes(2);
+
+        unsubscribe();
+        expect(mockAppStateRemove).toHaveBeenCalled();
     });
 
     it('is inert off Android', async () => {
