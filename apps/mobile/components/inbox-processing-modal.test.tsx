@@ -661,6 +661,53 @@ describe('InboxProcessingModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('chains a fresh action input from keyboard submit instead of converting (#827)', () => {
+    const onClose = vi.fn();
+    let tree: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<InboxProcessingModal visible onClose={onClose} />);
+    });
+
+    const root = tree!.root;
+
+    act(() => {
+      findPressableWithText(root, 'process.moreThanOneStepYes').props.onPress();
+    });
+
+    const findActionInputs = () => root.findAll((node) => (
+      typeof node.type === 'string'
+      && node.props.accessibilityLabel === 'process.nextAction'
+      && typeof node.props.onChangeText === 'function'
+    ));
+
+    act(() => {
+      findActionInputs()[0].props.onChangeText('Draft launch brief');
+    });
+    act(() => {
+      findActionInputs()[0].props.onSubmitEditing();
+    });
+    expect(findActionInputs()).toHaveLength(2);
+    expect(findActionInputs()[0].props.blurOnSubmit).toBe(false);
+
+    act(() => {
+      findActionInputs()[1].props.onChangeText('Book venue');
+    });
+    act(() => {
+      findActionInputs()[1].props.onSubmitEditing();
+    });
+    expect(findActionInputs()).toHaveLength(3);
+
+    // Submit on an empty trailing row must not add another.
+    act(() => {
+      findActionInputs()[2].props.onSubmitEditing();
+    });
+    expect(findActionInputs()).toHaveLength(3);
+
+    expect(addProject).not.toHaveBeenCalled();
+    expect(updateTask).not.toHaveBeenCalled();
+  });
+
   it('creates extra next actions in the new project when added at the split step (#827)', async () => {
     addProject.mockResolvedValueOnce({
       id: 'project-created',

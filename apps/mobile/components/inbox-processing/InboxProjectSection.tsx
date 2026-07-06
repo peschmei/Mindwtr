@@ -229,6 +229,10 @@ export function InboxProjectSection({
           <Text style={[styles.projectFieldLabel, { color: tc.secondaryText }]}>
             {t('process.nextAction')}
           </Text>
+          {/* Enter chains into a fresh action row (desktop parity) and keeps
+              the keyboard up — blurring here collapses the Android keyboard
+              inset and makes the sheet visibly jump (#827 rc.3 feedback).
+              The Create project button is the only way to finish the step. */}
           <TextInput
             value={nextActionDraft}
             onChangeText={setNextActionDraft}
@@ -236,8 +240,12 @@ export function InboxProjectSection({
             placeholderTextColor={tc.secondaryText}
             accessibilityLabel={t('process.nextAction')}
             style={[styles.projectSearchInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
-            onSubmitEditing={handleConvertToProject}
-            returnKeyType="done"
+            onSubmitEditing={() => {
+              if (!nextActionDraft.trim()) return;
+              setExtraActionDrafts([...extraActionDrafts, '']);
+            }}
+            blurOnSubmit={false}
+            returnKeyType="next"
           />
           {extraActionDrafts.map((draft, index) => (
             <View key={index} style={styles.extraActionRow}>
@@ -251,6 +259,12 @@ export function InboxProjectSection({
                 placeholderTextColor={tc.secondaryText}
                 accessibilityLabel={t('process.nextAction')}
                 style={[styles.projectSearchInput, styles.extraActionInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
+                onSubmitEditing={() => {
+                  if (index !== extraActionDrafts.length - 1 || !draft.trim()) return;
+                  setExtraActionDrafts([...extraActionDrafts, '']);
+                }}
+                blurOnSubmit={false}
+                returnKeyType="next"
               />
               <TouchableOpacity
                 accessibilityRole="button"
