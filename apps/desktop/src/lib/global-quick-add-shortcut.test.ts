@@ -70,8 +70,10 @@ describe('global quick add shortcut', () => {
         const flatpakLabels = getGlobalQuickAddShortcutOptions({ isFlatpak: true }).map((option) => option.label);
 
         expect(macLabels).toContain('Ctrl+Option+M (recommended)');
+        expect(macLabels).toContain('Cmd+Shift+A (legacy)');
         expect(nonMacLabels).toContain('Ctrl+Alt+M (recommended)');
-        expect(windowsLabels).toContain('Ctrl+Shift+A (recommended)');
+        expect(windowsLabels).toContain('Ctrl+Alt+M (recommended)');
+        expect(windowsLabels).toContain('Ctrl+Shift+A (legacy)');
         expect(windowsLabels).toContain('Disabled (default)');
         expect(flatpakLabels).toContain('Disabled (Flatpak default)');
     });

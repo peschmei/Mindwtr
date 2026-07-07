@@ -57,11 +57,11 @@ export function getGlobalQuickAddShortcutOptions(platform: GlobalQuickAddShortcu
     const isWindows = platform.isWindows === true;
     const defaultShortcut = getDefaultGlobalQuickAddShortcut(platform);
     const legacyLabel = isMac ? 'Cmd+Shift+A' : 'Ctrl+Shift+A';
-    const legacySuffix = isWindows
+    // Never recommend the legacy combo: Chrome (tab search), Word, and Excel
+    // all use Ctrl/Cmd+Shift+A, and a global hotkey steals it from them.
+    const legacySuffix = defaultShortcut === GLOBAL_QUICK_ADD_SHORTCUT_LEGACY
         ? ' (recommended)'
-        : defaultShortcut === GLOBAL_QUICK_ADD_SHORTCUT_LEGACY
-            ? ' (recommended)'
-            : ' (legacy)';
+        : ' (legacy)';
     const disabledLabel = isWindows
         ? 'Disabled (default)'
         : isFlatpak
@@ -73,9 +73,13 @@ export function getGlobalQuickAddShortcutOptions(platform: GlobalQuickAddShortcu
     return [
         {
             value: GLOBAL_QUICK_ADD_SHORTCUT_DEFAULT,
+            // On Windows the default is disabled, but Ctrl+Alt+M is still the
+            // pick to recommend when enabling one (least layout/app conflicts).
             label:
                 (isMac ? 'Ctrl+Option+M' : 'Ctrl+Alt+M')
-                + (defaultShortcut === GLOBAL_QUICK_ADD_SHORTCUT_DEFAULT ? ' (recommended)' : ''),
+                + (defaultShortcut === GLOBAL_QUICK_ADD_SHORTCUT_DEFAULT || isWindows
+                    ? ' (recommended)'
+                    : ''),
         },
         {
             value: GLOBAL_QUICK_ADD_SHORTCUT_ALTERNATE_N,
