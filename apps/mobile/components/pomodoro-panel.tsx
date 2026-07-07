@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View }
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   type Task,
+  addTimeSpentMinutes,
   createPomodoroState,
   DEFAULT_POMODORO_DURATIONS,
   formatPomodoroClock,
@@ -103,6 +104,27 @@ export function PomodoroPanel({
     autoStartOptionsRef.current = autoStartOptions;
   }, [autoStartOptions]);
 
+  // Completed focus sessions add their focus minutes to the linked task's
+  // synced time-spent total. Every history change funnels through
+  // setSessionHistory, so this one diff covers ticks, controls, and hydration.
+  const previousHistoryRef = useRef<PomodoroSessionHistory | null>(null);
+  useEffect(() => {
+    const prev = previousHistoryRef.current;
+    previousHistoryRef.current = sessionHistory;
+    if (!prev || prev === sessionHistory) return;
+    const { tasks: storeTasks, updateTask } = useTaskStore.getState();
+    for (const [taskId, count] of Object.entries(sessionHistory.completedFocusSessionsByTaskId)) {
+      const delta = count - (prev.completedFocusSessionsByTaskId[taskId] ?? 0);
+      if (delta <= 0) continue;
+      const target = storeTasks.find((candidate) => candidate.id === taskId);
+      if (!target) continue;
+      const nextTotal = addTimeSpentMinutes(target.timeSpentMinutes, delta * durations.focusMinutes);
+      if (nextTotal !== undefined && nextTotal !== target.timeSpentMinutes) {
+        void updateTask(taskId, { timeSpentMinutes: nextTotal });
+      }
+    }
+  }, [durations.focusMinutes, sessionHistory]);
+
   useEffect(() => {
     if (!linkTaskEnabled) {
       setIsTaskPickerOpen(false);
@@ -122,6 +144,10 @@ export function PomodoroPanel({
         if (!raw || cancelled) return;
         const parsed = JSON.parse(raw) as ReturnType<typeof serializePomodoroSession>;
         if (cancelled) return;
+        // Prime the credit diff with the raw stored counts so a focus session
+        // that completed while the app was closed still credits its minutes,
+        // without re-crediting sessions recorded on earlier runs.
+        previousHistoryRef.current = sanitizePomodoroSessionHistory(parsed.sessionHistory);
         applyResolvedSession(resolvePomodoroSession(parsed, Date.now(), autoStartOptionsRef.current), { emitEvent: false });
       } catch (error) {
         void logWarn('Failed to restore pomodoro session', {
