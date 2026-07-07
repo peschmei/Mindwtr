@@ -46,7 +46,7 @@ Mindwtr focuses on GTD and practical execution, and is built to be **simple by d
 
 - Keep workflows simple by default
 - Avoid unnecessary UI complexity
-- Prefer inference over configuration: if the right behavior can be determined automatically (platform, install channel, existing data, context), implement that instead of adding a setting — and reuse an existing switch before minting a new one (for example, update checks adapt to the install channel instead of offering a toggle)
+- Prefer automatic over manual: if the right outcome can be inferred (platform, install channel, existing data, context), the app should just do it — no new setting, no prompt, no extra workflow step or UI control — and reuse an existing switch before minting a new one (for example, update checks adapt to the install channel instead of offering a toggle)
 - Preserve data safety and reliability
 - Work consistently across platforms when applicable
 
