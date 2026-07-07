@@ -1964,6 +1964,11 @@ function TaskListComponent({
             maxToRenderPerBatch={12}
             windowSize={7}
             removeClippedSubviews={false}
+            // DraggableFlatList's outer container takes containerStyle; `style`
+            // lands on the inner FlatList. Without flex on the container it
+            // auto-sizes to the inner list's flex basis of 0, rendering an
+            // empty screen in reorder mode (#784).
+            containerStyle={styles.projectDragSelfScrollList}
             style={styles.projectDragSelfScrollList}
             contentContainerStyle={styles.projectDragSelfScrollContent}
           />
