@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     getDesktopUpdateTarget,
+    isAutoUpdateCheckAllowed,
     isDesktopUpdateReminderAllowed,
     isUpdateReminderVersionTrusted,
 } from './desktop-update-targets';
@@ -22,7 +23,6 @@ describe('desktop update targets', () => {
             'github-release',
             'microsoft-store',
             'winget',
-            'scoop',
             'chocolatey',
             'homebrew',
             'aur',
@@ -36,11 +36,19 @@ describe('desktop update targets', () => {
         }
     });
 
-    it('stays quiet on channels that update themselves', () => {
-        for (const source of ['flatpak', 'snap', 'mac-app-store', 'unknown'] as const) {
+    it('stays quiet on channels that update themselves or have no canonical feed', () => {
+        for (const source of ['flatpak', 'snap', 'mac-app-store', 'scoop', 'unknown'] as const) {
             expect(isDesktopUpdateReminderAllowed(source)).toBe(false);
         }
         expect(isDesktopUpdateReminderAllowed(null)).toBe(false);
+    });
+
+    it('blocks unsolicited background checks for scoop installs only', () => {
+        expect(isAutoUpdateCheckAllowed('scoop')).toBe(false);
+        expect(isAutoUpdateCheckAllowed('direct')).toBe(true);
+        expect(isAutoUpdateCheckAllowed('winget')).toBe(true);
+        expect(isAutoUpdateCheckAllowed('flatpak')).toBe(true);
+        expect(isAutoUpdateCheckAllowed(null)).toBe(true);
     });
 
     it('routes Microsoft Store update reminders to the Store updates page', () => {
@@ -62,8 +70,6 @@ describe('desktop update targets', () => {
         expect(isUpdateReminderVersionTrusted('winget', 'winget')).toBe(true);
         expect(isUpdateReminderVersionTrusted('winget', 'github-release')).toBe(false);
         expect(isUpdateReminderVersionTrusted('homebrew', 'github-release')).toBe(false);
-        expect(isUpdateReminderVersionTrusted('scoop', 'scoop')).toBe(true);
-        expect(isUpdateReminderVersionTrusted('scoop', 'github-release')).toBe(false);
         expect(isUpdateReminderVersionTrusted('chocolatey', 'chocolatey')).toBe(true);
         expect(isUpdateReminderVersionTrusted('chocolatey', 'github-release')).toBe(false);
         expect(isUpdateReminderVersionTrusted('aur-source', 'aur')).toBe(true);

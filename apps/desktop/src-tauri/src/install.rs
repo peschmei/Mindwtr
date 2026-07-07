@@ -232,7 +232,8 @@ fn detect_install_source() -> String {
         if is_windows_store_install() {
             return "microsoft-store".to_string();
         }
-        // Scoop typically unpacks the portable zip, so this must win over portable.
+        // Scoop extracts whatever the manifest ships (portable zip or setup
+        // archive) under scoop\apps, so this must win over the portable check.
         if is_scoop_install() {
             return "scoop".to_string();
         }

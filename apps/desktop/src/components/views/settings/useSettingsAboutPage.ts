@@ -26,6 +26,7 @@ import {
     getInstallSourceOrFallback,
     isTauriRuntime,
 } from '../../../lib/runtime';
+import { isAutoUpdateCheckAllowed } from '../../../lib/desktop-update-targets';
 import { reportError } from '../../../lib/report-error';
 import { resolveDesktopAnalyticsVersion } from '../../../lib/analytics-heartbeat';
 import { getLogPath } from '../../../lib/app-log';
@@ -182,6 +183,9 @@ export function useSettingsAboutPage({
 
     useEffect(() => {
         if (!isTauri || !appVersion || appVersion === 'web') return;
+        // Quiet channels (e.g. Scoop) never phone home on their own; updates
+        // are only checked when the user clicks the button.
+        if (!isAutoUpdateCheckAllowed(installSource)) return;
         let lastCheck = 0;
         try {
             lastCheck = Number(

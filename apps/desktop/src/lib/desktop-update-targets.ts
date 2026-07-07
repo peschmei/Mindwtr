@@ -14,15 +14,16 @@ import {
 } from './update-service';
 
 // Channels that update themselves in the background (Flatpak, Snap, App Store)
-// stay quiet; every channel where the user must act gets a reminder routed to
-// that channel's own update path.
+// stay quiet, and so does Scoop: any bucket can carry the manifest, so there is
+// no canonical feed to check against and the package manager owns updates.
+// Every other channel where the user must act gets a reminder routed to that
+// channel's own update path.
 const UPDATE_REMINDER_DESKTOP_INSTALL_SOURCES = new Set<InstallSource>([
     'direct',
     'portable',
     'github-release',
     'microsoft-store',
     'winget',
-    'scoop',
     'chocolatey',
     'homebrew',
     'aur',
@@ -37,13 +38,20 @@ const UPDATE_REMINDER_DESKTOP_INSTALL_SOURCES = new Set<InstallSource>([
 // update; a GitHub-only result means the channel has not published it yet.
 const CHANNEL_PINNED_INSTALL_SOURCES = new Set<InstallSource>([
     'winget',
-    'scoop',
     'chocolatey',
     'homebrew',
     'aur',
     'aur-bin',
     'aur-source',
 ]);
+
+// Quiet channels never make unsolicited update requests: no reminder and no
+// background badge check. The manual About-page check remains user-initiated.
+const AUTO_UPDATE_CHECK_QUIET_INSTALL_SOURCES = new Set<InstallSource>(['scoop']);
+
+export const isAutoUpdateCheckAllowed = (
+    installSource: InstallSource | null | undefined,
+): boolean => !installSource || !AUTO_UPDATE_CHECK_QUIET_INSTALL_SOURCES.has(installSource);
 
 const UPDATE_NOW_ACTION_LABEL = 'Update now';
 const MS_STORE_UPDATE_ACTION_LABEL = 'Update in Microsoft Store';

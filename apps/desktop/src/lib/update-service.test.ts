@@ -200,12 +200,9 @@ describe("update-service channel selection", () => {
     expect(normalizeInstallSource("choco")).toBe("chocolatey");
   });
 
-  it("pins scoop installs to the Scoop bucket manifest version", async () => {
+  it("reports the GitHub release for scoop manual checks without a bucket lookup", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes("homebrew-mindwtr/main/bucket/mindwtr.json")) {
-        return jsonResponse({ version: "1.1.0" });
-      }
       if (
         url.includes("api.github.com/repos/dongdongbh/Mindwtr/releases/latest")
       ) {
@@ -223,9 +220,10 @@ describe("update-service channel selection", () => {
     const result = await checkForUpdates("1.0.0", { installSource: "scoop" });
 
     expect(result.hasUpdate).toBe(true);
-    expect(result.source).toBe("scoop");
-    expect(result.latestVersion).toBe("1.1.0");
-    expect(result.sourceFallback).toBe(false);
+    expect(result.source).toBe("github-release");
+    expect(result.latestVersion).toBe("1.9.0");
+    // Only the GitHub API is contacted; no per-bucket guessing.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("pins chocolatey installs to the Chocolatey package version", async () => {

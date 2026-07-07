@@ -18,9 +18,6 @@ const WINGET_PACKAGE_URL =
   "https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dongdongbh/Mindwtr";
 const HOMEBREW_CASK_API = "https://formulae.brew.sh/api/cask/mindwtr.json";
 const HOMEBREW_CASK_URL = "https://formulae.brew.sh/cask/mindwtr";
-const SCOOP_MANIFEST_API =
-  "https://raw.githubusercontent.com/dongdongbh/homebrew-mindwtr/main/bucket/mindwtr.json";
-const SCOOP_BUCKET_URL = "https://github.com/dongdongbh/homebrew-mindwtr";
 const CHOCOLATEY_PACKAGE_API =
   "https://community.chocolatey.org/api/v2/Packages()?$filter=Id%20eq%20%27mindwtr%27%20and%20IsLatestVersion";
 const CHOCOLATEY_PACKAGE_URL =
@@ -63,7 +60,6 @@ const FLATPAK_INSTALL_SOURCE_PREFIX = "flatpak:";
 export type UpdateSource =
   | "github-release"
   | "winget"
-  | "scoop"
   | "chocolatey"
   | "homebrew"
   | "aur"
@@ -111,7 +107,6 @@ const isManagedInstallSource = (installSource: InstallSource): boolean => {
     installSource === "mac-app-store" ||
     installSource === "homebrew" ||
     installSource === "winget" ||
-    installSource === "scoop" ||
     installSource === "chocolatey" ||
     installSource === "aur-bin" ||
     installSource === "aur-source" ||
@@ -406,27 +401,6 @@ const fetchHomebrewLatestVersion = async (): Promise<SourceVersionResult> => {
   };
 };
 
-const fetchScoopLatestVersion = async (): Promise<SourceVersionResult> => {
-  const response = await fetchForUpdates(SCOOP_MANIFEST_API, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "Mindwtr-App",
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Scoop bucket manifest error: ${response.status}`);
-  }
-  const payload = (await response.json()) as { version?: unknown };
-  const version =
-    typeof payload.version === "string" ? payload.version.trim() : "";
-  if (!version) throw new Error("Scoop bucket manifest returned no version.");
-  return {
-    source: "scoop",
-    version: normalizeComparableVersion(version),
-    releaseUrl: SCOOP_BUCKET_URL,
-  };
-};
-
 const fetchChocolateyLatestVersion = async (): Promise<SourceVersionResult> => {
   const response = await fetchForUpdates(CHOCOLATEY_PACKAGE_API, {
     headers: {
@@ -589,8 +563,8 @@ const fetchSourceVersion = async (
       return fetchHomebrewLatestVersion();
     case "winget":
       return fetchWingetLatestVersion();
-    case "scoop":
-      return fetchScoopLatestVersion();
+    // Scoop has no canonical feed (any bucket can carry the manifest), so a
+    // manual check reports the GitHub release and defers installs to `scoop update`.
     case "chocolatey":
       return fetchChocolateyLatestVersion();
     case "aur":
@@ -789,7 +763,6 @@ export {
   HOMEBREW_CASK_URL,
   MS_STORE_URL,
   MS_STORE_UPDATES_URL,
-  SCOOP_BUCKET_URL,
   SNAPCRAFT_PACKAGE_URL,
   WINGET_PACKAGE_URL,
 };
