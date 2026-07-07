@@ -111,6 +111,12 @@ export const resolveRecommendedDownload = ({
   if (installSource === "winget") {
     return { label: "winget" };
   }
+  if (installSource === "scoop") {
+    return { label: "Scoop" };
+  }
+  if (installSource === "chocolatey") {
+    return { label: "Chocolatey" };
+  }
   if (installSource === "mac-app-store") {
     return { label: "App Store" };
   }
@@ -166,6 +172,8 @@ export const resolvePreferredDownloadUrl = ({
   if (
     installSource === "homebrew" ||
     installSource === "winget" ||
+    installSource === "scoop" ||
+    installSource === "chocolatey" ||
     installSource === "mac-app-store" ||
     installSource === "microsoft-store"
   ) {
@@ -199,6 +207,8 @@ export const canDownloadRecommendedUpdate = ({
   if (
     installSource === "homebrew" ||
     installSource === "winget" ||
+    installSource === "scoop" ||
+    installSource === "chocolatey" ||
     installSource === "mac-app-store" ||
     installSource === "microsoft-store"
   ) {

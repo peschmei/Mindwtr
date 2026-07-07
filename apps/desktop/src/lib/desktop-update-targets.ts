@@ -2,6 +2,7 @@ import {
     APP_STORE_LISTING_URL,
     AUR_BIN_PACKAGE_URL,
     AUR_SOURCE_PACKAGE_URL,
+    CHOCOLATEY_PACKAGE_URL,
     FLATHUB_PACKAGE_URL,
     GITHUB_RELEASES_URL,
     HOMEBREW_CASK_URL,
@@ -9,16 +10,39 @@ import {
     SNAPCRAFT_PACKAGE_URL,
     WINGET_PACKAGE_URL,
     type InstallSource,
+    type UpdateSource,
 } from './update-service';
 
+// Channels that update themselves in the background (Flatpak, Snap, App Store)
+// stay quiet; every channel where the user must act gets a reminder routed to
+// that channel's own update path.
 const UPDATE_REMINDER_DESKTOP_INSTALL_SOURCES = new Set<InstallSource>([
     'direct',
     'portable',
     'github-release',
     'microsoft-store',
+    'winget',
+    'scoop',
+    'chocolatey',
+    'homebrew',
+    'aur',
+    'aur-bin',
+    'aur-source',
     'appimage',
     'apt',
     'rpm',
+]);
+
+// Channels with their own version feed only remind when that feed reported the
+// update; a GitHub-only result means the channel has not published it yet.
+const CHANNEL_PINNED_INSTALL_SOURCES = new Set<InstallSource>([
+    'winget',
+    'scoop',
+    'chocolatey',
+    'homebrew',
+    'aur',
+    'aur-bin',
+    'aur-source',
 ]);
 
 const UPDATE_NOW_ACTION_LABEL = 'Update now';
@@ -28,6 +52,14 @@ const VIEW_RELEASE_ACTION_LABEL = 'View release';
 export const isDesktopUpdateReminderAllowed = (
     installSource: InstallSource | null | undefined,
 ): boolean => Boolean(installSource && UPDATE_REMINDER_DESKTOP_INSTALL_SOURCES.has(installSource));
+
+export const isUpdateReminderVersionTrusted = (
+    installSource: InstallSource | null | undefined,
+    updateSource: UpdateSource,
+): boolean =>
+    !installSource
+    || !CHANNEL_PINNED_INSTALL_SOURCES.has(installSource)
+    || updateSource !== 'github-release';
 
 export const getDesktopUpdateTarget = (
     installSource: InstallSource | null,
@@ -41,6 +73,11 @@ export const getDesktopUpdateTarget = (
             return { label: UPDATE_NOW_ACTION_LABEL, url: HOMEBREW_CASK_URL };
         case 'winget':
             return { label: UPDATE_NOW_ACTION_LABEL, url: WINGET_PACKAGE_URL };
+        case 'scoop':
+            // `scoop update mindwtr` does the install; point at the release notes.
+            return { label: VIEW_RELEASE_ACTION_LABEL, url: GITHUB_RELEASES_URL };
+        case 'chocolatey':
+            return { label: UPDATE_NOW_ACTION_LABEL, url: CHOCOLATEY_PACKAGE_URL };
         case 'flatpak':
             return { label: UPDATE_NOW_ACTION_LABEL, url: FLATHUB_PACKAGE_URL };
         case 'snap':

@@ -193,6 +193,76 @@ describe("update-service channel selection", () => {
     expect(result.latestVersion).toBe("1.3.0");
   });
 
+  it("normalizes scoop and chocolatey installs", () => {
+    expect(normalizeInstallSource("scoop")).toBe("scoop");
+    expect(normalizeInstallSource("SCOOP")).toBe("scoop");
+    expect(normalizeInstallSource("chocolatey")).toBe("chocolatey");
+    expect(normalizeInstallSource("choco")).toBe("chocolatey");
+  });
+
+  it("pins scoop installs to the Scoop bucket manifest version", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("homebrew-mindwtr/main/bucket/mindwtr.json")) {
+        return jsonResponse({ version: "1.1.0" });
+      }
+      if (
+        url.includes("api.github.com/repos/dongdongbh/Mindwtr/releases/latest")
+      ) {
+        return jsonResponse({
+          tag_name: "v1.9.0",
+          html_url: "https://github.com/dongdongbh/Mindwtr/releases/tag/v1.9.0",
+          body: "latest notes",
+          assets: [],
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await checkForUpdates("1.0.0", { installSource: "scoop" });
+
+    expect(result.hasUpdate).toBe(true);
+    expect(result.source).toBe("scoop");
+    expect(result.latestVersion).toBe("1.1.0");
+    expect(result.sourceFallback).toBe(false);
+  });
+
+  it("pins chocolatey installs to the Chocolatey package version", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("community.chocolatey.org/api/v2/Packages()")) {
+        return new Response(
+          "<feed><entry><id>http://community.chocolatey.org/api/v2/Packages(Id='mindwtr',Version='1.1.0')</id></entry></feed>",
+          { status: 200 },
+        );
+      }
+      if (
+        url.includes("api.github.com/repos/dongdongbh/Mindwtr/releases/latest")
+      ) {
+        return jsonResponse({
+          tag_name: "v1.9.0",
+          html_url: "https://github.com/dongdongbh/Mindwtr/releases/tag/v1.9.0",
+          body: "latest notes",
+          assets: [],
+        });
+      }
+      return jsonResponse({}, 404);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await checkForUpdates("1.0.0", {
+      installSource: "chocolatey",
+    });
+
+    expect(result.hasUpdate).toBe(true);
+    expect(result.source).toBe("chocolatey");
+    expect(result.latestVersion).toBe("1.1.0");
+    expect(result.releaseUrl).toBe(
+      "https://community.chocolatey.org/packages/mindwtr",
+    );
+  });
+
   it("normalizes flatpak branch installs while keeping the branch available for UI display", () => {
     expect(normalizeInstallSource("flatpak:test")).toBe("flatpak");
     expect(normalizeInstallSource("flatpak:master")).toBe("flatpak");

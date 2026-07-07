@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
     APP_STORE_LISTING_URL,
+    CHOCOLATEY_PACKAGE_URL,
     checkForUpdates,
     compareVersions,
     getFlatpakInstallChannel,
@@ -348,6 +349,15 @@ export function useSettingsAboutPage({
             );
             return;
         }
+        if (installSource === 'scoop') {
+            setDownloadNotice('Update via Scoop: scoop update mindwtr');
+            return;
+        }
+        if (installSource === 'chocolatey') {
+            await openLink(CHOCOLATEY_PACKAGE_URL);
+            setDownloadNotice('Update via Chocolatey: choco upgrade mindwtr');
+            return;
+        }
         if (updateInfo?.platform === 'macos') {
             const opened = await openLink(HOMEBREW_CASK_URL);
             setDownloadNotice(
@@ -418,6 +428,8 @@ export function useSettingsAboutPage({
 
     const installChannelDisplay = useMemo(() => {
         if (installSource === 'portable') return 'Portable';
+        if (installSource === 'scoop') return 'Scoop';
+        if (installSource === 'chocolatey') return 'Chocolatey';
         if (installSource !== 'flatpak') return null;
         if (!installChannel) return 'Flatpak';
         return `Flatpak (${installChannel})`;

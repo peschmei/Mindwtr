@@ -129,6 +129,59 @@ fn is_winget_install_path(path: &str) -> bool {
     path.contains("\\microsoft\\winget\\packages\\") || path.contains("/microsoft/winget/packages/")
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn is_scoop_install_path(path_lowercase: &str, scoop_root_lowercase: Option<&str>) -> bool {
+    if path_lowercase.contains("\\scoop\\apps\\") || path_lowercase.contains("/scoop/apps/") {
+        return true;
+    }
+    // Custom Scoop roots (SCOOP env var) can live anywhere, e.g. D:\tools.
+    if let Some(root) = scoop_root_lowercase {
+        let root = root.trim_end_matches(['\\', '/']);
+        if !root.is_empty() {
+            for separator in ['\\', '/'] {
+                let apps_prefix = format!("{root}{separator}apps{separator}");
+                if path_lowercase.starts_with(&apps_prefix) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+#[cfg(target_os = "windows")]
+fn is_scoop_install() -> bool {
+    let scoop_root = env::var("SCOOP").ok().map(|value| value.to_lowercase());
+    [
+        current_exe_path_lowercase(),
+        current_exe_canonical_path_lowercase(),
+    ]
+    .into_iter()
+    .flatten()
+    .any(|path| is_scoop_install_path(&path, scoop_root.as_deref()))
+}
+
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn chocolatey_lib_dir_candidates(choco_install_env: Option<&str>) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(root) = choco_install_env {
+        let root = root.trim().trim_end_matches(['\\', '/']);
+        if !root.is_empty() {
+            candidates.push(PathBuf::from(root).join("lib").join("mindwtr"));
+        }
+    }
+    candidates.push(PathBuf::from("C:\\ProgramData\\chocolatey\\lib\\mindwtr"));
+    candidates
+}
+
+#[cfg(target_os = "windows")]
+fn is_chocolatey_install() -> bool {
+    let choco_root = env::var("ChocolateyInstall").ok();
+    chocolatey_lib_dir_candidates(choco_root.as_deref())
+        .iter()
+        .any(|path| path.is_dir())
+}
+
 #[cfg(target_os = "windows")]
 fn command_output_lowercase(cmd: &str, args: &[&str]) -> Option<String> {
     let output = Command::new(cmd)
@@ -179,6 +232,10 @@ fn detect_install_source() -> String {
         if is_windows_store_install() {
             return "microsoft-store".to_string();
         }
+        // Scoop typically unpacks the portable zip, so this must win over portable.
+        if is_scoop_install() {
+            return "scoop".to_string();
+        }
         if crate::storage::is_portable_mode() {
             return "portable".to_string();
         }
@@ -194,6 +251,11 @@ fn detect_install_source() -> String {
             if is_winget_install_path(&path) {
                 return "winget".to_string();
             }
+        }
+        // Chocolatey wraps the regular installer, so the exe path looks like a
+        // direct install; the package record in the choco lib dir is the tell.
+        if is_chocolatey_install() {
+            return "chocolatey".to_string();
         }
         if let Some(list_output) = command_output_lowercase(
             "winget",
@@ -446,7 +508,56 @@ pub(crate) fn diagnostics_enabled() -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_arch_package_install_source;
+    use super::{
+        chocolatey_lib_dir_candidates, is_scoop_install_path, resolve_arch_package_install_source,
+    };
+
+    #[test]
+    fn scoop_install_path_matches_default_root() {
+        assert!(is_scoop_install_path(
+            "c:\\users\\alice\\scoop\\apps\\mindwtr\\current\\mindwtr.exe",
+            None
+        ));
+        assert!(is_scoop_install_path(
+            "c:/users/alice/scoop/apps/mindwtr/1.1.0/mindwtr.exe",
+            None
+        ));
+    }
+
+    #[test]
+    fn scoop_install_path_matches_custom_root_from_env() {
+        assert!(is_scoop_install_path(
+            "d:\\tools\\apps\\mindwtr\\current\\mindwtr.exe",
+            Some("d:\\tools")
+        ));
+        assert!(!is_scoop_install_path(
+            "d:\\tools\\apps\\mindwtr\\current\\mindwtr.exe",
+            Some("d:\\other")
+        ));
+    }
+
+    #[test]
+    fn scoop_install_path_rejects_regular_installs() {
+        assert!(!is_scoop_install_path(
+            "c:\\program files\\mindwtr\\mindwtr.exe",
+            None
+        ));
+        assert!(!is_scoop_install_path(
+            "c:\\program files\\mindwtr\\mindwtr.exe",
+            Some("")
+        ));
+    }
+
+    #[test]
+    fn chocolatey_lib_dir_candidates_prefer_env_root() {
+        let candidates = chocolatey_lib_dir_candidates(Some("D:\\choco\\"));
+        assert_eq!(candidates.len(), 2);
+        assert!(candidates[0].ends_with("lib/mindwtr") || candidates[0].ends_with("lib\\mindwtr"));
+        assert!(candidates[0].starts_with("D:\\choco"));
+
+        let default_only = chocolatey_lib_dir_candidates(None);
+        assert_eq!(default_only.len(), 1);
+    }
 
     #[test]
     fn resolve_arch_package_install_source_prefers_bin_when_both_match() {

@@ -98,7 +98,7 @@ import {
     normalizeInstallSource,
     type InstallSource,
 } from './lib/update-service';
-import { getDesktopUpdateTarget, isDesktopUpdateReminderAllowed } from './lib/desktop-update-targets';
+import { getDesktopUpdateTarget, isDesktopUpdateReminderAllowed, isUpdateReminderVersionTrusted } from './lib/desktop-update-targets';
 import {
     PROMPT_TEST_CONTROLS_ENABLED,
     subscribePromptTest,
@@ -1345,6 +1345,7 @@ function App() {
                 const currentVersion = await getVersion();
                 const info = await checkForUpdates(currentVersion, { installSource: desktopInstallSource });
                 if (cancelled || !info.hasUpdate) return;
+                if (!isUpdateReminderVersionTrusted(desktopInstallSource, info.source)) return;
                 const latestPromptState = readLocalUserPromptState();
                 if (!shouldShowUpdateReminder({
                     nowMs: Date.now(),

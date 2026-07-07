@@ -18,6 +18,13 @@ const WINGET_PACKAGE_URL =
   "https://github.com/microsoft/winget-pkgs/tree/master/manifests/d/dongdongbh/Mindwtr";
 const HOMEBREW_CASK_API = "https://formulae.brew.sh/api/cask/mindwtr.json";
 const HOMEBREW_CASK_URL = "https://formulae.brew.sh/cask/mindwtr";
+const SCOOP_MANIFEST_API =
+  "https://raw.githubusercontent.com/dongdongbh/homebrew-mindwtr/main/bucket/mindwtr.json";
+const SCOOP_BUCKET_URL = "https://github.com/dongdongbh/homebrew-mindwtr";
+const CHOCOLATEY_PACKAGE_API =
+  "https://community.chocolatey.org/api/v2/Packages()?$filter=Id%20eq%20%27mindwtr%27%20and%20IsLatestVersion";
+const CHOCOLATEY_PACKAGE_URL =
+  "https://community.chocolatey.org/packages/mindwtr";
 const AUR_SOURCE_RPC_API =
   "https://aur.archlinux.org/rpc/?v=5&type=info&arg%5B%5D=mindwtr";
 const AUR_SOURCE_PACKAGE_URL = "https://aur.archlinux.org/packages/mindwtr";
@@ -38,6 +45,8 @@ export type InstallSource =
   | "github-release"
   | "microsoft-store"
   | "winget"
+  | "scoop"
+  | "chocolatey"
   | "homebrew"
   | "mac-app-store"
   | "aur"
@@ -54,6 +63,8 @@ const FLATPAK_INSTALL_SOURCE_PREFIX = "flatpak:";
 export type UpdateSource =
   | "github-release"
   | "winget"
+  | "scoop"
+  | "chocolatey"
   | "homebrew"
   | "aur"
   | "app-store"
@@ -100,6 +111,8 @@ const isManagedInstallSource = (installSource: InstallSource): boolean => {
     installSource === "mac-app-store" ||
     installSource === "homebrew" ||
     installSource === "winget" ||
+    installSource === "scoop" ||
+    installSource === "chocolatey" ||
     installSource === "aur-bin" ||
     installSource === "aur-source" ||
     installSource === "aur"
@@ -316,6 +329,11 @@ export function normalizeInstallSource(
       return "microsoft-store";
     case "winget":
       return "winget";
+    case "scoop":
+      return "scoop";
+    case "chocolatey":
+    case "choco":
+      return "chocolatey";
     case "homebrew":
       return "homebrew";
     case "mac-app-store":
@@ -385,6 +403,48 @@ const fetchHomebrewLatestVersion = async (): Promise<SourceVersionResult> => {
     source: "homebrew",
     version: normalizeComparableVersion(version),
     releaseUrl: HOMEBREW_CASK_URL,
+  };
+};
+
+const fetchScoopLatestVersion = async (): Promise<SourceVersionResult> => {
+  const response = await fetchForUpdates(SCOOP_MANIFEST_API, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "Mindwtr-App",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Scoop bucket manifest error: ${response.status}`);
+  }
+  const payload = (await response.json()) as { version?: unknown };
+  const version =
+    typeof payload.version === "string" ? payload.version.trim() : "";
+  if (!version) throw new Error("Scoop bucket manifest returned no version.");
+  return {
+    source: "scoop",
+    version: normalizeComparableVersion(version),
+    releaseUrl: SCOOP_BUCKET_URL,
+  };
+};
+
+const fetchChocolateyLatestVersion = async (): Promise<SourceVersionResult> => {
+  const response = await fetchForUpdates(CHOCOLATEY_PACKAGE_API, {
+    headers: {
+      Accept: "application/atom+xml",
+      "User-Agent": "Mindwtr-App",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Chocolatey API error: ${response.status}`);
+  }
+  const payload = await response.text();
+  const match = payload.match(/Packages\(Id='mindwtr',Version='([^']+)'\)/i);
+  const version = normalizeComparableVersion(match?.[1] ?? "");
+  if (!version) throw new Error("Chocolatey API returned no version.");
+  return {
+    source: "chocolatey",
+    version,
+    releaseUrl: CHOCOLATEY_PACKAGE_URL,
   };
 };
 
@@ -529,6 +589,10 @@ const fetchSourceVersion = async (
       return fetchHomebrewLatestVersion();
     case "winget":
       return fetchWingetLatestVersion();
+    case "scoop":
+      return fetchScoopLatestVersion();
+    case "chocolatey":
+      return fetchChocolateyLatestVersion();
     case "aur":
     case "aur-bin":
     case "aur-source":
@@ -719,11 +783,13 @@ export {
   APP_STORE_LISTING_URL,
   AUR_BIN_PACKAGE_URL,
   AUR_SOURCE_PACKAGE_URL,
+  CHOCOLATEY_PACKAGE_URL,
   FLATHUB_PACKAGE_URL,
   GITHUB_RELEASES_URL,
   HOMEBREW_CASK_URL,
   MS_STORE_URL,
   MS_STORE_UPDATES_URL,
+  SCOOP_BUCKET_URL,
   SNAPCRAFT_PACKAGE_URL,
   WINGET_PACKAGE_URL,
 };
