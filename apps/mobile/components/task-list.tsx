@@ -55,7 +55,7 @@ import { useManualPullSync } from '@/hooks/use-manual-pull-sync';
 import { taskMatchesAreaFilter } from '@mindwtr/core';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 import { buildCopilotConfig, isAIKeyRequired, loadAIKey } from '../lib/ai-config';
-import { logError, logWarn } from '../lib/app-log';
+import { logError } from '../lib/app-log';
 import {
   beginMobilePerformanceDiagnostic,
   finishMobilePerformanceDiagnostic,
@@ -96,14 +96,7 @@ import {
   type ProjectTaskReorderGroup,
   sortProjectTasksByOrder,
 } from './task-list-utils';
-import {
-  buildTaskListMeasuredHeightKey,
-  buildTaskListItemLayouts,
-  buildTaskListVirtualizedItemKey,
-  ESTIMATED_TASK_HEIGHT,
-  LIST_CONTENT_VERTICAL_PADDING,
-  type TaskListLayoutRevision,
-} from './task-list/task-list-layout';
+import { buildTaskListVirtualizedItemKey } from './task-list/task-list-layout';
 import {
   buildMobileTaskListFilters,
   countActiveMobileTaskFilters,
@@ -111,19 +104,6 @@ import {
   type MobileTaskListFilters,
 } from './task-list/task-list-filter-utils';
 import { useTaskListSelection } from './use-task-list-selection';
-
-// Diagnostic trap for the unreproduced mid-list gap report (Inbox, 2026-07-06):
-// logs the two events that can leave getItemLayout frames disagreeing with
-// rendered rows. Capped and deduped so it stays quiet in normal use.
-const LIST_LAYOUT_LOG_LIMIT = 40;
-const listLayoutLogState = { count: 0, seen: new Set<string>() };
-const logListLayoutAnomaly = (message: string, extra: Record<string, unknown>) => {
-  const dedupeKey = `${message}:${String(extra.itemKey ?? '')}`;
-  if (listLayoutLogState.count >= LIST_LAYOUT_LOG_LIMIT || listLayoutLogState.seen.has(dedupeKey)) return;
-  listLayoutLogState.seen.add(dedupeKey);
-  listLayoutLogState.count += 1;
-  void logWarn(message, { scope: 'list-layout', extra });
-};
 
 const REMOVE_CLIPPED_SUBVIEWS_MIN_ITEMS = 15;
 const PROJECT_REORDER_ITEM_HEIGHT = 80;
@@ -954,95 +934,17 @@ function TaskListComponent({
     [projectId, statusFilter],
   );
   const listItemCountForDiagnostics = orderedTaskIds.length;
-  const itemHeightsRef = useRef<Record<string, number>>({});
-  const [itemLayoutVersion, setItemLayoutVersion] = useState(0);
   const getListItemKey = useCallback((item: ListItem) => (
     item.type === 'section' ? `section-${item.id}` : (item.groupId ? `${item.groupId}:${item.task.id}` : item.task.id)
   ), []);
-  const getListItemLayoutRevision = useCallback((item: ListItem): TaskListLayoutRevision => {
-    if (item.type === 'section') {
-      return `${item.title}:${item.count}:${item.collapsed === true ? 'collapsed' : 'expanded'}`;
-    }
-    return item.task.rev ?? item.task.updatedAt;
-  }, []);
-  const getListItemLayoutKey = useCallback((item: ListItem) => (
-    buildTaskListMeasuredHeightKey(getListItemKey(item), getListItemLayoutRevision(item))
-  ), [getListItemKey, getListItemLayoutRevision]);
   const getVirtualizedListItemKey = useCallback((item: ListItem, index: number) => (
     buildTaskListVirtualizedItemKey(getListItemKey(item), index)
   ), [getListItemKey]);
-  const wasPullRefreshingRef = useRef(false);
-  const registerItemHeight = useCallback((itemKey: string, height: number) => {
-    const rounded = Math.round(height);
-    if (!Number.isFinite(rounded) || rounded <= 0) return;
-    const previous = itemHeightsRef.current[itemKey];
-    if (previous === rounded) return;
-    if (previous !== undefined && Math.abs(previous - rounded) > 24) {
-      logListLayoutAnomaly('row height diverged from stored frame', {
-        itemKey,
-        previousHeight: previous,
-        nextHeight: rounded,
-      });
-    }
-    itemHeightsRef.current[itemKey] = rounded;
-    setItemLayoutVersion((prev) => prev + 1);
-  }, []);
-  useEffect(() => {
-    if (wasPullRefreshingRef.current && !pullSync.refreshing) {
-      itemHeightsRef.current = {};
-      setItemLayoutVersion((prev) => prev + 1);
-    }
-    wasPullRefreshingRef.current = pullSync.refreshing;
-  }, [pullSync.refreshing]);
-  const itemLayouts = useMemo(() => {
-    // itemLayoutVersion invalidates memoized offsets when ref-backed row heights change.
-    void itemLayoutVersion;
-    return buildTaskListItemLayouts(listItems, {
-      getItemKey: getListItemLayoutKey,
-      measuredHeights: itemHeightsRef.current,
-    });
-  }, [getListItemLayoutKey, itemLayoutVersion, listItems]);
-  useEffect(() => {
-    const activeItemKeys = new Set(listItems.map(getListItemLayoutKey));
-    const activeKeysByPrefix = new Map<string, string>();
-    activeItemKeys.forEach((fullKey) => {
-      activeKeysByPrefix.set(fullKey.split('@layout:')[0], fullKey);
-    });
-    let didPrune = false;
-    Object.keys(itemHeightsRef.current).forEach((itemKey) => {
-      if (!activeItemKeys.has(itemKey)) {
-        // A revision bump re-keys a still-listed row without remounting it,
-        // so onLayout only re-fires if the pixel height actually changed.
-        // Carry the measurement to the successor key; otherwise the frame
-        // falls back to the estimate (suspected cause of the unreproduced
-        // mid-list gap). The log keeps feeding that investigation.
-        const successor = activeKeysByPrefix.get(itemKey.split('@layout:')[0]);
-        if (successor !== undefined && itemHeightsRef.current[successor] === undefined) {
-          itemHeightsRef.current[successor] = itemHeightsRef.current[itemKey];
-          logListLayoutAnomaly('measured height carried across revision re-key', {
-            itemKey: itemKey.split('@layout:')[0],
-            previousHeight: itemHeightsRef.current[itemKey],
-          });
-        }
-        delete itemHeightsRef.current[itemKey];
-        didPrune = true;
-      }
-    });
-    if (didPrune) {
-      setItemLayoutVersion((prev) => prev + 1);
-    }
-  }, [getListItemLayoutKey, listItems]);
-  const getItemLayout = useCallback((_: ArrayLike<ListItem> | null | undefined, index: number) => {
-    const measured = itemLayouts[index];
-    if (measured) {
-      return { index, length: measured.length, offset: measured.offset };
-    }
-    return {
-      index,
-      length: ESTIMATED_TASK_HEIGHT,
-      offset: LIST_CONTENT_VERTICAL_PADDING + (ESTIMATED_TASK_HEIGHT * index),
-    };
-  }, [itemLayouts]);
+  // No getItemLayout here on purpose: rows have variable heights, and frames
+  // built from estimates shift every offset when a real measurement lands,
+  // visibly nudging the list as a scroll settles (#831). Native measurement
+  // keeps the scroll position anchored and also removes the estimate-vs-row
+  // disagreement behind the 2026-07-06 mid-list gap report.
 
   const projectReorderGroups = useMemo<ProjectTaskReorderGroup<Task>[]>(() => {
     if (!canUseProjectReorder) return [];
@@ -1659,7 +1561,6 @@ function TaskListComponent({
   ]);
 
   const renderListItem = useCallback(({ item }: { item: ListItem }) => {
-    const itemKey = getListItemLayoutKey(item);
     if (item.type === 'section') {
       if (item.collapsible) {
         return (
@@ -1668,7 +1569,6 @@ function TaskListComponent({
             accessibilityState={{ expanded: item.collapsed !== true }}
             onPress={() => setCompletedTasksCollapsed((value) => !value)}
             style={styles.sectionHeader}
-            onLayout={(event) => registerItemHeight(itemKey, event.nativeEvent.layout.height)}
           >
             <View style={styles.sectionHeaderTitleBlock}>
               {item.collapsed ? (
@@ -1688,10 +1588,7 @@ function TaskListComponent({
       }
 
       return (
-        <View
-          style={styles.sectionHeader}
-          onLayout={(event) => registerItemHeight(itemKey, event.nativeEvent.layout.height)}
-        >
+        <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: item.muted ? themeColorsMemo.secondaryText : themeColorsMemo.text }]}>
             {item.title}
           </Text>
@@ -1701,12 +1598,8 @@ function TaskListComponent({
         </View>
       );
     }
-    return (
-      <View onLayout={(event) => registerItemHeight(itemKey, event.nativeEvent.layout.height)}>
-        {renderTask({ item: item.task })}
-      </View>
-    );
-  }, [getListItemLayoutKey, registerItemHeight, renderTask, themeColorsMemo.secondaryText, themeColorsMemo.text]);
+    return renderTask({ item: item.task });
+  }, [renderTask, themeColorsMemo.secondaryText, themeColorsMemo.text]);
 
   const renderProjectReorderHeader = useCallback((group: ProjectTaskReorderGroup<Task>) => {
     const sectionIndex = typeof group.sectionId === 'string' ? projectSectionIds.indexOf(group.sectionId) : -1;
@@ -2019,7 +1912,6 @@ function TaskListComponent({
           contentContainerStyle={listContentStyle}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
-          getItemLayout={getItemLayout}
           initialNumToRender={12}
           maxToRenderPerBatch={12}
           windowSize={5}
