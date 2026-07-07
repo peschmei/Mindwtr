@@ -35,6 +35,7 @@ import {
   useTaskStore,
 } from '@mindwtr/core';
 import { useLanguage } from '../contexts/language-context';
+import { readQuickCaptureAddAnother, writeQuickCaptureAddAnother } from '../lib/quick-capture-preferences';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useThemeTokens } from '@/hooks/use-theme-tokens';
@@ -405,6 +406,12 @@ export function QuickCaptureSheet({
   useEffect(() => {
     if (!visible) return;
     resetDraftState();
+    // The "Add another" switch is a sticky device preference: capture bursts
+    // (Enter chains into the next task) should survive closing the sheet
+    // instead of resetting to one-shot mode every open (#819).
+    void readQuickCaptureAddAnother().then((stored) => {
+      if (stored) setAddAnother(true);
+    });
     if (autoRecord) return;
     clearInitialFocusTimer();
     initialFocusTimerRef.current = setTimeout(() => {
@@ -987,7 +994,10 @@ export function QuickCaptureSheet({
           setSelectedAreaId(defaultAreaId);
         }}
         onToggleOptions={handleToggleOptions}
-        onToggleAddAnother={setAddAnother}
+        onToggleAddAnother={(next) => {
+          setAddAnother(next);
+          void writeQuickCaptureAddAnother(next);
+        }}
         onToggleFocusNewTask={() => {
           if (!focusNewTask && !canFocusNewTask) {
             // Keep the hard focus cap, but explain the block instead of silently
