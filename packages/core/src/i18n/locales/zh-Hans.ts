@@ -1062,6 +1062,7 @@ export const zhHans: Record<string, string> = {
         'settings.pomodoroLinkTask': '将计时器关联到任务',
         'settings.pomodoroLinkTaskDesc': '在聚焦中显示计时任务选择器和完成任务操作。',
         'pomodoro.mobileTitle': '番茄钟计时器',
+        'pomodoro.startForTask': '开始专注会话',
         'pomodoro.phaseFocusShort': '专注',
         'pomodoro.phaseBreakShort': '休息',
         'pomodoro.switchToBreak': '切换到休息',

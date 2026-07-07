@@ -205,6 +205,7 @@ export const viOverrides: Record<string, string> = {
         'taskEdit.timeEstimateLabel': 'Ước tính thời gian',
         'taskEdit.timeSpentLabel': 'Thời gian đã dành',
         'taskEdit.timeSpentPlaceholder': 'phút',
+        'pomodoro.startForTask': 'Bắt đầu phiên tập trung',
         'taskEdit.recurrenceLabel': 'Lặp lại',
         'taskEdit.descriptionLabel': 'Mô tả',
         'taskEdit.descriptionPlaceholder': 'Thêm ghi chú...',

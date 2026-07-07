@@ -1149,6 +1149,7 @@ export const en: Record<string, string> = {
         'settings.pomodoroLinkTask': 'Link timer to task',
         'settings.pomodoroLinkTaskDesc': 'Show the Timer task picker and Task done action in Focus.',
         'pomodoro.mobileTitle': 'Pomodoro Timer',
+        'pomodoro.startForTask': 'Start focus session',
         'pomodoro.phaseFocusShort': 'Focus',
         'pomodoro.phaseBreakShort': 'Break',
         'pomodoro.switchToBreak': 'Switch to Break',

@@ -44,6 +44,7 @@ import { useTaskItemProjectContext } from './Task/useTaskItemProjectContext';
 import { useTaskItemFieldLayout } from './Task/useTaskItemFieldLayout';
 import { useTaskItemSubmit } from './Task/useTaskItemSubmit';
 import { dispatchNavigateEvent } from '../lib/navigation-events';
+import { usePomodoroStore } from '../store/pomodoro-store';
 import { dispatchContextsTokenSelection } from '../lib/contexts-view-state';
 import { reportError } from '../lib/report-error';
 import { undoTaskCompletion } from '../lib/undo-task-completion';
@@ -304,6 +305,33 @@ export const TaskItem = memo(function TaskItem({
         if (status === 'inbox') setEditFocusedToday(false);
     }, [setEditStatus, setEditFocusedToday]);
     const effectiveFocusToggle = effectiveReadOnly ? undefined : focusToggle;
+    // Task-row entry point into the shared pomodoro store: link this task and
+    // start a focus session (never a free-running clock), then show the timer.
+    const pomodoroQuickStartEligible = settings?.features?.pomodoro === true
+        && settings?.gtd?.pomodoro?.linkTask === true
+        && !effectiveReadOnly
+        && task.status !== 'archived'
+        && task.status !== 'reference';
+    const pomodoroSessionCount = usePomodoroStore((state) => (
+        pomodoroQuickStartEligible
+            ? state.snapshot.sessionHistory.completedFocusSessionsByTaskId[task.id] ?? 0
+            : 0
+    ));
+    const pomodoroAutoStartBreaks = settings?.gtd?.pomodoro?.autoStartBreaks === true;
+    const pomodoroAutoStartFocus = settings?.gtd?.pomodoro?.autoStartFocus === true;
+    const pomodoroQuickStart = useMemo(() => {
+        if (!pomodoroQuickStartEligible) return undefined;
+        return {
+            sessionCount: pomodoroSessionCount,
+            onStart: () => {
+                usePomodoroStore.getState().startPomodoroFocusForTask(task.id, {
+                    autoStartBreaks: pomodoroAutoStartBreaks,
+                    autoStartFocus: pomodoroAutoStartFocus,
+                });
+                dispatchNavigateEvent('agenda');
+            },
+        };
+    }, [pomodoroAutoStartBreaks, pomodoroAutoStartFocus, pomodoroQuickStartEligible, pomodoroSessionCount, task.id]);
     // An HTML5-draggable ancestor swallows mouse text selection, so rows stop
     // being calendar-drag sources while their read view is expanded (#815).
     const canCalendarDrag = !actionsOverlay && !dragHandle && !selectionMode && !isEditing && !effectiveReadOnly && !isTaskExpanded;
@@ -1266,6 +1294,7 @@ export const TaskItem = memo(function TaskItem({
         openAttachment,
         onToggleChecklistItem: handleToggleChecklistItem,
         focusToggle: effectiveFocusToggle,
+        pomodoroQuickStart,
     }), [
         handleDuplicateTask,
         effectiveFocusToggle,
@@ -1276,6 +1305,7 @@ export const TaskItem = memo(function TaskItem({
         handleToggleChecklistItem,
         onToggleSelect,
         openAttachment,
+        pomodoroQuickStart,
         project,
         startEditing,
         task.id,

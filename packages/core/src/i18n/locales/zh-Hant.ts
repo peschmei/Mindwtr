@@ -1062,6 +1062,7 @@ export const zhHant: Record<string, string> = {
         'settings.pomodoroLinkTask': '將計時器關聯到任務',
         'settings.pomodoroLinkTaskDesc': '在聚焦中顯示計時任務選擇器和完成任務操作。',
         'pomodoro.mobileTitle': '番茄鐘計時器',
+        'pomodoro.startForTask': '開始專注會話',
         'pomodoro.phaseFocusShort': '專注',
         'pomodoro.phaseBreakShort': '休息',
         'pomodoro.switchToBreak': '切換到休息',

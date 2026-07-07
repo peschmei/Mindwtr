@@ -1,4 +1,4 @@
-import { AlertTriangle, Calendar as CalendarIcon, Tag, Trash2, ArrowRight, Repeat, Check, Clock, Timer, Paperclip, RotateCcw, Copy, MapPin, Hourglass, Zap, MoreHorizontal } from 'lucide-react';
+import { AlertTriangle, Calendar as CalendarIcon, Tag, Trash2, ArrowRight, Repeat, Check, Clock, Timer, Paperclip, RotateCcw, Copy, MapPin, History, Hourglass, Play, Zap, MoreHorizontal } from 'lucide-react';
 import type { Area, Attachment, Project, RangeSelectionOptions, Task, TaskStatus, RecurrenceRule, RecurrenceStrategy, Language } from '@mindwtr/core';
 import { DEFAULT_AREA_COLOR, formatRecurrenceLabel, formatTimeEstimateLabel, getChecklistProgress, getInlineMarkdownPreview, getRecurringTaskPreviewDate, getTaskAgeLabel, getTaskDateCoherenceIssues, getTaskStaleness, getTaskUrgency, hasTimeComponent, safeFormatDate, resolveTaskTextDirection, tFallback } from '@mindwtr/core';
 import { cn } from '../../lib/utils';
@@ -34,6 +34,10 @@ interface TaskItemDisplayActions {
         title: string;
         ariaLabel: string;
         alwaysVisible?: boolean;
+    };
+    pomodoroQuickStart?: {
+        onStart: () => void;
+        sessionCount: number;
     };
 }
 
@@ -81,6 +85,13 @@ const getUrgencyColor = (task: Task) => {
 
 const formatTimeEstimate = formatTimeEstimateLabel;
 
+const formatTimeSpent = (minutes: number) => {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hrs <= 0) return `${mins}m`;
+    return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+};
+
 export const TaskItemDisplay = memo(function TaskItemDisplay({
     task,
     language,
@@ -124,7 +135,14 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
         openAttachment,
         onToggleChecklistItem,
         focusToggle,
+        pomodoroQuickStart,
     } = actions;
+    const pomodoroQuickStartTitle = pomodoroQuickStart
+        ? tFallback(t, 'pomodoro.startForTask', 'Start focus session')
+            + (pomodoroQuickStart.sessionCount > 0
+                ? ` · ${tFallback(t, 'pomodoro.sessionsDone', 'Focus sessions completed')}: ${pomodoroQuickStart.sessionCount}`
+                : '')
+        : '';
     const isReference = task.status === 'reference';
     const checklistProgress = isReference ? null : getChecklistProgress(task);
     const recurrenceLabel = formatRecurrenceLabel({ recurrence: task.recurrence, t });
@@ -488,6 +506,14 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                     label={formatTimeEstimate(task.timeEstimate)}
                 />
             )}
+            {Boolean(task.timeSpentMinutes) && (
+                <MetadataBadge
+                    variant="estimate"
+                    icon={History}
+                    label={formatTimeSpent(task.timeSpentMinutes as number)}
+                    ariaLabel={`${t('taskEdit.timeSpentLabel')}: ${formatTimeSpent(task.timeSpentMinutes as number)}`}
+                />
+            )}
         </div>
     );
     const overlayDragHandle = actionsOverlay && !!dragHandle;
@@ -807,6 +833,25 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                         <div className="hidden md:flex items-center max-w-[180px]">
                             {renderProjectBadge()}
                         </div>
+                    )}
+                    {pomodoroQuickStart && (
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                pomodoroQuickStart.onStart();
+                            }}
+                            title={pomodoroQuickStartTitle}
+                            aria-label={pomodoroQuickStartTitle}
+                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-1 rounded hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 inline-flex items-center gap-0.5"
+                        >
+                            <Play className="w-4 h-4" />
+                            {pomodoroQuickStart.sessionCount > 0 && (
+                                <span className="text-[10px] font-medium tabular-nums">
+                                    {pomodoroQuickStart.sessionCount}
+                                </span>
+                            )}
+                        </button>
                     )}
                     {focusToggle && (
                         <button

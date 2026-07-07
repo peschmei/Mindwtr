@@ -99,6 +99,7 @@ import {
     type InstallSource,
 } from './lib/update-service';
 import { getDesktopUpdateTarget, isDesktopUpdateReminderAllowed, isUpdateReminderVersionTrusted } from './lib/desktop-update-targets';
+import { usePomodoroStore } from './store/pomodoro-store';
 import {
     PROMPT_TEST_CONTROLS_ENABLED,
     subscribePromptTest,
@@ -355,6 +356,21 @@ function App() {
             cancelled = true;
         };
     }, [applyActiveNativeTheme, getActiveThemeMode, hasHydratedSettings]);
+
+    useEffect(() => {
+        // Hydrate the shared pomodoro store once tasks are loaded so task rows
+        // can show per-task session counts and a focus session that finished
+        // while the app was closed credits its minutes without opening Agenda.
+        if (!hasHydratedSettings || isLoading) return;
+        const { settings: currentSettings } = useTaskStore.getState();
+        if (currentSettings.features?.pomodoro !== true) return;
+        const pomodoroState = usePomodoroStore.getState();
+        if (pomodoroState.hasHydrated) return;
+        pomodoroState.hydratePomodoro({
+            autoStartBreaks: currentSettings.gtd?.pomodoro?.autoStartBreaks === true,
+            autoStartFocus: currentSettings.gtd?.pomodoro?.autoStartFocus === true,
+        });
+    }, [hasHydratedSettings, isLoading]);
 
     useEffect(() => {
         if (!hasHydratedSettings || !isTauriRuntime()) return;
