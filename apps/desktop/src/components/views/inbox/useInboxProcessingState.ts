@@ -252,7 +252,9 @@ export function useInboxProcessingState({
         setNextActionDraft('');
         setExtraActionDrafts([]);
         setSelectedProjectId(task.projectId ?? null);
-        setSelectedAreaId(null);
+        // Keep an area assigned while the task sat in the inbox; a project home
+        // outranks the direct area (container exclusivity).
+        setSelectedAreaId(task.projectId ? null : (task.areaId ?? null));
         const startDraft = getDateFieldDraft(task.startTime);
         setScheduleDate(startDraft.date);
         setScheduleTime(startDraft.time);

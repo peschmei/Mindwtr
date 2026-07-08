@@ -485,7 +485,7 @@ describe('InboxProcessingModal', () => {
     expect(root.findAllByProps({ placeholder: 'inbox.addContextPlaceholder' })).toHaveLength(0);
   });
 
-  it('filters project choices by selected area without preselecting the task area', () => {
+  it('preselects the task area and filters project choices by it', () => {
     storeState.tasks = [{ ...baseInboxTask, areaId: workArea.id }];
     storeState.areas = [workArea, homeArea];
     storeState.projects = [workProject, homeProject];
@@ -498,16 +498,18 @@ describe('InboxProcessingModal', () => {
 
     const root = tree!.root;
 
+    // The area assigned while the task sat in the inbox starts selected, so the
+    // project picker opens filtered to it (and apply keeps the area).
     expect(findNodesWithText(root, 'taskEdit.areaLabel').length).toBeGreaterThan(0);
     expect(findNodesWithText(root, 'Work Project').length).toBeGreaterThan(0);
-    expect(findNodesWithText(root, 'Home Project').length).toBeGreaterThan(0);
+    expect(findNodesWithText(root, 'Home Project')).toHaveLength(0);
 
     act(() => {
-      findPressableWithText(root, 'Work').props.onPress();
+      findPressableWithText(root, 'projects.noArea').props.onPress();
     });
 
     expect(findNodesWithText(root, 'Work Project').length).toBeGreaterThan(0);
-    expect(findNodesWithText(root, 'Home Project')).toHaveLength(0);
+    expect(findNodesWithText(root, 'Home Project').length).toBeGreaterThan(0);
   });
 
   it('respects the global area filter when building the processing queue', () => {

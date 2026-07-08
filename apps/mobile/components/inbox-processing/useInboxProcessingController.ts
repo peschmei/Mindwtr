@@ -375,7 +375,9 @@ export function useInboxProcessingController({
     setNewContext('');
     setProjectSearch('');
     setSelectedProjectId(task?.projectId ?? null);
-    setSelectedAreaId(null);
+    // Keep an area assigned while the task sat in the inbox; a project home
+    // outranks the direct area (container exclusivity).
+    setSelectedAreaId(task?.projectId ? null : (task?.areaId ?? null));
     resetTitleFocus();
     setProcessingTitle(task?.title ?? '');
     setProcessingDescription(task?.description ?? '');

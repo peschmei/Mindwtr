@@ -233,7 +233,7 @@ describe('InboxProcessor', () => {
         expect(queryByText('process.refineDesc')).toBeNull();
     });
 
-    it('starts quick processing without preselecting the task area', () => {
+    it('preselects the area already assigned to the inbox task', () => {
         const { getByRole, getByLabelText } = renderInboxProcessor({
             settings: {
                 gtd: {
@@ -248,7 +248,9 @@ describe('InboxProcessor', () => {
 
         fireEvent.click(getByRole('button', { name: /process\.btn/i }));
 
-        expect((getByLabelText('taskEdit.areaLabel') as HTMLSelectElement).value).toBe('');
+        // The dropdown must reflect what apply will save; resetting it to empty
+        // silently dropped an area assigned while the task sat in the inbox.
+        expect((getByLabelText('taskEdit.areaLabel') as HTMLSelectElement).value).toBe('area-work');
     });
 
     it('filters quick processing project choices by the selected area', () => {
