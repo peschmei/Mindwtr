@@ -10,6 +10,8 @@ import {
     normalizeCalendarSystemSetting,
     normalizeDateFormatSetting,
     normalizeTimeFormatSetting,
+    getSystemWeekStart,
+    normalizeWeekStartPreference,
     normalizeWeekStartSetting,
     parseCalendarInputDate,
     resolveCalendarSystemSetting,
@@ -83,10 +85,33 @@ describe('date utils', () => {
     it('normalizes week start settings safely', () => {
         expect(normalizeWeekStartSetting('monday')).toBe('monday');
         expect(normalizeWeekStartSetting('saturday')).toBe('saturday');
-        expect(normalizeWeekStartSetting('friday')).toBe('sunday');
+        expect(normalizeWeekStartSetting('sunday')).toBe('sunday');
+        // Absent, 'system', and invalid values follow the device locale.
+        expect(normalizeWeekStartSetting('friday')).toBe(getSystemWeekStart());
+        expect(normalizeWeekStartSetting('system')).toBe(getSystemWeekStart());
+        expect(normalizeWeekStartSetting(undefined)).toBe(getSystemWeekStart());
         expect(getWeekStartsOnIndex('monday')).toBe(1);
         expect(getWeekStartsOnIndex('saturday')).toBe(6);
-        expect(getWeekStartsOnIndex('unknown')).toBe(0);
+    });
+
+    it('keeps the stored week start preference distinct from the resolved value', () => {
+        expect(normalizeWeekStartPreference('monday')).toBe('monday');
+        expect(normalizeWeekStartPreference('sunday')).toBe('sunday');
+        expect(normalizeWeekStartPreference('system')).toBe('system');
+        expect(normalizeWeekStartPreference(undefined)).toBe('system');
+        expect(normalizeWeekStartPreference('friday')).toBe('system');
+    });
+
+    it('infers the week start from the locale', () => {
+        expect(getSystemWeekStart('de-DE')).toBe('monday');
+        expect(getSystemWeekStart('fr-FR')).toBe('monday');
+        expect(getSystemWeekStart('en-US')).toBe('sunday');
+        expect(getSystemWeekStart('ja-JP')).toBe('sunday');
+        expect(getSystemWeekStart('pt-BR')).toBe('sunday');
+        expect(getSystemWeekStart('ar-EG')).toBe('saturday');
+        expect(getSystemWeekStart('fa-IR')).toBe('saturday');
+        // No region and no week info still lands on a sane default.
+        expect(['monday', 'sunday', 'saturday']).toContain(getSystemWeekStart('en'));
     });
 
     it('normalizes clock time inputs for stored schedule defaults', () => {

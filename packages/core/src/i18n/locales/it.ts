@@ -745,6 +745,7 @@ export const itOverrides: Record<string, string> = {
         'settings.language': 'Lingua',
         'settings.weekStart': 'La settimana inizia di',
         'settings.weekStartSunday': 'Domenica',
+        'settings.weekStartSystem': 'Predefinito di sistema',
         'settings.weekStartMonday': 'Lunedì',
         'settings.dateFormat': 'Formato data',
         'settings.dateFormatSystem': 'Predefinito di sistema',

@@ -10,7 +10,7 @@ const FLATPAK_QUICK_ADD_COMMAND = 'flatpak run tech.dongdongbh.mindwtr --quick-a
 type ThemeMode = 'system' | 'light' | 'dark' | 'eink' | 'nord' | 'sepia';
 type DensityMode = 'comfortable' | 'compact';
 type TextSizeMode = 'small' | 'default' | 'large' | 'extra-large';
-type WeekStart = 'sunday' | 'monday' | 'saturday';
+type WeekStart = 'system' | 'sunday' | 'monday' | 'saturday';
 type DateFormatSetting = 'system' | 'dmy' | 'mdy' | 'ymd';
 type CalendarSystemSetting = 'gregorian' | 'jalali';
 type TimeFormatSetting = 'system' | '12h' | '24h';
@@ -44,6 +44,7 @@ type Labels = {
     weekStartSunday: string;
     weekStartMonday: string;
     weekStartSaturday: string;
+    weekStartSystem: string;
     dateFormat: string;
     dateFormatSystem: string;
     dateFormatDmy: string;
@@ -247,7 +248,9 @@ export function SettingsMainPage({
         ? t.weekStartMonday
         : weekStart === 'saturday'
             ? t.weekStartSaturday
-            : t.weekStartSunday;
+            : weekStart === 'sunday'
+                ? t.weekStartSunday
+                : t.weekStartSystem;
 
     return (
         <div className="space-y-5">
@@ -332,6 +335,7 @@ export function SettingsMainPage({
                         onChange={(e) => onWeekStartChange(e.target.value as WeekStart)}
                         className={selectCls}
                     >
+                        <option value="system">{t.weekStartSystem}</option>
                         <option value="sunday">{t.weekStartSunday}</option>
                         <option value="monday">{t.weekStartMonday}</option>
                         <option value="saturday">{t.weekStartSaturday}</option>

@@ -661,6 +661,7 @@ export const jaOverrides: Record<string, string> = {
         'settings.language': '言語',
         'settings.weekStart': '週の始まりは',
         'settings.weekStartSunday': '日曜日',
+        'settings.weekStartSystem': 'システムに従う',
         'settings.weekStartMonday': '月曜日',
         'settings.dateFormat': '日付形式',
         'settings.dateFormatSystem': 'システムのデフォルト',

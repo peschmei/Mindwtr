@@ -745,6 +745,7 @@ export const zhHant: Record<string, string> = {
         'settings.language': '語言',
         'settings.weekStart': '每週開始於',
         'settings.weekStartSunday': '週日',
+        'settings.weekStartSystem': '跟隨系統',
         'settings.weekStartMonday': '週一',
         'settings.weekStartSaturday': '週六',
         'settings.dateFormat': '日期格式',

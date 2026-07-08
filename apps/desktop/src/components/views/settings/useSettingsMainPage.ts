@@ -5,7 +5,7 @@ import {
     canUseJalaliCalendar,
     normalizeDateFormatSetting,
     normalizeTimeFormatSetting,
-    normalizeWeekStartSetting,
+    normalizeWeekStartPreference,
     resolveCalendarSystemSetting,
     type AppearanceSettings,
     type AppData,
@@ -85,7 +85,7 @@ export function useSettingsMainPage({
     const dateFormat = normalizeDateFormatSetting(settings?.dateFormat);
     const timeFormat = normalizeTimeFormatSetting(settings?.timeFormat);
     const undoNotificationsEnabled = notificationSettings.undoNotificationsEnabled !== false;
-    const weekStart = normalizeWeekStartSetting(settings?.weekStart);
+    const weekStart = normalizeWeekStartPreference(settings?.weekStart);
     const systemLocale = typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function'
         ? Intl.DateTimeFormat().resolvedOptions().locale
         : '';

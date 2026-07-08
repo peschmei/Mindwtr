@@ -824,6 +824,7 @@ export const en: Record<string, string> = {
         'settings.language': 'Language',
         'settings.weekStart': 'Week starts on',
         'settings.weekStartSunday': 'Sunday',
+        'settings.weekStartSystem': 'System default',
         'settings.weekStartMonday': 'Monday',
         'settings.weekStartSaturday': 'Saturday',
         'settings.dateFormat': 'Date format',

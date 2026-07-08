@@ -659,6 +659,7 @@ export const hiOverrides: Record<string, string> = {
         'settings.language': 'भाषा',
         'settings.weekStart': 'सप्ताह प्रारंभ होता है',
         'settings.weekStartSunday': 'रविवार',
+        'settings.weekStartSystem': 'सिस्टम डिफ़ॉल्ट',
         'settings.weekStartMonday': 'सोमवार',
         'settings.dateFormat': 'तारिख का प्रारूप',
         'settings.dateFormatSystem': 'प्रणालीगत चूक',

@@ -460,7 +460,7 @@ export interface AppSettings extends NotificationSettings {
     appearance?: AppearanceSettings;
     theme?: AppTheme;
     language?: AppLanguage;
-    weekStart?: 'monday' | 'sunday' | 'saturday';
+    weekStart?: 'system' | 'monday' | 'sunday' | 'saturday'; // Absent or 'system' = follow the device locale.
     dateFormat?: string;
     calendarSystem?: string;
     timeFormat?: string;

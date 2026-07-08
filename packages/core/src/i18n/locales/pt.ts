@@ -700,6 +700,7 @@ export const ptOverrides: Record<string, string> = {
         'settings.language': 'Linguagem',
         'settings.weekStart': 'A semana começa em',
         'settings.weekStartSunday': 'Domingo',
+        'settings.weekStartSystem': 'Padrão do sistema',
         'settings.weekStartMonday': 'Segunda-feira',
         'settings.dateFormat': 'Formato de data',
         'settings.dateFormatSystem': 'Padrão do sistema',

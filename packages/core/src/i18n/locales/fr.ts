@@ -805,6 +805,7 @@ export const frOverrides: Record<string, string> = {
         'settings.language': 'Langue',
         'settings.weekStart': 'La semaine commence le',
         'settings.weekStartSunday': 'Dimanche',
+        'settings.weekStartSystem': 'Défaut du système',
         'settings.weekStartMonday': 'Lundi',
         'settings.weekStartSaturday': 'Samedi',
         'settings.dateFormat': 'Format des dates',

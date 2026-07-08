@@ -531,6 +531,7 @@ export {
     getCalendarMonthIndex,
     getCalendarYear,
     getQuickDate,
+    getSystemWeekStart,
     getWeekStartsOnIndex,
     hasTimeComponent,
     isDueForReview,
@@ -542,6 +543,7 @@ export {
     normalizeCalendarSystemSetting,
     normalizeDateFormatSetting,
     normalizeTimeFormatSetting,
+    normalizeWeekStartPreference,
     normalizeWeekStartSetting,
     QUICK_DATE_PRESETS,
     parseCalendarInputDate,
@@ -559,6 +561,7 @@ export type {
     DateFormatSetting,
     QuickDatePreset,
     TimeFormatSetting,
+    WeekStartPreference,
     WeekStartSetting,
     WeekStartsOnIndex,
 } from './date';

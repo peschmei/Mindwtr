@@ -655,6 +655,7 @@ export const koOverrides: Record<string, string> = {
         'settings.language': '언어',
         'settings.weekStart': '주가 시작되는 날짜',
         'settings.weekStartSunday': '일요일',
+        'settings.weekStartSystem': '시스템 기본값',
         'settings.weekStartMonday': '월요일',
         'settings.dateFormat': '날짜 형식',
         'settings.dateFormatSystem': '시스템 기본값',

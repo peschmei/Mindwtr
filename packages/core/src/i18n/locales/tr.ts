@@ -669,6 +669,7 @@ export const trOverrides: Record<string, string> = {
         'settings.language': 'Dil',
         'settings.weekStart': 'Hafta başlıyor',
         'settings.weekStartSunday': 'Pazar',
+        'settings.weekStartSystem': 'Sistem varsayılanı',
         'settings.weekStartMonday': 'Pazartesi',
         'settings.dateFormat': 'Tarih formatı',
         'settings.dateFormatSystem': 'Sistem varsayılanı',

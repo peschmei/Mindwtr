@@ -701,6 +701,7 @@ export const deOverrides: Record<string, string> = {
         'settings.language': 'Sprache',
         'settings.weekStart': 'Woche startet am',
         'settings.weekStartSunday': 'Sonntag',
+        'settings.weekStartSystem': 'Systemstandard',
         'settings.weekStartMonday': 'Montag',
         'settings.dateFormat': 'Datumsformat',
         'settings.dateFormatSystem': 'Systemstandard',

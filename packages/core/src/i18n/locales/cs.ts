@@ -793,6 +793,7 @@ export const csOverrides: Record<string, string> = {
         'settings.language': 'Jazyk',
         'settings.weekStart': 'Týden začíná v',
         'settings.weekStartSunday': 'Neděli',
+        'settings.weekStartSystem': 'Podle systému',
         'settings.weekStartMonday': 'Pondělí',
         'settings.weekStartSaturday': 'Sobotu',
         'settings.dateFormat': 'Formát data',

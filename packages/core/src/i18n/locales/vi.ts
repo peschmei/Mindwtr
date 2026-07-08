@@ -815,6 +815,7 @@ export const viOverrides: Record<string, string> = {
         'settings.language': 'Ngôn ngữ',
         'settings.weekStart': 'Tuần bắt đầu vào',
         'settings.weekStartSunday': 'Chủ nhật',
+        'settings.weekStartSystem': 'Theo hệ thống',
         'settings.weekStartMonday': 'Thứ hai',
         'settings.weekStartSaturday': 'Thứ bảy',
         'settings.dateFormat': 'Định dạng ngày',

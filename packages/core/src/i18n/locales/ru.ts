@@ -661,6 +661,7 @@ export const ruOverrides: Record<string, string> = {
         'settings.language': 'Язык',
         'settings.weekStart': 'Неделя начинается',
         'settings.weekStartSunday': 'Воскресенье',
+        'settings.weekStartSystem': 'Системный',
         'settings.weekStartMonday': 'Понедельник',
         'settings.dateFormat': 'Формат даты',
         'settings.dateFormatSystem': 'Система по умолчанию',

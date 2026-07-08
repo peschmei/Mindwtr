@@ -724,6 +724,7 @@ export const arOverrides: Record<string, string> = {
         'settings.language': 'لغة',
         'settings.weekStart': 'يبدأ الأسبوع في',
         'settings.weekStartSunday': 'الأحد',
+        'settings.weekStartSystem': 'افتراضي النظام',
         'settings.weekStartMonday': 'الاثنين',
         'settings.dateFormat': 'تنسيق التاريخ',
         'settings.dateFormatSystem': 'الافتراضي للنظام',

@@ -7,8 +7,9 @@ import {
     canUseJalaliCalendar,
     normalizeDateFormatSetting,
     normalizeTimeFormatSetting,
-    normalizeWeekStartSetting,
+    normalizeWeekStartPreference,
     resolveCalendarSystemSetting,
+    tFallback,
     useTaskStore,
 } from '@mindwtr/core';
 
@@ -41,7 +42,7 @@ export function GeneralSettingsScreen() {
     const [appLockBusy, setAppLockBusy] = useState(false);
     const [appLockErrorKey, setAppLockErrorKey] = useState<string | null>(null);
 
-    const weekStart = normalizeWeekStartSetting(settings.weekStart);
+    const weekStart = normalizeWeekStartPreference(settings.weekStart);
     const dateFormat = normalizeDateFormatSetting(settings.dateFormat);
     const timeFormat = normalizeTimeFormatSetting(settings.timeFormat);
     const systemLocale = typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function'
@@ -75,12 +76,13 @@ export function GeneralSettingsScreen() {
                     : t('nav.contexts'),
     }));
     const currentQuickAccessLabel = quickAccessOptions.find((opt) => opt.value === quickAccessView)?.label ?? t('tab.review');
-    const weekStartOptions: { value: 'sunday' | 'monday' | 'saturday'; label: string }[] = [
+    const weekStartOptions: { value: 'system' | 'sunday' | 'monday' | 'saturday'; label: string }[] = [
+        { value: 'system', label: tFallback(t, 'settings.weekStartSystem', 'System default') },
         { value: 'sunday', label: t('settings.weekStartSunday') },
         { value: 'monday', label: t('settings.weekStartMonday') },
         { value: 'saturday', label: t('settings.weekStartSaturday') },
     ];
-    const currentWeekStartLabel = weekStartOptions.find((opt) => opt.value === weekStart)?.label ?? t('settings.weekStartSunday');
+    const currentWeekStartLabel = weekStartOptions.find((opt) => opt.value === weekStart)?.label ?? tFallback(t, 'settings.weekStartSystem', 'System default');
     const dateFormatOptions: { value: 'system' | 'dmy' | 'mdy' | 'ymd'; label: string }[] = [
         { value: 'system', label: t('settings.dateFormatSystem') },
         { value: 'dmy', label: t('settings.dateFormatDmy') },

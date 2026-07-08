@@ -656,6 +656,7 @@ export const plOverrides: Record<string, string> = {
         'settings.language': 'Język',
         'settings.weekStart': 'Tydzień zaczyna się',
         'settings.weekStartSunday': 'Niedziela',
+        'settings.weekStartSystem': 'Domyślne systemowe',
         'settings.weekStartMonday': 'Poniedziałek',
         'settings.dateFormat': 'Format daty',
         'settings.dateFormatSystem': 'Domyślny systemowy',
