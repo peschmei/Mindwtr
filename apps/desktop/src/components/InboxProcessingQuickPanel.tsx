@@ -1,4 +1,4 @@
-import { useEffect, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { ArrowRight, BookOpen, CheckCircle, ClipboardList, Clock, Trash2, User, X } from 'lucide-react';
 import { DEFAULT_PROJECT_COLOR, filterProjectsBySelectedArea, safeFormatDate, safeParseDate, tFallback, type Area, type Project, type Task, type TaskPriority, type TimeEstimate } from '@mindwtr/core';
 
@@ -302,6 +302,13 @@ export function InboxProcessingQuickPanel({
         return () => document.removeEventListener('keydown', handleDocumentKeyDown);
     }, [onSubmit]);
 
+    // After a long form is submitted the view is left scrolled to the bottom;
+    // bring the panel top (title of the next task) back into view on advance.
+    const panelRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        panelRef.current?.scrollIntoView?.({ block: 'start' });
+    }, [processingTask.id]);
+
     const handlePanelKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
         if (event.defaultPrevented) return;
         if (event.key === 'Process' || event.nativeEvent.isComposing) return;
@@ -316,6 +323,7 @@ export function InboxProcessingQuickPanel({
 
     return (
         <div
+            ref={panelRef}
             className="bg-card border border-border rounded-xl animate-in fade-in overflow-visible"
             onKeyDown={handlePanelKeyDown}
         >

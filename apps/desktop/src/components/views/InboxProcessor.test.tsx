@@ -525,6 +525,33 @@ describe('InboxProcessor', () => {
         });
     });
 
+    it('scrolls the processing panel back into view when advancing to the next task (#841)', async () => {
+        const scrollIntoView = vi.fn();
+        Element.prototype.scrollIntoView = scrollIntoView;
+        const inboxTaskTwo: Task = { ...inboxTask, id: 'task-2', title: 'Second capture' };
+        const { getByRole, updateTask } = renderInboxProcessor({
+            settings: {
+                gtd: {
+                    inboxProcessing: {
+                        defaultMode: 'quick',
+                    },
+                },
+            },
+            tasks: [inboxTask, inboxTaskTwo],
+        });
+
+        fireEvent.click(getByRole('button', { name: /process\.btn/i }));
+        scrollIntoView.mockClear();
+        fireEvent.click(getByRole('button', { name: 'process.next' }));
+
+        await waitFor(() => {
+            expect(updateTask).toHaveBeenCalled();
+        });
+        await waitFor(() => {
+            expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
+        });
+    });
+
     it('moves a task to next with a date-only start date from the quick Later outcome', async () => {
         const { getByRole, getByText, getByLabelText, updateTask } = renderInboxProcessor();
 

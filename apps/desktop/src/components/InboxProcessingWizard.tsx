@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { ArrowRight, BookOpen, Check, CheckCircle, ChevronLeft, ClipboardList, Clock, Trash2, User, X } from 'lucide-react';
 import { DEFAULT_PROJECT_COLOR, filterProjectsBySelectedArea, safeFormatDate, safeParseDate, tFallback, type Area, type Project, type Task, type TaskPriority, type TimeEstimate } from '@mindwtr/core';
 
@@ -219,6 +219,15 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
     scheduleFields,
     visibleScheduleFieldKeys,
 }: InboxProcessingWizardProps) {
+    // After a long step is submitted the view is left scrolled to the bottom;
+    // bring the panel top (title of the next task) back into view on advance.
+    const panelRef = useRef<HTMLDivElement | null>(null);
+    const processingTaskId = processingTask?.id;
+    useEffect(() => {
+        if (!processingTaskId) return;
+        panelRef.current?.scrollIntoView?.({ block: 'start' });
+    }, [processingTaskId]);
+
     if (!isProcessing || !processingTask) return null;
 
     const currentProject = selectedProjectId
@@ -247,7 +256,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl animate-in fade-in overflow-visible">
+        <div ref={panelRef} className="bg-card border border-border rounded-xl animate-in fade-in overflow-visible">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
