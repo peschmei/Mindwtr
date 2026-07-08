@@ -11,6 +11,7 @@ Changes collected after `v1.0.5` and before the next version tag.
 
 ## Full Change List
 
+- feat(desktop): scrollbars follow the active theme's palette — a slim rounded thumb in the theme's border color replaces the engine's default gray bars.
 - fix(tasks): Bulk organize now defaults to "Keep status" — applying no longer resets every selected task's status to Next, and an all-keep apply changes nothing.
 - fix(desktop): attachments added in the task editor are no longer silently discarded when the editor closes without saving — attachment edits now count as unsaved changes (click-outside keeps the editor open, Esc asks to confirm), and a stale editor draft can no longer wipe stored attachments on save.
 - feat(tasks): adjust a task's completion timestamp — tap or click the Completed time in Done/Archived views to correct it, or right-click Done (desktop) / long-press Done in the status menu (mobile) to complete a task as of an earlier time; backdated completions anchor "repeat after completion" recurrence to the actual completion time.

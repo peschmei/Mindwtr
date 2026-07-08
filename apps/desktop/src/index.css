@@ -358,6 +358,37 @@
     color-scheme: dark;
   }
 
+  /*
+   * Theme-aware scrollbars. Every Tauri webview (WebView2, WKWebView,
+   * WebKitGTK) supports the -webkit-scrollbar pseudo-elements, so the thumb
+   * can follow the active theme's palette instead of the engine's default
+   * chrome. The transparent border + content-box clip inset the pill so it
+   * floats over the surface.
+   */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.55);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   html[data-quick-add-window='true'],
   html[data-quick-add-window='true'] body,
   html[data-quick-add-window='true'] #root {
