@@ -115,6 +115,10 @@ export function useTaskEditAttachments({
             localStatus: 'available',
         };
         const cached = await persistAttachmentLocally(attachment);
+        if (cached.uri === attachment.uri) {
+            Alert.alert(t('attachments.title'), t('attachments.fileNotReadable'));
+            return;
+        }
         setEditedTask((prev) => ({ ...prev, attachments: [...(prev.attachments || []), cached] }));
     }, [resolveValidationMessage, setEditedTask, t]);
 
@@ -174,6 +178,10 @@ export function useTaskEditAttachments({
             localStatus: 'available',
         };
         const cached = await persistAttachmentLocally(attachment);
+        if (cached.uri === attachment.uri) {
+            Alert.alert(t('attachments.title'), t('attachments.fileNotReadable'));
+            return;
+        }
         setEditedTask((prev) => ({ ...prev, attachments: [...(prev.attachments || []), cached] }));
     }, [resolveValidationMessage, setEditedTask, t]);
 

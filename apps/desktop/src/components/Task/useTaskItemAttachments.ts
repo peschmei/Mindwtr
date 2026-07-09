@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Attachment, DEFAULT_PROJECT_COLOR, buildTaskUpdatesFromSpeechResult, findSelectableProjectByTitleAndArea, generateUUID, normalizeLinkAttachmentInput, translateWithFallback, useTaskStore, validateAttachmentForUpload, type Task } from '@mindwtr/core';
+import { Attachment, DEFAULT_PROJECT_COLOR, buildTaskUpdatesFromSpeechResult, findSelectableProjectByTitleAndArea, generateUUID, normalizeLinkAttachmentInput, translateWithFallback, useTaskStore, type Task } from '@mindwtr/core';
 import { dataDir } from '@tauri-apps/api/path';
-import { BaseDirectory, readFile, readTextFile, size } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, readFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { loadAIKey } from '../../lib/ai-config';
+import { importPickedFileAttachment } from '../../lib/attachment-import';
 import { normalizeAttachmentPathForUrl, resolveAttachmentOpenTarget } from '../../lib/attachment-paths';
 import { normalizeAttachmentInput } from '../../lib/attachment-utils';
 import { openAttachmentTarget } from '../../lib/open-attachment-target';
@@ -46,11 +47,6 @@ export function useTaskItemAttachments({ task, t }: UseTaskItemAttachmentsProps)
     const audioLoadRequestRef = useRef(0);
     const audioObjectUrlRef = useRef<string | null>(null);
 
-    const resolveValidationMessage = useCallback((error?: string) => {
-        if (error === 'file_too_large') return t('attachments.fileTooLarge');
-        if (error === 'mime_type_blocked' || error === 'mime_type_not_allowed') return t('attachments.invalidFileType');
-        return t('attachments.fileNotSupported');
-    }, [t]);
     const resolveText = useCallback((key: string, fallback: string) => {
         return translateWithFallback(t, key, fallback);
     }, [t]);
@@ -388,43 +384,13 @@ export function useTaskItemAttachments({ task, t }: UseTaskItemAttachmentsProps)
             title: t('attachments.addFile'),
         });
         if (!selected || typeof selected !== 'string') return;
-        try {
-            const fileSize = await size(selected);
-            const validation = await validateAttachmentForUpload(
-                {
-                    id: 'pending',
-                    kind: 'file',
-                    title: selected.split(/[/\\]/).pop() || selected,
-                    uri: selected,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                fileSize
-            );
-            if (!validation.valid) {
-                setAttachmentError(resolveValidationMessage(validation.error));
-                return;
-            }
-        } catch (error) {
-            void logWarn('Failed to read attachment file', {
-                scope: 'attachment',
-                extra: { error: error instanceof Error ? error.message : String(error) },
-            });
-            setAttachmentError(t('attachments.fileNotReadable'));
+        const result = await importPickedFileAttachment(selected);
+        if ('errorKey' in result) {
+            setAttachmentError(t(result.errorKey));
             return;
         }
-        const now = new Date().toISOString();
-        const title = selected.split(/[/\\]/).pop() || selected;
-        const attachment: Attachment = {
-            id: generateUUID(),
-            kind: 'file',
-            title,
-            uri: selected,
-            createdAt: now,
-            updatedAt: now,
-        };
-        setEditAttachments((prev) => [...prev, attachment]);
-    }, [resolveValidationMessage, t]);
+        setEditAttachments((prev) => [...prev, result.attachment]);
+    }, [t]);
 
     const addLinkAttachment = useCallback(() => {
         setAttachmentError(null);

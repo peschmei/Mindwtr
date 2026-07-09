@@ -194,6 +194,10 @@ export function useProjectAttachments({
       localStatus: 'available',
     };
     const cached = await persistAttachmentLocally(attachment);
+    if (cached.uri === attachment.uri) {
+      Alert.alert(t('attachments.title'), t('attachments.fileNotReadable'));
+      return;
+    }
     const next = [...(selectedProject.attachments || []), cached];
     updateProject(selectedProject.id, { attachments: next });
     setSelectedProject({ ...selectedProject, attachments: next });

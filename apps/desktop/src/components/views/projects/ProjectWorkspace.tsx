@@ -1387,12 +1387,6 @@ export function ProjectWorkspace({
         }
     };
 
-    const resolveValidationMessage = (error?: string) => {
-        if (error === 'file_too_large') return t('attachments.fileTooLarge');
-        if (error === 'mime_type_blocked' || error === 'mime_type_not_allowed') return t('attachments.invalidFileType');
-        return t('attachments.fileNotSupported');
-    };
-
     const {
         attachmentError,
         showLinkPrompt,
@@ -1406,7 +1400,6 @@ export function ProjectWorkspace({
         t,
         selectedProject,
         updateProject,
-        resolveValidationMessage,
     });
 
     const selectedProjectAreaLabel = (() => {

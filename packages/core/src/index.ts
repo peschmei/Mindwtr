@@ -875,6 +875,7 @@ export {
 } from './cloudkit-attachments';
 
 export {
+    DEFAULT_MAX_FILE_SIZE_BYTES,
     markAttachmentUnrecoverable,
     validateAttachmentForUpload,
 } from './attachment-validation';

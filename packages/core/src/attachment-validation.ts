@@ -18,7 +18,7 @@ export interface ValidationResult {
     details?: string;
 }
 
-const DEFAULT_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+export const DEFAULT_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const DEFAULT_BLOCKED_MIME_TYPES = [
     'application/x-executable',
     'application/x-msdos-program',

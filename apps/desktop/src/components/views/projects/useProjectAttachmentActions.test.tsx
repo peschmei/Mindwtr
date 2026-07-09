@@ -31,7 +31,6 @@ describe('useProjectAttachmentActions', () => {
             t: (key) => key,
             selectedProject,
             updateProject: vi.fn(),
-            resolveValidationMessage: (error) => error || 'unknown',
         };
 
         const hook = renderHook(() => useProjectAttachmentActions(params));
