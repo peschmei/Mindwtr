@@ -1226,4 +1226,47 @@ describe('TaskItemDisplay', () => {
         expect(queryByText('0/1')).not.toBeInTheDocument();
         expect(queryByText('Reference step')).not.toBeInTheDocument();
     });
+
+    it('keeps the completion timestamp clickable on read-only done rows', () => {
+        const onEditCompletedAt = vi.fn();
+        const doneTask: Task = {
+            ...baseTask,
+            title: 'Finished task',
+            status: 'done',
+            completedAt: '2026-01-02T10:00:00.000Z',
+        };
+
+        const { getByLabelText } = render(
+            <LanguageProvider>
+                <TaskItemDisplay
+                    task={doneTask}
+                    language="en"
+                    selectionMode={false}
+                    isViewOpen={false}
+                    actions={{
+                        onToggleView: vi.fn(),
+                        onEdit: vi.fn(),
+                        onDelete: vi.fn(),
+                        onDuplicate: vi.fn(),
+                        onStatusChange: vi.fn(),
+                        openAttachment: vi.fn(),
+                        onEditCompletedAt,
+                    }}
+                    visibleAttachments={[]}
+                    recurrenceRule=""
+                    recurrenceStrategy="strict"
+                    prioritiesEnabled={false}
+                    timeEstimatesEnabled={false}
+                    isStagnant={false}
+                    showQuickDone={false}
+                    readOnly
+                    t={(key: string) => key}
+                />
+            </LanguageProvider>
+        );
+
+        fireEvent.click(getByLabelText('Edit completion time'));
+
+        expect(onEditCompletedAt).toHaveBeenCalled();
+    });
 });

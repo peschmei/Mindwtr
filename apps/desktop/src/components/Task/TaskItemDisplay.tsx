@@ -377,7 +377,9 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                 label={`${tFallback(t, 'list.done', 'Completed')}: ${completionLabel}`}
             />
         );
-        if (!onEditCompletedAt || readOnly || selectionMode) return badge;
+        // Done/archived rows are readOnly by design, but correcting the completion
+        // timestamp is exactly for those rows — only selection mode disables it.
+        if (!onEditCompletedAt || selectionMode) return badge;
         const editCompletedAtLabel = tFallback(t, 'task.editCompletedAt', 'Edit completion time');
         return (
             <button
