@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type MouseEvent } from 'react';
 import { useLanguage } from '../contexts/language-context';
 import { ModalPortal } from './ModalPortal';
 import { Button } from './ui/Button';
@@ -55,6 +55,11 @@ export function PromptModal({
     const showValidation = !allowEmptyConfirm && hasInteracted && !canConfirm;
 
     if (!isOpen) return null;
+
+    // Keep the input focused while clicking footer buttons: the blur would
+    // reveal the validation line and shift the buttons mid-click, so the
+    // mouseup lands elsewhere and the first click gets swallowed.
+    const keepInputFocus = (event: MouseEvent<HTMLButtonElement>) => event.preventDefault();
 
     return (
         <ModalPortal>
@@ -119,6 +124,7 @@ export function PromptModal({
                             <Button
                                 variant="secondary"
                                 className="mr-auto"
+                                onMouseDown={keepInputFocus}
                                 onClick={() => {
                                     void onBrowse().then((picked) => {
                                         if (typeof picked === 'string' && picked) {
@@ -132,14 +138,15 @@ export function PromptModal({
                             </Button>
                         )}
                         {secondaryLabel && onSecondary && (
-                            <Button variant="secondary" onClick={onSecondary}>
+                            <Button variant="secondary" onMouseDown={keepInputFocus} onClick={onSecondary}>
                                 {secondaryLabel}
                             </Button>
                         )}
-                        <Button variant="secondary" onClick={onCancel}>
+                        <Button variant="secondary" onMouseDown={keepInputFocus} onClick={onCancel}>
                             {cancelLabel}
                         </Button>
                         <Button
+                            onMouseDown={keepInputFocus}
                             onClick={() => {
                                 if (canConfirm) {
                                     onConfirm(value);
