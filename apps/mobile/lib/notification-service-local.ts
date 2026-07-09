@@ -1099,7 +1099,16 @@ export async function startLocalMobileNotifications(): Promise<void> {
   logNotificationInfo('Service started');
 
   storeSubscription?.();
-  storeSubscription = useTaskStore.subscribe(() => {
+  storeSubscription = useTaskStore.subscribe((state, prevState) => {
+    // Reschedule cycles only read tasks, projects, and settings; skip store
+    // updates (sync status, loading flags, editor state) that leave them untouched.
+    if (
+      state.tasks === prevState.tasks
+      && state.projects === prevState.projects
+      && state.settings === prevState.settings
+    ) {
+      return;
+    }
     clearRescheduleTimer();
     rescheduleTimer = setTimeout(() => {
       rescheduleTimer = null;

@@ -322,6 +322,37 @@ describe('notification-service-local', () => {
     expect(snapshot.has('task:task-1:r2')).toBe(false);
   });
 
+  it('skips reschedules for store updates that leave tasks, projects, and settings untouched', async () => {
+    await startLocalMobileNotifications();
+    const listener = (mockStoreSubscribe.mock.calls as unknown[][])[0]?.[0] as (state: unknown, prevState: unknown) => void;
+    expect(typeof listener).toBe('function');
+
+    vi.useFakeTimers();
+    try {
+      const shared = {
+        tasks: mockStoreState.tasks,
+        projects: mockStoreState.projects,
+        settings: mockStoreState.settings,
+      };
+      mockLogInfo.mockClear();
+      listener({ ...shared, isLoading: true }, { ...shared, isLoading: false });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mockLogInfo).not.toHaveBeenCalledWith(
+        '[Local Notifications] Reschedule cycle started',
+        expect.anything()
+      );
+
+      listener({ ...shared, tasks: [...mockStoreState.tasks] }, shared);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mockLogInfo).toHaveBeenCalledWith(
+        '[Local Notifications] Reschedule cycle started',
+        expect.anything()
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('logs reminder scheduling diagnostics without task title or description content', async () => {
     const fireAt = new Date(Date.now() + 5 * 60 * 1000);
     mockStoreState.tasks = [
