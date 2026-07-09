@@ -121,3 +121,4 @@ Changes collected after `v1.0.5` and before the next version tag.
 - fix(mobile): leaving a project's Task order mode no longer shows an empty task list until you scroll — the list now comes back at the position you left it. (#784)
 - fix(mobile): a project's task list no longer hiccups or shifts when you lift your finger after scrolling — the list now scrolls natively like the Projects list, staying exactly where you leave it, with the project details header scrolling along naturally. (#831)
 - fix(mobile): entering Select mode in a project no longer jumps the task list back to the top — selection starts on the tasks you were looking at. (#765)
+- fix(desktop): the Area dropdown in the Inbox Processor no longer renders as the operating system's native select (metallic shading, different arrow, narrower bar on macOS) — it now uses the same searchable dropdown as the Project picker, in both quick and guided processing. (#840)
