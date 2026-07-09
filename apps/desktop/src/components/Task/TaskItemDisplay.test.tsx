@@ -38,6 +38,7 @@ describe('TaskItemDisplay', () => {
 
     afterEach(() => {
         vi.unstubAllGlobals();
+        vi.useRealTimers();
     });
 
     it('renders task age in Chinese when language is zh', () => {
@@ -387,6 +388,10 @@ describe('TaskItemDisplay', () => {
     });
 
     it('shows the projected recurrence date in task preview metadata', () => {
+        // The projected date is computed from "now"; freeze it so the
+        // hardcoded Jul 9 expectation stays valid after that date passes.
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(2026, 6, 3, 12, 0, 0));
         const { getByText } = render(
             <LanguageProvider>
                 <TaskItemDisplay
