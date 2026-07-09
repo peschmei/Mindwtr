@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { AppData, MergeStats, createSyncOrchestrator, ensureFreshLocalSyncSnapshot, runPreSyncAttachmentPhase, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, CLOCK_SKEW_THRESHOLD_MS, appendSyncHistory, withRetry, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, sanitizeAppDataForRemote, buildHttpRemoteFileFingerprint, computeSyncPayloadFingerprint, areSyncPayloadsEqual, assertNoPendingAttachmentUploads, buildFastSyncScope, buildMergeSummaryLog, buildPendingAttachmentUploadLogExtra, findPendingAttachmentUploads, hasPendingSyncSideEffects, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, mergeAppData, cloneAppData, LocalSyncAbort, getInMemoryAppDataSnapshot, shouldRunAttachmentCleanup, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, isDropboxUnauthorizedError, parseFastSyncState, serializeFastSyncState, decodeUriSafe, SYNC_FILE_NAME, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type Attachment, type CloudJsonWriteResult, type CloudProvider, type FastSyncState, type PendingAttachmentUpload, type RemoteJsonWriteResult } from '@mindwtr/core';
+import { AppData, MergeStats, createSyncOrchestrator, ensureFreshLocalSyncSnapshot, runPreSyncAttachmentPhase, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, CLOCK_SKEW_THRESHOLD_MS, appendSyncHistory, withRetry, isRetryableError, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, sanitizeAppDataForRemote, buildHttpRemoteFileFingerprint, computeSyncPayloadFingerprint, areSyncPayloadsEqual, assertNoPendingAttachmentUploads, buildFastSyncScope, buildMergeSummaryLog, buildPendingAttachmentUploadLogExtra, findPendingAttachmentUploads, hasPendingSyncSideEffects, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, mergeAppData, cloneAppData, LocalSyncAbort, getInMemoryAppDataSnapshot, shouldRunAttachmentCleanup, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, isDropboxUnauthorizedError, parseFastSyncState, serializeFastSyncState, decodeUriSafe, SYNC_FILE_NAME, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type Attachment, type CloudJsonWriteResult, type CloudProvider, type FastSyncState, type PendingAttachmentUpload, type RemoteJsonWriteResult } from '@mindwtr/core';
 import { mobileStorage } from './storage-adapter';
 import { logInfo, logSyncError, logWarn, sanitizeLogMessage } from './app-log';
 import { readSyncFile, resolveSyncFileUri, writeSyncFile } from './storage-file';
@@ -42,6 +42,7 @@ import { getMobileCloudRequestOptions, getMobileWebDavRequestOptions } from './w
 const DEFAULT_SYNC_TIMEOUT_MS = 30_000;
 const WEBDAV_RETRY_OPTIONS = { maxAttempts: 5, baseDelayMs: 2000, maxDelayMs: 30_000 };
 const WEBDAV_READ_RETRY_OPTIONS = { ...WEBDAV_RETRY_OPTIONS, shouldRetry: isRetryableWebdavReadError };
+const DROPBOX_RETRY_OPTIONS = { maxAttempts: 3, baseDelayMs: 1000, maxDelayMs: 8000 };
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SYNC_CONFIG_CACHE_TTL_MS = 30_000;
 const FAST_SYNC_STATE_KEY = '@mindwtr_fast_sync_state_v1';
@@ -730,15 +731,26 @@ class MobileSyncRun {
     }
   }
 
+  // Transient failures here must retry before the offline heuristic sees them: the first
+  // request after app resume can die on a stale socket, and Dropbox resets connections
+  // under multi-device write contention — both look like "offline" to the error patterns.
   private async runDropboxOperation<T>(operation: (accessToken: string) => Promise<T>): Promise<T> {
-    let accessToken = await getValidDropboxAccessToken(this.dropboxClientId, this.fetchWithAbort);
-    try {
-      return await operation(accessToken);
-    } catch (error) {
-      if (!isDropboxUnauthorizedError(error)) throw error;
-      accessToken = await forceRefreshDropboxAccessToken(this.dropboxClientId, this.fetchWithAbort);
-      return operation(accessToken);
-    }
+    return withRetry(async () => {
+      let accessToken = await getValidDropboxAccessToken(this.dropboxClientId, this.fetchWithAbort);
+      try {
+        return await operation(accessToken);
+      } catch (error) {
+        if (!isDropboxUnauthorizedError(error)) throw error;
+        accessToken = await forceRefreshDropboxAccessToken(this.dropboxClientId, this.fetchWithAbort);
+        return operation(accessToken);
+      }
+    }, {
+      ...DROPBOX_RETRY_OPTIONS,
+      shouldRetry: (error) => !this.networkWentOffline
+        && !this.requestAbortController.signal.aborted
+        && isRetryableError(error),
+      onRetry: (error, attempt) => logSyncWarning(`Dropbox request failed (attempt ${attempt}); retrying`, error),
+    });
   }
 
   private readLocalDataForSyncCycle = async (): Promise<AppData> => {
@@ -1496,6 +1508,7 @@ class MobileSyncRun {
         backend,
         step: this.step,
         reason: this.offlineDetectionCause ?? 'unknown',
+        error: formatSyncErrorMessage(error, backend),
         ...(this.lastOfflineNetworkStatus ? formatNetworkStatusForLog(this.lastOfflineNetworkStatus) : {}),
       });
       logSyncDiagnostic('Sync diagnostic offline skip', this.syncDiagnosticStartedAt, {
@@ -1504,6 +1517,7 @@ class MobileSyncRun {
         success: 'true',
         skipped: 'offline',
         reason: this.offlineDetectionCause ?? 'unknown',
+        error: formatSyncErrorMessage(error, backend),
       });
       return buildOfflineSkipResult();
     }

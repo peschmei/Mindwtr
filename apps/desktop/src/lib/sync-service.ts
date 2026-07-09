@@ -33,6 +33,7 @@ import {
     summarizeMergeStats,
     withTimeout,
     withRetry,
+    isRetryableError,
     isRetryableWebdavReadError,
     isWebdavInvalidJsonError,
     CLOCK_SKEW_THRESHOLD_MS,
@@ -159,6 +160,7 @@ export type ExternalSyncChange = {
 };
 
 const DROPBOX_AUTH_RETRY_LIMIT = 1;
+const DROPBOX_TRANSIENT_RETRY_OPTIONS = { maxAttempts: 3, baseDelayMs: 1000, maxDelayMs: 8000, shouldRetry: isRetryableError };
 const WEBDAV_READ_RETRY_OPTIONS = {
     maxAttempts: 5,
     baseDelayMs: 2000,
@@ -1165,18 +1167,20 @@ export class SyncService {
     ): Promise<T> {
         let forceRefresh = false;
         let unauthorizedRetries = 0;
-        while (true) {
-            try {
-                const token = await resolveAccessToken(forceRefresh);
-                return await operation(token);
-            } catch (error) {
-                if (!(error instanceof DropboxUnauthorizedError) || unauthorizedRetries >= DROPBOX_AUTH_RETRY_LIMIT) {
-                    throw error;
+        return withRetry(async () => {
+            while (true) {
+                try {
+                    const token = await resolveAccessToken(forceRefresh);
+                    return await operation(token);
+                } catch (error) {
+                    if (!(error instanceof DropboxUnauthorizedError) || unauthorizedRetries >= DROPBOX_AUTH_RETRY_LIMIT) {
+                        throw error;
+                    }
+                    unauthorizedRetries += 1;
+                    forceRefresh = true;
                 }
-                unauthorizedRetries += 1;
-                forceRefresh = true;
             }
-        }
+        }, DROPBOX_TRANSIENT_RETRY_OPTIONS);
     }
 
     private static async persistSuccessfulSyncStatus(

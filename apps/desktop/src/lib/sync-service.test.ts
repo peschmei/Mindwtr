@@ -420,6 +420,30 @@ describe('SyncService testability hooks', () => {
         expect(operation).toHaveBeenNthCalledWith(2, 'token-2');
         expect(operation).toHaveBeenCalledTimes(2);
     });
+
+    it('retries a transient Dropbox request failure before giving up', async () => {
+        const resolveAccessToken = vi.fn(async () => 'token-1');
+        const operation = vi.fn()
+            .mockRejectedValueOnce(new TypeError('Network request failed'))
+            .mockResolvedValue('ok');
+
+        await expect((SyncService as any).runDropboxWithRetry(resolveAccessToken, operation)).resolves.toBe('ok');
+
+        expect(operation).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry non-transient Dropbox failures', async () => {
+        const resolveAccessToken = vi.fn(async () => 'token-1');
+        const operation = vi.fn(async () => {
+            throw new Error('Dropbox download failed: HTTP 409');
+        });
+
+        await expect((SyncService as any).runDropboxWithRetry(resolveAccessToken, operation))
+            .rejects
+            .toThrow('HTTP 409');
+
+        expect(operation).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('SyncService orchestration', () => {
