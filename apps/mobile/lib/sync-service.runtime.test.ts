@@ -1143,7 +1143,10 @@ describe('mobile sync-service runtime', () => {
     expect(result).toEqual({ success: true, stats: emptyStats });
     expect(coreMocks.performSyncCycle).toHaveBeenCalledTimes(1);
     expect(attachmentSyncMocks.cleanupAttachmentTempFiles).toHaveBeenCalledTimes(1);
-    expect(storeStateRef.current.fetchData).toHaveBeenCalledWith({ silent: true });
+    expect(storeStateRef.current.fetchData).toHaveBeenCalledWith({
+      silent: true,
+      preloadedData: expect.objectContaining({ tasks: expect.any(Array) }),
+    });
     expect(logMocks.logSyncError).not.toHaveBeenCalled();
   });
 

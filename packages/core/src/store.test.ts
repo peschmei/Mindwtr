@@ -4,7 +4,7 @@ import { safeParseDate } from './date';
 import { useTaskStore, flushPendingSave, resetForTests, setStorageAdapter } from './store';
 import { buildEntityMap } from './store-helpers';
 import type { StorageAdapter } from './storage';
-import type { Area, Project, Task } from './types';
+import type { AppData, Area, Project, Task } from './types';
 
 const waitForExpectation = async (assertion: () => void, maxAttempts = 200): Promise<void> => {
     let lastError: unknown = null;
@@ -1649,6 +1649,44 @@ describe('TaskStore', () => {
         const saveCalls = (mockStorage.saveData as unknown as { mock: { calls: any[][] } }).mock.calls;
         const lastSaved = saveCalls[saveCalls.length - 1]?.[0];
         expect(lastSaved?.tasks?.[0]?.title).toBe('Edited during sync');
+    });
+
+    it('applies preloaded data through the load pipeline without reading storage', async () => {
+        mockStorage.getData = vi.fn();
+        const preloadedData = {
+            tasks: [
+                {
+                    id: 'task-live',
+                    title: 'Live task',
+                    status: 'next',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-03-22T10:00:00.000Z',
+                    updatedAt: '2026-03-22T10:00:00.000Z',
+                },
+                {
+                    id: 'task-deleted',
+                    title: 'Deleted task',
+                    status: 'next',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-03-22T10:00:00.000Z',
+                    updatedAt: new Date().toISOString(),
+                    deletedAt: new Date().toISOString(),
+                },
+            ],
+            projects: [],
+            sections: [],
+            areas: [],
+            settings: {},
+        } as unknown as AppData;
+
+        await useTaskStore.getState().fetchData({ silent: true, preloadedData });
+
+        expect(mockStorage.getData).not.toHaveBeenCalled();
+        const state = useTaskStore.getState();
+        expect(state.tasks.map((task) => task.id)).toEqual(['task-live']);
+        expect(state._allTasks.map((task) => task.id).sort()).toEqual(['task-deleted', 'task-live']);
     });
 
     it('does not overwrite same-millisecond task completions made during an in-flight fetch', async () => {

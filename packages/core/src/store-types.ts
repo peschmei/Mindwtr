@@ -49,8 +49,8 @@ export interface TaskStore {
     _peopleById: Map<string, Person>;
 
     // Actions
-    /** Load all data from storage */
-    fetchData: (options?: { silent?: boolean }) => Promise<void>;
+    /** Load all data from storage, or apply an already-persisted snapshot without re-reading storage */
+    fetchData: (options?: { silent?: boolean; preloadedData?: AppData }) => Promise<void>;
     /** Add the shared Getting Started project/tasks when missing. */
     seedGettingStarted: () => Promise<StoreActionResult>;
     /** Add a new task */

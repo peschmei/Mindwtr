@@ -604,10 +604,14 @@ export const createSettingsActions = ({
         }
         const fetchStartedAt = get().lastDataChangeAt;
         try {
-            const storage = getStorage();
-            const data = await measureCoreStartupPhase('core.fetch_data.storage_get_data', async () =>
-                withTimeout(storage.getData(), STORAGE_TIMEOUT_MS, 'Storage request timed out')
-            );
+            // A preloaded snapshot must already be durably persisted (e.g. the merged
+            // document sync just wrote); it skips the storage read but runs the exact
+            // same load pipeline, and the lastDataChangeAt guard below still discards
+            // it if local edits landed in the meantime.
+            const data = options?.preloadedData
+                ?? await measureCoreStartupPhase('core.fetch_data.storage_get_data', async () =>
+                    withTimeout(getStorage().getData(), STORAGE_TIMEOUT_MS, 'Storage request timed out')
+                );
             const postProcessStartedAt = Date.now();
             markCoreStartupPhase('core.fetch_data.post_process:start');
             const rawTasks = Array.isArray(data.tasks) ? data.tasks : [];
