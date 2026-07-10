@@ -83,6 +83,21 @@ export function parseShortcutCaptureUrl(rawUrl: string): ShortcutCapturePayload 
     };
 }
 
+export function normalizeShortcutTags(tags: string[]): string[] {
+    const normalized: string[] = [];
+    const seen = new Set<string>();
+    for (const rawTag of tags) {
+        const trimmed = String(rawTag || '').trim();
+        if (!trimmed) continue;
+        const prefixed = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+        const key = prefixed.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        normalized.push(prefixed);
+    }
+    return normalized;
+}
+
 export function isOpenFeatureUrl(rawUrl: string): boolean {
     if (typeof rawUrl !== 'string' || !rawUrl.trim()) return false;
 

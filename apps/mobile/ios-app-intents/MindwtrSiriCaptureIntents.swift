@@ -223,6 +223,117 @@ struct MindwtrOpenListIntent: AppIntent {
     }
 }
 
+// Background captures never touch the app database from Swift. The intent
+// appends a JSON payload to Documents/pending-captures/ and the React Native
+// side ingests it through the normal store/sync write path on next launch or
+// foreground (#845).
+private enum MindwtrPendingCaptureQueue {
+    static let directoryName = "pending-captures"
+
+    static func directoryURL() -> URL? {
+        FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask)
+            .first?
+            .appendingPathComponent(directoryName, isDirectory: true)
+    }
+
+    static func enqueue(task: String, note: String?, tags: String?, project: String?) -> Bool {
+        guard let directory = directoryURL() else { return false }
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let id = UUID().uuidString
+            var payload: [String: Any] = [
+                "id": id,
+                "title": task,
+                "createdAt": ISO8601DateFormatter().string(from: Date())
+            ]
+            if let note = MindwtrSiriCaptureLauncher.trimmed(note) {
+                payload["note"] = note
+            }
+            if let tags = MindwtrSiriCaptureLauncher.normalizedCommaList(tags) {
+                payload["tags"] = tags
+            }
+            if let project = MindwtrSiriCaptureLauncher.trimmed(project) {
+                payload["project"] = project
+            }
+            let data = try JSONSerialization.data(withJSONObject: payload, options: [])
+            try data.write(to: directory.appendingPathComponent("\(id).json"), options: [.atomic])
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+enum MindwtrBackgroundCaptureError: Error, CustomLocalizedStringResourceConvertible {
+    case emptyTask
+    case writeFailed
+
+    var localizedStringResource: LocalizedStringResource {
+        switch self {
+        case .emptyTask:
+            return "Tell Mindwtr what to add."
+        case .writeFailed:
+            return "Mindwtr could not save the task. Open the app and try again."
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+struct MindwtrBackgroundCaptureIntent: AppIntent {
+    static var title: LocalizedStringResource = "Add to Mindwtr Inbox"
+    static var description = IntentDescription("Silently adds a task to the Mindwtr Inbox without opening the app. The task appears the next time Mindwtr opens.")
+
+#if compiler(>=6.0)
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes {
+        .background
+    }
+#endif
+
+    @available(*, deprecated, message: "Use supportedModes with newer App Intents SDKs.")
+    static var openAppWhenRun: Bool {
+        false
+    }
+
+    @Parameter(title: "Task")
+    var task: String
+
+    @Parameter(title: "Note")
+    var note: String?
+
+    @Parameter(title: "Tags")
+    var tags: String?
+
+    @Parameter(title: "Project")
+    var project: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Add \(\.$task) to Inbox") {
+            \.$note
+            \.$tags
+            \.$project
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let trimmedTask = task.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTask.isEmpty else {
+            throw MindwtrBackgroundCaptureError.emptyTask
+        }
+        guard MindwtrPendingCaptureQueue.enqueue(
+            task: trimmedTask,
+            note: note,
+            tags: tags,
+            project: project
+        ) else {
+            throw MindwtrBackgroundCaptureError.writeFailed
+        }
+        return .result(dialog: "Added to your Mindwtr Inbox.")
+    }
+}
+
 @available(iOS 16.0, *)
 struct MindwtrSiriCaptureShortcuts: AppShortcutsProvider {
     static var shortcutTileColor: ShortcutTileColor {

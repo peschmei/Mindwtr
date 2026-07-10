@@ -45,6 +45,28 @@ describe('ios-widgets-and-shortcuts', () => {
     expect(source).toContain('.foreground(.immediate)');
   });
 
+  it('ships a background capture intent that only writes the pending-captures queue', () => {
+    const sourceDir = path.resolve(__dirname, '..', APP_INTENTS_FOLDER);
+    const source = fs.readFileSync(
+      path.join(sourceDir, 'MindwtrSiriCaptureIntents.swift'),
+      'utf8'
+    );
+
+    expect(source).toContain('struct MindwtrBackgroundCaptureIntent: AppIntent');
+    expect(source).toContain('"pending-captures"');
+
+    const backgroundIntent = source.slice(source.indexOf('struct MindwtrBackgroundCaptureIntent'));
+    // Background capture must never foreground the app or open deep links.
+    expect(backgroundIntent).toContain('.background');
+    expect(backgroundIntent).not.toContain('.foreground');
+    expect(backgroundIntent).not.toContain('UIApplication');
+    expect(backgroundIntent).not.toContain('MindwtrSiriCaptureLauncher.open');
+
+    // No SQLite or store writes from Swift: the queue file is the only output.
+    expect(source).not.toContain('sqlite');
+    expect(source).not.toContain('SQLite');
+  });
+
   it('registers App Shortcuts from AppDelegate idempotently', () => {
     const appDelegate = `public class AppDelegate: ExpoAppDelegate {
   public override func application(

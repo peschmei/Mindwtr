@@ -7,6 +7,7 @@ import { logError, logWarn } from '@/lib/app-log';
 import {
     isOpenFeatureUrl,
     isShortcutCaptureUrl,
+    normalizeShortcutTags,
     parseOpenFeatureUrl,
     parseShortcutCaptureUrl,
     resolveOpenFeaturePath,
@@ -31,21 +32,6 @@ type UseRootLayoutExternalCaptureParams = {
     shareText?: string | null;
     shareWebUrl?: string | null;
     showToast: (options: ToastOptions) => void;
-};
-
-const normalizeShortcutTags = (tags: string[]): string[] => {
-    const normalized: string[] = [];
-    const seen = new Set<string>();
-    for (const rawTag of tags) {
-        const trimmed = String(rawTag || '').trim();
-        if (!trimmed) continue;
-        const prefixed = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
-        const key = prefixed.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        normalized.push(prefixed);
-    }
-    return normalized;
 };
 
 const trimSharedValue = (value: string | null | undefined): string => (
