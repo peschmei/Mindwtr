@@ -1134,6 +1134,7 @@ export const zhHans: Record<string, string> = {
         'common.play': '播放',
         'common.pause': '暂停',
         'common.done': '完成',
+        'common.hideKeyboard': '隐藏键盘',
         'common.showCompleted': '显示已完成',
         'common.hideCompleted': '隐藏已完成',
         'common.undo': '撤销',

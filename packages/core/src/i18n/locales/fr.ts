@@ -1208,6 +1208,7 @@ export const frOverrides: Record<string, string> = {
         'common.play': 'Jouer',
         'common.pause': 'Pause',
         'common.done': 'Terminé',
+        'common.hideKeyboard': 'Masquer le clavier',
         'common.showCompleted': 'Afficher les tâches terminées',
         'common.hideCompleted': 'Masquer les tâches terminées',
         'common.undo': 'Annuler',

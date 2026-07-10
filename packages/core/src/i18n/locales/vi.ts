@@ -1218,6 +1218,7 @@ export const viOverrides: Record<string, string> = {
         'common.play': 'Phát',
         'common.pause': 'Tạm dừng',
         'common.done': 'Xong',
+        'common.hideKeyboard': 'Ẩn bàn phím',
         'common.showCompleted': 'Hiện đã hoàn thành',
         'common.hideCompleted': 'Ẩn đã hoàn thành',
         'common.undo': 'Hoàn tác',

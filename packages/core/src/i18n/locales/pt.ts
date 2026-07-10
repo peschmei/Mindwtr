@@ -1021,6 +1021,7 @@ export const ptOverrides: Record<string, string> = {
         'common.play': 'Tocar',
         'common.pause': 'Pausar',
         'common.done': 'Feito',
+        'common.hideKeyboard': 'Ocultar teclado',
         'common.showCompleted': 'Mostrar concluídas',
         'common.hideCompleted': 'Ocultar concluídas',
         'common.undo': 'Desfazer',

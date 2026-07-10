@@ -1234,6 +1234,7 @@ export const en: Record<string, string> = {
         'common.play': 'Play',
         'common.pause': 'Pause',
         'common.done': 'Done',
+        'common.hideKeyboard': 'Hide keyboard',
         'common.showCompleted': 'Show completed',
         'common.hideCompleted': 'Hide completed',
         'common.undo': 'Undo',

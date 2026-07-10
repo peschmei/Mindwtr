@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import {
   applyCapturedProject,
   buildCaptureTaskProps,
@@ -492,9 +493,9 @@ export default function CaptureScreen() {
                   onPress={Keyboard.dismiss}
                   style={[styles.dismissKeyboardButton, { borderColor: tc.border, backgroundColor: tc.inputBg }]}
                   accessibilityRole="button"
-                  accessibilityLabel={t('common.done')}
+                  accessibilityLabel={tFallback(t, 'common.hideKeyboard', 'Hide keyboard')}
                 >
-                  <Text style={[styles.dismissKeyboardText, { color: tc.text }]}>{t('common.done')}</Text>
+                  <Ionicons name="chevron-down" size={16} color={tc.text} />
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -632,10 +633,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-  },
-  dismissKeyboardText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   helpToggle: {
     width: 28,

@@ -969,6 +969,7 @@ export const trOverrides: Record<string, string> = {
         'common.play': 'Oynamak',
         'common.pause': 'Duraklat',
         'common.done': 'Tamamlamak',
+        'common.hideKeyboard': 'Klavyeyi gizle',
         'common.showCompleted': 'Tamamlananları göster',
         'common.hideCompleted': 'Tamamlananları gizle',
         'common.undo': 'Geri al',

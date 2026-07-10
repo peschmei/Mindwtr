@@ -1000,6 +1000,7 @@ export const arOverrides: Record<string, string> = {
         'common.play': 'يلعب',
         'common.pause': 'يوقف',
         'common.done': 'منتهي',
+        'common.hideKeyboard': 'إخفاء لوحة المفاتيح',
         'common.showCompleted': 'إظهار المكتملة',
         'common.hideCompleted': 'إخفاء المكتملة',
         'common.undo': 'تراجع',

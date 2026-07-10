@@ -234,12 +234,12 @@ describe('CaptureScreen', () => {
       listeners.get('keyboardDidShow')?.();
     });
 
-    const doneButton = tree.root.find(
-      (node) => node.type === TouchableOpacity && node.props.accessibilityLabel === 'Done'
+    const dismissButton = tree.root.find(
+      (node) => node.type === TouchableOpacity && node.props.accessibilityLabel === 'Hide keyboard'
     );
 
     act(() => {
-      doneButton.props.onPress();
+      dismissButton.props.onPress();
     });
 
     expect(dismissSpy).toHaveBeenCalledTimes(1);

@@ -1185,6 +1185,7 @@ export const csOverrides: Record<string, string> = {
         'common.play': 'Přehrát',
         'common.pause': 'Pozastavit',
         'common.done': 'Hotovo',
+        'common.hideKeyboard': 'Skrýt klávesnici',
         'common.showCompleted': 'Zobrazit dokončené',
         'common.hideCompleted': 'Skrýt dokončené',
         'common.undo': 'Zpět',

@@ -962,6 +962,7 @@ export const koOverrides: Record<string, string> = {
         'common.play': '놀다',
         'common.pause': '정지시키다',
         'common.done': '완료',
+        'common.hideKeyboard': '키보드 숨기기',
         'common.showCompleted': '완료 항목 표시',
         'common.hideCompleted': '완료 항목 숨기기',
         'common.undo': '실행 취소',

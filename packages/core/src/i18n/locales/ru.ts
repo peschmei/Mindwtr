@@ -957,6 +957,7 @@ export const ruOverrides: Record<string, string> = {
         'common.play': 'Играть',
         'common.pause': 'Пауза',
         'common.done': 'Сделанный',
+        'common.hideKeyboard': 'Скрыть клавиатуру',
         'common.showCompleted': 'Показать выполненные',
         'common.hideCompleted': 'Скрыть выполненные',
         'common.undo': 'Отменить',

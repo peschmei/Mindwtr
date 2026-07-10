@@ -957,6 +957,7 @@ export const jaOverrides: Record<string, string> = {
         'common.play': '遊ぶ',
         'common.pause': '一時停止',
         'common.done': '終わり',
+        'common.hideKeyboard': 'キーボードを隠す',
         'common.showCompleted': '完了済みを表示',
         'common.hideCompleted': '完了済みを非表示',
         'common.undo': '元に戻す',

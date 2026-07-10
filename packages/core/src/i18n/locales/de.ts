@@ -998,6 +998,7 @@ export const deOverrides: Record<string, string> = {
         'common.close': 'Schließen',
         'common.play': 'Abspielen',
         'common.done': 'Erledigt',
+        'common.hideKeyboard': 'Tastatur ausblenden',
         'common.showCompleted': 'Erledigte anzeigen',
         'common.hideCompleted': 'Erledigte ausblenden',
         'common.undo': 'Rückgängig',
