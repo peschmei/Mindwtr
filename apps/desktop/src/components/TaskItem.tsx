@@ -31,6 +31,7 @@ import { TaskItemEditor } from './Task/TaskItemEditor';
 import { TaskItemDisplay } from './Task/TaskItemDisplay';
 import { TaskItemEditorSurface } from './Task/TaskItemEditorSurface';
 import { TaskItemFieldRenderer } from './Task/TaskItemFieldRenderer';
+import { releaseTaskEditSession, tryClaimTaskEditSession } from './Task/task-edit-session';
 import { TaskItemOverlays } from './Task/TaskItemOverlays';
 import { ProjectNextActionPrompt } from './Task/ProjectNextActionPrompt';
 import { PromptModal } from './PromptModal';
@@ -505,8 +506,13 @@ export const TaskItem = memo(function TaskItem({
         setShowCustomRecurrence(false);
         resetAiState();
     }, [resetLocalEditState, resetAiState, setShowCustomRecurrence]);
+    // Identity of this row instance in the per-task edit-session claim. The
+    // same task can render as several rows (Focus grouped by tags), and only
+    // the claiming row may run the inline editor.
+    const editSessionOwnerRef = useRef<object>({});
     const startEditing = useCallback(() => {
         if (effectiveReadOnly || isEditing) return;
+        if (!tryClaimTaskEditSession(task.id, editSessionOwnerRef.current)) return;
         resetEditState();
         setTaskExpanded(task.id, false);
         setAutoFocusTitle(true);
@@ -778,6 +784,10 @@ export const TaskItem = memo(function TaskItem({
     useEffect(() => {
         if (isEditing) return;
         if (editingTaskId === task.id && !effectiveReadOnly) {
+            // Another row instance of this task may already run the editor
+            // (Focus grouped by tags renders multi-tag tasks once per group);
+            // opening a second editor makes them close each other on click.
+            if (!tryClaimTaskEditSession(task.id, editSessionOwnerRef.current)) return;
             setTaskExpanded(task.id, false);
             setAutoFocusTitle(true);
             setIsEditing(true);
@@ -800,10 +810,12 @@ export const TaskItem = memo(function TaskItem({
     useEffect(() => {
         if (!isEditing) return;
         lockEditing();
+        const owner = editSessionOwnerRef.current;
         return () => {
             unlockEditing();
+            releaseTaskEditSession(task.id, owner);
         };
-    }, [isEditing, lockEditing, unlockEditing]);
+    }, [isEditing, lockEditing, task.id, unlockEditing]);
 
 
     const handleDiscardChanges = useCallback(() => {

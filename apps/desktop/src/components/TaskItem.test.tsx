@@ -578,6 +578,34 @@ describe('TaskItem', () => {
         expect(getByDisplayValue('Test Task')).toBeInTheDocument();
     });
 
+    it('opens a single editor when the same task renders in multiple rows (Focus grouped by tags)', async () => {
+        const multiTagTask: Task = { ...mockTask, tags: ['home', 'errand'] };
+        const { getAllByRole, getAllByDisplayValue } = render(
+            <LanguageProvider>
+                <div>
+                    <TaskItem task={multiTagTask} />
+                    <TaskItem task={multiTagTask} />
+                </div>
+            </LanguageProvider>
+        );
+
+        const toggles = getAllByRole('button', { name: /toggle task details/i });
+        await act(async () => {
+            fireEvent.doubleClick(toggles[0]);
+        });
+
+        // Only the double-clicked row may run the editor; a second instance
+        // would treat clicks inside the first editor as outside clicks and
+        // close the whole session.
+        expect(getAllByDisplayValue('Test Task')).toHaveLength(1);
+
+        const titleInput = getAllByDisplayValue('Test Task')[0];
+        await act(async () => {
+            fireEvent.pointerDown(titleInput);
+        });
+        expect(getAllByDisplayValue('Test Task')).toHaveLength(1);
+    });
+
     it('does not render checkbox when not in selection mode', () => {
         const { queryByRole } = render(
             <LanguageProvider>
