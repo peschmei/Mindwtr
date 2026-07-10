@@ -723,6 +723,37 @@ describe('task-utils', () => {
             expect(shouldShowTaskForStart(task, { now })).toBe(false);
             expect(shouldShowTaskForStart(task, { now, showFutureStarts: true })).toBe(true);
         });
+
+        it('defers a recurring due-only task until its due date arrives', () => {
+            const task = { startTime: undefined, dueDate: '2026-05-09', recurrence: { rule: 'weekly' as const } };
+
+            expect(isTaskFutureStart(task, now)).toBe(true);
+            expect(shouldShowTaskForStart(task, { now })).toBe(false);
+            expect(shouldShowTaskForStart(task, { now, showFutureStarts: true })).toBe(true);
+        });
+
+        it('defers a legacy string-recurrence due-only task until its due date arrives', () => {
+            expect(isTaskFutureStart({ startTime: undefined, dueDate: '2026-05-09', recurrence: 'weekly' }, now)).toBe(true);
+        });
+
+        it('shows a recurring due-only task once its due date is today or past', () => {
+            expect(isTaskFutureStart({ startTime: undefined, dueDate: '2026-05-02', recurrence: { rule: 'weekly' } }, now)).toBe(false);
+            expect(isTaskFutureStart({ startTime: undefined, dueDate: '2026-04-25', recurrence: { rule: 'weekly' } }, now)).toBe(false);
+        });
+
+        it('does not defer non-recurring tasks with a future due date', () => {
+            expect(isTaskFutureStart({ startTime: undefined, dueDate: '2026-05-09' }, now)).toBe(false);
+        });
+
+        it('lets an explicit start date override the due-date deferral for recurring tasks', () => {
+            const task = {
+                startTime: new Date(2026, 4, 1, 9, 0, 0, 0).toISOString(),
+                dueDate: '2026-05-09',
+                recurrence: { rule: 'weekly' as const },
+            };
+
+            expect(isTaskFutureStart(task, now)).toBe(false);
+        });
     });
 
     describe('getTaskFocusEligibility', () => {
@@ -778,6 +809,20 @@ describe('task-utils', () => {
                 reason: 'eligible',
             });
             expect(task.status).toBe('waiting');
+        });
+
+        it('defers the next instance of a recurring due-only task until its due date', () => {
+            const task = makeTask({
+                id: 'recurring-due-only',
+                status: 'next',
+                dueDate: '2026-04-12',
+                recurrence: { rule: 'weekly' },
+            });
+
+            expect(getTaskFocusEligibility(task, { tasks: [task], projects: [], now })).toEqual({
+                eligible: false,
+                reason: 'deferred',
+            });
         });
     });
 

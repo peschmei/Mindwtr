@@ -4,6 +4,7 @@
 
 import { Task, TaskStatus, TaskSortBy, TaskPriority, Project, AppData, SortField } from './types';
 import { isDueForReview, safeParseDate, safeParseDueDate } from './date';
+import { hasRecurrenceRule } from './recurrence';
 import { timeEstimateToMinutes } from './calendar-scheduling';
 import { TASK_STATUS_ORDER } from './task-status';
 import { isTaskInActiveProject } from './project-utils';
@@ -313,9 +314,17 @@ export function getWaitingPerson(task: Pick<Task, 'assignedTo' | 'description'>)
     return extractWaitingPerson(task.description);
 }
 
-export function isTaskFutureStart(task: Pick<Task, 'startTime'>, now: Date = new Date()): boolean {
+export function isTaskFutureStart(
+    task: Pick<Task, 'startTime'> & Partial<Pick<Task, 'dueDate' | 'recurrence'>>,
+    now: Date = new Date(),
+): boolean {
     const start = safeParseDate(task.startTime);
-    if (!start) return false;
+    // A recurring task with only a due date defers like a start-dated one; otherwise
+    // the next instance spawned on completion reappears in Next/Focus immediately,
+    // indistinguishable from the instance just completed (#843).
+    const deferUntil = start
+        ?? (hasRecurrenceRule(task.recurrence) ? safeParseDate(task.dueDate) : null);
+    if (!deferUntil) return false;
 
     const endOfToday = new Date(
         now.getFullYear(),
@@ -326,11 +335,11 @@ export function isTaskFutureStart(task: Pick<Task, 'startTime'>, now: Date = new
         59,
         999,
     );
-    return start > endOfToday;
+    return deferUntil > endOfToday;
 }
 
 export function shouldShowTaskForStart(
-    task: Pick<Task, 'startTime'>,
+    task: Pick<Task, 'startTime'> & Partial<Pick<Task, 'dueDate' | 'recurrence'>>,
     options: TaskStartVisibilityOptions = {},
 ): boolean {
     if (options.showFutureStarts === true) return true;

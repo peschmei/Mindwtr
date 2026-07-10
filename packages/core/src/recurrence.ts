@@ -303,6 +303,10 @@ export function buildRRuleString(
     return parts.join(';');
 }
 
+export function hasRecurrenceRule(value: Task['recurrence']): boolean {
+    return getRecurrenceRule(value) !== null;
+}
+
 function getRecurrenceRule(value: Task['recurrence']): RecurrenceRule | null {
     if (!value) return null;
     if (typeof value === 'string') {
