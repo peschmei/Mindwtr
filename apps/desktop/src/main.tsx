@@ -222,6 +222,21 @@ async function bootstrap() {
         navigator.serviceWorker.register('/sw.js').catch(() => undefined);
     }
 
+    if (!isTauriRuntime()) {
+        // A lazy route chunk can fail to import when the served index.html and
+        // the deployed assets are from different builds (web app redeployed
+        // while a tab was open, or a stale cached shell). One reload fetches a
+        // fresh shell with matching chunk names; the guard stops a reload loop
+        // when the failure is not staleness.
+        window.addEventListener('vite:preloadError', () => {
+            const RELOAD_FLAG = 'mindwtr-chunk-reload-at';
+            const lastReload = Number(sessionStorage.getItem(RELOAD_FLAG) || 0);
+            if (Date.now() - lastReload < 30_000) return;
+            sessionStorage.setItem(RELOAD_FLAG, String(Date.now()));
+            window.location.reload();
+        });
+    }
+
     const RootApp = isQuickAddWindow ? QuickAddWindowApp : App;
 
     ReactDOM.createRoot(document.getElementById('root')!).render(
