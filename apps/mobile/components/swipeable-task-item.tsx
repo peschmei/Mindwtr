@@ -83,7 +83,6 @@ export type SwipeableTaskItemRowContext = {
     focusTaskLimit: number;
     timeEstimatesEnabled: boolean;
     showTaskAge: boolean;
-    undoNotificationsEnabled: boolean;
 };
 
 
@@ -128,7 +127,6 @@ function StoreBackedSwipeableTaskItem(props: SwipeableTaskItemProps) {
         focusTaskLimit: normalizeFocusTaskLimit(state.settings?.gtd?.focusTaskLimit),
         timeEstimatesEnabled: state.settings?.features?.timeEstimates !== false,
         showTaskAge: state.settings?.appearance?.showTaskAge === true,
-        undoNotificationsEnabled: state.settings?.undoNotificationsEnabled !== false,
     }), shallow);
     return <SwipeableTaskItemInner {...props} rowContext={rowContext} />;
 }
@@ -186,7 +184,6 @@ function SwipeableTaskItemInner({
         focusTaskLimit,
         timeEstimatesEnabled,
         showTaskAge,
-        undoNotificationsEnabled,
     } = rowContext;
     const canShowFocusToggle = showFocusToggle
         && task.status !== 'done'
@@ -466,7 +463,6 @@ function SwipeableTaskItemInner({
         }
         void deletePromise
             .then(() => {
-                if (!undoNotificationsEnabled) return;
                 showToast({
                     title: t('common.notice') || 'Notice',
                     message: t('list.taskDeleted') || 'Task deleted',

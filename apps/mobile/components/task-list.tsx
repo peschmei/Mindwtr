@@ -436,7 +436,6 @@ function TaskListComponent({
   const prioritiesEnabled = settings?.features?.priorities !== false;
   const timeEstimatesEnabled = settings?.features?.timeEstimates !== false;
   const showTaskAge = settings?.appearance?.showTaskAge === true;
-  const undoNotificationsEnabled = settings?.undoNotificationsEnabled !== false;
   const rowContext = useMemo<SwipeableTaskItemRowContext>(() => ({
     addTask,
     updateTask,
@@ -447,7 +446,6 @@ function TaskListComponent({
     focusTaskLimit,
     timeEstimatesEnabled,
     showTaskAge,
-    undoNotificationsEnabled,
   }), [
     addTask,
     areas,
@@ -457,7 +455,6 @@ function TaskListComponent({
     restoreTask,
     showTaskAge,
     timeEstimatesEnabled,
-    undoNotificationsEnabled,
     updateTask,
   ]);
   const timeEstimateFiltersEnabled = showTimeEstimateFiltersProp && timeEstimatesEnabled && statusFilter !== 'inbox';

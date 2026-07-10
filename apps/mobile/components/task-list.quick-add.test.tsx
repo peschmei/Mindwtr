@@ -690,7 +690,6 @@ describe('TaskList project quick add', () => {
       focusTaskLimit: 3,
       showTaskAge: false,
       timeEstimatesEnabled: true,
-      undoNotificationsEnabled: true,
     }));
 
     act(() => {

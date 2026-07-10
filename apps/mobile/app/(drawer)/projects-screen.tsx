@@ -189,7 +189,6 @@ export default function ProjectsScreen() {
     const value = t(key);
     return value && value !== key ? value : fallback;
   }, [t]);
-  const undoNotificationsEnabled = settings?.undoNotificationsEnabled !== false;
   const [showTagFilter, setShowTagFilter] = useState(false);
   const [tagDraft, setTagDraft] = useState('');
   const windowHeight = Dimensions.get('window').height;
@@ -426,7 +425,6 @@ export default function ProjectsScreen() {
         if (selectedProject?.id === projectIdToDelete) {
           setSelectedProject(null);
         }
-        if (!undoNotificationsEnabled) return;
         showToast({
           title: resolveText('common.notice', 'Notice'),
           message: resolveText('projects.deleted', 'Project moved to Trash'),
@@ -461,7 +459,6 @@ export default function ProjectsScreen() {
     restoreProject,
     selectedProject?.id,
     showToast,
-    undoNotificationsEnabled,
   ]);
 
   const handleDuplicateProject = useCallback((projectIdToDuplicate: string) => {

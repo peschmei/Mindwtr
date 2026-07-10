@@ -478,18 +478,16 @@ export function useTaskEditActions({
     const handleDeleteTask = useCallback(async () => {
         if (!task) return;
         await deleteTask(task.id).catch((error) => logTaskError('Failed to delete task', error));
-        if (settings.undoNotificationsEnabled !== false) {
-            showToast({
-                title: t('common.notice') || 'Notice',
-                message: t('list.taskDeleted') || 'Task deleted',
-                tone: 'info',
-                actionLabel: t('common.undo') || 'Undo',
-                onAction: () => { void restoreTask(task.id); },
-                durationMs: 5200,
-            });
-        }
+        showToast({
+            title: t('common.notice') || 'Notice',
+            message: t('list.taskDeleted') || 'Task deleted',
+            tone: 'info',
+            actionLabel: t('common.undo') || 'Undo',
+            onAction: () => { void restoreTask(task.id); },
+            durationMs: 5200,
+        });
         onClose();
-    }, [deleteTask, onClose, restoreTask, settings.undoNotificationsEnabled, showToast, t, task]);
+    }, [deleteTask, onClose, restoreTask, showToast, t, task]);
 
     const handleConvertToReference = useCallback(() => {
         if (!task) return;
