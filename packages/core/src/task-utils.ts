@@ -314,16 +314,24 @@ export function getWaitingPerson(task: Pick<Task, 'assignedTo' | 'description'>)
     return extractWaitingPerson(task.description);
 }
 
+function earliestDate(a: Date | null, b: Date | null): Date | null {
+    if (!a) return b;
+    if (!b) return a;
+    return a <= b ? a : b;
+}
+
 export function isTaskFutureStart(
-    task: Pick<Task, 'startTime'> & Partial<Pick<Task, 'dueDate' | 'recurrence'>>,
+    task: Pick<Task, 'startTime'> & Partial<Pick<Task, 'dueDate' | 'recurrence' | 'reviewAt'>>,
     now: Date = new Date(),
 ): boolean {
     const start = safeParseDate(task.startTime);
-    // A recurring task with only a due date defers like a start-dated one; otherwise
-    // the next instance spawned on completion reappears in Next/Focus immediately,
+    // A recurring task without a start date defers on its next remaining
+    // schedule field (the earlier of due/review); otherwise the next instance
+    // spawned on completion reappears in Next/Focus immediately,
     // indistinguishable from the instance just completed (#843).
-    const deferUntil = start
-        ?? (hasRecurrenceRule(task.recurrence) ? safeParseDate(task.dueDate) : null);
+    const deferUntil = start ?? (hasRecurrenceRule(task.recurrence)
+        ? earliestDate(safeParseDate(task.dueDate), safeParseDate(task.reviewAt))
+        : null);
     if (!deferUntil) return false;
 
     const endOfToday = new Date(
@@ -339,7 +347,7 @@ export function isTaskFutureStart(
 }
 
 export function shouldShowTaskForStart(
-    task: Pick<Task, 'startTime'> & Partial<Pick<Task, 'dueDate' | 'recurrence'>>,
+    task: Pick<Task, 'startTime'> & Partial<Pick<Task, 'dueDate' | 'recurrence' | 'reviewAt'>>,
     options: TaskStartVisibilityOptions = {},
 ): boolean {
     if (options.showFutureStarts === true) return true;

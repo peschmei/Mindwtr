@@ -745,6 +745,29 @@ describe('task-utils', () => {
             expect(isTaskFutureStart({ startTime: undefined, dueDate: '2026-05-09' }, now)).toBe(false);
         });
 
+        it('defers a recurring review-only task until its review date arrives', () => {
+            const task = { startTime: undefined, reviewAt: '2026-05-09T09:00:00.000Z', recurrence: { rule: 'weekly' as const } };
+
+            expect(isTaskFutureStart(task, now)).toBe(true);
+            expect(isTaskFutureStart({ ...task, reviewAt: '2026-05-02T09:00:00.000Z' }, now)).toBe(false);
+        });
+
+        it('does not defer non-recurring tasks with a future review date', () => {
+            expect(isTaskFutureStart({ startTime: undefined, reviewAt: '2026-05-09T09:00:00.000Z' }, now)).toBe(false);
+        });
+
+        it('defers a recurring task with due and review dates only until the earlier of the two', () => {
+            const task = {
+                startTime: undefined,
+                dueDate: '2026-05-16',
+                reviewAt: '2026-05-03T09:00:00.000Z',
+                recurrence: { rule: 'weekly' as const },
+            };
+
+            expect(isTaskFutureStart(task, now)).toBe(true);
+            expect(isTaskFutureStart(task, new Date(2026, 4, 3, 10, 0, 0, 0))).toBe(false);
+        });
+
         it('lets an explicit start date override the due-date deferral for recurring tasks', () => {
             const task = {
                 startTime: new Date(2026, 4, 1, 9, 0, 0, 0).toISOString(),
