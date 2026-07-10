@@ -25,7 +25,24 @@ object PersistentCaptureNotifier {
   const val EXTRA_TEXT = "tech.dongdongbh.mindwtr.persistentCapture.text"
   const val EXTRA_CHANNEL_NAME = "tech.dongdongbh.mindwtr.persistentCapture.channelName"
 
+  // Device-local mirror of the last posted state so the notification can be
+  // re-pinned from any process start (alarm receivers, widgets, activity
+  // launches) without waiting for React to boot. OEMs remove the app's
+  // notifications when they kill its process, and that removal fires no
+  // dismiss intent (#819).
+  private const val PREFS_NAME = "mindwtr-persistent-capture"
+  private const val PREF_ENABLED = "enabled"
+  private const val PREF_TITLE = "title"
+  private const val PREF_TEXT = "text"
+  private const val PREF_CHANNEL_NAME = "channelName"
+
   fun post(context: Context, title: String, text: String, channelName: String) {
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+      .putBoolean(PREF_ENABLED, true)
+      .putString(PREF_TITLE, title)
+      .putString(PREF_TEXT, text)
+      .putString(PREF_CHANNEL_NAME, channelName)
+      .apply()
     val notificationManager =
       context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
 
@@ -88,9 +105,24 @@ object PersistentCaptureNotifier {
   }
 
   fun cancel(context: Context) {
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
     val notificationManager =
       context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
     notificationManager?.cancel(NOTIFICATION_ID)
+  }
+
+  /**
+   * Re-post the notification from the mirrored state if the toggle is on.
+   * Same-id notify on the silent channel is an invisible in-place update, so
+   * calling this on every process start is safe.
+   */
+  fun restoreOnProcessStart(context: Context) {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    if (!prefs.getBoolean(PREF_ENABLED, false)) return
+    val title = prefs.getString(PREF_TITLE, null) ?: return
+    val text = prefs.getString(PREF_TEXT, null) ?: return
+    val channelName = prefs.getString(PREF_CHANNEL_NAME, null) ?: return
+    post(context, title, text, channelName)
   }
 }
 
