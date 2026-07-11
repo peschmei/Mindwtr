@@ -22,13 +22,13 @@
           "轻量级任务管理器",
           "隐私保护任务应用"
         ],
-        "Description": "Mindwtr \n是一款注重隐私、本地优先（Lo\ncal-First）的 GTD (Getting Things Done) \n待办事项管理应用，旨在帮助您井井有条地安排生活，且无需牺牲数据安全。\n\n与其他将您的生活数据存储在云端服务器的任务管理器不同，Mindwtr \n将所有内容都保存在您的设备上。您的任务、项目和笔记完全属于您自己。\n\n主要功能：\n•\n本地优先：除非您主动导出，否则您的数据绝不会离开您的设备。\n• GTD 工作流：专为“Getting \nThings \nDone”方法论打造，包含收件箱（Inbox）、项目（Projects）和上下文（Contexts）。\n• 快速轻量：基于 Rust \n和 Tauri \n构建，启动迅速，性能极快。\n\n• \n专注无干扰：干净、极简的用户界面，助您专注于重要事项。\n• \n开源透明：代码开源且可审计，值得您信赖。\n\n掌控您的任务\n，同时确信您的数据安全无虞。",
+        "Description": "大脑总在最不合适的时候提醒你还有事没做。Mindwtr 给这些事一个安稳的家。\n\nMindwtr 是一款免费开源的待办应用，基于「搞定」（Getting Things Done，GTD）方法。想到什么随手记下，几秒钟整理好，然后只看当下能做的事。无需账号，无需订阅，数据保存在你自己的电脑上。\n\n它是怎么工作的：\n• 先记下来。一个快捷键，任务、想法直接进收件箱。\n• 理一理。跟着向导快速过一遍：现在就做、排上日程、交给别人，或先放一放。\n• 去做。「聚焦」只显示你现在能做的事。\n• 每周清一次。每周回顾让清单一直可信、脑子一直清爽。\n\n为什么选 Mindwtr：\n• 完全离线可用，无需账号。\n• 数据保存在你的设备上。同步可选：Dropbox、你自己的文件夹、WebDAV 或自己的服务器。\n• 内置完整 GTD 方法：收件箱、下一步、等待中、将来/也许、项目、领域、情境与回顾。\n• 列表、日历与看板视图；提醒、重复任务、Markdown 笔记与附件。\n• 支持从 Todoist、TickTick、OmniFocus 等导入。\n• 免费开源。无广告、无跟踪、无锁定。\n\n注意：运行需要 Microsoft Visual C++ Redistributable。",
         "Features": [
-          "本地优先的数据存储，最大程度保护隐私",
-          "干净、极简的 GTD (Getting Things Done) \n界面",
-          "基于 Rust 和 Tauri \n构建，性能极快",
-          "完全离线可用，无需互联网连接",
-          "完全开源，安全透明"
+          "完全离线可用，无需账号",
+          "内置完整 GTD（搞定）流程：引导式收件箱处理与每周回顾",
+          "数据留在本地；可选同步到 Dropbox、WebDAV、文件夹或自己的服务器",
+          "列表、日历与看板视图，支持提醒与重复任务",
+          "免费开源，无广告无跟踪"
         ],
         "ReleaseNotes": "• 重复提醒、相对开始时间、看板筛选、仅日期计划和长标题编辑让计划更顺畅。\n• TickTick/Obsidian 导入、WebDAV 读取、本地听写下载和循环任务更可靠。\n• 桌面侧边栏、项目编辑、同步修复和本地自动化路径提升了稳定性和可访问性。",
         "Images": [
@@ -74,13 +74,13 @@
           "gtd-applications",
           "cross-platform"
         ],
-        "Description": "Requires Microsoft Visual C++ Redistributable \nto run.\n\nMindwtr is a privacy-focused, local-first Getting Things Done (GTD) \napplication designed to help you organize your life without compromising your \ndata.\n\nUnlike other task managers that store your life on a cloud server, \nMindwtr keeps everything on your device. Your tasks, projects, and notes belong \nto you, and you alone.\n\nKey Features:\n• Local-First: Your data never \nleaves your device unless you explicitly export it.\n• GTD Workflow: Built \nfor the \"Getting Things Done\" methodology with Inbox, Projects, and \nContexts.\n• Fast & Lightweight: Built with Rust and Tauri for \nblazing-fast performance.\n• Distraction-Free: A clean, minimalist \ninterface that helps you focus on what matters.\n• Open Source: Auditable \nand transparent code you can trust.\n\nTake control of your tasks with the peace\nof mind that your data is safe.",
+        "Description": "Your head keeps reminding you of things at the worst times. Mindwtr gives them a safe home.\n\nMindwtr is a free, open-source to-do app built on the Getting Things Done (GTD) method. Write down every task and idea the moment it appears, sort it in seconds, and see only what you can do right now. No account, no subscription, and your data stays on your PC.\n\nHow it works:\n• Dump it. One hotkey, and a task, idea, or worry lands in your Inbox.\n• Sort it. A short guided pass: do it now, schedule it, hand it off, or shelve it for someday.\n• Do it. The Focus view shows only what you can act on right now.\n• Reset weekly. A guided review keeps the list trustworthy and your head clear.\n\nWhy Mindwtr:\n• Works completely offline. No account required.\n• Your tasks stay on your device. Sync is optional: Dropbox, a folder you control, WebDAV, or your own server.\n• The full GTD method built in: Inbox, Next, Waiting For, Someday/Maybe, Projects, Areas, Contexts, and reviews.\n• List, calendar, and kanban board views. Reminders, repeating tasks, Markdown notes, and attachments.\n• Import from Todoist, TickTick, OmniFocus, and more.\n• Free and open source. No ads, no tracking, no lock-in.\n\nNote: Requires the Microsoft Visual C++ Redistributable to run.",
         "Features": [
-          "Local-first data storage for maximum privacy",
-          "Clean, minimalist GTD (Getting Things Done) interface",
-          "Blazing fast performance using Rust and Tauri",
-          "No internet connection required to function",
-          "Open source and transparent"
+          "Works offline, no account required",
+          "Full Getting Things Done (GTD) workflow with guided inbox processing and weekly review",
+          "Your data stays on your device; optional sync to Dropbox, WebDAV, a folder, or your own server",
+          "List, calendar, and kanban views with reminders and repeating tasks",
+          "Free and open source, no ads or tracking"
         ],
         "ReleaseNotes": "• Repeat reminders, relative start offsets, board filters, date-only scheduling, and long task title editing make planning smoother.\n• TickTick and Obsidian imports, WebDAV reads, local dictation downloads, and recurrence handling are more reliable.\n• Desktop sidebar, project editing, sync repair, and local automation paths received stability and accessibility polish.",
         "Images": [
@@ -123,13 +123,13 @@
           "Produktivitaet",
           "Datenschutz Aufgaben App"
         ],
-        "Description": "Mindwtr ist ein datenschutzorientierter, lokaler GTD (Getting Things Done) Aufgabenmanager, der dir hilft, dein Leben zu organisieren, ohne deine Daten zu gefaehrden.\n\nIm Unterschied zu Aufgabenmanagern, die dein Leben auf einem Cloud-Server speichern, behaelt Mindwtr alles auf deinem Geraet. Deine Aufgaben, Projekte und Notizen gehoeren dir.\n\nHauptfunktionen:\n- Lokal zuerst: Deine Daten verlassen dein Geraet nur, wenn du sie ausdruecklich exportierst oder synchronisierst.\n- GTD-Workflow: Entwickelt fuer Getting Things Done mit Inbox, Projekten und Kontexten.\n- Schnell und leicht: Gebaut mit Rust und Tauri fuer starke Leistung.\n- Ablenkungsarm: Eine klare, minimalistische Oberflaeche hilft dir, dich auf Wichtiges zu konzentrieren.\n- Open Source: Transparenter Code, der geprueft werden kann.\n\nBehalte die Kontrolle ueber deine Aufgaben und deine Daten.",
+        "Description": "Dein Kopf erinnert dich immer im falschen Moment an offene Dinge. Mindwtr gibt ihnen ein sicheres Zuhause.\n\nMindwtr ist eine kostenlose Open-Source-To-do-App nach der Getting-Things-Done-Methode (GTD). Schreib jede Aufgabe und Idee sofort auf, sortiere sie in Sekunden und sieh nur das, was du jetzt tun kannst. Kein Konto, kein Abo, und deine Daten bleiben auf deinem PC.\n\nSo funktioniert es:\n• Rauslassen. Ein Hotkey, und Aufgabe, Idee oder Sorge landet in der Inbox.\n• Sortieren. Ein kurzer gefuehrter Durchgang: jetzt erledigen, terminieren, abgeben oder auf spaeter verschieben.\n• Erledigen. Die Focus-Ansicht zeigt nur, was du jetzt tun kannst.\n• Woechentlich aufraeumen. Ein gefuehrter Wochenrueckblick haelt die Liste vertrauenswuerdig und den Kopf frei.\n\nWarum Mindwtr:\n• Funktioniert komplett offline. Kein Konto noetig.\n• Deine Aufgaben bleiben auf deinem Geraet. Sync ist optional: Dropbox, ein eigener Ordner, WebDAV oder dein eigener Server.\n• Die volle GTD-Methode eingebaut: Inbox, Next, Warten, Irgendwann/Vielleicht, Projekte, Bereiche, Kontexte und Reviews.\n• Listen-, Kalender- und Kanban-Ansichten. Erinnerungen, Wiederholungen, Markdown-Notizen und Anhaenge.\n• Import aus Todoist, TickTick, OmniFocus und mehr.\n• Kostenlos und Open Source. Keine Werbung, kein Tracking, kein Lock-in.\n\nHinweis: Zum Ausfuehren wird die Microsoft Visual C++ Redistributable benoetigt.",
         "Features": [
-          "Lokale Datenspeicherung fuer mehr Privatsphaere",
-          "Klare GTD (Getting Things Done) Oberflaeche",
-          "Schnelle Leistung mit Rust und Tauri",
-          "Offline nutzbar ohne staendige Internetverbindung",
-          "Open Source und transparent"
+          "Funktioniert offline, kein Konto noetig",
+          "Vollstaendiger GTD-Workflow mit gefuehrter Inbox-Verarbeitung und Wochenrueckblick",
+          "Daten bleiben lokal; optionaler Sync zu Dropbox, WebDAV, Ordner oder eigenem Server",
+          "Listen-, Kalender- und Kanban-Ansichten mit Erinnerungen und Wiederholungen",
+          "Kostenlos und Open Source, ohne Werbung und Tracking"
         ],
         "ReleaseNotes": "• Wiederhol-Erinnerungen, relative Startzeiten, Board-Filter, Datum-only-Planung und lange Aufgabentitel machen Planung runder.\n• TickTick-/Obsidian-Importe, WebDAV-Lesezugriffe, lokale Diktat-Downloads und Wiederholungen sind zuverlaessiger.\n• Desktop-Seitenleiste, Projektbearbeitung, Sync-Reparatur und lokale Automation wurden stabiler und zugaenglicher.",
         "Images": [],
@@ -153,13 +153,13 @@
           "productivité",
           "application tâches privée"
         ],
-        "Description": "Mindwtr est un gestionnaire de tâches gratuit et open source conçu pour Getting Things Done (GTD). Il vous aide à capturer, clarifier, organiser et revoir vos engagements sans confier vos données personnelles à un service cloud.\n\nContrairement à de nombreuses applications de productivité, Mindwtr conserve vos tâches, projets et notes sur votre appareil. Vous décidez vous-même si et où les données sont synchronisées, exportées ou sauvegardées.\n\nFonctionnalités principales :\n- Local-first : vos données restent sur votre appareil sauf si vous choisissez de les synchroniser, les exporter ou les sauvegarder.\n- Flux GTD : Inbox, Next, Waiting, Someday, Projects, Areas et Contexts suivent la méthode Getting Things Done.\n- Rapide et léger : construit avec Rust et Tauri pour de bonnes performances.\n- Sans distraction : une interface claire vous aide à vous concentrer sur ce qui compte.\n- Open source : code transparent et vérifiable.\n\nGardez le contrôle de vos tâches et de vos données.",
+        "Description": "Votre tête vous rappelle toujours les choses au pire moment. Mindwtr leur donne un endroit sûr.\n\nMindwtr est une application de tâches gratuite et open source fondée sur la méthode Getting Things Done (GTD). Notez chaque tâche et chaque idée dès qu'elle surgit, triez-les en quelques secondes, puis ne voyez que ce que vous pouvez faire maintenant. Pas de compte, pas d'abonnement, et vos données restent sur votre PC.\n\nComment ça marche :\n• Videz. Un raccourci clavier, et la tâche, l'idée ou le souci atterrit dans l'Inbox.\n• Triez. Un court passage guidé : faites-le maintenant, planifiez-le, déléguez-le ou mettez-le de côté.\n• Agissez. La vue Focus ne montre que ce que vous pouvez faire maintenant.\n• Faites le point chaque semaine. Une revue guidée garde la liste fiable et la tête claire.\n\nPourquoi Mindwtr :\n• Fonctionne entièrement hors ligne. Aucun compte requis.\n• Vos tâches restent sur votre appareil. Synchronisation optionnelle : Dropbox, un dossier à vous, WebDAV ou votre propre serveur.\n• La méthode GTD complète intégrée : Inbox, Next, En attente, Un jour/Peut-être, Projets, Domaines, Contextes et revues.\n• Vues liste, calendrier et kanban. Rappels, tâches répétées, notes Markdown et pièces jointes.\n• Import depuis Todoist, TickTick, OmniFocus et plus.\n• Gratuit et open source. Pas de pub, pas de pistage, pas de verrouillage.\n\nRemarque : nécessite Microsoft Visual C++ Redistributable pour fonctionner.",
         "Features": [
-          "Stockage local-first pour protéger la vie privée",
-          "Interface GTD claire pour capturer et organiser les tâches",
-          "Fonctionne hors ligne sans compte obligatoire",
-          "Projets, contextes, revue et tableau Kanban",
-          "Open source et transparent"
+          "Fonctionne hors ligne, aucun compte requis",
+          "Flux GTD complet avec traitement guidé de l'Inbox et revue hebdomadaire",
+          "Les données restent locales ; sync optionnelle vers Dropbox, WebDAV, un dossier ou votre serveur",
+          "Vues liste, calendrier et kanban, rappels et tâches répétées",
+          "Gratuit et open source, sans publicité ni pistage"
         ],
         "ReleaseNotes": "• Rappels repetes, debuts relatifs, filtres tableau, dates sans heure et longs titres rendent la planification plus fluide.\n• Imports TickTick/Obsidian, lectures WebDAV, telechargements de dictee locale et recurrence sont plus fiables.\n• Barre laterale, edition de projets, reparation sync et automation locale gagnent en stabilite et accessibilite.",
         "Images": [],
@@ -182,13 +182,13 @@
           "gestor GTD",
           "aplicación GTD privacidad"
         ],
-        "Description": "Mindwtr es una aplicación de gestión de tareas\nGTD (Getting Things Done) centrada en la privacidad y con diseño \n\"Local-First\", diseñada para ayudarte a organizar tu vida sin \ncomprometer tus datos.\n\nA diferencia de otros gestores de tareas que almacenan\ntu vida en un servidor en la nube, Mindwtr guarda todo en tu dispositivo. Tus \ntareas, proyectos y notas te pertenecen a ti, y solo a \nti.\n\nCaracterísticas principales:\n• Local-First: Tus datos nunca \nsalen de tu dispositivo a menos que los exportes explícitamente.\n• \nFlujo de trabajo GTD: Construido para la metodología \"Getting Things \nDone\" con Bandeja de entrada, Proyectos y Contextos.\n• Rápido y \nligero: Construido con Rust y Tauri para un rendimiento increíblemente \nrápido.\n• Sin distracciones: Una interfaz limpia y minimalista que te\nayuda a concentrarte en lo importante.\n• Código abierto: Código \nauditable y transparente en el que puedes confiar.\n\nToma el control de tus \ntareas con la tranquilidad de saber que tus datos están seguros.",
+        "Description": "Tu cabeza te recuerda las cosas en el peor momento. Mindwtr les da un lugar seguro.\n\nMindwtr es una aplicación de tareas gratuita y de código abierto basada en el método Getting Things Done (GTD). Apunta cada tarea e idea en cuanto aparece, ordénala en segundos y mira solo lo que puedes hacer ahora. Sin cuenta, sin suscripción, y tus datos se quedan en tu PC.\n\nCómo funciona:\n• Suéltalo. Un atajo de teclado y la tarea, idea o preocupación cae en tu Bandeja de entrada.\n• Ordénalo. Una pasada guiada y corta: hazlo ya, ponle fecha, delégalo o apárcalo para algún día.\n• Hazlo. La vista Enfoque muestra solo lo que puedes hacer ahora.\n• Repasa cada semana. Una revisión guiada mantiene la lista fiable y la cabeza despejada.\n\nPor qué Mindwtr:\n• Funciona totalmente sin conexión. No requiere cuenta.\n• Tus tareas se quedan en tu equipo. Sincronización opcional: Dropbox, una carpeta tuya, WebDAV o tu propio servidor.\n• El método GTD completo integrado: Bandeja de entrada, Siguiente, En espera, Algún día/Quizá, Proyectos, Áreas, Contextos y revisiones.\n• Vistas de lista, calendario y kanban. Recordatorios, tareas repetidas, notas Markdown y adjuntos.\n• Importa desde Todoist, TickTick, OmniFocus y más.\n• Gratis y de código abierto. Sin anuncios, sin rastreo, sin ataduras.\n\nNota: requiere Microsoft Visual C++ Redistributable para funcionar.",
         "Features": [
-          "Almacenamiento de datos local para máxima privacidad",
-          "Interfaz GTD (Getting Things Done) limpia y minimalista",
-          "Rendimiento ultrarrápido usando Rust y Tauri",
-          "No requiere conexión a internet para funcionar",
-          "Código abierto y transparente"
+          "Funciona sin conexión, no requiere cuenta",
+          "Flujo GTD completo con procesado guiado de la bandeja y revisión semanal",
+          "Los datos quedan en tu equipo; sync opcional con Dropbox, WebDAV, carpeta o tu servidor",
+          "Vistas de lista, calendario y kanban, con recordatorios y tareas repetidas",
+          "Gratis y de código abierto, sin anuncios ni rastreo"
         ],
         "ReleaseNotes": "• Recordatorios repetidos, inicios relativos, filtros de tablero, fechas sin hora y titulos largos hacen la planificacion mas fluida.\n• Importaciones TickTick/Obsidian, lecturas WebDAV, descargas de dictado local y recurrencia son mas fiables.\n• Barra lateral, edicion de proyectos, reparacion de sync y automatizacion local recibieron mas estabilidad y accesibilidad.",
         "Images": [

@@ -4,8 +4,8 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>AGPL-3.0-only</project_license>
   <name>Mindwtr</name>
-  <summary>Plan tasks and projects</summary>
-  <summary xml:lang="de">Aufgaben und Projekte planen</summary>
+  <summary>Get tasks out of your head</summary>
+  <summary xml:lang="de">Aufgaben aus dem Kopf bekommen</summary>
   <developer id="tech.dongdongbh">
     <name>Dongda Li</name>
   </developer>
@@ -14,10 +14,10 @@
     <binary>mindwtr</binary>
   </provides>
   <description>
-    <p>Capture tasks, organize projects, and keep work moving with a simple personal system that keeps your data on your device.</p>
-    <p xml:lang="de">Erfasse Aufgaben, organisiere Projekte und halte Arbeit mit einem einfachen persoenlichen System in Bewegung, das deine Daten auf deinem Geraet laesst.</p>
-    <p>Mindwtr helps you sort inbox items, review commitments, and plan next actions without requiring an account or locking you into a proprietary service.</p>
-    <p xml:lang="de">Mindwtr hilft dir, Inbox-Eintraege zu sortieren, Verpflichtungen zu pruefen und naechste Aktionen zu planen, ohne ein Konto zu verlangen oder dich an einen proprietaeren Dienst zu binden.</p>
+    <p>Mindwtr is a to-do app built on the Getting Things Done (GTD) method: capture every task and idea in seconds, sort them with a short guided pass, and see only what you can act on right now. No account required, and your data stays on your device.</p>
+    <p xml:lang="de">Mindwtr ist eine To-do-App nach der Getting-Things-Done-Methode (GTD): Erfasse jede Aufgabe und Idee in Sekunden, sortiere sie in einem kurzen gefuehrten Durchgang und sieh nur das, was du jetzt tun kannst. Kein Konto noetig, und deine Daten bleiben auf deinem Geraet.</p>
+    <p>A guided weekly review catches loose ends, so the list stays trustworthy and your head stays clear. Simple by default, powerful when you need it.</p>
+    <p xml:lang="de">Ein gefuehrter Wochenrueckblick faengt lose Enden ein, damit die Liste vertrauenswuerdig bleibt und dein Kopf frei. Einfach als Standard, stark bei Bedarf.</p>
     <ul>
       <li>Capture tasks, notes, and ideas quickly</li>
       <li xml:lang="de">Aufgaben, Notizen und Ideen schnell erfassen</li>

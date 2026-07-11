@@ -16,8 +16,8 @@
         <docsUrl>https://github.com/dongdongbh/Mindwtr#readme</docsUrl>
         <bugTrackerUrl>https://github.com/dongdongbh/Mindwtr/issues</bugTrackerUrl>
         <tags>mindwtr gtd productivity task-management kanban tauri local-first</tags>
-        <summary>Local-first GTD productivity tool.</summary>
-        <description>Mindwtr is a local-first, open-source productivity app built for Getting Things Done (GTD), with projects, reviews, sync, and offline support.</description>
+        <summary>Get tasks out of your head. Free, open-source GTD to-do app.</summary>
+        <description>Mindwtr is a free, open-source to-do app built on the Getting Things Done (GTD) method. Capture every task and idea in seconds, sort them with a short guided pass, and see only what you can act on right now. Works offline with no account, and your data stays on your device. Includes projects, contexts, guided reviews, list/calendar/kanban views, reminders, and optional sync through Dropbox, WebDAV, a folder, or a self-hosted server.</description>
         <releaseNotes>https://github.com/dongdongbh/Mindwtr/releases</releaseNotes>
     </metadata>
 </package>

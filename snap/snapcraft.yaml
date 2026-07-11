@@ -1,9 +1,17 @@
 name: mindwtr
 base: core22
 version: '1.1.0'
-summary: Local-first GTD application
+summary: Get tasks out of your head and see the next step
 description: |
-  Mindwtr is a privacy-focused, local-first GTD app for desktop.
+  Mindwtr is a free, open-source to-do app built on the Getting Things Done
+  (GTD) method. Capture every task and idea in seconds, sort them with a
+  short guided pass, and see only what you can act on right now. A guided
+  weekly review keeps the list trustworthy.
+
+  Works completely offline with no account. Your data stays on your device;
+  sync is optional through Dropbox, a folder you control, WebDAV, or your
+  own server. Includes list, calendar, and kanban views, reminders,
+  repeating tasks, Markdown notes, and attachments.
 grade: stable
 confinement: strict
 

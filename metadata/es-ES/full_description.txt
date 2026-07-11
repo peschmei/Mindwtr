@@ -1,21 +1,29 @@
-Mindwtr es un sistema completo de productividad basado en Getting Things Done (GTD), diseñado para lograr un estado de "Mind Like Water". Construido para velocidad y privacidad, te ofrece una forma potente y sin distracciones de capturar y organizar tu vida, sin suscripciones en la nube.
+Tu cabeza te recuerda las cosas en el peor momento. Mindwtr les da un lugar seguro.
 
-DISENADO PARA EL ENFOQUE
-Mindwtr es simple por defecto y potente cuando lo necesitas. Ya sea para capturar una idea rapida o planificar un proyecto complejo, la interfaz no se interpone.
+Mindwtr es una aplicación de tareas gratuita y de código abierto basada en el método Getting Things Done (GTD). Apunta cada tarea e idea en cuanto aparece, ordénala en segundos y mira solo lo que puedes hacer ahora. Sin cuenta, sin suscripción, y tus datos se quedan en tu dispositivo.
 
-FLUJO GTD PRINCIPAL
-- Capturar: Anade tareas al Inbox en cuanto aparecen.
-- Aclarar: Procesa tu inbox rapidamente con la regla de 2 minutos.
-- Organizar: Ordena tareas en Proyectos, Contextos (@work, @home) y Areas.
-- Revisar: Mantente al dia con la Revision Semanal integrada.
-- Ejecutar: Filtra Next Actions por contexto o energia para saber que hacer ahora.
+CÓMO FUNCIONA
 
-FUNCIONES POTENTES
-- Vista Focus: Un panel unificado con Agenda y Next Actions.
-- Tableros Kanban: Visualiza proyectos con arrastrar y soltar.
-- Local-First: Tus datos viven en tu dispositivo, sin login ni suscripciones.
-- Soporte Markdown: Anade notas y descripciones enriquecidas.
-- Sync flexible: Sincroniza con escritorio via File Sync (iCloud Drive, Syncthing) o WebDAV (Nextcloud).
+1. Suéltalo. Una tarea, una idea, una preocupación: escríbela o díctala y cae en tu Bandeja de entrada.
+2. Ordénalo. Una pasada guiada y corta: hazlo ya, ponle fecha, delégalo o apárcalo para algún día.
+3. Hazlo. La vista Enfoque muestra solo lo que puedes hacer ahora, nada más.
+4. Repasa cada semana. Una revisión guiada atrapa los cabos sueltos: la lista sigue siendo fiable y tu cabeza queda despejada.
 
-ENFOQUE EN PRIVACIDAD
-Creemos que tus tareas son asunto privado. Mindwtr funciona completamente offline, no sube tus tareas a Mindwtr y no requiere cuenta.
+¿Nuevo en GTD? La idea es simple: tu cabeza sirve para tener ideas, no para guardarlas. Mindwtr te guía en cada paso.
+
+POR QUÉ MINDWTR
+
+- Funciona totalmente sin conexión. No requiere cuenta.
+- Tus tareas se quedan en tu dispositivo. La sincronización es opcional y tú eliges dónde: Dropbox, una carpeta tuya, WebDAV, tu propio servidor o iCloud en dispositivos Apple.
+- El método GTD completo integrado: Bandeja de entrada, Siguiente, En espera, Algún día/Quizá, Proyectos, Áreas, Contextos y revisiones.
+- Captura desde cualquier parte: añadido rápido, widgets, compartir desde otras apps o por voz.
+- Planifica a tu manera: vistas de lista, calendario y tablero kanban.
+- Recordatorios, tareas repetidas, checklists, notas Markdown y adjuntos.
+- Importa desde Todoist, TickTick, OmniFocus y más.
+- Gratis y de código abierto. Sin anuncios, sin rastreo, sin ataduras.
+
+SIMPLE POR DEFECTO, POTENTE CUANDO HACE FALTA
+
+Menos campos, menos ajustes, nada de estorbos. Las herramientas avanzadas, como el tablero kanban, la automatización y un asistente de IA opcional (con tu propia cuenta de IA), quedan ocultas hasta que las necesitas.
+
+Mindwtr significa "mind like water": la calma de no tener nada dando vueltas en la cabeza.
