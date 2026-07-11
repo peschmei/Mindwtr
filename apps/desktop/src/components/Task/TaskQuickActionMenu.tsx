@@ -102,6 +102,7 @@ export function TaskQuickActionMenu({
 }: TaskQuickActionMenuProps) {
     const menuRef = useRef<HTMLDivElement | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
+    const focusedPanelRef = useRef<QuickPanelId>(null);
     const initialLayoutScrollSettledRef = useRef(false);
     const startButtonRef = useRef<HTMLButtonElement | null>(null);
     const dueButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -169,11 +170,7 @@ export function TaskQuickActionMenu({
     }, [task.areaId, task.contexts, task.dueDate, task.id, task.reviewAt, task.startTime]);
 
     useEffect(() => {
-        const focusTarget = startButtonRef.current
-            ?? dueButtonRef.current
-            ?? reviewButtonRef.current
-            ?? areaButtonRef.current
-            ?? contextsButtonRef.current
+        const focusTarget = menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
             ?? menuRef.current?.querySelector<HTMLButtonElement>('button');
         focusTarget?.focus();
     }, []);
@@ -201,26 +198,105 @@ export function TaskQuickActionMenu({
             if (event.type === 'scroll' && !initialLayoutScrollSettledRef.current) return;
             onClose();
         };
+        const getMenuItems = () => Array.from(
+            menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
+        );
+        const moveMenuFocus = (delta: number) => {
+            const items = getMenuItems();
+            if (items.length === 0) return;
+            const currentIndex = items.findIndex((item) => item === document.activeElement);
+            const nextIndex = currentIndex < 0
+                ? (delta > 0 ? 0 : items.length - 1)
+                : (currentIndex + delta + items.length) % items.length;
+            items[nextIndex]?.focus();
+        };
+        const getPanelAnchor = (panelId: Exclude<QuickPanelId, null>) => (
+            panelId === 'startTime'
+                ? startButtonRef.current
+                : panelId === 'dueDate'
+                    ? dueButtonRef.current
+                    : panelId === 'reviewAt'
+                        ? reviewButtonRef.current
+                        : panelId === 'area'
+                            ? areaButtonRef.current
+                            : contextsButtonRef.current
+        );
+        const closeActivePanel = () => {
+            if (!activePanel) return;
+            const anchor = getPanelAnchor(activePanel);
+            setActivePanel(null);
+            anchor?.focus();
+        };
+        // Runs in the capture phase so the app-wide shortcut handler never sees
+        // keys the open menu consumes (arrows would otherwise move the list
+        // selection behind the menu and close it via the scroll listener).
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key !== 'Escape') return;
-            event.preventDefault();
-            if (activePanel) {
-                setActivePanel(null);
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                if (activePanel) {
+                    closeActivePanel();
+                    return;
+                }
+                onClose();
                 return;
             }
-            onClose();
+            const target = event.target instanceof Node ? event.target : null;
+            const inPanelSurface = Boolean(
+                (target && panelRef.current?.contains(target))
+                || (target instanceof Element && target.closest('[data-selector-dropdown="true"]')),
+            );
+            if (inPanelSurface) return;
+
+            switch (event.key) {
+                case 'ArrowDown':
+                    moveMenuFocus(1);
+                    break;
+                case 'ArrowUp':
+                    moveMenuFocus(-1);
+                    break;
+                case 'Home':
+                    getMenuItems()[0]?.focus();
+                    break;
+                case 'End': {
+                    const items = getMenuItems();
+                    items[items.length - 1]?.focus();
+                    break;
+                }
+                case 'ArrowRight': {
+                    const active = document.activeElement;
+                    if (
+                        active instanceof HTMLElement
+                        && menuRef.current?.contains(active)
+                        && active.getAttribute('aria-haspopup') === 'dialog'
+                        && active.getAttribute('aria-expanded') !== 'true'
+                    ) {
+                        active.click();
+                        break;
+                    }
+                    return;
+                }
+                case 'ArrowLeft':
+                    if (!activePanel) return;
+                    closeActivePanel();
+                    break;
+                default:
+                    return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
         };
         window.addEventListener('mousedown', handlePointer);
         window.addEventListener('scroll', handleScrollOrResize, true);
         window.addEventListener('resize', handleScrollOrResize);
         window.addEventListener('contextmenu', handlePointer);
-        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', handleKeyDown, true);
         return () => {
             window.removeEventListener('mousedown', handlePointer);
             window.removeEventListener('scroll', handleScrollOrResize, true);
             window.removeEventListener('resize', handleScrollOrResize);
             window.removeEventListener('contextmenu', handlePointer);
-            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keydown', handleKeyDown, true);
         };
     }, [activePanel, onClose]);
 
@@ -288,6 +364,19 @@ export function TaskQuickActionMenu({
             ),
         });
     }, [activePanel, menuPosition.left, menuPosition.top]);
+
+    useEffect(() => {
+        if (!activePanel || !panelPosition) {
+            if (!activePanel) focusedPanelRef.current = null;
+            return;
+        }
+        if (focusedPanelRef.current === activePanel) return;
+        focusedPanelRef.current = activePanel;
+        const focusable = panelRef.current?.querySelector<HTMLElement>(
+            'input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        focusable?.focus();
+    }, [activePanel, panelPosition]);
 
     if (typeof document === 'undefined') return null;
 

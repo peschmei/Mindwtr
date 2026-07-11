@@ -117,9 +117,17 @@ export function ProjectsSidebar({
     const focusedCount = focusedProjectCount;
     const [contextMenu, setContextMenu] = useState<{ projectId: string; x: number; y: number } | null>(null);
     const contextMenuRef = useRef<HTMLDivElement | null>(null);
+    const contextMenuReturnFocusRef = useRef<HTMLElement | null>(null);
     const pendingProjectSelectionRef = useRef<{ projectId: string; timeoutId: number } | null>(null);
 
-    const closeContextMenu = useCallback(() => setContextMenu(null), []);
+    const closeContextMenu = useCallback(() => {
+        setContextMenu(null);
+        const returnFocus = contextMenuReturnFocusRef.current;
+        contextMenuReturnFocusRef.current = null;
+        if (returnFocus?.isConnected) {
+            window.setTimeout(() => returnFocus.focus(), 0);
+        }
+    }, []);
     const clearPendingProjectSelection = useCallback(() => {
         if (!pendingProjectSelectionRef.current) return;
         window.clearTimeout(pendingProjectSelectionRef.current.timeoutId);
@@ -174,12 +182,15 @@ export function ProjectsSidebar({
 
     useEffect(() => {
         if (!contextMenu) return;
+        contextMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
         const handlePointer = (event: Event) => {
             if (contextMenuRef.current && contextMenuRef.current.contains(event.target as Node)) return;
             closeContextMenu();
         };
         const handleKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') closeContextMenu();
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            closeContextMenu();
         };
         window.addEventListener('mousedown', handlePointer);
         window.addEventListener('scroll', handlePointer, true);
@@ -417,6 +428,7 @@ export function ProjectsSidebar({
                                                     onKeyDown={(event) => handleProjectKeyDown(event, project.id)}
                                                     onContextMenu={(event) => {
                                                         event.preventDefault();
+                                                        contextMenuReturnFocusRef.current = event.currentTarget;
                                                         setContextMenu({
                                                                     projectId: project.id,
                                                                     x: event.clientX,
@@ -688,12 +700,14 @@ export function ProjectsSidebar({
             {contextMenu && (
                 <div
                     ref={contextMenuRef}
+                    role="menu"
                     className="fixed z-50 min-w-[160px] rounded-md border border-border bg-card shadow-lg p-1 text-sm"
                     style={{ top: contextMenu.y, left: contextMenu.x }}
                 >
                     <button
                         type="button"
-                        className="w-full text-left px-3 py-2 rounded hover:bg-muted transition-colors"
+                        role="menuitem"
+                        className="w-full text-left px-3 py-2 rounded hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                         onClick={() => {
                             onDuplicateProject(contextMenu.projectId);
                             closeContextMenu();

@@ -312,6 +312,81 @@ describe('TaskQuickActionMenu', () => {
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
+    it('focuses the first menu item on open', () => {
+        renderMenu();
+
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+    });
+
+    it('moves between menu items with arrow keys, wrapping at the ends', () => {
+        renderMenu();
+
+        fireEvent.keyDown(window, { key: 'ArrowDown' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Due Date…' }));
+
+        fireEvent.keyDown(window, { key: 'ArrowUp' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+
+        fireEvent.keyDown(window, { key: 'ArrowUp' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Delete' }));
+
+        fireEvent.keyDown(window, { key: 'ArrowDown' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+    });
+
+    it('jumps to the first and last item with Home and End', () => {
+        renderMenu();
+
+        fireEvent.keyDown(window, { key: 'End' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Delete' }));
+
+        fireEvent.keyDown(window, { key: 'Home' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+    });
+
+    it('opens the focused submenu panel with ArrowRight and closes it with ArrowLeft', () => {
+        renderMenu();
+
+        const startButton = screen.getByRole('menuitem', { name: /start date/i });
+        startButton.focus();
+        fireEvent.keyDown(window, { key: 'ArrowRight' });
+
+        expect(screen.getByRole('dialog', { name: /start date/i })).toBeInTheDocument();
+
+        fireEvent.keyDown(window, { key: 'ArrowLeft' });
+
+        expect(screen.queryByRole('dialog', { name: /start date/i })).not.toBeInTheDocument();
+        expect(document.activeElement).toBe(startButton);
+    });
+
+    it('returns focus to the anchoring item when Escape closes a panel', () => {
+        renderMenu();
+
+        const dueButton = screen.getByRole('menuitem', { name: 'Due Date…' });
+        fireEvent.click(dueButton);
+        expect(screen.getByRole('dialog', { name: 'Due Date' })).toBeInTheDocument();
+
+        fireEvent.keyDown(window, { key: 'Escape' });
+
+        expect(screen.queryByRole('dialog', { name: 'Due Date' })).not.toBeInTheDocument();
+        expect(document.activeElement).toBe(dueButton);
+    });
+
+    it('skips disabled items when moving focus', () => {
+        renderMenu({
+            focusAction: {
+                isFocused: false,
+                canToggle: false,
+                label: "Add to today's focus",
+                title: 'Clarify first',
+                onToggle: vi.fn(),
+            },
+        });
+
+        fireEvent.keyDown(window, { key: 'Home' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+    });
+
     it('keeps secondary task row actions in the quick menu', () => {
         const onStatusChange = vi.fn();
         const props = renderMenu({ onStatusChange });

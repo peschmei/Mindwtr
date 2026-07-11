@@ -402,6 +402,49 @@ describe('KeybindingProvider (vim)', () => {
         });
     });
 
+    it('ignores list shortcuts while focus is inside an open menu', () => {
+        const editSelected = vi.fn();
+        const toggleDoneSelected = vi.fn();
+
+        const MenuHarness = () => {
+            const { registerTaskListScope } = useKeybindings();
+            useEffect(() => {
+                registerTaskListScope({
+                    kind: 'taskList',
+                    selectNext: vi.fn(),
+                    selectPrev: vi.fn(),
+                    selectFirst: vi.fn(),
+                    selectLast: vi.fn(),
+                    editSelected,
+                    toggleDoneSelected,
+                    deleteSelected: vi.fn(),
+                });
+                return () => registerTaskListScope(null);
+            }, [registerTaskListScope]);
+            return (
+                <div role="menu">
+                    <button type="button" role="menuitem">Duplicate</button>
+                </div>
+            );
+        };
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <MenuHarness />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        const item = document.querySelector('[role="menuitem"]') as HTMLButtonElement;
+        item.focus();
+        fireEvent.keyDown(item, { key: 'e' });
+        fireEvent.keyDown(item, { key: 'x' });
+
+        expect(editSelected).not.toHaveBeenCalled();
+        expect(toggleDoneSelected).not.toHaveBeenCalled();
+    });
+
     it('opens the selected task with Enter when nothing interactive is focused', () => {
         const openSelected = vi.fn();
 

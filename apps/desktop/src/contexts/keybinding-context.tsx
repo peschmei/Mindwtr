@@ -850,6 +850,9 @@ export function KeybindingProvider({
                 }
                 return;
             }
+            // An open menu owns the keyboard: don't fire list shortcuts (j/k,
+            // e, x, dd…) while focus sits on a menu item (#848).
+            if (e.target instanceof HTMLElement && e.target.closest('[role="menu"]')) return;
             if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === 'Comma') {
                 e.preventDefault();
                 onNavigate('settings');
