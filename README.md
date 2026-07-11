@@ -6,7 +6,7 @@
 
 English | [中文](./README_zh.md)
 
-**Get everything out of your head.** Mindwtr is a free, open-source to-do app built on the Getting Things Done (GTD) method: it captures every task and idea in seconds, then shows you the one next thing to do. Works on Windows, Mac, Linux, iPhone, Android, and the web. No account, no subscription, and your data stays on your device.
+**Get everything out of your head.** Mindwtr is a free, open-source to-do app built on the Getting Things Done (GTD) method: it captures every task and idea in seconds, then shows you the one next thing to do. No account, no subscription, and your data stays on your device.
 
 _Mindwtr = "mind like water": the calm you get when nothing is rattling around in your head._
 
