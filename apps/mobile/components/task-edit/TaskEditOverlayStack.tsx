@@ -67,6 +67,7 @@ export function TaskEditOverlayStack(props: TaskEditOverlayStackProps) {
         toggleAudioPlayback,
         waitingAssignmentInput,
         waitingAssignmentModalVisible,
+        waitingAssignmentSuggestions,
         closeWaitingAssignmentModal,
         confirmWaitingAssignment,
         setWaitingAssignmentInput,
@@ -97,6 +98,7 @@ export function TaskEditOverlayStack(props: TaskEditOverlayStackProps) {
                     t={t}
                     tc={tc}
                     value={waitingAssignmentInput}
+                    suggestions={waitingAssignmentSuggestions}
                     onChangeValue={setWaitingAssignmentInput}
                     onClose={closeWaitingAssignmentModal}
                     onSave={confirmWaitingAssignment}

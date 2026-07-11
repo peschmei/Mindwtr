@@ -14,6 +14,7 @@ import {
     parseQuickAdd,
     normalizeClockTimeInput,
     getDefaultTaskAreaMode,
+    getPersonOptionNames,
     resolveDefaultNewTaskAreaId,
     safeParseDate,
     shallow,
@@ -140,12 +141,14 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         tasks,
         projects,
         areas,
+        people,
         lastDataChangeAt,
         highlightTaskId,
     } = useTaskStore((state) => ({
         tasks: state.tasks,
         projects: state.projects,
         areas: state.areas,
+        people: state.people,
         lastDataChangeAt: state.lastDataChangeAt,
         highlightTaskId: state.highlightTaskId,
     }), shallow);
@@ -287,14 +290,19 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         nextCount,
     } = useListViewOptimizations(tasks, baseTasks, statusFilter, perf);
     const allTokens = Array.from(new Set([...allContexts, ...allTags])).sort();
+    const personOptionNames = useMemo(
+        () => getPersonOptionNames(people, tasks),
+        [people, tasks],
+    );
     const quickAddParseOptions = useMemo(
         () => ({
             knownContexts: allContexts,
             knownTags: allTags,
+            knownPeople: personOptionNames,
             defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
             preserveText: settings.quickAddAutoClean !== true,
         }),
-        [allContexts, allTags, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean],
+        [allContexts, allTags, personOptionNames, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean],
     );
 
     const {
@@ -981,6 +989,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                     addInputRef={addInputRef}
                     projects={projects}
                     areas={areas}
+                    people={personOptionNames}
                     onCreateProject={async (title) => {
                         const created = await addProject(
                             title,

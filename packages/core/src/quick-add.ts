@@ -23,6 +23,7 @@ export interface QuickAddResult {
 export interface QuickAddParseOptions {
     knownContexts?: readonly string[];
     knownTags?: readonly string[];
+    knownPeople?: readonly string[];
     defaultScheduleTime?: string | null;
     // When true, keep the user's text exactly as entered: recognized metadata
     // (dates, tags, contexts, ...) is still detected and applied, but never
@@ -70,13 +71,13 @@ const ENERGY_TOKENS: Record<string, TaskEnergyLevel> = {
 };
 
 const ESCAPE_SENTINEL = '__MW_ESC__';
-const QUICK_ADD_ESCAPE_CHARS = new Set(['@', '#', '+', '/', '!']);
+const QUICK_ADD_ESCAPE_CHARS = new Set(['@', '#', '+', '/', '!', '%']);
 const QUICK_ADD_FOCUS_COMMAND_PATTERN = String.raw`\*(?:\s+focus\b)?`;
 const QUICK_ADD_COMMAND_BOUNDARY = String.raw`(?=\s\/(?:${QUICK_ADD_FOCUS_COMMAND_PATTERN}|link:|note:|start:|due:|review:|project:|area:|energy:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b)|$)`;
-const QUICK_ADD_INLINE_CONTROL_BOUNDARY = String.raw`(?=\s(?:[@#+!]|\/(?:${QUICK_ADD_FOCUS_COMMAND_PATTERN}|link:|note:|start:|due:|review:|project:|area:|energy:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b))|$)`;
+const QUICK_ADD_INLINE_CONTROL_BOUNDARY = String.raw`(?=\s(?:[@#+!%]|\/(?:${QUICK_ADD_FOCUS_COMMAND_PATTERN}|link:|note:|start:|due:|review:|project:|area:|energy:|inbox\b|next\b|in-progress\b|waiting\b|someday\b|done\b|archived\b))|$)`;
 const SIMPLE_TASK_TOKEN_RE = /[@#][\p{L}\p{N}_-]+/gu;
 const RICH_TASK_TOKEN_RE = new RegExp(
-    String.raw`(?:^|\s)([@#](?![\s\p{L}\p{N}_-])[^@#+/!]+?)${QUICK_ADD_INLINE_CONTROL_BOUNDARY}`,
+    String.raw`(?:^|\s)([@#](?![\s\p{L}\p{N}_-])[^@#+/!%]+?)${QUICK_ADD_INLINE_CONTROL_BOUNDARY}`,
     'gu',
 );
 const NATURAL_TIME_HINT_RE = /\b(?:\d{1,2}:\d{2}(?:\s*[ap]m)?|\d{1,2}\s*[ap]m|noon|midnight|morning|afternoon|evening|night|tonight)\b/i;
@@ -373,8 +374,8 @@ function matchKnownQuickAddNamePrefix(
     return null;
 }
 
-function matchQuickAddQuotedName(working: string, marker: '+' | '!'): { raw: string; value: string } | null {
-    const escapedMarker = marker === '+' ? String.raw`\+` : '!';
+function matchQuickAddQuotedName(working: string, marker: '+' | '!' | '%'): { raw: string; value: string } | null {
+    const escapedMarker = marker === '+' ? String.raw`\+` : marker;
     const match = working.match(new RegExp(String.raw`(?:^|\s)${escapedMarker}"((?:\\.|[^"\\])*)"`, 'u'));
     if (!match) return null;
     const rawOffset = match[0].indexOf(`${marker}"`);
@@ -543,6 +544,36 @@ export function parseQuickAdd(
     tagMatches.forEach((tag) => tags.add(tag.token));
     tagMatches.forEach((tag) => (working = stripToken(working, tag.raw)));
 
+    // Person: %Name or %"Full Name" → assignedTo
+    let assignedTo: string | undefined;
+    const knownPeople = options.knownPeople ?? [];
+    const canonicalPersonName = (value: string) =>
+        knownPeople.find((name) => normalizeQuickAddName(name) === normalizeQuickAddName(value)) ?? value;
+    const quotedPerson = matchQuickAddQuotedName(working, '%');
+    if (quotedPerson) {
+        assignedTo = canonicalPersonName(quotedPerson.value);
+        working = stripToken(working, quotedPerson.raw);
+    } else {
+        const personMatch = working.match(/(?:^|\s)%([^\s/]+(?:\s+(?![@#+/!%])[^/\s]+)*)/);
+        if (personMatch) {
+            const rawFull = personMatch[1] || '';
+            const prefixMatch = matchKnownQuickAddNamePrefix(rawFull, knownPeople);
+            if (prefixMatch) {
+                assignedTo = canonicalPersonName(prefixMatch.value);
+                working = stripToken(working, `%${prefixMatch.consumedRaw}`);
+            } else {
+                // Unknown name: take only the first word so trailing title
+                // words are not swallowed; multi-word new names use %"...".
+                const firstWord = rawFull.match(/\S+/u)?.[0] ?? '';
+                const restoredFirst = restoreEscapes(firstWord).trim();
+                if (restoredFirst) {
+                    assignedTo = restoredFirst;
+                    working = stripToken(working, `%${firstWord}`);
+                }
+            }
+        }
+    }
+
     let energyLevel: TaskEnergyLevel | undefined;
     const energyMatch = working.match(/\/energy:([^\s/]+)/i);
     if (energyMatch) {
@@ -582,7 +613,7 @@ export function parseQuickAdd(
                 working = stripToken(working, quotedArea.raw);
             }
         } else {
-            const areaMatch = working.match(/(?:^|\s)!([^\s/]+(?:\s+(?![@#+/!])[^/\s]+)*)/);
+            const areaMatch = working.match(/(?:^|\s)!([^\s/]+(?:\s+(?![@#+/!%])[^/\s]+)*)/);
             if (areaMatch) {
                 const rawFull = areaMatch[1] || '';
                 if (areas && areas.length > 0) {
@@ -666,7 +697,7 @@ export function parseQuickAdd(
             }
             working = stripToken(working, quotedProject.raw);
         } else {
-            const plusMatch = working.match(/(?:^|\s)\+([^\s/]+(?:\s+(?![@#+/])[^/\s]+)*)/);
+            const plusMatch = working.match(/(?:^|\s)\+([^\s/]+(?:\s+(?![@#+/%])[^/\s]+)*)/);
             if (plusMatch) {
                 const rawFull = plusMatch[1] || '';
                 const activeProjects = (projects ?? []).filter((p) => p.status !== 'archived');
@@ -716,6 +747,7 @@ export function parseQuickAdd(
     if (projectId) props.projectId = projectId;
     if (areaId) props.areaId = areaId;
     if (energyLevel) props.energyLevel = energyLevel;
+    if (assignedTo) props.assignedTo = assignedTo;
     if (focusToday) props.isFocusedToday = true;
 
     return {

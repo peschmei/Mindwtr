@@ -491,6 +491,76 @@ describe('quick-add', () => {
         expect(areaQuoted.title).toBe('task more words');
     });
 
+    it('parses a person token into assignedTo', () => {
+        const now = new Date('2026-07-11T10:00:00Z');
+        const result = parseQuickAdd('Ask %Jim for the budget /waiting', undefined, now);
+
+        expect(result.title).toBe('Ask for the budget');
+        expect(result.props.assignedTo).toBe('Jim');
+        expect(result.props.status).toBe('waiting');
+    });
+
+    it('matches known multi-word people and keeps trailing words in the title', () => {
+        const now = new Date('2026-07-11T10:00:00Z');
+        const result = parseQuickAdd(
+            'Follow up %Jim Smith about budget',
+            undefined,
+            now,
+            undefined,
+            { knownPeople: ['Jim Smith'] },
+        );
+
+        expect(result.props.assignedTo).toBe('Jim Smith');
+        expect(result.title).toBe('Follow up about budget');
+    });
+
+    it('uses the canonical person name casing for known people', () => {
+        const now = new Date('2026-07-11T10:00:00Z');
+        const result = parseQuickAdd(
+            'Ping %jim smith today',
+            undefined,
+            now,
+            undefined,
+            { knownPeople: ['Jim Smith'] },
+        );
+
+        expect(result.props.assignedTo).toBe('Jim Smith');
+    });
+
+    it('takes only the first word for unknown person names', () => {
+        const now = new Date('2026-07-11T10:00:00Z');
+        const result = parseQuickAdd('Ask %Jim Smith for report', undefined, now);
+
+        expect(result.props.assignedTo).toBe('Jim');
+        expect(result.title).toBe('Ask Smith for report');
+    });
+
+    it('supports quoted person names for explicit delimiting', () => {
+        const now = new Date('2026-07-11T10:00:00Z');
+        const result = parseQuickAdd('task %"Jane Doe" more words', undefined, now);
+
+        expect(result.props.assignedTo).toBe('Jane Doe');
+        expect(result.title).toBe('task more words');
+    });
+
+    it('parses person tokens alongside contexts and tags', () => {
+        const now = new Date('2026-07-11T10:00:00Z');
+        const result = parseQuickAdd('Ask %Jim @phone #budget', undefined, now);
+
+        expect(result.props.assignedTo).toBe('Jim');
+        expect(result.props.contexts).toEqual(['@phone']);
+        expect(result.props.tags).toEqual(['#budget']);
+        expect(result.title).toBe('Ask');
+    });
+
+    it('escapes percent signs so they stay in the title', () => {
+        const now = new Date('2026-07-11T10:00:00Z');
+        const result = parseQuickAdd('Cut budget by \\%10', undefined, now);
+
+        expect(result.props.assignedTo).toBeUndefined();
+        expect(result.title).toBe('Cut budget by %10');
+    });
+
     it('uses parsed area before fallback area when creating a project from quick add', () => {
         expect(getQuickAddProjectInitialProps({ areaId: 'parsed-area' }, 'fallback-area')).toEqual({ areaId: 'parsed-area' });
         expect(getQuickAddProjectInitialProps({}, 'fallback-area')).toEqual({ areaId: 'fallback-area' });

@@ -95,6 +95,7 @@ type ListControlsPanelProps = {
     tokenCounts: Record<string, number>;
     waitingPeople: string[];
     areas: Area[];
+    people: readonly string[];
     nextCount: number;
 };
 
@@ -174,6 +175,7 @@ export function ListControlsPanel({
     tokenCounts,
     waitingPeople,
     areas,
+    people,
     nextCount,
 }: ListControlsPanelProps) {
     return (
@@ -367,6 +369,7 @@ export function ListControlsPanel({
                         projects={projects}
                         areas={areas}
                         contexts={allTokens}
+                        people={people}
                         t={t}
                         dense={densityMode === 'compact'}
                         onCreateProject={onCreateProject}

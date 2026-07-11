@@ -96,6 +96,7 @@ type TaskEditWaitingAssignmentModalProps = {
     t: Translator;
     tc: ThemeColors;
     value: string;
+    suggestions?: string[];
     onChangeValue: (value: string) => void;
     onClose: () => void;
     onSave: () => void;
@@ -106,6 +107,7 @@ export const TaskEditWaitingAssignmentModal = ({
     t,
     tc,
     value,
+    suggestions = [],
     onChangeValue,
     onClose,
     onSave,
@@ -148,6 +150,22 @@ export const TaskEditWaitingAssignmentModal = ({
                         accessibilityHint={description}
                         onSubmitEditing={onSave}
                     />
+                    {suggestions.length > 0 && (
+                        <View style={[styles.tokenSuggestionsMenu, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                            {suggestions.map((name, index) => (
+                                <TouchableOpacity
+                                    key={name}
+                                    style={[
+                                        styles.tokenSuggestionItem,
+                                        index === suggestions.length - 1 ? styles.tokenSuggestionItemLast : null,
+                                    ]}
+                                    onPress={() => onChangeValue(name)}
+                                >
+                                    <Text style={[styles.tokenSuggestionText, { color: tc.text }]}>{name}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
                     <View style={styles.modalButtons}>
                         <TouchableOpacity onPress={onClose} style={styles.modalButton}>
                             <Text style={[styles.modalButtonText, { color: tc.secondaryText }]}>{t('common.cancel')}</Text>

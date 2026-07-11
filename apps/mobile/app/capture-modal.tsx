@@ -19,6 +19,7 @@ import {
   createAIProvider,
   DEFAULT_PROJECT_COLOR,
   getQuickAddProjectInitialProps,
+  getPersonOptionNames,
   getUsedTaskTokens,
   isSelectableProjectForTaskAssignment,
   parseQuickAdd,
@@ -149,7 +150,7 @@ const sanitizeInitialPropsParam = (
 export default function CaptureScreen() {
   const params = useLocalSearchParams<CaptureSearchParams>();
   const router = useRouter();
-  const { addProject, addTask, addTasks, projects, tasks, settings, areas } = useTaskStore((state) => ({
+  const { addProject, addTask, addTasks, projects, tasks, settings, areas, people } = useTaskStore((state) => ({
     addProject: state.addProject,
     addTask: state.addTask,
     addTasks: state.addTasks,
@@ -157,6 +158,7 @@ export default function CaptureScreen() {
     tasks: state.tasks,
     settings: state.settings,
     areas: state.areas,
+    people: state.people,
   }), shallow);
   const tc = useThemeColors();
   const { showToast } = useToast();
@@ -232,14 +234,18 @@ export default function CaptureScreen() {
   const tagOptions = React.useMemo(() => {
     return getUsedTaskTokens(tasks, (task) => task.tags, { prefix: '#' });
   }, [tasks]);
+  const personOptions = React.useMemo(() => {
+    return getPersonOptionNames(people, tasks);
+  }, [people, tasks]);
   const quickAddParseOptions = React.useMemo(
     () => ({
       knownContexts: contextOptions,
       knownTags: tagOptions,
+      knownPeople: personOptions,
       defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
       preserveText: settings.quickAddAutoClean !== true,
     }),
-    [contextOptions, tagOptions, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean]
+    [contextOptions, tagOptions, personOptions, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean]
   );
 
   useEffect(() => {

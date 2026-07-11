@@ -8,7 +8,7 @@ import {
     normalizeAutocompleteTokens,
 } from './token-autocomplete';
 
-type TriggerType = 'project' | 'context' | 'tag' | 'area' | 'command';
+type TriggerType = 'project' | 'context' | 'tag' | 'area' | 'person' | 'command';
 type SlashCommand = 'due' | 'start' | 'review' | 'note' | 'inbox' | 'next' | 'waiting' | 'someday' | 'done';
 
 interface TriggerState {
@@ -40,6 +40,7 @@ type Option =
     | { kind: 'context'; label: string; value: string }
     | { kind: 'tag'; label: string; value: string }
     | { kind: 'area'; label: string; value: string; id: string }
+    | { kind: 'person'; label: string; value: string }
     | { kind: 'command'; label: string; value: string; command: SlashCommand; requiresArgument: boolean };
 
 // WebKit does not scroll an input to a caret set via setSelectionRange, so we
@@ -74,6 +75,7 @@ export type TaskInputAcceptedSuggestion =
     | { kind: 'context'; label: string; value: string }
     | { kind: 'tag'; label: string; value: string }
     | { kind: 'area'; label: string; value: string; areaId: string }
+    | { kind: 'person'; label: string; value: string }
     | { kind: 'command'; label: string; value: string; command: SlashCommand };
 
 interface TaskInputProps {
@@ -83,6 +85,7 @@ interface TaskInputProps {
     projects: Project[];
     contexts: readonly string[];
     areas?: Area[];
+    people?: readonly string[];
     onCreateProject?: (title: string) => Promise<string | null>;
     onAcceptSuggestion?: (suggestion: TaskInputAcceptedSuggestion) => boolean | Promise<boolean>;
     placeholder?: string;
@@ -157,7 +160,7 @@ function getTrigger(text: string, caret: number): TriggerState | null {
     const lastSpace = Math.max(before.lastIndexOf(' '), before.lastIndexOf('\n'), before.lastIndexOf('\t'));
     const start = lastSpace + 1;
     const token = before.slice(start);
-    if (!token.startsWith('+') && !token.startsWith('@') && !token.startsWith('#') && !token.startsWith('!') && !token.startsWith('/')) return null;
+    if (!token.startsWith('+') && !token.startsWith('@') && !token.startsWith('#') && !token.startsWith('!') && !token.startsWith('%') && !token.startsWith('/')) return null;
     const type: TriggerType = token.startsWith('+')
         ? 'project'
         : token.startsWith('@')
@@ -166,7 +169,9 @@ function getTrigger(text: string, caret: number): TriggerState | null {
                 ? 'tag'
                 : token.startsWith('!')
                     ? 'area'
-                    : 'command';
+                    : token.startsWith('%')
+                        ? 'person'
+                        : 'command';
     return {
         type,
         start,
@@ -210,6 +215,7 @@ export function TaskInput({
     projects,
     contexts,
     areas = [],
+    people = [],
     onCreateProject,
     onAcceptSuggestion,
     placeholder,
@@ -273,6 +279,16 @@ export function TaskInput({
                 id: area.id,
             }));
         }
+        if (trigger.type === 'person') {
+            const matches = people
+                .filter((name) => matchesAutocompleteQuery(name, query))
+                .sort((a, b) => compareAutocompleteLabels(a, b, query));
+            return matches.map((name) => ({
+                kind: 'person' as const,
+                label: name,
+                value: name,
+            }));
+        }
         const expectedPrefix = trigger.type === 'tag' ? '#' : '@';
         const normalizedTokens = normalizeAutocompleteTokens(contexts, expectedPrefix);
         const matches = normalizedTokens
@@ -283,7 +299,7 @@ export function TaskInput({
             label: token,
             value: token,
         }));
-    }, [trigger, projects, contexts, areas]);
+    }, [trigger, projects, contexts, areas, people]);
 
     const closeTrigger = () => {
         setTrigger(null);
@@ -429,6 +445,8 @@ export function TaskInput({
                     ? { kind: 'createProject', label: option.label, value: option.value, projectId: createdProjectId }
                     : option.kind === 'area'
                         ? { kind: 'area', label: option.label, value: option.value, areaId: option.id }
+                        : option.kind === 'person'
+                            ? { kind: 'person', label: option.label, value: option.value }
                         : option.kind === 'command'
                             ? { kind: 'command', label: option.label, value: option.value, command: option.command }
                         : option.kind === 'context'
@@ -453,6 +471,10 @@ export function TaskInput({
             tokenValue = `+${tokenValue}`;
         } else if (activeTrigger.type === 'area') {
             tokenValue = `!${tokenValue}`;
+        } else if (activeTrigger.type === 'person') {
+            // Quote multi-word names so the parser never swallows title words
+            // at call sites that do not pass knownPeople.
+            tokenValue = /\s/.test(tokenValue) ? `%"${tokenValue}"` : `%${tokenValue}`;
         } else if (activeTrigger.type === 'tag') {
             tokenValue = tokenValue.startsWith('#') ? tokenValue : `#${tokenValue}`;
         } else if (activeTrigger.type === 'command' && option.kind === 'command') {

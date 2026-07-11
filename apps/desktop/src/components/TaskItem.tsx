@@ -18,6 +18,7 @@ import {
     getFocusStarBlockedText,
     resolveFocusStarAction,
     parseQuickAddDateCommands,
+    getPersonOptionNames,
     useTaskStore,
     areDraftAttachmentsDirty,
     isTaskDraftDirty,
@@ -289,6 +290,13 @@ export const TaskItem = memo(function TaskItem({
     });
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
     const [showWaitingAssignmentPrompt, setShowWaitingAssignmentPrompt] = useState(false);
+    // Read lazily when the prompt opens: the editor-scoped assignedToOptions
+    // are only loaded while editing, and this prompt also opens outside edits.
+    const waitingAssignmentSuggestions = useMemo(() => {
+        if (!showWaitingAssignmentPrompt) return [];
+        const storeState = useTaskStore.getState();
+        return getPersonOptionNames(storeState.people, storeState.tasks);
+    }, [showWaitingAssignmentPrompt]);
     const [completedAtPrompt, setCompletedAtPrompt] = useState<null | 'complete' | 'edit'>(null);
     const [projectNextActionPrompt, setProjectNextActionPrompt] = useState<ProjectNextActionPromptState | null>(null);
     const [projectNextActionTitle, setProjectNextActionTitle] = useState('');
@@ -1574,6 +1582,7 @@ export const TaskItem = memo(function TaskItem({
                 onCancelWaitingAssignmentPrompt={closeWaitingAssignmentPrompt}
                 onConfirmWaitingAssignmentPrompt={applyWaitingAssignment}
                 waitingAssignmentDefaultValue={task.assignedTo || ''}
+                waitingAssignmentSuggestions={waitingAssignmentSuggestions}
                 retryAudioTranscription={retryAudioTranscription}
                 setCustomInterval={setCustomInterval}
                 setCustomMode={setCustomMode}

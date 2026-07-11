@@ -44,6 +44,7 @@ type TaskItemOverlaysProps = {
     onCancelWaitingAssignmentPrompt: () => void;
     onConfirmWaitingAssignmentPrompt: (value: string) => void;
     waitingAssignmentDefaultValue: string;
+    waitingAssignmentSuggestions?: readonly string[];
     retryAudioTranscription: () => void;
     setCustomInterval: (value: number) => void;
     setCustomMode: (value: 'date' | 'nth') => void;
@@ -98,6 +99,7 @@ export function TaskItemOverlays({
     onCancelWaitingAssignmentPrompt,
     onConfirmWaitingAssignmentPrompt,
     waitingAssignmentDefaultValue,
+    waitingAssignmentSuggestions,
     retryAudioTranscription,
     setCustomInterval,
     setCustomMode,
@@ -176,6 +178,7 @@ export function TaskItemOverlays({
                     description={waitingAssignmentPromptDescription}
                     placeholder={waitingAssignmentPlaceholder}
                     defaultValue={waitingAssignmentDefaultValue}
+                    suggestions={waitingAssignmentSuggestions}
                     allowEmptyConfirm
                     confirmLabel={t('common.save')}
                     cancelLabel={t('common.cancel')}

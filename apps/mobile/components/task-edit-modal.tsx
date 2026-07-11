@@ -422,6 +422,10 @@ function TaskEditModalInner({
     const [customMonthDay, setCustomMonthDay] = useState<number>(monthlyAnchorDate.getDate());
     const [waitingAssignmentModalVisible, setWaitingAssignmentModalVisible] = useState(false);
     const [waitingAssignmentInput, setWaitingAssignmentInput] = useState('');
+    const waitingAssignmentSuggestions = useMemo(
+        () => getAssignedToSuggestions(tasks, waitingAssignmentInput, MAX_VISIBLE_SUGGESTIONS, people),
+        [people, tasks, waitingAssignmentInput]
+    );
     const [isTitleInputFocused, setIsTitleInputFocused] = useState(false);
 
     const openCustomRecurrence = useCallback(() => {
@@ -1034,6 +1038,7 @@ function TaskEditModalInner({
                         toggleAudioPlayback={toggleAudioPlayback}
                         waitingAssignmentInput={waitingAssignmentInput}
                         waitingAssignmentModalVisible={waitingAssignmentModalVisible}
+                        waitingAssignmentSuggestions={waitingAssignmentSuggestions}
                         closeWaitingAssignmentModal={closeWaitingAssignmentModal}
                         confirmWaitingAssignment={confirmWaitingAssignment}
                         setWaitingAssignmentInput={setWaitingAssignmentInput}

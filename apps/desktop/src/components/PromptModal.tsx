@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type MouseEvent } from 'react';
 import { useLanguage } from '../contexts/language-context';
 import { ModalPortal } from './ModalPortal';
+import { AutocompleteTextInput } from './ui/AutocompleteTextInput';
 import { Button } from './ui/Button';
 
 interface PromptModalProps {
@@ -9,6 +10,7 @@ interface PromptModalProps {
     description?: string;
     placeholder?: string;
     defaultValue?: string;
+    suggestions?: readonly string[];
     inputType?: 'text' | 'date' | 'datetime-local';
     allowEmptyConfirm?: boolean;
     browseLabel?: string;
@@ -27,6 +29,7 @@ export function PromptModal({
     description,
     placeholder,
     defaultValue,
+    suggestions,
     inputType = 'text',
     allowEmptyConfirm = false,
     browseLabel,
@@ -84,12 +87,13 @@ export function PromptModal({
                     )}
                 </div>
                 <div className="p-4 space-y-3">
-                    <input
+                    <AutocompleteTextInput
                         autoFocus
                         type={inputType}
                         value={value}
-                        onChange={(e) => {
-                            setValue(e.target.value);
+                        suggestions={suggestions ?? []}
+                        onChange={(next) => {
+                            setValue(next);
                             if (!hasInteracted) {
                                 setHasInteracted(true);
                             }

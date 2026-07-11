@@ -9,6 +9,7 @@ import {
     type InboxProcessingScheduleFieldsControls,
 } from './InboxProcessingScheduleFields';
 import { TokenAutocompleteInput } from './Task/TokenAutocompleteInput';
+import { AutocompleteTextInput } from './ui/AutocompleteTextInput';
 import { AreaSelector } from './ui/AreaSelector';
 import { ProjectSelector } from './ui/ProjectSelector';
 import { QuickDateChips } from './QuickDateChips';
@@ -52,6 +53,7 @@ export type InboxProcessingQuickPanelProps = {
     setSelectedEnergyLevel: (value: Task['energyLevel']) => void;
     selectedAssignedTo: string;
     setSelectedAssignedTo: (value: string) => void;
+    personOptions: string[];
     selectedTimeEstimate?: TimeEstimate;
     setSelectedTimeEstimate: (value: TimeEstimate | undefined) => void;
     timeEstimateOptions: TimeEstimate[];
@@ -165,6 +167,7 @@ export function InboxProcessingQuickPanel({
     setSelectedEnergyLevel,
     selectedAssignedTo,
     setSelectedAssignedTo,
+    personOptions,
     selectedTimeEstimate,
     setSelectedTimeEstimate,
     timeEstimateOptions,
@@ -597,10 +600,11 @@ export function InboxProcessingQuickPanel({
                     <div className="space-y-3">
                         <div className="space-y-1">
                             <label className="text-[11px] text-muted-foreground font-medium">{t('process.delegateWhoLabel')}</label>
-                            <input
+                            <AutocompleteTextInput
                                 aria-label={t('process.delegateWhoLabel')}
                                 value={delegateWho}
-                                onChange={(event) => setDelegateWho(event.target.value)}
+                                onChange={setDelegateWho}
+                                suggestions={personOptions}
                                 placeholder={t('process.delegateWhoPlaceholder')}
                                 className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
                             />
@@ -814,10 +818,11 @@ export function InboxProcessingQuickPanel({
                                 {showAssignedToField ? (
                                     <div className="space-y-2">
                                         <label className="text-[11px] text-muted-foreground font-medium">{t('taskEdit.assignedTo')}</label>
-                                        <input
+                                        <AutocompleteTextInput
                                             aria-label={t('taskEdit.assignedTo')}
                                             value={selectedAssignedTo}
-                                            onChange={(event) => setSelectedAssignedTo(event.target.value)}
+                                            onChange={setSelectedAssignedTo}
+                                            suggestions={personOptions}
                                             placeholder={t('taskEdit.assignedToPlaceholder')}
                                             className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
                                         />

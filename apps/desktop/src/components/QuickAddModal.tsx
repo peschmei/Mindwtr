@@ -10,6 +10,7 @@ import {
     flushPendingSave,
     findSelectableProjectByTitleAndArea,
     getQuickAddProjectInitialProps,
+    getPersonOptionNames,
     parseQuickAdd,
     normalizeClockTimeInput,
     normalizeFocusTaskLimit,
@@ -209,14 +210,21 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
     const defaultAreaId = defaultAreaMode === 'active'
         ? activeAreaId ?? ''
         : resolveDefaultNewTaskAreaId(settings, sortedAreas) ?? '';
+    // Read lazily on each open: the modal does not subscribe to tasks/people.
+    const personOptionNames = useMemo(() => {
+        if (!isOpen) return [];
+        const { people, tasks } = useTaskStore.getState();
+        return getPersonOptionNames(people, tasks);
+    }, [isOpen]);
     const quickAddParseOptions = useMemo(
         () => ({
             knownContexts: allContexts,
             knownTags: allTags,
+            knownPeople: personOptionNames,
             defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
             preserveText: settings.quickAddAutoClean !== true,
         }),
-        [allContexts, allTags, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean],
+        [allContexts, allTags, personOptionNames, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean],
     );
     const parsedInput = useMemo(
         () => parseQuickAdd(value, projects, new Date(), areas, quickAddParseOptions),
@@ -1157,6 +1165,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
                                 projects={projects}
                                 contexts={suggestionTokens}
                                 areas={areas}
+                                people={personOptionNames}
                                 onCreateProject={async (title) => {
                                     const created = await addProject(
                                         title,

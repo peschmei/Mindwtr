@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo } from 'react';
 import {
     addBreadcrumb,
     DEFAULT_PROJECT_COLOR,
+    getPersonOptionNames,
     isTaskInActiveProject,
     parseQuickAddDateCommands,
     tFallback,
+    useTaskStore,
     type AppData,
     type Area,
     type Project,
@@ -63,6 +65,8 @@ export function useInboxProcessingController({
     setIsProcessing,
 }: UseInboxProcessingControllerParams): UseInboxProcessingControllerResult {
     const showToast = useUiStore((state) => state.showToast);
+    const people = useTaskStore((state) => state.people);
+    const personOptions = useMemo(() => getPersonOptionNames(people, tasks), [people, tasks]);
     const {
         processingMode,
         setProcessingMode,
@@ -807,6 +811,7 @@ export function useInboxProcessingController({
             setSelectedEnergyLevel,
             selectedAssignedTo,
             setSelectedAssignedTo,
+            personOptions,
             selectedTimeEstimate,
             setSelectedTimeEstimate,
             timeEstimateOptions,
@@ -886,6 +891,7 @@ export function useInboxProcessingController({
         setSelectedEnergyLevel,
         selectedAssignedTo,
         setSelectedAssignedTo,
+        personOptions,
         selectedTimeEstimate,
         setSelectedTimeEstimate,
         timeEstimateOptions,

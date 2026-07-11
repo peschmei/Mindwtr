@@ -9,6 +9,7 @@ import {
     type InboxProcessingScheduleFieldsControls,
 } from './InboxProcessingScheduleFields';
 import { TokenAutocompleteInput } from './Task/TokenAutocompleteInput';
+import { AutocompleteTextInput } from './ui/AutocompleteTextInput';
 import { AreaSelector } from './ui/AreaSelector';
 import { ProjectSelector } from './ui/ProjectSelector';
 import { QuickDateChips } from './QuickDateChips';
@@ -56,6 +57,7 @@ export type InboxProcessingWizardProps = {
     setSelectedEnergyLevel: (value: Task['energyLevel']) => void;
     selectedAssignedTo: string;
     setSelectedAssignedTo: (value: string) => void;
+    personOptions: string[];
     selectedTimeEstimate?: TimeEstimate;
     setSelectedTimeEstimate: (value: TimeEstimate | undefined) => void;
     timeEstimateOptions: TimeEstimate[];
@@ -166,6 +168,7 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
     setSelectedEnergyLevel,
     selectedAssignedTo,
     setSelectedAssignedTo,
+    personOptions,
     selectedTimeEstimate,
     setSelectedTimeEstimate,
     timeEstimateOptions,
@@ -578,9 +581,10 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                     </p>
                     <div className="space-y-2">
                         <label className="text-xs text-muted-foreground font-medium">{t('process.delegateWhoLabel')}</label>
-                        <input
+                        <AutocompleteTextInput
                             value={delegateWho}
-                            onChange={(e) => setDelegateWho(e.target.value)}
+                            onChange={setDelegateWho}
+                            suggestions={personOptions}
                             placeholder={t('process.delegateWhoPlaceholder')}
                             className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
                         />
@@ -828,10 +832,11 @@ export const InboxProcessingWizard = memo(function InboxProcessingWizard({
                                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
                                         {t('taskEdit.assignedTo')}
                                     </div>
-                                    <input
+                                    <AutocompleteTextInput
                                         aria-label={t('taskEdit.assignedTo')}
                                         value={selectedAssignedTo}
-                                        onChange={(event) => setSelectedAssignedTo(event.target.value)}
+                                        onChange={setSelectedAssignedTo}
+                                        suggestions={personOptions}
                                         placeholder={t('taskEdit.assignedToPlaceholder')}
                                         className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
                                     />
