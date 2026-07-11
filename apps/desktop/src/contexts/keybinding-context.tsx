@@ -16,7 +16,11 @@ import {
 } from '../lib/global-quick-add-shortcut';
 import { AREA_FILTER_ALL } from '@mindwtr/core';
 
-export type KeybindingStyle = 'vim' | 'emacs';
+export type KeybindingStyle = 'vim' | 'emacs' | 'standard';
+
+function isKeybindingStyle(value: unknown): value is KeybindingStyle {
+    return value === 'vim' || value === 'emacs' || value === 'standard';
+}
 
 export interface TaskListScope {
     kind: 'taskList';
@@ -156,10 +160,9 @@ export function KeybindingProvider({
     const editingTaskId = useUiStore((state) => state.editingTaskId);
     const editingTaskIdRef = useRef<string | null>(editingTaskId);
 
-    const initialStyle: KeybindingStyle =
-        settings.keybindingStyle === 'vim' || settings.keybindingStyle === 'emacs'
-            ? settings.keybindingStyle
-            : 'vim';
+    const initialStyle: KeybindingStyle = isKeybindingStyle(settings.keybindingStyle)
+        ? settings.keybindingStyle
+        : 'vim';
     const [style, setStyleState] = useState<KeybindingStyle>(initialStyle);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const quickAddShortcut = useMemo(
@@ -233,7 +236,7 @@ export function KeybindingProvider({
     useEffect(() => {
         if (isTest) return;
         const nextStyle = settings.keybindingStyle;
-        if (nextStyle === 'vim' || nextStyle === 'emacs') {
+        if (isKeybindingStyle(nextStyle)) {
             setStyleState((prev) => (prev === nextStyle ? prev : nextStyle));
         }
     }, [isTest, settings.keybindingStyle]);
@@ -635,6 +638,124 @@ export function KeybindingProvider({
             }
         };
 
+        // Gmail/Superhuman/Todoist-style task-action cluster: e done, x select,
+        // Enter open, z undo, # delete. Navigation matches the Vim preset since
+        // Gmail uses j/k and g-chords too.
+        const handleStandard = (e: KeyboardEvent) => {
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            if (e.key === 'F11') {
+                if (isTauriRuntime()) {
+                    e.preventDefault();
+                    void toggleFullscreen();
+                }
+                return;
+            }
+            if (editingTaskIdRef.current) return;
+            if (isEditableTarget(e.target)) return;
+
+            const scope = getActiveScope();
+            const now = Date.now();
+            if (pendingRef.current.key && now - pendingRef.current.timestamp > 700) {
+                pendingRef.current.key = null;
+            }
+
+            const pending = pendingRef.current.key;
+            if (pending) {
+                e.preventDefault();
+                if (pending === 'g') {
+                    if (e.key === 'g') {
+                        scope?.selectFirst();
+                    } else if (vimGoMap[e.key]) {
+                        onNavigate(vimGoMap[e.key]);
+                    }
+                } else if (pending === 'A') {
+                    applyAreaFilterShortcut(e.key);
+                }
+                pendingRef.current.key = null;
+                return;
+            }
+
+            switch (e.key) {
+                case 'j':
+                    if (moveSidebarFocus(e.target, 'next')) {
+                        e.preventDefault();
+                        break;
+                    }
+                    e.preventDefault();
+                    scope?.selectNext();
+                    break;
+                case 'k':
+                    if (moveSidebarFocus(e.target, 'prev')) {
+                        e.preventDefault();
+                        break;
+                    }
+                    e.preventDefault();
+                    scope?.selectPrev();
+                    break;
+                case 'h':
+                    if (focusSidebarCurrentView(currentView)) {
+                        e.preventDefault();
+                    }
+                    break;
+                case 'l':
+                    if (focusMainContent()) {
+                        e.preventDefault();
+                    }
+                    break;
+                case 'G':
+                    e.preventDefault();
+                    scope?.selectLast();
+                    break;
+                case 'e':
+                    e.preventDefault();
+                    scope?.toggleDoneSelected();
+                    break;
+                case 'x':
+                    e.preventDefault();
+                    scope?.toggleSelectSelected?.();
+                    break;
+                case '#':
+                    e.preventDefault();
+                    scope?.deleteSelected();
+                    break;
+                case 'z': {
+                    const undo = takeUndoableAction();
+                    if (undo) {
+                        e.preventDefault();
+                        undo();
+                    }
+                    break;
+                }
+                case 'Enter':
+                    if (hasInteractiveFocus()) break;
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        scope?.editSelected();
+                    } else {
+                        scope?.openSelected?.();
+                    }
+                    break;
+                case '.':
+                    e.preventDefault();
+                    scope?.openQuickActions?.();
+                    break;
+                case '/':
+                    e.preventDefault();
+                    triggerGlobalSearch();
+                    break;
+                case '?':
+                    e.preventDefault();
+                    setIsHelpOpen(true);
+                    break;
+                case 'g':
+                    e.preventDefault();
+                    pendingRef.current = { key: e.key, timestamp: now };
+                    break;
+                default:
+                    break;
+            }
+        };
+
         const handleEmacs = (e: KeyboardEvent) => {
             if (e.key === 'F11') {
                 if (isTauriRuntime()) {
@@ -782,13 +903,13 @@ export function KeybindingProvider({
                     getActiveScope().selectPrev();
                     return;
                 }
-                if (style === 'vim' && e.key === 'ArrowLeft') {
+                if (style !== 'emacs' && e.key === 'ArrowLeft') {
                     if (focusSidebarCurrentView(currentView)) {
                         e.preventDefault();
                         return;
                     }
                 }
-                if (style === 'vim' && e.key === 'ArrowRight') {
+                if (style !== 'emacs' && e.key === 'ArrowRight') {
                     if (focusMainContent()) {
                         e.preventDefault();
                         return;
@@ -829,6 +950,8 @@ export function KeybindingProvider({
             }
             if (style === 'emacs') {
                 handleEmacs(e);
+            } else if (style === 'standard') {
+                handleStandard(e);
             } else {
                 handleVim(e);
             }

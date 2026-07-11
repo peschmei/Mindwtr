@@ -468,7 +468,7 @@ export interface AppSettings extends NotificationSettings {
     syncPreferencesUpdatedAt?: SettingsSyncUpdatedAt;
     externalCalendars?: ExternalCalendarSubscription[];
     calendar?: CalendarSettings;
-    keybindingStyle?: 'vim' | 'emacs';
+    keybindingStyle?: 'vim' | 'emacs' | 'standard';
     globalQuickAddShortcut?: string;
     // Quick-add: when true, recognized tokens (dates, tags, contexts) are removed
     // from the title after being applied. Default (unset) preserves text as typed

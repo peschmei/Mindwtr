@@ -40,11 +40,11 @@ type UseSettingsMainPageOptions = {
     isFlatpak: boolean;
     isLinux: boolean;
     isTauri: boolean;
-    keybindingStyle: 'vim' | 'emacs';
+    keybindingStyle: 'vim' | 'emacs' | 'standard';
     language: Language;
     openHelp: () => void;
     setGlobalQuickAddShortcut: (shortcut: GlobalQuickAddShortcutSetting) => void;
-    setKeybindingStyle: (style: 'vim' | 'emacs') => void;
+    setKeybindingStyle: (style: 'vim' | 'emacs' | 'standard') => void;
     setLanguage: (language: Language) => void | Promise<void>;
     settings: AppData['settings'];
     showSaved: () => void;
@@ -299,7 +299,7 @@ export function useSettingsMainPage({
             .finally(() => setLaunchAtStartupLoading(false));
     }, [isTauri, settings?.window, showSaved, updateSettings]);
 
-    const onKeybindingStyleChange = useCallback((style: 'vim' | 'emacs') => {
+    const onKeybindingStyleChange = useCallback((style: 'vim' | 'emacs' | 'standard') => {
         setKeybindingStyle(style);
         showSaved();
     }, [setKeybindingStyle, showSaved]);

@@ -595,3 +595,143 @@ describe('KeybindingProvider (vim)', () => {
         expect(restoreTask).toHaveBeenCalledWith('1');
     });
 });
+
+describe('KeybindingProvider (standard)', () => {
+    const StandardScopeList = ({
+        toggleDoneSelected,
+        toggleSelectSelected,
+        deleteSelected,
+        openSelected,
+        editSelected,
+    }: {
+        toggleDoneSelected: () => void;
+        toggleSelectSelected: () => void;
+        deleteSelected: () => void;
+        openSelected: () => void;
+        editSelected: () => void;
+    }) => {
+        const { registerTaskListScope } = useKeybindings();
+        useEffect(() => {
+            registerTaskListScope({
+                kind: 'taskList',
+                selectNext: vi.fn(),
+                selectPrev: vi.fn(),
+                selectFirst: vi.fn(),
+                selectLast: vi.fn(),
+                editSelected,
+                openSelected,
+                toggleDoneSelected,
+                toggleSelectSelected,
+                deleteSelected,
+            });
+            return () => registerTaskListScope(null);
+        }, [deleteSelected, editSelected, openSelected, registerTaskListScope, toggleDoneSelected, toggleSelectSelected]);
+        return <div data-task-id="1">Task 1</div>;
+    };
+
+    beforeEach(() => {
+        useUiStore.setState({ editingTaskId: null });
+        useTaskStore.setState((state) => ({
+            settings: {
+                ...state.settings,
+                keybindingStyle: 'standard',
+            },
+        }));
+    });
+
+    it('maps e/x/#/Enter/Shift+Enter to done/select/delete/open/edit', () => {
+        const toggleDoneSelected = vi.fn();
+        const toggleSelectSelected = vi.fn();
+        const deleteSelected = vi.fn();
+        const openSelected = vi.fn();
+        const editSelected = vi.fn();
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <StandardScopeList
+                        toggleDoneSelected={toggleDoneSelected}
+                        toggleSelectSelected={toggleSelectSelected}
+                        deleteSelected={deleteSelected}
+                        openSelected={openSelected}
+                        editSelected={editSelected}
+                    />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'e' });
+        fireEvent.keyDown(window, { key: 'x' });
+        fireEvent.keyDown(window, { key: '#', shiftKey: true });
+        fireEvent.keyDown(window, { key: 'Enter' });
+        fireEvent.keyDown(window, { key: 'Enter', shiftKey: true });
+
+        expect(toggleDoneSelected).toHaveBeenCalledTimes(1);
+        expect(toggleSelectSelected).toHaveBeenCalledTimes(1);
+        expect(deleteSelected).toHaveBeenCalledTimes(1);
+        expect(openSelected).toHaveBeenCalledTimes(1);
+        expect(editSelected).toHaveBeenCalledTimes(1);
+    });
+
+    it('navigates views with g chords in standard style', () => {
+        const onNavigate = vi.fn();
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={onNavigate}>
+                    <div data-main-content tabIndex={-1} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        fireEvent.keyDown(window, { key: 'g' });
+        fireEvent.keyDown(window, { key: 'n' });
+
+        expect(onNavigate).toHaveBeenCalledWith('next');
+    });
+
+    it('undoes the last complete/delete with plain z', async () => {
+        const deleteTask = vi.fn(async () => ({ success: true }));
+        const restoreTask = vi.fn(async () => ({ success: true }));
+        useUiStore.setState({ showToast: vi.fn() });
+        useTaskStore.setState((state) => ({
+            ...state,
+            _allTasks: [{
+                id: '1',
+                title: 'Task 1',
+                status: 'next',
+                tags: [],
+                contexts: [],
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+            }],
+            settings: {
+                ...state.settings,
+                keybindingStyle: 'standard',
+                undoNotificationsEnabled: false,
+            },
+            deleteTask,
+            restoreTask,
+        }));
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="projects" onNavigate={vi.fn()}>
+                    <FallbackTaskList onEditTask1={vi.fn()} onEditTask2={vi.fn()} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        fireEvent.keyDown(window, { key: '#', shiftKey: true });
+
+        await waitFor(() => {
+            expect(deleteTask).toHaveBeenCalledWith('1');
+        });
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'z' });
+
+        expect(restoreTask).toHaveBeenCalledWith('1');
+    });
+});

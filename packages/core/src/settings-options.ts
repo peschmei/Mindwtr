@@ -46,6 +46,7 @@ const TIME_FORMAT_VALUE_FLAGS: Record<TimeFormatValue, true> = {
 const KEYBINDING_STYLE_VALUE_FLAGS: Record<KeybindingStyleValue, true> = {
     vim: true,
     emacs: true,
+    standard: true,
 };
 
 const DENSITY_VALUE_FLAGS: Record<DensityValue, true> = {

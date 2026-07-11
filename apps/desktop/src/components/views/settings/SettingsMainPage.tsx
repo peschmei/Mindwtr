@@ -66,6 +66,7 @@ type Labels = {
     globalQuickAddFlatpakDesc: string;
     globalQuickAddFlatpakCommand: string;
     globalQuickAddFlatpakCommandDesc: string;
+    keybindingStandard: string;
     keybindingVim: string;
     keybindingEmacs: string;
     viewShortcuts: string;
@@ -105,8 +106,8 @@ export type SettingsMainPageProps = {
     onCalendarSystemChange: (calendarSystem: CalendarSystemSetting) => void;
     timeFormat: TimeFormatSetting;
     onTimeFormatChange: (format: TimeFormatSetting) => void;
-    keybindingStyle: 'vim' | 'emacs';
-    onKeybindingStyleChange: (style: 'vim' | 'emacs') => void;
+    keybindingStyle: 'vim' | 'emacs' | 'standard';
+    onKeybindingStyleChange: (style: 'vim' | 'emacs' | 'standard') => void;
     globalQuickAddShortcut: GlobalQuickAddShortcutSetting;
     onGlobalQuickAddShortcutChange: (shortcut: GlobalQuickAddShortcutSetting) => void;
     isFlatpak?: boolean;
@@ -412,9 +413,10 @@ export function SettingsMainPage({
                 <SettingsRow title={t.keybindings} description={t.keybindingsDesc}>
                     <select
                         value={keybindingStyle}
-                        onChange={(e) => onKeybindingStyleChange(e.target.value as 'vim' | 'emacs')}
+                        onChange={(e) => onKeybindingStyleChange(e.target.value as 'vim' | 'emacs' | 'standard')}
                         className={selectCls}
                     >
+                        <option value="standard">{t.keybindingStandard}</option>
                         <option value="vim">{t.keybindingVim}</option>
                         <option value="emacs">{t.keybindingEmacs}</option>
                     </select>

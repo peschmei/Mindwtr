@@ -79,6 +79,20 @@ export function KeybindingHelpModal({
         { keys: 'dd', labelKey: 'keybindings.list.delete' },
     ];
 
+    const standardList: HelpItem[] = [
+        { keys: 'j / k / ↑ / ↓', labelKey: 'keybindings.list.nextPrev' },
+        { keys: 'gg / G', labelKey: 'keybindings.list.firstLast' },
+        { keys: 'Enter', labelKey: 'keybindings.list.open', fallbackLabel: 'Open selected task' },
+        { keys: 'Shift+Enter', labelKey: 'keybindings.list.edit' },
+        { keys: 'e', labelKey: 'keybindings.list.toggleDone' },
+        { keys: 'x', labelKey: 'keybindings.list.select', fallbackLabel: 'Select / deselect task' },
+        { keys: '#', labelKey: 'keybindings.list.delete' },
+        { keys: 'z', labelKey: 'keybindings.undo', fallbackLabel: 'Undo last complete/delete' },
+        { keys: '.', labelKey: 'taskEdit.moreOptions' },
+        { keys: 'Ctrl+Enter / Cmd+Enter', labelKey: 'keybindings.list.saveEdit' },
+        { keys: 'Esc', labelKey: 'keybindings.list.cancelEdit' },
+    ];
+
     const emacsGlobal: HelpItem[] = [
         ...sharedGlobal,
         { keys: 'Ctrl-s', labelKey: 'keybindings.openSearch' },
@@ -110,7 +124,7 @@ export function KeybindingHelpModal({
     ];
 
     const globalItems = style === 'emacs' ? emacsGlobal : vimGlobal;
-    const listItems = style === 'emacs' ? emacsList : vimList;
+    const listItems = style === 'emacs' ? emacsList : style === 'standard' ? standardList : vimList;
     const resolveItemLabel = (item: HelpItem) => {
         const translated = t(item.labelKey);
         if (translated !== item.labelKey) return translated;
@@ -174,7 +188,7 @@ export function KeybindingHelpModal({
                     </div>
 
                     <p className="text-xs text-muted-foreground">
-                        {t('nav.settings')}: {t('keybindings.styleLabel')} • {t('keybindings.style.vim')} / {t('keybindings.style.emacs')} ({currentView})
+                        {t('nav.settings')}: {t('keybindings.styleLabel')} • {t('keybindings.style.standard')} / {t('keybindings.style.vim')} / {t('keybindings.style.emacs')} ({currentView})
                     </p>
                 </div>
 
