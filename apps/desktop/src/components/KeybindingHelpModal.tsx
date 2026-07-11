@@ -41,6 +41,7 @@ export function KeybindingHelpModal({
         { keys: 'Ctrl+Shift+\\ / Cmd+Shift+\\', labelKey: 'keybindings.toggleFocusMode' },
         { keys: 'Ctrl+Shift+D / Cmd+Shift+D', labelKey: 'keybindings.list.toggleDetails' },
         { keys: 'Ctrl+Shift+C / Cmd+Shift+C', labelKey: 'keybindings.list.toggleDensity' },
+        { keys: 'Ctrl+Z / Cmd+Z', labelKey: 'keybindings.undo', fallbackLabel: 'Undo last complete/delete' },
         { keys: 'F11', labelKey: 'keybindings.toggleFullscreen' },
     ];
     const vimGlobal: HelpItem[] = [

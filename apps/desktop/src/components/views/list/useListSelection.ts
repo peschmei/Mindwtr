@@ -18,6 +18,7 @@ import type {
 } from '@mindwtr/core';
 
 import { reportError } from '../../../lib/report-error';
+import { registerUndoableAction } from '../../../lib/undo-registry';
 import { undoTaskCompletion } from '../../../lib/undo-task-completion';
 import type { NextGroupBy } from './next-grouping';
 
@@ -361,17 +362,19 @@ export function useListSelection({
         const wasFocusedToday = task.isFocusedToday === true;
         void Promise.resolve(moveTask(task.id, nextStatus))
             .then(() => {
-                if (!undoNotificationsEnabled || nextStatus !== 'done') return;
+                if (nextStatus !== 'done') return;
+                const undo = registerUndoableAction(() => {
+                    void undoTaskCompletion(task.id, task.status, wasFocusedToday)
+                        .catch((error) => reportError('Failed to undo task completion', error));
+                });
+                if (!undoNotificationsEnabled) return;
                 showToast(
                     `${task.title} marked Done`,
                     'info',
                     5000,
                     {
                         label: t('common.undo') || 'Undo',
-                        onClick: () => {
-                            void undoTaskCompletion(task.id, task.status, wasFocusedToday)
-                                .catch((error) => reportError('Failed to undo task completion', error));
-                        },
+                        onClick: undo,
                     },
                 );
             })
@@ -380,6 +383,9 @@ export function useListSelection({
 
     const runSingleDelete = useCallback(async (task: Task) => {
         await Promise.resolve(deleteTask(task.id));
+        const undo = registerUndoableAction(() => {
+            void restoreTask(task.id);
+        });
         if (!undoNotificationsEnabled) return;
         showToast(
             t('list.taskDeleted') || 'Task deleted',
@@ -387,9 +393,7 @@ export function useListSelection({
             5000,
             {
                 label: t('common.undo') || 'Undo',
-                onClick: () => {
-                    void restoreTask(task.id);
-                },
+                onClick: undo,
             },
         );
     }, [deleteTask, restoreTask, showToast, t, undoNotificationsEnabled]);
@@ -528,6 +532,9 @@ export function useListSelection({
         try {
             await Promise.resolve(batchDeleteTasks(taskIds));
             exitSelectionMode();
+            const undo = registerUndoableAction(() => {
+                void restoreDeletedTasksWithFeedback(taskIds, restoreTask, showToast);
+            });
             if (undoNotificationsEnabled) {
                 const deletedMessage = taskIds.length === 1
                     ? (t('list.taskDeleted') || 'Task deleted')
@@ -538,9 +545,7 @@ export function useListSelection({
                     5000,
                     {
                         label: t('common.undo') || 'Undo',
-                        onClick: () => {
-                            void restoreDeletedTasksWithFeedback(taskIds, restoreTask, showToast);
-                        },
+                        onClick: undo,
                     },
                 );
             }

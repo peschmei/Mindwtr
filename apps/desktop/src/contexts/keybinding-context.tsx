@@ -4,6 +4,7 @@ import { useLanguage } from './language-context';
 import { KeybindingHelpModal } from '../components/KeybindingHelpModal';
 import { isFlatpakRuntime, isTauriRuntime } from '../lib/runtime';
 import { reportError } from '../lib/report-error';
+import { registerUndoableAction, takeUndoableAction } from '../lib/undo-registry';
 import { undoTaskCompletion } from '../lib/undo-task-completion';
 import { logWarn } from '../lib/app-log';
 import { useUiStore } from '../store/ui-store';
@@ -395,17 +396,19 @@ export function KeybindingProvider({
                 if (!result.success) {
                     throw new Error(result.error || 'Failed to change task status');
                 }
-                if (settings.undoNotificationsEnabled === false || nextStatus !== 'done' || previousStatus === 'done') return;
+                if (nextStatus !== 'done' || previousStatus === 'done') return;
+                const undo = registerUndoableAction(() => {
+                    void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
+                        .catch((error) => reportError('Failed to undo task completion', error));
+                });
+                if (settings.undoNotificationsEnabled === false) return;
                 showToast(
                     formatTaskMarkedDoneMessage(task.title),
                     'info',
                     5000,
                     {
                         label: undoLabel,
-                        onClick: () => {
-                            void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
-                                .catch((error) => reportError('Failed to undo task completion', error));
-                        },
+                        onClick: undo,
                     }
                 );
             })
@@ -422,6 +425,9 @@ export function KeybindingProvider({
                 if (!result.success) {
                     throw new Error(result.error || 'Failed to delete task');
                 }
+                const undo = registerUndoableAction(() => {
+                    void state.restoreTask(selectedTaskId);
+                });
                 if (settings.undoNotificationsEnabled === false) return;
                 const deletedMessageRaw = t('list.taskDeleted');
                 const deletedMessage = deletedMessageRaw && deletedMessageRaw !== 'list.taskDeleted'
@@ -433,9 +439,7 @@ export function KeybindingProvider({
                     5000,
                     {
                         label: undoLabel,
-                        onClick: () => {
-                            void state.restoreTask(selectedTaskId);
-                        },
+                        onClick: undo,
                     }
                 );
             })
@@ -728,6 +732,14 @@ export function KeybindingProvider({
             if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === 'Comma') {
                 e.preventDefault();
                 onNavigate('settings');
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'z' && !isEditableTarget(e.target)) {
+                const undo = takeUndoableAction();
+                if (undo) {
+                    e.preventDefault();
+                    undo();
+                }
                 return;
             }
             if (!e.metaKey && !e.ctrlKey && !e.altKey && !isEditableTarget(e.target)) {

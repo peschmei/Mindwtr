@@ -547,4 +547,51 @@ describe('KeybindingProvider (vim)', () => {
         undoAction.onClick();
         expect(restoreTask).toHaveBeenCalledWith('1');
     });
+
+    it('undoes the last keyboard delete with Ctrl+Z even when toasts are disabled', async () => {
+        const deleteTask = vi.fn(async () => ({ success: true }));
+        const restoreTask = vi.fn(async () => ({ success: true }));
+        const showToast = vi.fn();
+        useUiStore.setState({ showToast });
+        useTaskStore.setState((state) => ({
+            ...state,
+            _allTasks: [{
+                id: '1',
+                title: 'Task 1',
+                status: 'next',
+                tags: [],
+                contexts: [],
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+            }],
+            settings: {
+                ...state.settings,
+                keybindingStyle: 'vim',
+                undoNotificationsEnabled: false,
+            },
+            deleteTask,
+            restoreTask,
+        }));
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="projects" onNavigate={vi.fn()}>
+                    <FallbackTaskList onEditTask1={vi.fn()} onEditTask2={vi.fn()} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        fireEvent.keyDown(window, { key: 'd' });
+        fireEvent.keyDown(window, { key: 'd' });
+
+        await waitFor(() => {
+            expect(deleteTask).toHaveBeenCalledWith('1');
+        });
+        expect(showToast).not.toHaveBeenCalled();
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+        expect(restoreTask).toHaveBeenCalledWith('1');
+    });
 });

@@ -52,6 +52,7 @@ import { dispatchNavigateEvent } from '../lib/navigation-events';
 import { usePomodoroStore } from '../store/pomodoro-store';
 import { dispatchContextsTokenSelection } from '../lib/contexts-view-state';
 import { reportError } from '../lib/report-error';
+import { registerUndoableAction } from '../lib/undo-registry';
 import { undoTaskCompletion } from '../lib/undo-task-completion';
 import { resolveNativeDateInputLocale } from '../lib/native-date-input-locale';
 import { setCalendarTaskDragData } from '../lib/calendar-task-drag';
@@ -978,6 +979,9 @@ export const TaskItem = memo(function TaskItem({
     // keeps its confirmation.
     const handleDeleteTask = useCallback(() => {
         void deleteTask(task.id);
+        const undo = registerUndoableAction(() => {
+            void restoreTask(task.id);
+        });
         if (!undoNotificationsEnabled) return;
         showToast(
             tFallback(t, 'task.aria.delete', 'Task deleted'),
@@ -985,13 +989,16 @@ export const TaskItem = memo(function TaskItem({
             5000,
             {
                 label: undoLabel,
-                onClick: () => {
-                    void restoreTask(task.id);
-                },
+                onClick: undo,
             }
         );
     }, [deleteTask, restoreTask, showToast, t, task.id, undoLabel, undoNotificationsEnabled]);
     const handleTaskCompleted = useCallback((previousStatus: TaskStatus, wasFocusedToday: boolean) => {
+        const undo = registerUndoableAction(() => {
+            closeProjectNextActionPrompt();
+            void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
+                .catch((error) => reportError('Failed to undo task completion', error));
+        });
         if (undoNotificationsEnabled) {
             showToast(
                 `${task.title} marked Done`,
@@ -999,11 +1006,7 @@ export const TaskItem = memo(function TaskItem({
                 5000,
                 {
                     label: undoLabel,
-                    onClick: () => {
-                        closeProjectNextActionPrompt();
-                        void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
-                            .catch((error) => reportError('Failed to undo task completion', error));
-                    },
+                    onClick: undo,
                 }
             );
         }

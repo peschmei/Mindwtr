@@ -37,8 +37,15 @@ export const allowedEnglishMirrorTerms = [
 ] as const;
 
 export const allowedEnglishMirrorKeysByLocale: Record<string, readonly string[]> = {
+    de: [
+        'keybindings.style.standard',
+    ],
+    it: [
+        'keybindings.style.standard',
+    ],
     fr: [
         'calendar.date',
+        'keybindings.style.standard',
         'common.pause',
         'context.energy.routine',
         'list.compact',
