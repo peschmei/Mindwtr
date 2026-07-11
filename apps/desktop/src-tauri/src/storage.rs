@@ -230,9 +230,49 @@ fn write_data_json_file(data_path: &Path, data: &Value) -> Result<(), String> {
     Ok(())
 }
 
+const ENTITY_TABLES: [&str; 5] = ["tasks", "projects", "sections", "areas", "people"];
+
+fn count_incoming_entities(data: &Value) -> usize {
+    ENTITY_TABLES
+        .iter()
+        .map(|key| {
+            data.get(*key)
+                .and_then(|value| value.as_array())
+                .map(|entries| entries.len())
+                .unwrap_or(0)
+        })
+        .sum()
+}
+
+fn sqlite_entity_count(conn: &Connection) -> Result<i64, String> {
+    let mut total = 0i64;
+    for table in ENTITY_TABLES {
+        let count: i64 = conn
+            .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+            .map_err(|e| e.to_string())?;
+        total += count;
+    }
+    Ok(total)
+}
+
+// A save that would replace existing entities with a document containing no
+// entities at all is never legitimate: real mass-deletions keep tombstoned
+// rows, so an all-empty payload over live data means the caller lost its
+// in-memory state. Refuse instead of wiping both stores (#852).
+fn refuse_empty_snapshot_overwrite(conn: &Connection, data: &Value) -> Result<(), String> {
+    if count_incoming_entities(data) == 0 && sqlite_entity_count(conn)? > 0 {
+        return Err(
+            "Refusing to overwrite existing data with an empty snapshot; local data left untouched"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
 fn persist_data_snapshot(app: &tauri::AppHandle, data: &Value) -> Result<(), String> {
     ensure_data_file(app)?;
     let mut conn = open_sqlite(app)?;
+    refuse_empty_snapshot_overwrite(&conn, data)?;
     migrate_json_to_sqlite(&mut conn, data)?;
     write_data_json_file(&get_data_path(app), data)?;
     Ok(())
@@ -2303,6 +2343,72 @@ mod tests {
         assert!(index_names
             .iter()
             .any(|name| name == "idx_tasks_assignedTo"));
+    }
+
+    #[test]
+    fn refuses_empty_snapshot_over_existing_entities() {
+        let conn = Connection::open_in_memory().expect("should open in-memory db");
+        conn.execute_batch(SQLITE_SCHEMA)
+            .expect("should create schema");
+        let task = serde_json::json!({
+            "id": "task-guard-1",
+            "title": "Existing task",
+            "status": "next",
+            "createdAt": "2026-07-01T00:00:00.000Z",
+            "updatedAt": "2026-07-01T00:00:00.000Z"
+        });
+        upsert_task_row(&conn, &task).expect("should upsert task");
+
+        let empty = serde_json::json!({
+            "tasks": [],
+            "projects": [],
+            "settings": {"theme": "dark"}
+        });
+        let result = refuse_empty_snapshot_overwrite(&conn, &empty);
+        assert!(result.is_err(), "empty payload over live data must be refused");
+
+        // Mass deletions keep tombstoned rows, so a payload that still carries
+        // the (deleted) entity is a legitimate overwrite.
+        let tombstoned = serde_json::json!({
+            "tasks": [{
+                "id": "task-guard-1",
+                "title": "Existing task",
+                "status": "next",
+                "createdAt": "2026-07-01T00:00:00.000Z",
+                "updatedAt": "2026-07-02T00:00:00.000Z",
+                "deletedAt": "2026-07-02T00:00:00.000Z"
+            }],
+            "projects": []
+        });
+        refuse_empty_snapshot_overwrite(&conn, &tombstoned)
+            .expect("tombstone-carrying payload should pass");
+    }
+
+    #[test]
+    fn allows_empty_snapshot_on_fresh_database() {
+        let conn = Connection::open_in_memory().expect("should open in-memory db");
+        conn.execute_batch(SQLITE_SCHEMA)
+            .expect("should create schema");
+        // Fresh installs persist settings-only documents before any task exists.
+        let empty = serde_json::json!({
+            "tasks": [],
+            "projects": [],
+            "settings": {"language": "en"}
+        });
+        refuse_empty_snapshot_overwrite(&conn, &empty)
+            .expect("settings-only save on a fresh database should pass");
+    }
+
+    #[test]
+    fn counts_incoming_entities_across_all_collections() {
+        assert_eq!(count_incoming_entities(&serde_json::json!({})), 0);
+        assert_eq!(
+            count_incoming_entities(&serde_json::json!({
+                "tasks": [{"id": "t"}],
+                "people": [{"id": "p"}, {"id": "q"}]
+            })),
+            3
+        );
     }
 
     #[test]
