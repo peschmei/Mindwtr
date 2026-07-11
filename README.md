@@ -6,9 +6,9 @@
 
 English | [中文](./README_zh.md)
 
-The free, open-source, cross-platform GTD app. Local-first, no account required. _Mind Like Water._
+**Get everything out of your head.** Mindwtr is a free, open-source to-do app built on the Getting Things Done (GTD) method: it captures every task and idea in seconds, then shows you the one next thing to do. Works on Windows, Mac, Linux, iPhone, Android, and the web. No account, no subscription, and your data stays on your device.
 
-_New to GTD? Read [GTD in 15 minutes](https://hamberg.no/gtd) for a quick introduction._
+_Mindwtr = "mind like water": the calm you get when nothing is rattling around in your head._
 
 [Getting Started](https://docs.mindwtr.app/start/getting-started) · [FAQ](https://docs.mindwtr.app/start/faq) · [Docs](https://docs.mindwtr.app/) · [Data & Sync](https://docs.mindwtr.app/data-sync/) · [Cloud Deployment](https://docs.mindwtr.app/data-sync/cloud-deployment) · [MCP Server](https://docs.mindwtr.app/power-users/mcp)
 
@@ -84,44 +84,37 @@ _New to GTD? Read [GTD in 15 minutes](https://hamberg.no/gtd) for a quick introd
   </p>
 </div>
 
-## Why Mindwtr (Quick Comparison)
+## How it works
 
-Mindwtr is built for people who want a complete GTD system without lock-in. Here is a brief, respectful comparison with mainstream task apps and GTD-focused alternatives.
+Your head is for having ideas, not for holding them (David Allen, who wrote the book on this). Mindwtr holds them for you:
 
-| Capability                                                        | Mindwtr | Todoist | TickTick | Everdo | NirvanaHQ |
-| ----------------------------------------------------------------- | ------- | ------- | -------- | ------ | --------- |
-| Open source                                                       | ✅      | ❌      | ❌       | ❌     | ❌        |
-| GTD-native workflow                                               | ✅      | ⚠️      | ⚠️       | ✅     | ✅        |
-| All major platforms (desktop + mobile + web, incl. Linux desktop) | ✅      | ✅      | ✅       | ⚠️     | ⚠️        |
-| Local-first + no account required                                 | ✅      | ❌      | ❌       | ✅     | ❌        |
-| AI assistant (BYOK + local LLM)                                   | ✅      | ❌      | ❌       | ❌     | ❌        |
-| Flexible sync (WebDAV / Dropbox / self-hosted / local file)       | ✅      | ❌      | ❌       | ⚠️     | ❌        |
-| Completely free                                                   | ✅      | ❌      | ❌       | ❌     | ❌        |
+1. **Dump it.** A task, an idea, a worry: type it (or speak it) and it lands in your Inbox. Global hotkey on desktop, widget and share sheet on your phone.
+2. **Sort it.** A short guided pass over the Inbox. Takes two minutes? Do it now. Has a date? Schedule it. Waiting on someone else? Track it. Just a maybe? Shelve it for someday.
+3. **Do it.** Open Focus and see only what you can act on right now. Everything else stays out of sight.
+4. **Reset weekly.** A guided review catches loose ends, so the list stays trustworthy and your head stays clear.
 
-Legend: `✅` = yes, `❌` = no, `⚠️` = partial/limited support.
-
-_This comparison is based on the current public capabilities of each product. If any entry is outdated, feel free to open an issue or PR with sources._
+If you know GTD: that is Capture, Clarify, Organize, Engage, and Reflect, end to end. New to it? [GTD in 15 minutes](https://hamberg.no/gtd) is a good primer, and Mindwtr guides you through each step anyway.
 
 ## Philosophy
 
-Mindwtr is built to be **simple by default and powerful when you need it**. We focus on reducing cognitive load, cutting the fat, and keeping you in flow. That means:
+**Don't show me a cockpit when I just want to ride a bike.**
 
-- **Progressive disclosure**: advanced options stay hidden until they matter.
-- **Less by default**: fewer fields, fewer knobs, fewer distractions.
-- **Avoid feature creep**: we prioritize clarity over clutter.
+Mindwtr is simple by default and powerful when you need it:
 
-_Don't show me a cockpit when I just want to ride a bike._
+- Advanced options stay hidden until they matter.
+- Fewer fields, fewer knobs, fewer distractions.
+- Clarity beats clutter: we say no to feature creep.
 
 ## Features
 
-- GTD workflow end-to-end: Capture, Clarify, Organize, Reflect, Engage.
-- Focus view combines time-based agenda with next actions.
-- Local-first data model with native iCloud / CloudKit sync on supported Apple builds, plus file sync, WebDAV, Dropbox, and self-hosted cloud options.
-- Projects support sections, areas, and reorderable project task order for larger multi-step planning.
-- Obsidian vault import with note deep links on desktop.
-- Optional AI copilot (BYOK + local/self-hosted compatible models).
-- Cross-platform apps for desktop and mobile, plus PWA.
-- Optional automation helpers with desktop local REST API, CLI, and the published [`mindwtr-mcp`](https://www.npmjs.com/package/mindwtr-mcp) server.
+- The full GTD loop, guided: capture, sort, do, review.
+- Focus view puts today's schedule and your next actions on one screen.
+- Your data lives on your device. Sync is optional, and you pick where: iCloud on Apple devices, Dropbox, a shared folder, your own server, or WebDAV.
+- Projects with sections, areas, and manual task ordering for bigger plans.
+- Import tasks from your Obsidian notes, with links back to the source (desktop).
+- Optional AI helper: connect your own OpenAI, Gemini, or Claude account, or run a private AI on your own computer. Off by default.
+- Apps for Windows, macOS, Linux, iPhone, and Android, plus a web app that works offline.
+- For developers: a local REST API, a CLI, and the [`mindwtr-mcp`](https://www.npmjs.com/package/mindwtr-mcp) server so AI assistants can manage your tasks.
 
 <details>
 <summary>See all features</summary>
@@ -133,14 +126,14 @@ _Don't show me a cockpit when I just want to ride a bike._
 - **Organize** - Projects, sections, contexts, and status lists
 - **Reflect** - Weekly review wizard with reminders
 - **Engage** - Context-filtered next actions
-- **AI Assist (Optional)** - Clarify, break down, and review with BYOK AI (OpenAI, Gemini, Claude, or local/self-hosted OpenAI-compatible LLMs)
+- **AI Assist (Optional)** - Clarify, break down, and review with your own AI account (OpenAI, Gemini, Claude) or a local/self-hosted OpenAI-compatible model
 
 ### Views
 
 - 📥 **Inbox** - Capture zone with processing wizard
 - 🎯 **Focus** - Agenda (time-based) + Next Actions in one view
 - 📁 **Projects** - Multi-step outcomes with sections, areas, and manual task ordering
-- 🏷️ **Contexts** - Slash-delimited contexts with parent matching (@work/meetings)
+- 🏷️ **Contexts** - Tag tasks by where or how you get them done; nested contexts like @work/meetings also match @work
 - ⏳ **Waiting For** - Delegated items
 - 💭 **Someday/Maybe** - Deferred ideas
 - 📅 **Calendar** - Time-based planning with adjustable mobile week density
@@ -168,8 +161,8 @@ _Don't show me a cockpit when I just want to ride a bike._
 ### Data & Sync
 
 - 🔄 **Sync Options** - See the [Data & Sync docs](https://docs.mindwtr.app/data-sync/) for supported backends and setup
-- 🍎 **Native iCloud / CloudKit Sync** - Apple-only structured sync on supported iPhone, iPad, and macOS builds
-- ☁️ **Dropbox OAuth Sync (Optional)** - Native Dropbox App Folder sync in supported non-FOSS builds
+- 🍎 **iCloud Sync** - Built-in sync on supported iPhone, iPad, and macOS builds (CloudKit)
+- ☁️ **Dropbox Sync (Optional)** - Sign in with Dropbox and sync through a private app folder (store builds; not in FOSS builds)
 - 📤 **Export/Backup** - Export data to JSON
 - ♻️ **Restore from Backup** - Replace local data from a validated Mindwtr backup with a recovery snapshot first
 - 📥 **TickTick + Todoist + DGT GTD + OmniFocus + Apple Reminders Import** - Import TickTick CSV/ZIP, Todoist CSV/ZIP, DGT GTD JSON/ZIP, OmniFocus exports, or incomplete Apple Reminders into Mindwtr
@@ -180,8 +173,8 @@ _Don't show me a cockpit when I just want to ride a bike._
 
 - 🔌 **CLI** - Add, list, complete, search from terminal by running the repo helper
 - 🌐 **REST API** - Optional desktop localhost API server for token-authenticated scripting
-- 🌍 **Web App (PWA)** - Browser access with offline support
-- 🧠 **MCP Server** - Optional local stdio Model Context Protocol server for LLM automation, available as [`mindwtr-mcp`](https://www.npmjs.com/package/mindwtr-mcp) and in the [MCP Registry](https://registry.modelcontextprotocol.io/)
+- 🌍 **Web App** - Runs in your browser, works offline (PWA)
+- 🧠 **MCP Server** - Lets AI assistants read and manage your tasks (a local Model Context Protocol server), available as [`mindwtr-mcp`](https://www.npmjs.com/package/mindwtr-mcp) and in the [MCP Registry](https://registry.modelcontextprotocol.io/)
 
 Desktop builds can start the local REST API from **Settings -> Advanced** on `127.0.0.1` with default port `3456` and a generated bearer token. The CLI remains a repo helper; the stdio MCP server can be installed from npm with `npm install -g mindwtr-mcp` or launched by MCP clients with `npx -y mindwtr-mcp`.
 
@@ -196,6 +189,24 @@ Desktop builds can start the local REST API from **Settings -> Advanced** on `12
 - 🐳 **Docker** - Run the PWA + self-hosted sync server with Docker
 
 </details>
+
+## Why Mindwtr (Quick Comparison)
+
+Mindwtr is for people who want the full GTD method in one app, with data they own and no lock-in. Here is a brief, respectful comparison with mainstream task apps and GTD-focused alternatives.
+
+| Capability                                                              | Mindwtr | Todoist | TickTick | Everdo | NirvanaHQ |
+| ----------------------------------------------------------------------- | ------- | ------- | -------- | ------ | --------- |
+| Open source                                                             | ✅      | ❌      | ❌       | ❌     | ❌        |
+| Follows the full GTD method out of the box                              | ✅      | ⚠️      | ⚠️       | ✅     | ✅        |
+| Works everywhere: Windows, Mac, Linux, iPhone, Android, web             | ✅      | ✅      | ✅       | ⚠️     | ⚠️        |
+| Works offline, no account needed                                        | ✅      | ❌      | ❌       | ✅     | ❌        |
+| Optional AI helper (your own AI account, or one on your computer)       | ✅      | ❌      | ❌       | ❌     | ❌        |
+| You pick where your data syncs (Dropbox, your server, a folder, WebDAV) | ✅      | ❌      | ❌       | ⚠️     | ❌        |
+| Completely free                                                         | ✅      | ❌      | ❌       | ❌     | ❌        |
+
+Legend: `✅` = yes, `❌` = no, `⚠️` = partial/limited support.
+
+_This comparison is based on the current public capabilities of each product. If any entry is outdated, feel free to open an issue or PR with sources._
 
 ## Installation
 
