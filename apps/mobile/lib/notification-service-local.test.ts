@@ -14,6 +14,7 @@ const {
   mockAlarmSendNotification,
   mockAlarmScheduleAlarm,
   mockEnsureReminderNotificationChannel,
+  mockRestorePersistentCaptureNotification,
   mockGetNextScheduledAt,
   mockGetDueReminderRepeatTimes,
   mockHasTimeComponent,
@@ -46,6 +47,7 @@ const {
   mockAlarmSendNotification: vi.fn(),
   mockAlarmScheduleAlarm: vi.fn(async () => ({ id: 99 })),
   mockEnsureReminderNotificationChannel: vi.fn(async () => undefined),
+  mockRestorePersistentCaptureNotification: vi.fn(),
   mockGetNextScheduledAt: vi.fn<(...args: unknown[]) => Date | null>(() => null),
   mockGetDueReminderRepeatTimes: vi.fn<(...args: unknown[]) => Date[]>(() => []),
   mockHasTimeComponent: vi.fn(() => false),
@@ -132,6 +134,7 @@ vi.mock('./app-log', () => ({
 
 vi.mock('@/modules/notification-open-intents', () => ({
   ensureReminderNotificationChannel: mockEnsureReminderNotificationChannel,
+  restorePersistentCaptureNotification: mockRestorePersistentCaptureNotification,
 }));
 
 import {
@@ -164,6 +167,7 @@ describe('notification-service-local', () => {
     mockAlarmScheduleAlarm.mockResolvedValue({ id: 99 });
     mockEnsureReminderNotificationChannel.mockReset();
     mockEnsureReminderNotificationChannel.mockResolvedValue(undefined);
+    mockRestorePersistentCaptureNotification.mockReset();
     mockGetNextScheduledAt.mockReset();
     mockGetNextScheduledAt.mockReturnValue(null);
     mockGetDueReminderRepeatTimes.mockReset();
@@ -222,6 +226,18 @@ describe('notification-service-local', () => {
     expect(mockAlarmRemoveAllFiredNotifications).toHaveBeenCalledTimes(1);
     expect(__localNotificationTestUtils.getAlarmMapSnapshot().size).toBe(0);
     expect(mockAsyncStorageSetItem).toHaveBeenCalledWith('mindwtr:local:alarms:v1', '{}');
+  });
+
+  it('re-asserts the persistent capture notification after wiping fired notifications', async () => {
+    await stopLocalMobileNotifications();
+
+    // removeAllFiredNotifications() is NotificationManager.cancelAll(), which
+    // also removes the pinned quick-capture notification (#819).
+    expect(mockAlarmRemoveAllFiredNotifications).toHaveBeenCalledTimes(1);
+    expect(mockRestorePersistentCaptureNotification).toHaveBeenCalledTimes(1);
+    const wipeOrder = mockAlarmRemoveAllFiredNotifications.mock.invocationCallOrder[0];
+    const restoreOrder = mockRestorePersistentCaptureNotification.mock.invocationCallOrder[0];
+    expect(restoreOrder).toBeGreaterThan(wipeOrder);
   });
 
   it('ensures the Android reminder notification channel when permission is already granted', async () => {

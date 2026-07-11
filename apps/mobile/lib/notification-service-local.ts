@@ -21,7 +21,7 @@ import {
   hasActiveMobileNotificationFeature,
   isWeeklyReviewReminderEnabled,
 } from './mobile-notification-settings';
-import { ensureReminderNotificationChannel } from '@/modules/notification-open-intents';
+import { ensureReminderNotificationChannel, restorePersistentCaptureNotification } from '@/modules/notification-open-intents';
 import { getDuplicateAlarmRetryFireAt } from './notification-service-local-utils';
 
 type NotificationOpenPayload = {
@@ -275,6 +275,16 @@ async function clearScheduledAlarms(api: AlarmNotificationsApi | null): Promise<
 
     try {
       api.removeAllFiredNotifications();
+    } catch {
+      // no-op
+    }
+
+    // removeAllFiredNotifications() is NotificationManager.cancelAll(): it also
+    // wipes the pinned quick-capture notification, which is why the handle
+    // vanished whenever reminders were off (#819). Re-assert it from its
+    // native mirror; a no-op when the capture toggle is off.
+    try {
+      restorePersistentCaptureNotification();
     } catch {
       // no-op
     }

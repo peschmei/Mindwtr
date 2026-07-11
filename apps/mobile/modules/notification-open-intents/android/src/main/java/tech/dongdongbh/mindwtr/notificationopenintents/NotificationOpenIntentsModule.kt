@@ -27,6 +27,10 @@ class NotificationOpenIntentsModule : Module() {
       appContext.reactContext?.let { PersistentCaptureNotifier.cancel(it) }
     }
 
+    Function("restorePersistentCaptureNotification") {
+      appContext.reactContext?.let { PersistentCaptureNotifier.restoreOnProcessStart(it) }
+    }
+
     Function("ensureReminderChannel") { channelId: String, channelName: String ->
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
         return@Function

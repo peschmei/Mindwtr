@@ -15,6 +15,7 @@ type NotificationOpenIntentsModule = {
   ensureReminderChannel?: (channelId: string, channelName: string) => void;
   showPersistentCaptureNotification?: (title: string, text: string, channelName: string) => void;
   hidePersistentCaptureNotification?: () => void;
+  restorePersistentCaptureNotification?: () => void;
 };
 
 type AlarmNotificationModule = {
@@ -97,4 +98,14 @@ export function showPersistentCaptureNotification(title: string, text: string, c
 export function hidePersistentCaptureNotification(): void {
   if (Platform.OS !== 'android') return;
   nativeModule?.hidePersistentCaptureNotification?.();
+}
+
+/**
+ * Re-post the pinned capture notification from its native last-posted mirror
+ * if the toggle is on. Needs no strings, so callers that just wiped the shade
+ * (NotificationManager.cancelAll) can re-assert the handle without i18n access.
+ */
+export function restorePersistentCaptureNotification(): void {
+  if (Platform.OS !== 'android') return;
+  nativeModule?.restorePersistentCaptureNotification?.();
 }
