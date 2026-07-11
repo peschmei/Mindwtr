@@ -29,4 +29,64 @@ describe('AreaSelector', () => {
         expect(dropdown?.parentElement).toBe(document.body);
         expect(dropdown).toHaveStyle({ position: 'fixed' });
     });
+
+    it('opens the dropdown with ArrowDown on the closed trigger', () => {
+        const { getByRole, queryByRole } = render(
+            <AreaSelector
+                areas={areas}
+                value=""
+                onChange={vi.fn()}
+                placeholder="Select area"
+                searchPlaceholder="Search areas"
+            />
+        );
+
+        expect(queryByRole('listbox', { name: 'Select area' })).not.toBeInTheDocument();
+
+        const trigger = getByRole('button', { name: 'Select area' });
+        trigger.focus();
+        fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+
+        expect(getByRole('listbox', { name: 'Select area' })).toBeInTheDocument();
+    });
+
+    it('returns focus to the trigger after selecting an option with the keyboard', () => {
+        const onChange = vi.fn();
+        const { getByRole } = render(
+            <AreaSelector
+                areas={areas}
+                value=""
+                onChange={onChange}
+                placeholder="Select area"
+                searchPlaceholder="Search areas"
+            />
+        );
+
+        const trigger = getByRole('button', { name: 'Select area' });
+        fireEvent.click(trigger);
+        fireEvent.click(getByRole('option', { name: 'Work' }));
+
+        expect(onChange).toHaveBeenCalledWith('a1');
+        expect(document.activeElement).toBe(trigger);
+    });
+
+    it('closes only the dropdown on Escape, returning focus to the trigger', () => {
+        const { getByRole, queryByRole } = render(
+            <AreaSelector
+                areas={areas}
+                value=""
+                onChange={vi.fn()}
+                placeholder="Select area"
+                searchPlaceholder="Search areas"
+            />
+        );
+
+        const trigger = getByRole('button', { name: 'Select area' });
+        fireEvent.click(trigger);
+        const search = getByRole('textbox', { name: 'Search areas' });
+        fireEvent.keyDown(search, { key: 'Escape' });
+
+        expect(queryByRole('listbox', { name: 'Select area' })).not.toBeInTheDocument();
+        expect(document.activeElement).toBe(trigger);
+    });
 });

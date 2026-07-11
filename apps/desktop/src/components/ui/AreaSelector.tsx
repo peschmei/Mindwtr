@@ -38,6 +38,7 @@ export function AreaSelector({
     const [query, setQuery] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const selected = areas.find((area) => area.id === value);
     const { fixedDropdownStyle, listMaxHeight } = useDropdownPosition({
         open,
@@ -68,9 +69,12 @@ export function AreaSelector({
         return () => document.removeEventListener('mousedown', handleClick);
     }, [open]);
 
+    // Keyboard/selection closes return focus to the trigger so the user is not
+    // stranded on a removed node (outside clicks bypass this on purpose).
     const closeDropdown = () => {
         setOpen(false);
         setQuery('');
+        triggerRef.current?.focus();
     };
 
     const focusSelectableOption = (direction: 1 | -1) => {
@@ -92,19 +96,25 @@ export function AreaSelector({
         list[nextIndex].focus();
     };
 
+    // stopPropagation keeps the app-wide shortcut handler (and an enclosing
+    // quick-action menu) from reacting to keys the open dropdown consumes —
+    // the dropdown is portaled outside any [role="menu"] ancestor.
     const handleDropdownKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Escape') {
             event.preventDefault();
+            event.stopPropagation();
             closeDropdown();
             return;
         }
         if (event.key === 'ArrowDown') {
             event.preventDefault();
+            event.stopPropagation();
             focusSelectableOption(1);
             return;
         }
         if (event.key === 'ArrowUp') {
             event.preventDefault();
+            event.stopPropagation();
             focusSelectableOption(-1);
         }
     };
@@ -142,12 +152,20 @@ export function AreaSelector({
     return (
         <div ref={containerRef} className={cn('relative', className)}>
             <button
+                ref={triggerRef}
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
                 onKeyDown={(event) => {
                     if (event.key === 'Escape' && open) {
                         event.preventDefault();
+                        event.stopPropagation();
                         closeDropdown();
+                        return;
+                    }
+                    if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !open) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setOpen(true);
                     }
                 }}
                 className={cn(

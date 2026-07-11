@@ -169,10 +169,11 @@ export function TaskQuickActionMenu({
         setContextsDraft(task.contexts?.join(', ') || '');
     }, [task.areaId, task.contexts, task.dueDate, task.id, task.reviewAt, task.startTime]);
 
+    // Focus the menu container, not the first item — like native context menus,
+    // nothing is highlighted until the first arrow press, and key events still
+    // land inside the menu so the app-wide shortcuts stay suppressed.
     useEffect(() => {
-        const focusTarget = menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
-            ?? menuRef.current?.querySelector<HTMLButtonElement>('button');
-        focusTarget?.focus();
+        menuRef.current?.focus();
     }, []);
 
     useEffect(() => {
@@ -231,7 +232,14 @@ export function TaskQuickActionMenu({
         // keys the open menu consumes (arrows would otherwise move the list
         // selection behind the menu and close it via the scroll listener).
         const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target instanceof Node ? event.target : null;
+            const inSelectorDropdown = Boolean(
+                target instanceof Element && target.closest('[data-selector-dropdown="true"]'),
+            );
             if (event.key === 'Escape') {
+                // An open selector dropdown is one layer deeper — it closes
+                // itself on Escape; the panel takes the next press.
+                if (inSelectorDropdown) return;
                 event.preventDefault();
                 event.stopPropagation();
                 if (activePanel) {
@@ -241,11 +249,8 @@ export function TaskQuickActionMenu({
                 onClose();
                 return;
             }
-            const target = event.target instanceof Node ? event.target : null;
-            const inPanelSurface = Boolean(
-                (target && panelRef.current?.contains(target))
-                || (target instanceof Element && target.closest('[data-selector-dropdown="true"]')),
-            );
+            const inPanelSurface = inSelectorDropdown
+                || Boolean(target && panelRef.current?.contains(target));
             if (inPanelSurface) return;
 
             switch (event.key) {
@@ -562,7 +567,10 @@ export function TaskQuickActionMenu({
             title={title}
             onClick={onClick}
             className={cn(
-                'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                // Plain focus: styles, not focus-visible: — keyboard traversal
+                // moves focus programmatically, and WebKit does not always mark
+                // that focus-visible, which left the focused item unhighlighted.
+                'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:bg-muted focus-visible:ring-2 focus-visible:ring-primary/40',
                 disabled
                     ? 'cursor-not-allowed text-muted-foreground/50'
                     : active
@@ -582,7 +590,8 @@ export function TaskQuickActionMenu({
                     ref={menuRef}
                     role="menu"
                     aria-label={moreOptionsLabel}
-                    className="fixed z-50 w-56 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl"
+                    tabIndex={-1}
+                    className="fixed z-50 w-56 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl focus:outline-none"
                     style={{ top: menuPosition.top, left: menuPosition.left }}
                     onContextMenu={(event) => event.preventDefault()}
                 >

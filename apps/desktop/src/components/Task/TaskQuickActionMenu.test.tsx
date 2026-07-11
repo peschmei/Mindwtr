@@ -312,14 +312,17 @@ describe('TaskQuickActionMenu', () => {
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('focuses the first menu item on open', () => {
+    it('focuses the menu container on open, with no item pre-highlighted', () => {
         renderMenu();
 
-        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+        expect(document.activeElement).toBe(screen.getByRole('menu', { name: /more options/i }));
     });
 
     it('moves between menu items with arrow keys, wrapping at the ends', () => {
         renderMenu();
+
+        fireEvent.keyDown(window, { key: 'ArrowDown' });
+        expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
 
         fireEvent.keyDown(window, { key: 'ArrowDown' });
         expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Due Date…' }));
@@ -332,6 +335,13 @@ describe('TaskQuickActionMenu', () => {
 
         fireEvent.keyDown(window, { key: 'ArrowDown' });
         expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+    });
+
+    it('highlights the focused item with a plain focus style, not focus-visible only', () => {
+        renderMenu();
+
+        fireEvent.keyDown(window, { key: 'ArrowDown' });
+        expect(document.activeElement).toHaveClass('focus:bg-muted');
     });
 
     it('jumps to the first and last item with Home and End', () => {
@@ -385,6 +395,35 @@ describe('TaskQuickActionMenu', () => {
 
         fireEvent.keyDown(window, { key: 'Home' });
         expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: /start date/i }));
+    });
+
+    it('lets Escape close the area selector dropdown before the panel and menu', () => {
+        const props = renderMenu({
+            areas: [{
+                id: 'area-work',
+                name: 'Work',
+                color: '#2563eb',
+                order: 0,
+                createdAt: now,
+                updatedAt: now,
+            }],
+        });
+
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Area…' }));
+        fireEvent.click(screen.getByRole('button', { name: 'No Area' }));
+        const search = screen.getByRole('textbox', { name: 'Search areas' });
+
+        fireEvent.keyDown(search, { key: 'Escape' });
+        expect(screen.queryByRole('option', { name: 'Work' })).not.toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Area' })).toBeInTheDocument();
+        expect(props.onClose).not.toHaveBeenCalled();
+
+        fireEvent.keyDown(window, { key: 'Escape' });
+        expect(screen.queryByRole('dialog', { name: 'Area' })).not.toBeInTheDocument();
+        expect(props.onClose).not.toHaveBeenCalled();
+
+        fireEvent.keyDown(window, { key: 'Escape' });
+        expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
     it('keeps secondary task row actions in the quick menu', () => {

@@ -707,7 +707,7 @@ export function ProjectsSidebar({
                     <button
                         type="button"
                         role="menuitem"
-                        className="w-full text-left px-3 py-2 rounded hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        className="w-full text-left px-3 py-2 rounded hover:bg-muted transition-colors focus:outline-none focus:bg-muted focus-visible:ring-2 focus-visible:ring-primary/40"
                         onClick={() => {
                             onDuplicateProject(contextMenu.projectId);
                             closeContextMenu();
