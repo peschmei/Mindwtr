@@ -367,6 +367,41 @@ describe('AgendaView', () => {
         expect(getByText('1 task hidden (future start)')).toBeInTheDocument();
     });
 
+    it('does not count future-start someday tasks in the hidden notice', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-02-28T12:00:00.000Z'));
+
+        // Focus never surfaces someday tasks, so a future-start someday
+        // recurrence must not inflate the notice count (#856).
+        const futureSomedayTask: Task = {
+            id: 'future-start-someday-task',
+            title: 'Future someday recurrence',
+            status: 'someday',
+            startTime: '2026-03-03T09:00:00.000Z',
+            recurrence: 'weekly',
+            tags: [],
+            contexts: [],
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        };
+
+        useTaskStore.setState({
+            tasks: [futureSomedayTask],
+            _allTasks: [futureSomedayTask],
+            projects: [],
+            _allProjects: [],
+            areas: [],
+            _allAreas: [],
+            settings: {},
+            highlightTaskId: null,
+        });
+
+        const { queryByText } = renderAgenda();
+
+        expect(queryByText('Future someday recurrence')).not.toBeInTheDocument();
+        expect(queryByText(/hidden \(future start\)/)).not.toBeInTheDocument();
+    });
+
     it('removes focused tasks immediately when a local edit makes them ineligible', async () => {
         useTaskStore.setState({
             tasks: [focusedTask],

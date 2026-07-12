@@ -25,6 +25,7 @@ import {
   removeAdvancedFilterCriteriaChip,
   sortFocusNextActions,
   shouldShowTaskForStart,
+  isFocusSequentialCandidate,
   getFocusSequentialFirstTaskIds,
   generateUUID,
   getProjectDeadlineBoosts,
@@ -374,9 +375,17 @@ export default function FocusScreen() {
   const activeTasks = useMemo(() => (
     baseActiveTasks.filter((task) => shouldShowTaskForStart(task, { showFutureStarts }))
   ), [baseActiveTasks, showFutureStarts]);
-  const futureStartTasks = useMemo(() => (
-    baseActiveTasks.filter((task) => !shouldShowTaskForStart(task, { showFutureStarts: false }))
-  ), [baseActiveTasks]);
+  const futureStartTasks = useMemo(() => {
+    const now = new Date();
+    // Count only tasks Focus would actually surface once their start arrives
+    // (starred, next, review-due). Future-start someday/waiting/inbox items
+    // never render in this tab, so counting them makes the notice claim tasks
+    // the Show toggle can't reveal (#856).
+    return baseActiveTasks.filter((task) => (
+      !shouldShowTaskForStart(task, { showFutureStarts: false, now })
+      && isFocusSequentialCandidate(task, { now })
+    ));
+  }, [baseActiveTasks]);
   const hiddenFutureStartCount = futureStartTasks.length;
   const futureStartPreview = useMemo(() => {
     if (!showFutureStarts || futureStartTasks.length === 0) return '';
