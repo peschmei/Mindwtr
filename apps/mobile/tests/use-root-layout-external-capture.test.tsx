@@ -9,9 +9,9 @@ vi.mock('@/lib/app-log', () => ({
   logWarn: vi.fn(),
 }));
 
-const persistAttachmentLocally = vi.hoisted(() => vi.fn());
+const persistAttachmentLocallyDetailed = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/attachment-sync', () => ({
-  persistAttachmentLocally,
+  persistAttachmentLocallyDetailed,
 }));
 
 vi.mock('expo-file-system', () => ({
@@ -151,9 +151,9 @@ describe('useRootLayoutExternalCapture', () => {
 
   it('copies a shared file into attachments and opens capture with it attached', async () => {
     const resetShareIntent = vi.fn();
-    persistAttachmentLocally.mockImplementation(async (attachment: { uri: string }) => ({
-      ...attachment,
-      uri: 'file:///data/mindwtr/attachments/copied.pdf',
+    persistAttachmentLocallyDetailed.mockImplementation(async (attachment: { uri: string }) => ({
+      attachment: { ...attachment, uri: 'file:///data/mindwtr/attachments/copied.pdf' },
+      status: 'copied',
     }));
 
     await act(async () => {
@@ -169,8 +169,8 @@ describe('useRootLayoutExternalCapture', () => {
       );
     });
 
-    expect(persistAttachmentLocally).toHaveBeenCalledTimes(1);
-    expect(persistAttachmentLocally.mock.calls[0][0]).toMatchObject({
+    expect(persistAttachmentLocallyDetailed).toHaveBeenCalledTimes(1);
+    expect(persistAttachmentLocallyDetailed.mock.calls[0][0]).toMatchObject({
       kind: 'file',
       title: 'Invoice March.pdf',
       mimeType: 'application/pdf',
@@ -192,8 +192,10 @@ describe('useRootLayoutExternalCapture', () => {
   });
 
   it('falls back to shared text capture and reports the skipped file when the copy fails', async () => {
-    // persistAttachmentLocally signals a failed copy by returning the input unchanged.
-    persistAttachmentLocally.mockImplementation(async (attachment: { uri: string }) => attachment);
+    persistAttachmentLocallyDetailed.mockImplementation(async (attachment: { uri: string }) => ({
+      attachment,
+      status: 'failed',
+    }));
 
     await act(async () => {
       create(
@@ -217,9 +219,9 @@ describe('useRootLayoutExternalCapture', () => {
   });
 
   it('skips blocked file types even when the share reports no size', async () => {
-    persistAttachmentLocally.mockImplementation(async (attachment: { uri: string }) => ({
-      ...attachment,
-      uri: 'file:///data/mindwtr/attachments/copied.bin',
+    persistAttachmentLocallyDetailed.mockImplementation(async (attachment: { uri: string }) => ({
+      attachment: { ...attachment, uri: 'file:///data/mindwtr/attachments/copied.bin' },
+      status: 'copied',
     }));
 
     await act(async () => {
@@ -236,7 +238,7 @@ describe('useRootLayoutExternalCapture', () => {
     });
 
     // The blocklist rejects the file before any copy happens.
-    expect(persistAttachmentLocally).not.toHaveBeenCalled();
+    expect(persistAttachmentLocallyDetailed).not.toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledTimes(1);
     const params = router.replace.mock.calls[0][0].params;
     expect(decodeURIComponent(params.initialValue)).toBe('Install this');
@@ -246,8 +248,11 @@ describe('useRootLayoutExternalCapture', () => {
   it('handles a share intent once even when hook dependencies change mid-copy', async () => {
     const resetShareIntent = vi.fn();
     let resolveCopy!: (value: { uri: string }) => void;
-    persistAttachmentLocally.mockImplementation((attachment: { uri: string }) => new Promise((resolve) => {
-      resolveCopy = () => resolve({ ...attachment, uri: 'file:///data/mindwtr/attachments/copied.pdf' });
+    persistAttachmentLocallyDetailed.mockImplementation((attachment: { uri: string }) => new Promise((resolve) => {
+      resolveCopy = () => resolve({
+        attachment: { ...attachment, uri: 'file:///data/mindwtr/attachments/copied.pdf' },
+        status: 'copied',
+      });
     }));
 
     let tree!: ReturnType<typeof create>;
@@ -268,7 +273,7 @@ describe('useRootLayoutExternalCapture', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(persistAttachmentLocally).toHaveBeenCalledTimes(1);
+    expect(persistAttachmentLocallyDetailed).toHaveBeenCalledTimes(1);
 
     // A re-render with a new showToast identity while the copy is pending
     // re-runs the effect; the in-flight guard must not start a second copy.
@@ -290,7 +295,7 @@ describe('useRootLayoutExternalCapture', () => {
       await Promise.resolve();
     });
 
-    expect(persistAttachmentLocally).toHaveBeenCalledTimes(1);
+    expect(persistAttachmentLocallyDetailed).toHaveBeenCalledTimes(1);
     expect(router.replace).toHaveBeenCalledTimes(1);
     expect(resetShareIntent).toHaveBeenCalledTimes(1);
   });

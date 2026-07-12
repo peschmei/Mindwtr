@@ -5,7 +5,7 @@ import { generateUUID, validateAttachmentForUpload, type Attachment, type Task }
 
 import type { ToastOptions } from '@/contexts/toast-context';
 import { logError, logWarn } from '@/lib/app-log';
-import { persistAttachmentLocally } from '@/lib/attachment-sync';
+import { persistAttachmentLocallyDetailed } from '@/lib/attachment-sync';
 import {
     isOpenFeatureUrl,
     isShortcutCaptureUrl,
@@ -102,13 +102,17 @@ async function buildShareIntentFileCaptureParams({
                 });
                 continue;
             }
-            const cached = await persistAttachmentLocally(attachment);
-            if (cached.uri === attachment.uri) {
-                // persistAttachmentLocally returns the input unchanged when the
-                // copy failed; a share-container path would go stale immediately.
-                void logWarn('Failed to copy shared file into attachments', { scope: 'share-intent' });
+            const persisted = await persistAttachmentLocallyDetailed(attachment);
+            if (persisted.status !== 'copied' && persisted.status !== 'already-local') {
+                // A share-container path goes stale as soon as the intent is
+                // consumed, so a failed copy means the file is lost to us.
+                void logWarn('Failed to copy shared file into attachments', {
+                    scope: 'share-intent',
+                    extra: { status: persisted.status },
+                });
                 continue;
             }
+            const cached = persisted.attachment;
             if (typeof attachment.size !== 'number' && typeof cached.size === 'number') {
                 // The copy revealed the real size of a sizeless share; drop the
                 // bytes again if they exceed the attachment cap.

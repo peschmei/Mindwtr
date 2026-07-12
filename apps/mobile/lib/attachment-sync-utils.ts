@@ -545,15 +545,26 @@ export const fileExists = async (uri: string): Promise<boolean> => {
   }
 };
 
-export const persistAttachmentLocally = async (attachment: Attachment): Promise<Attachment> => {
-  if (attachment.kind !== 'file') return attachment;
+export type PersistAttachmentOutcome = {
+  attachment: Attachment;
+  /**
+   * 'copied' — bytes were re-homed into the managed attachments dir now;
+   * 'already-local' — the uri already points into the managed dir (success);
+   * 'not-applicable' — nothing to persist (link/http/non-file, or no dir);
+   * 'failed' — the copy was attempted and did not succeed.
+   */
+  status: 'copied' | 'already-local' | 'not-applicable' | 'failed';
+};
+
+export const persistAttachmentLocallyDetailed = async (attachment: Attachment): Promise<PersistAttachmentOutcome> => {
+  if (attachment.kind !== 'file') return { attachment, status: 'not-applicable' };
   const uri = attachment.uri || '';
-  if (!uri || isHttpAttachmentUri(uri)) return attachment;
+  if (!uri || isHttpAttachmentUri(uri)) return { attachment, status: 'not-applicable' };
 
   const attachmentsDir = await getAttachmentsDir();
-  if (!attachmentsDir) return attachment;
+  if (!attachmentsDir) return { attachment, status: 'not-applicable' };
 
-  if (uri.startsWith(attachmentsDir)) return attachment;
+  if (uri.startsWith(attachmentsDir)) return { attachment, status: 'already-local' };
 
   const ext = extractExtension(attachment.title) || extractExtension(uri);
   const filename = `${attachment.id}${ext}`;
@@ -586,16 +597,26 @@ export const persistAttachmentLocally = async (attachment: Attachment): Promise<
       size: Number.isFinite(size ?? NaN) ? String(size) : 'unknown',
     });
     return {
-      ...attachment,
-      uri: targetUri,
-      size,
-      localStatus: 'available',
+      attachment: {
+        ...attachment,
+        uri: targetUri,
+        size,
+        localStatus: 'available',
+      },
+      status: 'copied',
     };
   } catch (error) {
     logAttachmentWarn('Failed to cache attachment locally', error);
-    return attachment;
+    return { attachment, status: 'failed' };
   }
 };
+
+// Compatibility shape: callers that only need the (possibly re-homed)
+// attachment. Note the ambiguity — an unchanged result can mean failure OR
+// already-managed; callers that must tell them apart use the Detailed variant.
+export const persistAttachmentLocally = async (attachment: Attachment): Promise<Attachment> => (
+  (await persistAttachmentLocallyDetailed(attachment)).attachment
+);
 
 export const ensureAttachmentStoredLocally = async (attachment: Attachment): Promise<boolean> => {
   if (attachment.kind !== 'file') return false;

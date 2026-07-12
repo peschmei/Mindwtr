@@ -6,7 +6,9 @@ export {
     getCloudBaseUrl,
     hasPendingAttachmentSyncWork,
     persistAttachmentLocally,
+    persistAttachmentLocallyDetailed,
 } from './attachment-sync-utils';
+export type { PersistAttachmentOutcome } from './attachment-sync-utils';
 export {
     syncCloudAttachments,
     syncCloudKitAttachments,
