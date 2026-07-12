@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, Text, TextInput, TouchableOpacity, Alert, FlatList, Dimensions, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AREA_PRESET_COLORS, Attachment, DEFAULT_PROJECT_COLOR, Project, shallow, Task, type Section, type TaskSortBy, useTaskStore } from '@mindwtr/core';
@@ -665,23 +665,14 @@ export default function ProjectsScreen() {
     setShowStatusMenu(false);
   };
 
+  // Archive without a native confirm: the action is fully reversible (the same
+  // button slot becomes Reactivate, task statuses are restored), and Alert.alert
+  // can present behind the pageSheet detail modal on iOS, leaving the button
+  // apparently dead.
   const handleArchiveSelectedProject = () => {
     if (!selectedProject) return;
-    Alert.alert(
-      t('projects.title'),
-      t('projects.archiveConfirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('projects.archive'),
-          style: 'destructive',
-          onPress: () => {
-            updateProject(selectedProject.id, { status: 'archived' });
-            setSelectedProject({ ...selectedProject, status: 'archived' });
-          }
-        }
-      ]
-    );
+    updateProject(selectedProject.id, { status: 'archived' });
+    setSelectedProject({ ...selectedProject, status: 'archived' });
   };
 
   const openAreaPicker = () => {

@@ -837,6 +837,25 @@ describe('ProjectDetailModal lifecycle actions', () => {
         expect(actionsSection.findAllByProps({ testID: 'project-type-toggle' })).toHaveLength(0);
     });
 
+    it('archives from the Archive action with a single tap and no native confirm', () => {
+        const handleArchiveSelectedProject = vi.fn();
+        const alertSpy = vi.spyOn(Alert, 'alert');
+        let tree!: ReturnType<typeof create>;
+
+        act(() => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps({
+                handleArchiveSelectedProject,
+            })} />);
+        });
+
+        act(() => {
+            tree.root.findByProps({ testID: 'project-archive-button' }).props.onPress();
+        });
+
+        expect(handleArchiveSelectedProject).toHaveBeenCalledTimes(1);
+        expect(alertSpy).not.toHaveBeenCalled();
+    });
+
     it('surfaces that completing a project files it in Archived', () => {
         let tree!: ReturnType<typeof create>;
 

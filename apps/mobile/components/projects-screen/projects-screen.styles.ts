@@ -408,9 +408,6 @@ export const projectsScreenStyles = StyleSheet.create({
     completeText: {
         color: '#10B981',
     },
-    archiveText: {
-        color: '#6B7280',
-    },
     reactivateText: {
         color: '#3B82F6',
     },

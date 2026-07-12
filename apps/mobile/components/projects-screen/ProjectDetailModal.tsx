@@ -1074,8 +1074,8 @@ export function ProjectDetailModal({
                                                         accessibilityLabel={t('projects.archive')}
                                                         testID="project-archive-button"
                                                     >
-                                                        <Ionicons name="archive-outline" size={16} color="#6B7280" />
-                                                        <Text style={[styles.statusButtonText, styles.archiveText]}>
+                                                        <Ionicons name="archive-outline" size={16} color={tc.text} />
+                                                        <Text style={[styles.statusButtonText, { color: tc.text }]}>
                                                             {t('projects.archive')}
                                                         </Text>
                                                     </TouchableOpacity>
