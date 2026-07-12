@@ -978,8 +978,13 @@ export function KeybindingProvider({
         applyAreaFilterShortcut,
     ]);
 
+    // Only apply the shortcut once the settings document has loaded (deviceId is
+    // stamped on every load). Before that, `quickAddShortcut` is the platform
+    // default, and persisting the registration fallback into the not-yet-loaded
+    // store wiped the on-disk data on machines where registration fails (#852).
+    const isStoreHydrated = Boolean(settings.deviceId);
     useEffect(() => {
-        if (isTest || !isTauriRuntime()) return;
+        if (isTest || !isTauriRuntime() || !isStoreHydrated) return;
         let cancelled = false;
         import('@tauri-apps/api/core')
             .then(({ invoke }) =>
@@ -1007,7 +1012,7 @@ export function KeybindingProvider({
         return () => {
             cancelled = true;
         };
-    }, [isTest, isMac, isWindows, quickAddShortcut, showToast, updateSettings]);
+    }, [isTest, isMac, isWindows, isStoreHydrated, quickAddShortcut, showToast, updateSettings]);
 
     const contextValue = useMemo<KeybindingContextType>(() => ({
         style,

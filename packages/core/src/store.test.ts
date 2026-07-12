@@ -926,6 +926,7 @@ describe('TaskStore', () => {
 
     it('stamps the GTD sync time when the focus limit changes', async () => {
         vi.setSystemTime(new Date('2026-03-21T12:00:00.000Z'));
+        useTaskStore.setState({ settings: { deviceId: 'device-a' } });
 
         await useTaskStore.getState().updateSettings({ gtd: { focusTaskLimit: 5 } });
 
@@ -934,6 +935,7 @@ describe('TaskStore', () => {
 
     it('stamps the GTD sync time when the Focus grouping changes', async () => {
         vi.setSystemTime(new Date('2026-03-21T12:00:00.000Z'));
+        useTaskStore.setState({ settings: { deviceId: 'device-a' } });
 
         await useTaskStore.getState().updateSettings({ gtd: { focusGroupBy: 'project' } });
 
@@ -1189,6 +1191,7 @@ describe('TaskStore', () => {
 
     it('tracks filter changes as local data mutations', async () => {
         vi.setSystemTime(new Date('2026-03-21T12:00:00.000Z'));
+        useTaskStore.setState({ settings: { deviceId: 'device-a' } });
 
         await useTaskStore.getState().updateSettings({
             filters: { areaId: 'area-2' },
@@ -1222,6 +1225,7 @@ describe('TaskStore', () => {
 
     it('tracks saved filter changes as synced local data mutations', async () => {
         vi.setSystemTime(new Date('2026-03-21T12:00:00.000Z'));
+        useTaskStore.setState({ settings: { deviceId: 'device-a' } });
 
         await useTaskStore.getState().updateSettings({
             savedFilters: [{
@@ -3500,6 +3504,53 @@ describe('TaskStore', () => {
             const finalRestoredTask = useTaskStore.getState()._allTasks.find((item) => item.id === restoredTask.id)!;
             expect(finalDeletedTask.deletedAt).toBeTruthy();
             expect(finalRestoredTask.deletedAt).toBeUndefined();
+        });
+    });
+
+    describe('pre-hydration settings persistence guard (#852)', () => {
+        it('applies settings in memory but does not persist before initial data load', async () => {
+            const { updateSettings } = useTaskStore.getState();
+            await updateSettings({ globalQuickAddShortcut: 'disabled' });
+
+            const state = useTaskStore.getState();
+            expect(state.settings.globalQuickAddShortcut).toBe('disabled');
+            expect(state.settings.deviceId).toBeUndefined();
+            expect(state.lastDataChangeAt).toBe(0);
+
+            await flushPendingSave();
+            expect(mockStorage.saveData).not.toHaveBeenCalled();
+        });
+
+        it('does not discard the initial load when settings change while the fetch is in flight', async () => {
+            vi.mocked(mockStorage.getData).mockResolvedValue({
+                tasks: [createStoreTask('task-1', { status: 'next' })],
+                projects: [],
+                sections: [],
+                areas: [],
+                settings: { deviceId: 'device-a' },
+            });
+
+            const fetchPromise = useTaskStore.getState().fetchData();
+            await useTaskStore.getState().updateSettings({ globalQuickAddShortcut: 'disabled' });
+            await fetchPromise;
+
+            const state = useTaskStore.getState();
+            expect(state._allTasks.map((task) => task.id)).toEqual(['task-1']);
+            expect(state.settings.deviceId).toBe('device-a');
+        });
+
+        it('persists settings updates again once the store has loaded', async () => {
+            await useTaskStore.getState().fetchData();
+            expect(useTaskStore.getState().settings.deviceId).toBeTruthy();
+            await flushPendingSave();
+            vi.mocked(mockStorage.saveData).mockClear();
+
+            await useTaskStore.getState().updateSettings({ globalQuickAddShortcut: 'disabled' });
+            await flushPendingSave();
+
+            expect(mockStorage.saveData).toHaveBeenCalled();
+            const saved = vi.mocked(mockStorage.saveData).mock.calls.at(-1)?.[0] as AppData;
+            expect(saved.settings.globalQuickAddShortcut).toBe('disabled');
         });
     });
 });

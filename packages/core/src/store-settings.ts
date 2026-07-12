@@ -1160,6 +1160,20 @@ export const createSettingsActions = ({
      * @param updates Settings to update
      */
     updateSettings: async (updates: Partial<AppData['settings']>) => {
+        // A store that never loaded a document has no device identity yet.
+        // Persisting from it would enqueue a snapshot of the empty in-memory
+        // state, which the pre-load save flush then writes over the on-disk
+        // document (#852). Apply the update in memory only and let the first
+        // load win; callers that still need the change re-apply after load.
+        if (!get().settings.deviceId) {
+            set((state) => ({ settings: mergeSettingsUpdates(state.settings, updates) }));
+            logWarn('Skipped settings persistence before initial data load', {
+                scope: 'store',
+                category: 'storage',
+                context: { keys: Object.keys(updates).join(',') },
+            });
+            return;
+        }
         const archiveDaysUpdate = updates.gtd?.autoArchiveDays !== undefined;
         let snapshot: AppData | null = null;
         set((state) => {
