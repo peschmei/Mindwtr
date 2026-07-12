@@ -1007,7 +1007,7 @@ describe('InboxProcessor', () => {
         fireEvent.change(getByRole('combobox', { name: 'taskEdit.timeEstimateLabel' }), {
             target: { value: '1hr' },
         });
-        fireEvent.change(getByRole('textbox', { name: 'taskEdit.assignedTo' }), {
+        fireEvent.change(getByRole('combobox', { name: 'taskEdit.assignedTo' }), {
             target: { value: 'Casey' },
         });
         fireEvent.click(getByRole('button', { name: 'priority.urgent' }));

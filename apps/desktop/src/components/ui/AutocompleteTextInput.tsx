@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { InputHTMLAttributes, KeyboardEvent } from 'react';
 import { cn } from '../../lib/utils';
 
@@ -25,6 +25,7 @@ export function AutocompleteTextInput({
 }: AutocompleteTextInputProps) {
     const [focused, setFocused] = useState(false);
     const [activeIndex, setActiveIndex] = useState(-1);
+    const listboxId = `${useId()}listbox`;
     const query = value.trim();
 
     const matches = useMemo(() => {
@@ -84,8 +85,11 @@ export function AutocompleteTextInput({
                 {...inputProps}
                 type={inputProps.type ?? 'text'}
                 value={value}
+                role="combobox"
                 aria-autocomplete="list"
                 aria-expanded={matches.length > 0}
+                aria-controls={listboxId}
+                aria-activedescendant={activeIndex >= 0 && activeIndex < matches.length ? `${listboxId}-option-${activeIndex}` : undefined}
                 onChange={(event) => onChange(event.target.value)}
                 onKeyDown={handleKeyDown}
                 onFocus={(event) => {
@@ -100,12 +104,14 @@ export function AutocompleteTextInput({
             />
             {matches.length > 0 && (
                 <div
+                    id={listboxId}
                     role="listbox"
                     className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg"
                 >
                     {matches.map((option, index) => (
                         <button
                             key={option}
+                            id={`${listboxId}-option-${index}`}
                             type="button"
                             role="option"
                             aria-selected={index === activeIndex}
