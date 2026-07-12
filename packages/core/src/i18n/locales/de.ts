@@ -1240,6 +1240,7 @@ export const deOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'synchronisierte Version behalten',
         'settings.syncConflictChanged': 'geändert: {{fields}}',
         'settings.syncConflictDeleteRestore': 'Löschen vs. Bearbeiten',
+        'settings.syncConflictMore': '+{{count}} weitere gelöste Konflikte',
         'settings.syncHistory': 'Verlauf synchronisieren',
         'settings.recoverySnapshots': 'Wiederherstellungs-Schnappschüsse',
         'settings.recoverySnapshotsDesc': 'Vor der Synchronisierung erstellt. Wird bis zu 7 Tage lang aufbewahrt (max. 5 Dateien).',

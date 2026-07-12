@@ -1159,6 +1159,7 @@ export const hiOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'सिंक किया गया संस्करण रखा गया',
         'settings.syncConflictChanged': 'बदला गया: {{fields}}',
         'settings.syncConflictDeleteRestore': 'हटाना बनाम संपादन',
+        'settings.syncConflictMore': '+{{count}} और सुलझाए गए टकराव',
         'settings.recoverySnapshots': 'पुनर्प्राप्ति स्नैपशॉट',
         'settings.recoverySnapshotsEmpty': 'अभी तक कोई स्नैपशॉट नहीं.',
         'settings.recoverySnapshotsRestore': 'पुनर्स्थापित करना',

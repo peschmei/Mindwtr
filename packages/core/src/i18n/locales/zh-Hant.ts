@@ -1369,6 +1369,7 @@ export const zhHant: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': '保留了同步的版本',
         'settings.syncConflictChanged': '變更：{{fields}}',
         'settings.syncConflictDeleteRestore': '刪除與編輯衝突',
+        'settings.syncConflictMore': '還有 {{count}} 個已解決的衝突',
         'settings.syncHistoryBackend': '後端',
         'settings.syncHistoryType': '類型',
         'settings.syncHistoryDetails': '詳情',

@@ -271,6 +271,11 @@ export function SyncStatusSection({
                                     {describeConflictSample(sample)}
                                 </div>
                             ))}
+                            {lastSyncSummary.conflicts > conflictSamples.length && (
+                                <div>
+                                    {t.syncConflictMore.replace('{{count}}', String(lastSyncSummary.conflicts - conflictSamples.length))}
+                                </div>
+                            )}
                         </div>
                     )}
                     {lastSyncStats && conflictSamples.length === 0 && conflictIds.length > 0 && (

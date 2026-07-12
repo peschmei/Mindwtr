@@ -1173,6 +1173,7 @@ export const plOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'zachowano zsynchronizowaną wersję',
         'settings.syncConflictChanged': 'zmieniono: {{fields}}',
         'settings.syncConflictDeleteRestore': 'usunięcie vs. edycja',
+        'settings.syncConflictMore': '+{{count}} więcej rozwiązanych konfliktów',
         'settings.syncHistory': 'Synchronizacja history',
         'settings.recoverySnapshots': 'Migawki odzyskiwania',
         'settings.recoverySnapshotsDesc': 'Created before Synchronizacja. Kept for up to 7 dni (max 5 files).',

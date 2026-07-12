@@ -1239,6 +1239,7 @@ export const ptOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'mantida a versão sincronizada',
         'settings.syncConflictChanged': 'alterado: {{fields}}',
         'settings.syncConflictDeleteRestore': 'exclusão vs. edição',
+        'settings.syncConflictMore': '+{{count}} outros conflitos resolvidos',
         'settings.syncHistory': 'Sincronização history',
         'settings.recoverySnapshots': 'Instantâneos de recuperação',
         'settings.recoverySnapshotsDesc': 'Created before Sincronização. Kept for up to 7 dias (max 5 files).',

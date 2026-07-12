@@ -1429,6 +1429,7 @@ export const csOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'ponechána synchronizovaná verze',
         'settings.syncConflictChanged': 'změněno: {{fields}}',
         'settings.syncConflictDeleteRestore': 'smazání vs. úprava',
+        'settings.syncConflictMore': '+{{count}} dalších vyřešených konfliktů',
         'settings.syncHistoryType': 'Typ',
         'settings.syncHistoryDetails': 'Detaily',
         'settings.syncSettings': 'Nastavení synchronizace',

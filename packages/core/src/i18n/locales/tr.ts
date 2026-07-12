@@ -1190,6 +1190,7 @@ export const trOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'eşitlenen sürüm korundu',
         'settings.syncConflictChanged': 'değişen: {{fields}}',
         'settings.syncConflictDeleteRestore': 'silme vs. düzenleme',
+        'settings.syncConflictMore': '+{{count}} çözülen çakışma daha',
         'settings.syncHistory': 'Eşitleme history',
         'settings.recoverySnapshots': 'Kurtarma anlık görüntüleri',
         'settings.recoverySnapshotsDesc': 'Created before Eşitleme. Kept for up to 7 gün (max 5 files).',

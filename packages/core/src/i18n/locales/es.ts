@@ -1105,6 +1105,7 @@ export const esOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'se conservó la versión sincronizada',
         'settings.syncConflictChanged': 'cambió: {{fields}}',
         'settings.syncConflictDeleteRestore': 'eliminación vs. edición',
+        'settings.syncConflictMore': '+{{count}} conflictos resueltos más',
         'settings.syncHistory': 'Sincronizar history',
         'settings.recoverySnapshots': 'Instantáneas de recuperación',
         'settings.recoverySnapshotsDesc': 'Created before Sincronizar. Kept for up to 7 días (max 5 files).',

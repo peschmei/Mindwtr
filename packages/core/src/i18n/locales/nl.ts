@@ -351,6 +351,7 @@ export const nlOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'gesynchroniseerde versie behouden',
         'settings.syncConflictChanged': 'gewijzigd: {{fields}}',
         'settings.syncConflictDeleteRestore': 'verwijderen vs. bewerken',
+        'settings.syncConflictMore': '+{{count}} meer opgeloste conflicten',
         'settings.syncHistory': 'Synchronisatie history',
         'settings.recoverySnapshots': 'Herstelmomentopnamen',
         'settings.recoverySnapshotsDesc': 'Created before Synchronisatie. Kept for up to 7 dagen (max 5 files).',

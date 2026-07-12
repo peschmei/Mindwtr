@@ -151,7 +151,7 @@ function SyncSettingsView({
             if (!entity) return id;
             return ('title' in entity ? entity.title : entity.name) || id;
         };
-        return samples.map((sample) => {
+        const lines = samples.map((sample) => {
             const outcome = sample.winner === 'incoming'
                 ? translateWithFallback(t, 'settings.syncConflictKeptOtherDevice', 'kept the synced version')
                 : translateWithFallback(t, 'settings.syncConflictKeptThisDevice', "kept this device's version");
@@ -163,6 +163,14 @@ function SyncSettingsView({
             const title = findTitle(sample);
             return detail ? `“${title}” — ${outcome} (${detail})` : `“${title}” — ${outcome}`;
         });
+        const totalConflicts = summarizeMergeStats(lastSyncStats).conflicts;
+        if (totalConflicts > samples.length) {
+            lines.push(
+                translateWithFallback(t, 'settings.syncConflictMore', '+{{count}} more resolved conflicts')
+                    .replace('{{count}}', String(totalConflicts - samples.length)),
+            );
+        }
+        return lines;
     }, [lastSyncStats, t]);
     const loggingEnabled = settings.diagnostics?.loggingEnabled === true;
     const analyticsHeartbeatAvailable = isMobileAnalyticsHeartbeatConfigured({

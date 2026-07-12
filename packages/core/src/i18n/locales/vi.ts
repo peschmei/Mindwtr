@@ -1478,6 +1478,7 @@ export const viOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'giữ phiên bản đã đồng bộ',
         'settings.syncConflictChanged': 'đã thay đổi: {{fields}}',
         'settings.syncConflictDeleteRestore': 'xóa so với chỉnh sửa',
+        'settings.syncConflictMore': '+{{count}} xung đột đã giải quyết khác',
         'settings.syncHistoryBackend': 'Nền đồng bộ',
         'settings.syncHistoryType': 'Loại',
         'settings.syncHistoryDetails': 'Chi tiết',

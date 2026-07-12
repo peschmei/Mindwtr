@@ -1499,6 +1499,7 @@ export const en: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'kept the synced version',
         'settings.syncConflictChanged': 'changed: {{fields}}',
         'settings.syncConflictDeleteRestore': 'delete vs. edit',
+        'settings.syncConflictMore': '+{{count}} more resolved conflicts',
         'settings.syncHistoryBackend': 'Backend',
         'settings.syncHistoryType': 'Type',
         'settings.syncHistoryDetails': 'Details',

@@ -1199,6 +1199,7 @@ export const arOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'تم الاحتفاظ بالنسخة المتزامنة',
         'settings.syncConflictChanged': 'تغيّر: {{fields}}',
         'settings.syncConflictDeleteRestore': 'حذف مقابل تعديل',
+        'settings.syncConflictMore': 'و{{count}} تعارضات أخرى تم حلها',
         'settings.recoverySnapshots': 'لقطات الاسترداد',
         'settings.recoverySnapshotsEmpty': 'لا توجد لقطات حتى الآن.',
         'settings.recoverySnapshotsRestore': 'يعيد',

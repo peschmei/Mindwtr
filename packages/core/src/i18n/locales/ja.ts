@@ -1160,6 +1160,7 @@ export const jaOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': '同期されたバージョンを保持',
         'settings.syncConflictChanged': '変更: {{fields}}',
         'settings.syncConflictDeleteRestore': '削除と編集の競合',
+        'settings.syncConflictMore': 'ほか {{count}} 件の解決済みの競合',
         'settings.recoverySnapshots': 'リカバリスナップショット',
         'settings.recoverySnapshotsEmpty': 'まだスナップショットはありません。',
         'settings.recoverySnapshotsRestore': '復元する',

@@ -1160,6 +1160,7 @@ export const ruOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'сохранена синхронизированная версия',
         'settings.syncConflictChanged': 'изменено: {{fields}}',
         'settings.syncConflictDeleteRestore': 'удаление против редактирования',
+        'settings.syncConflictMore': 'и ещё {{count}} разрешённых конфликтов',
         'settings.recoverySnapshots': 'Снимки восстановления',
         'settings.recoverySnapshotsEmpty': 'Снимков пока нет.',
         'settings.recoverySnapshotsRestore': 'Восстановить',

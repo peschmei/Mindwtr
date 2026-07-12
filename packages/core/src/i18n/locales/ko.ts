@@ -1161,6 +1161,7 @@ export const koOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': '동기화된 버전 유지',
         'settings.syncConflictChanged': '변경됨: {{fields}}',
         'settings.syncConflictDeleteRestore': '삭제 vs. 편집',
+        'settings.syncConflictMore': '해결된 충돌 {{count}}개 더 있음',
         'settings.recoverySnapshots': '복구 스냅샷',
         'settings.recoverySnapshotsEmpty': '아직 스냅샷이 없습니다.',
         'settings.recoverySnapshotsRestore': '복원하다',

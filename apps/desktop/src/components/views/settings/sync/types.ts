@@ -104,6 +104,7 @@ export type SettingsSyncLabels = {
     syncConflictKeptOtherDevice: string;
     syncConflictChanged: string;
     syncConflictDeleteRestore: string;
+    syncConflictMore: string;
     syncHistory: string;
     recoverySnapshots: string;
     recoverySnapshotsDesc: string;

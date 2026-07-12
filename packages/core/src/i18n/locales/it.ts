@@ -1348,6 +1348,7 @@ export const itOverrides: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': 'mantenuta la versione sincronizzata',
         'settings.syncConflictChanged': 'modificato: {{fields}}',
         'settings.syncConflictDeleteRestore': 'eliminazione vs. modifica',
+        'settings.syncConflictMore': '+{{count}} altri conflitti risolti',
         'settings.syncHistoryType': 'Tipo',
         'settings.syncHistoryDetails': 'Dettagli',
         'settings.syncSettings': 'Impostazioni di sincronizzazione',

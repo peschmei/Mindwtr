@@ -1369,6 +1369,7 @@ export const zhHans: Record<string, string> = {
         'settings.syncConflictKeptOtherDevice': '保留了同步的版本',
         'settings.syncConflictChanged': '变更：{{fields}}',
         'settings.syncConflictDeleteRestore': '删除与编辑冲突',
+        'settings.syncConflictMore': '还有 {{count}} 个已解决的冲突',
         'settings.syncHistoryBackend': '后端',
         'settings.syncHistoryType': '类型',
         'settings.syncHistoryDetails': '详情',
