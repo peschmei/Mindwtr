@@ -132,6 +132,10 @@ vi.mock('@/lib/task-meta-navigation', () => ({
   openTaskScreen,
 }));
 
+vi.mock('@/lib/attachment-sync-utils', () => ({
+  getAttachmentsDir: vi.fn(async () => 'file:///data/mindwtr/attachments/'),
+}));
+
 const findTouchableByText = (tree: ReturnType<typeof create>, label: string) => {
   const button = tree.root.findAll((node) => (
     node.type === TouchableOpacity
@@ -275,6 +279,63 @@ describe('CaptureScreen', () => {
       tags: ['#phone'],
     });
     expect(routerMocks.replace).toHaveBeenCalledWith('/inbox');
+  });
+
+  it('creates the task with shared-file attachments and drops uris outside the managed dir', async () => {
+    routeParams.current = {
+      initialValue: encodeURIComponent('report'),
+      initialProps: encodeURIComponent(JSON.stringify({
+        attachments: [
+          {
+            id: 'att-1',
+            kind: 'file',
+            title: 'report.pdf',
+            uri: 'file:///data/mindwtr/attachments/att-1.pdf',
+            mimeType: 'application/pdf',
+            size: 1024,
+            createdAt: '2026-07-12T00:00:00.000Z',
+            updatedAt: '2026-07-12T00:00:00.000Z',
+            localStatus: 'available',
+          },
+          {
+            id: 'att-2',
+            kind: 'file',
+            title: 'outside.bin',
+            uri: 'file:///data/other-app/outside.bin',
+            createdAt: '2026-07-12T00:00:00.000Z',
+            updatedAt: '2026-07-12T00:00:00.000Z',
+          },
+        ],
+      })),
+    };
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<CaptureScreen />);
+    });
+
+    // The pending attachment is visible on the sheet before saving.
+    expect(tree.root.findAllByType(Text).some((node) => node.props.children === 'report.pdf')).toBe(true);
+
+    const saveButton = findTouchableByText(tree, 'Save');
+
+    await act(async () => {
+      await saveButton.props.onPress();
+    });
+
+    expect(storeState.addTask).toHaveBeenCalledTimes(1);
+    const [title, initialProps] = storeState.addTask.mock.calls[0];
+    expect(title).toBe('report');
+    expect(initialProps.attachments).toHaveLength(1);
+    expect(initialProps.attachments[0]).toMatchObject({
+      id: 'att-1',
+      kind: 'file',
+      title: 'report.pdf',
+      uri: 'file:///data/mindwtr/attachments/att-1.pdf',
+      mimeType: 'application/pdf',
+      size: 1024,
+    });
   });
 
   it('confirms multiline capture before creating one task per line', async () => {

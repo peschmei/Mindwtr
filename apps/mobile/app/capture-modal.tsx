@@ -29,11 +29,13 @@ import {
   splitQuickAddBulkLines,
   tFallback,
   type AIProviderId,
+  type Attachment,
   type Project,
   type Task,
   type TimeEstimate,
   useTaskStore,
 } from '@mindwtr/core';
+import { getAttachmentsDir } from '@/lib/attachment-sync-utils';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useToast } from '@/contexts/toast-context';
 import { useLanguage } from '../contexts/language-context';
@@ -111,6 +113,52 @@ const normalizeInitialTokenList = (value: unknown, prefix?: '@' | '#'): string[]
   return next.length > 0 ? next : undefined;
 };
 
+const MAX_INITIAL_ATTACHMENTS = 6;
+
+// Share-intent file captures arrive as attachment records in the route's
+// initialProps (the share handler already copied the bytes into the managed
+// attachments dir). Route params are attacker-reachable via deep links, so
+// only structurally valid file records survive here; buildTaskInputFromInput
+// additionally drops any uri outside the managed attachments dir.
+const sanitizeInitialAttachments = (value: unknown): Attachment[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const next: Attachment[] = [];
+  for (const item of value) {
+    if (next.length >= MAX_INITIAL_ATTACHMENTS) break;
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const record = item as Record<string, unknown>;
+    if (record.kind !== 'file') continue;
+    const id = typeof record.id === 'string' ? record.id.trim() : '';
+    const uri = typeof record.uri === 'string' ? record.uri.trim() : '';
+    if (!id || !uri) continue;
+    const now = new Date().toISOString();
+    const createdAt = typeof record.createdAt === 'string' && record.createdAt ? record.createdAt : now;
+    const attachment: Attachment = {
+      id,
+      kind: 'file',
+      title: typeof record.title === 'string' && record.title.trim() ? record.title.trim() : 'Attachment',
+      uri,
+      createdAt,
+      updatedAt: typeof record.updatedAt === 'string' && record.updatedAt ? record.updatedAt : createdAt,
+      localStatus: 'available',
+    };
+    if (typeof record.mimeType === 'string' && record.mimeType.trim()) {
+      attachment.mimeType = record.mimeType.trim();
+    }
+    if (typeof record.size === 'number' && Number.isFinite(record.size)) {
+      attachment.size = record.size;
+    }
+    next.push(attachment);
+  }
+  return next.length > 0 ? next : undefined;
+};
+
+const filterManagedAttachments = async (attachments: Attachment[]): Promise<Attachment[]> => {
+  const dir = await getAttachmentsDir();
+  if (!dir) return [];
+  return attachments.filter((attachment) => attachment.uri.startsWith(dir));
+};
+
 const sanitizeInitialPropsParam = (
   value: string | string[] | undefined,
   projects: Project[],
@@ -118,6 +166,9 @@ const sanitizeInitialPropsParam = (
 ): Partial<Task> => {
   const parsed = parseInitialPropsJson(value);
   const next: Partial<Task> = {};
+
+  const attachments = sanitizeInitialAttachments(parsed.attachments);
+  if (attachments) next.attachments = attachments;
 
   if (typeof parsed.description === 'string' && parsed.description.trim()) {
     next.description = parsed.description;
@@ -373,6 +424,14 @@ export default function CaptureScreen() {
     // best-effort fallback, not a typed +Project token: resolve a selectable
     // match up front, and simply skip it when it names an archived project.
     const surfaceProps: Partial<Task> = { ...initialProps };
+    if (surfaceProps.attachments?.length) {
+      const managed = await filterManagedAttachments(surfaceProps.attachments);
+      if (managed.length > 0) {
+        surfaceProps.attachments = managed;
+      } else {
+        delete surfaceProps.attachments;
+      }
+    }
     let fallbackProjectTitleToCreate: string | undefined;
     if (!parsed.props.projectId && !parsed.projectTitle && initialProjectTitle) {
       const ref = initialProjectTitle.toLowerCase();
@@ -452,6 +511,11 @@ export default function CaptureScreen() {
       if (!taskInput) return;
       taskInputs.push(taskInput);
     }
+    // Shared files belong to one task, not one copy per line: the attachment
+    // records share ids, so duplicating them across tasks would alias files.
+    taskInputs.forEach((taskInput, index) => {
+      if (index > 0) delete taskInput.initialProps.attachments;
+    });
     const result = await addTasks(taskInputs);
     if (result && typeof result === 'object' && result.success === false) return;
     closeCapture();
@@ -525,6 +589,19 @@ export default function CaptureScreen() {
             returnKeyType="done"
             multiline
           />
+          {(initialProps.attachments?.length ?? 0) > 0 && (
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: tc.secondaryText }]}>{tFallback(t, 'attachments.title', 'Attachments')}</Text>
+              {(initialProps.attachments ?? []).map((attachment) => (
+                <View key={attachment.id} style={styles.attachmentRow}>
+                  <Ionicons name="attach" size={14} color={tc.secondaryText} />
+                  <Text style={[styles.attachmentTitle, { color: tc.text }]} numberOfLines={1}>
+                    {attachment.title}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
           {(initialDescription.trim().length > 0 || descriptionValue.trim().length > 0) && (
             <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: tc.secondaryText }]}>{t('taskEdit.descriptionLabel')}</Text>
@@ -677,6 +754,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
     minHeight: 70,
+  },
+  attachmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 6,
+  },
+  attachmentTitle: {
+    flex: 1,
+    fontSize: 14,
   },
   copilotPill: {
     borderWidth: 1,
