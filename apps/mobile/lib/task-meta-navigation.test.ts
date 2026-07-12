@@ -22,12 +22,14 @@ describe('task-meta-navigation', () => {
         vi.clearAllMocks();
     });
 
-    it('navigates to the project screen', () => {
+    it('navigates to the project screen with a fresh open token', () => {
+        vi.spyOn(Date, 'now').mockReturnValueOnce(24680);
+
         openProjectScreen('project-1');
 
         expect(routerMocks.navigate).toHaveBeenCalledWith({
             pathname: '/projects-screen',
-            params: { projectId: 'project-1' },
+            params: { projectId: 'project-1', openToken: '24680' },
         });
     });
 
