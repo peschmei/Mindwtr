@@ -138,7 +138,7 @@ export default function ProjectsScreen() {
   const [expandedAreaColorId, setExpandedAreaColorId] = useState<string | null>(null);
   const { projectId, taskId, openToken, taskTab } = useLocalSearchParams<{ projectId?: string; taskId?: string; openToken?: string; taskTab?: string }>();
   const lastOpenedTaskKeyRef = useRef<string | null>(null);
-  const handledRouteProjectIdRef = useRef<string | null>(null);
+  const handledRouteProjectKeyRef = useRef<string | null>(null);
   const pathname = usePathname();
 
   // The open project lives in component state, not the route — mirror it into
@@ -381,16 +381,22 @@ export default function ProjectsScreen() {
 
   useEffect(() => {
     if (!projectId || typeof projectId !== 'string') return;
-    // Handle each route param value once per screen instance — re-running on
+    // Handle each open request once per screen instance — re-running on
     // unrelated store updates would reset the open project's sort and pickers,
-    // and would reopen a project the user just closed.
-    if (handledRouteProjectIdRef.current === projectId) return;
+    // and would reopen a project the user just closed. A fresh openToken marks
+    // a new explicit request, so tapping the same project again still opens it.
+    const openKey = `${projectId}:${typeof openToken === 'string' ? openToken : ''}`;
+    if (handledRouteProjectKeyRef.current === openKey) return;
     const project = projects.find((item) => item.id === projectId && !item.deletedAt);
     if (project) {
-      handledRouteProjectIdRef.current = projectId;
-      openProject(project);
+      handledRouteProjectKeyRef.current = openKey;
+      // Tokenless re-visits (capture returnTo, session restore) must not reset
+      // the detail state of a project that is already open.
+      if (selectedProject?.id !== project.id) {
+        openProject(project);
+      }
     }
-  }, [projectId, projects, openProject]);
+  }, [projectId, openToken, projects, openProject, selectedProject?.id]);
 
   useEffect(() => {
     if (!taskId || typeof taskId !== 'string') return;

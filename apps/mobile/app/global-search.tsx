@@ -338,7 +338,7 @@ export default function SearchScreen() {
             return;
         }
         if (task.projectId) {
-            router.push({ pathname: '/projects-screen', params: { projectId: task.projectId, taskId: task.id } });
+            router.push({ pathname: '/projects-screen', params: { projectId: task.projectId, taskId: task.id, openToken: String(Date.now()) } });
             return;
         }
 
@@ -353,7 +353,7 @@ export default function SearchScreen() {
 
     const handleSelect = (result: { type: 'project'; item: SearchProjectResult } | { type: 'task'; item: SearchTaskResult }) => {
         if (result.type === 'project') {
-            router.push({ pathname: '/projects-screen', params: { projectId: result.item.id } });
+            router.push({ pathname: '/projects-screen', params: { projectId: result.item.id, openToken: String(Date.now()) } });
             return;
         }
 
