@@ -4,7 +4,7 @@ import { View, Text, TextInput, TouchableOpacity, FlatList, Dimensions, Platform
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AREA_PRESET_COLORS, Attachment, DEFAULT_PROJECT_COLOR, Project, shallow, Task, type Section, type TaskSortBy, useTaskStore } from '@mindwtr/core';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react-native';
 
 import {
@@ -16,6 +16,7 @@ import {
   serializeProjectListViewState,
 } from '@/lib/view-state/project-list-view-state';
 import { projectsScreenStyles as styles } from '@/components/projects-screen/projects-screen.styles';
+import { persistLastRoute, setSessionRestoreOpenProject } from '@/lib/session-restore';
 import {
   buildProjectQuickCaptureReturnTo,
   formatProjectDate,
@@ -137,6 +138,20 @@ export default function ProjectsScreen() {
   const [expandedAreaColorId, setExpandedAreaColorId] = useState<string | null>(null);
   const { projectId, taskId, openToken, taskTab } = useLocalSearchParams<{ projectId?: string; taskId?: string; openToken?: string; taskTab?: string }>();
   const lastOpenedTaskKeyRef = useRef<string | null>(null);
+  const handledRouteProjectIdRef = useRef<string | null>(null);
+  const pathname = usePathname();
+
+  // The open project lives in component state, not the route — mirror it into
+  // the session snapshot so an interrupted session reopens the project, not
+  // just the projects list (#842). Re-persist immediately: an OS kill can
+  // arrive without another navigation or background event.
+  useEffect(() => {
+    setSessionRestoreOpenProject(selectedProject?.id ?? null);
+    void persistLastRoute(pathname);
+  }, [pathname, selectedProject?.id]);
+  useEffect(() => () => {
+    setSessionRestoreOpenProject(null);
+  }, []);
   const ALL_TAGS = '__all__';
   const NO_TAGS = '__none__';
   const ALL_AREAS = AREA_FILTER_ALL;
@@ -366,8 +381,13 @@ export default function ProjectsScreen() {
 
   useEffect(() => {
     if (!projectId || typeof projectId !== 'string') return;
+    // Handle each route param value once per screen instance — re-running on
+    // unrelated store updates would reset the open project's sort and pickers,
+    // and would reopen a project the user just closed.
+    if (handledRouteProjectIdRef.current === projectId) return;
     const project = projects.find((item) => item.id === projectId && !item.deletedAt);
     if (project) {
+      handledRouteProjectIdRef.current = projectId;
       openProject(project);
     }
   }, [projectId, projects, openProject]);

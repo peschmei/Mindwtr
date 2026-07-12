@@ -11,11 +11,12 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     },
 }));
 
-import { persistLastRoute, readRestorableRoute } from './session-restore';
+import { persistLastRoute, readRestorableRoute, setSessionRestoreOpenProject } from './session-restore';
 
 describe('mobile session restore', () => {
     beforeEach(() => {
         memoryStore.clear();
+        setSessionRestoreOpenProject(null);
     });
 
     it('round-trips a restorable route within the window', async () => {
@@ -47,6 +48,26 @@ describe('mobile session restore', () => {
         expect(await readRestorableRoute()).toEqual({ pathname: '/contexts' });
         await persistLastRoute('/settings');
         expect(await readRestorableRoute()).toEqual({ pathname: '/contexts' });
+    });
+
+    it('carries the open project from the screen mirror when the route has no param', async () => {
+        // Tapping a project row opens it via component state only (#842) —
+        // the mirrored id must land in the snapshot without a route param.
+        setSessionRestoreOpenProject('project-2');
+        await persistLastRoute('/projects-screen');
+        expect(await readRestorableRoute()).toEqual({
+            pathname: '/projects-screen',
+            params: { projectId: 'project-2' },
+        });
+
+        // Off the projects surfaces the mirror must not leak into snapshots.
+        await persistLastRoute('/focus');
+        expect(await readRestorableRoute()).toEqual({ pathname: '/focus' });
+
+        // Closing the project clears the mirror.
+        setSessionRestoreOpenProject(null);
+        await persistLastRoute('/projects-screen');
+        expect(await readRestorableRoute()).toEqual({ pathname: '/projects-screen' });
     });
 
     it('restores saved search routes by prefix', async () => {

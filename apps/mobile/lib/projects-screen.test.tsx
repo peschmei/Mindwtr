@@ -101,6 +101,7 @@ vi.mock('@mindwtr/core', async (importOriginal) => {
 
 vi.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
+  usePathname: () => '/projects-screen',
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 

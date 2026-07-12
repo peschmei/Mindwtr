@@ -32,6 +32,7 @@ const { openTaskScreen, parseQuickAdd, routerMocks, routeParams, storeState } = 
 
 vi.mock('expo-router', () => ({
   useLocalSearchParams: () => routeParams.current,
+  usePathname: () => '/projects-screen',
   useRouter: () => routerMocks,
 }));
 

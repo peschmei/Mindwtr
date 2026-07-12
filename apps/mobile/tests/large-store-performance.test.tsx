@@ -342,6 +342,7 @@ vi.mock('expo-linking', () => ({
 }));
 
 vi.mock('expo-router', () => ({
+  usePathname: () => '/projects-screen',
   router: {
     push: vi.fn(),
     navigate: vi.fn(),
