@@ -694,6 +694,17 @@ jobs:
     with:
       tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
+  # Stable releases also update the AUR beta package so mindwtr-bin-beta users
+  # pick stable back up after a test cycle without switching packages.
+  update-aur-bin-beta:
+    needs: release
+    if: ${{ always() && !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') && ((startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' && needs.release.result == 'success') || (github.event_name == 'workflow_dispatch' && inputs.run_update_aur && (needs.release.result == 'success' || needs.release.result == 'skipped'))) }}
+    name: Update AUR Beta (mindwtr-bin-beta)
+    uses: ./.github/workflows/update-aur-beta.yml
+    with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    secrets: inherit
+
   # Stable releases also land in the beta repos (matching the Flathub beta
   # branch behavior) so beta-repo users pick stable back up after a test
   # cycle. Runs after the stable repo publish: both jobs push to gh-pages and
