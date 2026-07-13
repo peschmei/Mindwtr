@@ -43,7 +43,6 @@ const DEFAULT_SYNC_TIMEOUT_MS = 30_000;
 const WEBDAV_RETRY_OPTIONS = { maxAttempts: 5, baseDelayMs: 2000, maxDelayMs: 30_000 };
 const WEBDAV_READ_RETRY_OPTIONS = { ...WEBDAV_RETRY_OPTIONS, shouldRetry: isRetryableWebdavReadError };
 const DROPBOX_RETRY_OPTIONS = { maxAttempts: 3, baseDelayMs: 1000, maxDelayMs: 8000 };
-const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SYNC_CONFIG_CACHE_TTL_MS = 30_000;
 const FAST_SYNC_STATE_KEY = '@mindwtr_fast_sync_state_v1';
 const LOCAL_SYNC_STATUS_KEY = '@mindwtr_local_sync_status_v1';
@@ -383,11 +382,6 @@ const logSyncDiagnostic = (
 const buildOfflineSkipResult = (): MobileSyncResult => ({
   success: true,
   skipped: 'offline',
-});
-
-const buildRequeuedSkipResult = (): MobileSyncResult => ({
-  success: true,
-  skipped: 'requeued',
 });
 
 type MobileNetworkStatus = {

@@ -1,7 +1,7 @@
 # ADR 0014: Shared Sync Orchestration Ports
 
 Date: 2026-05-04
-Status: Proposed
+Status: Accepted (implemented 2026-07-13)
 
 ## Context
 
@@ -47,3 +47,33 @@ Stages, each its own commit and each gated on both platforms' full sync suites p
 5. **Deletion pass.** Remove the duplicated skip/status/fingerprint plumbing from both apps; what remains per platform is transport code only.
 
 Scheduling constraint: land in a release-quiet window, never alongside an active RC — a sync regression here is the project's worst failure mode.
+
+## Implementation notes (2026-07-13)
+
+Landed right after stable v1.1.0, in the staged commits this plan prescribed.
+
+- `packages/core/src/sync-run-ports.ts` holds the ports; `sync-run.ts` is the
+  state machine (`runSharedSyncCycle`), unit-tested against in-memory fakes in
+  `sync-run.test.ts`. The port groupings map to this ADR as: `SyncBackendIO`
+  (BackendIO), `SyncRunStorage` (Storage), `SyncRunNotifier` (Notifier),
+  `now()` injection (Clock), plus `SyncRunStoreBridge` for shared-store access
+  and `SyncRunPlatformHooks`/`SyncRunPolicy` for codified platform divergences.
+- Deliberate divergences became explicit policy switches instead of being
+  unified: mobile runs the attachment pre-sync before the fast-check and has a
+  second read-and-compare skip; mobile fails the cycle on post-merge attachment
+  errors where desktop degrades to a warning; the desktop web runtime disables
+  attachment phases.
+- Deviation from stage 3 as written: desktop's `setDependenciesForTests` was
+  kept, not deleted. It now covers transport-level dependencies only (Tauri
+  invoke, fetch, CloudKit, store access); cycle policy is fake-tested once in
+  core, while both app suites exercise the real machine through real adapters
+  over mocked transports — strictly more coverage than replacing those suites
+  with port fakes.
+- Known benign behavior deltas from the extraction: desktop persists merged
+  external calendars after (not before) the mid-cycle freshness check; desktop
+  gained mobile's "Attachment final sync start/done" log lines; mobile gained
+  desktop's "Sync failed" warning plus step logs for flush/refresh; mobile's
+  unchanged-skip log lines lost their elapsed/payload-shape extras.
+- Line counts: desktop `sync-service.ts` 2,456 → ~1,860; mobile
+  `sync-service.ts` 1,651 → ~1,250; the machine plus ports add ~1,000 lines to
+  core, written once.

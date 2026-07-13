@@ -54,3 +54,9 @@ _Avoid_: filter state, active filters
 **Capture**:
 Turning quick-add input into a new inbox task. A capture is never dropped: a `+Project` naming only an archived project behaves like an unknown name and creates a fresh project. Parsed tokens are untrusted (validated against assignable projects); the capturing surface's own context (its current project, pickers) is trusted.
 _Avoid_: quick task, note
+
+### Syncing
+
+**Sync run**:
+One execution of the shared sync cycle state machine (`runSharedSyncCycle` in core, ADR 0014): flush, backend setup, unchanged-skip checks, attachment phases, the merge cycle, cleanup, fast-sync bookkeeping, and error/requeue handling. Desktop and mobile supply transport, storage, and notification ports; deliberate platform differences are policy switches on the run, never re-implemented phases.
+_Avoid_: sync loop, sync pass, per-platform orchestrator

@@ -292,14 +292,8 @@ export {
 
 export {
     createSyncOrchestrator,
-    runPreSyncAttachmentPhase,
 } from './sync-orchestrator';
 export type {
-    PreSyncAttachmentBackend,
-    PreSyncAttachmentCloudProvider,
-    PreSyncAttachmentOperation,
-    PreSyncAttachmentPhaseResult,
-    RunPreSyncAttachmentPhaseOptions,
     SyncOrchestrator,
     SyncOrchestratorControls,
 } from './sync-orchestrator';
