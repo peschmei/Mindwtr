@@ -910,7 +910,7 @@ describe('SyncService orchestration', () => {
                 markLocalWrite: vi.fn(),
                 markLocalSqliteWrite: vi.fn(),
                 applySyncedDataToStore: vi.fn(),
-                getExternalCalendars: () => [],
+                getExternalCalendars: async () => [],
                 setExternalCalendars: vi.fn(),
                 flushPendingSave: vi.fn(async () => undefined),
                 getStoreState: () => storeState as any,

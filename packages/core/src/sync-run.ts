@@ -206,6 +206,12 @@ class SharedSyncRunMachine {
         await this.hooks.ensureNetworkStillAvailable?.();
     }
 
+    private attachmentHelpers() {
+        return {
+            ensureLocalSnapshotFresh: () => this.ensureLocalSnapshotFresh(),
+        };
+    }
+
     private acceptCoveredLocalSnapshot(expectedData: AppData): boolean {
         if (!this.hooks.acceptCoveredSnapshot) return false;
         const currentChangeAt = this.store.getLastDataChangeAt();
@@ -224,7 +230,7 @@ class SharedSyncRunMachine {
                 : undefined,
             requestFollowUp: () => this.hooks.requestFollowUp(),
             onStale: this.hooks.onStaleSnapshot
-                ? (details) => this.hooks.onStaleSnapshot?.(details)
+                ? (details) => this.hooks.onStaleSnapshot?.({ ...details, step: this.state.step })
                 : undefined,
         });
     }
@@ -501,7 +507,7 @@ class SharedSyncRunMachine {
             if (isRemoteSyncBackend(this.backend)) {
                 await this.ensureNetwork();
             }
-            const result = await io.syncAttachments(localData);
+            const result = await io.syncAttachments(localData, this.attachmentHelpers());
             const mutated = result === true || (Boolean(result) && typeof result === 'object');
             const mutatedData = result && typeof result === 'object' ? result : localData;
             if (mutated) {
@@ -541,7 +547,7 @@ class SharedSyncRunMachine {
         if (isRemoteSyncBackend(this.backend)) {
             await this.ensureNetwork();
         }
-        const result = await io.syncAttachments(data);
+        const result = await io.syncAttachments(data, this.attachmentHelpers());
         const nextData = result && typeof result === 'object' ? result : data;
         const remainingUploads = findPendingAttachmentUploads(nextData);
         this.notifier.logInfo('Attachment final sync done', {
@@ -577,7 +583,7 @@ class SharedSyncRunMachine {
                 await this.ensureNetwork();
             }
             const candidateData = cloneAppData(currentData);
-            const result = await io.syncAttachments(candidateData);
+            const result = await io.syncAttachments(candidateData, this.attachmentHelpers());
             const nextData = result && typeof result === 'object'
                 ? result
                 : result
@@ -737,7 +743,7 @@ class SharedSyncRunMachine {
     private async handleRunError(error: unknown): Promise<SyncRunResult> {
         const errorContext: SyncRunErrorContext = {
             step: this.state.step,
-            wroteLocal: this.state.wroteLocal,
+            getWroteLocal: () => this.state.wroteLocal,
             persistPreSyncedData: () => this.persistPreSyncedDataAfterAbort(),
         };
         const beforeResult = await this.hooks.handleRunErrorBeforeRequeue?.(error, errorContext);
@@ -747,15 +753,15 @@ class SharedSyncRunMachine {
             await this.persistPreSyncedDataAfterAbort();
             this.notifier.onDiagnostic?.({
                 event: 'requeued',
-                extra: { wroteLocal: String(this.state.wroteLocal) },
+                extra: {
+                    step: this.state.step,
+                    wroteLocal: String(this.state.wroteLocal),
+                },
             });
             return { success: true, skipped: 'requeued' };
         }
 
-        const afterResult = await this.hooks.handleRunErrorAfterRequeue?.(error, {
-            ...errorContext,
-            wroteLocal: this.state.wroteLocal,
-        });
+        const afterResult = await this.hooks.handleRunErrorAfterRequeue?.(error, errorContext);
         if (afterResult) return afterResult;
 
         this.notifier.logWarning('Sync failed', error);
@@ -790,6 +796,7 @@ class SharedSyncRunMachine {
             await this.hooks.finalizeErrorStatus({
                 at: now,
                 message: finalErrorMessage,
+                step: this.state.step,
                 history: nextHistory,
                 wroteLocal: this.state.wroteLocal,
             });

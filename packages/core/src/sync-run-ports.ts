@@ -73,8 +73,10 @@ export interface SyncBackendIO {
     /** One mutating attachment pass against this backend (upload pending
      *  files, resolve missing downloads). The same operation serves the
      *  prepare, finalize, and post-merge phases. Return the mutated data,
-     *  true (mutated in place), or false/null/undefined (no change). */
-    syncAttachments?(data: AppData): Promise<AppData | boolean | null | undefined>;
+     *  true (mutated in place), or false/null/undefined (no change).
+     *  `helpers.ensureLocalSnapshotFresh` lets long uploads abort when local
+     *  data changes mid-pass (mobile's self-hosted cloud backend uses it). */
+    syncAttachments?(data: AppData, helpers: SyncRunAttachmentHelpers): Promise<AppData | boolean | null | undefined>;
     /** Remote location for error-log context (never logged with credentials). */
     getSyncUrl?(): string | undefined;
 }
@@ -177,13 +179,20 @@ export type SyncRunCycleSetup =
 
 export type SyncRunErrorContext = {
     step: string;
-    wroteLocal: boolean;
+    /** Live view of whether this cycle persisted local data — it can flip to
+     *  true when the hook itself calls `persistPreSyncedData`. */
+    getWroteLocal(): boolean;
     /** Persist attachment pre-sync mutations that would otherwise be lost
      *  when the cycle aborts early (reconciled with the in-memory snapshot). */
     persistPreSyncedData(): Promise<void>;
 };
 
 export type SyncRunAttachmentPhase = 'prepare' | 'post-merge';
+
+export type SyncRunAttachmentHelpers = {
+    /** Abort (requeue) when local data changed mid-pass. */
+    ensureLocalSnapshotFresh(): void;
+};
 
 export type SyncRunAttachmentCleanupContext = {
     setStep(step: string): void;
@@ -196,6 +205,7 @@ export type SyncRunAttachmentCleanupContext = {
 export type SyncRunErrorStatusDetails = {
     at: string;
     message: string;
+    step: string;
     history: SyncHistoryEntry[];
     wroteLocal: boolean;
 };
@@ -233,7 +243,7 @@ export interface SyncRunPlatformHooks {
      *  payload fingerprint already equals the data this cycle synced. */
     acceptCoveredSnapshot?(expectedData: AppData): boolean;
     /** Observability for snapshot-staleness aborts (mobile logs these). */
-    onStaleSnapshot?(details: { localSnapshotChangeAt: number; currentChangeAt: number }): void;
+    onStaleSnapshot?(details: { localSnapshotChangeAt: number; currentChangeAt: number; step: string }): void;
     /** Mobile: gate attachment phases on real pending work (and flip the
      *  visible sync-activity state). Desktop always runs the phases. */
     shouldRunAttachmentPhase?(data: AppData, phase: SyncRunAttachmentPhase): Promise<boolean>;
