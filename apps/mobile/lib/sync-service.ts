@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { AppData, MergeStats, createSyncOrchestrator, runSharedSyncCycle, SyncRemoteWriteConflict, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, withRetry, isRetryableError, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, normalizeRemoteWriteResult, buildFastSyncScope, hasPendingSyncSideEffects, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, getInMemoryAppDataSnapshot, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, isDropboxUnauthorizedError, parseFastSyncState, serializeFastSyncState, decodeUriSafe, SYNC_FILE_NAME, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type Attachment, type CloudProvider, type FastSyncState, type RemoteJsonWriteResult, type SyncBackendIO, type SyncRunDiagnosticEvent, type SyncRunNotifier, type SyncRunPlatformHooks, type SyncRunStorage } from '@mindwtr/core';
+import { AppData, MergeStats, createSyncOrchestrator, runSharedSyncCycle, SyncRemoteWriteConflict, useTaskStore, webdavGetJson, webdavHeadFile, webdavPutJson, cloudGetJson, cloudHeadJson, cloudPutJson, flushPendingSave, performSyncCycle, withRetry, isRetryableError, isRetryableWebdavReadError, isWebdavInvalidJsonError, normalizeWebdavUrl, normalizeCloudUrl, normalizeRemoteWriteResult, buildFastSyncScope, hasPendingSyncSideEffects, injectExternalCalendars as injectExternalCalendarsForSync, persistExternalCalendars as persistExternalCalendarsForSync, getInMemoryAppDataSnapshot, createAbortableFetch, normalizeCloudProvider as normalizeCoreCloudProvider, isDropboxUnauthorizedError, parseFastSyncState, serializeFastSyncState, summarizeTaskLifecycleCounts, decodeUriSafe, SYNC_FILE_NAME, CLOUD_PROVIDER_DROPBOX, CLOUD_PROVIDER_SELF_HOSTED, type Attachment, type CloudProvider, type FastSyncState, type RemoteJsonWriteResult, type SyncBackendIO, type SyncRunDiagnosticEvent, type SyncRunNotifier, type SyncRunPlatformHooks, type SyncRunStorage } from '@mindwtr/core';
 import { mobileStorage } from './storage-adapter';
 import { logInfo, logSyncError, logWarn, sanitizeLogMessage } from './app-log';
 import { readSyncFile, resolveSyncFileUri, writeSyncFile } from './storage-file';
@@ -349,9 +349,17 @@ const buildSyncDataDiagnostics = (data: AppData | null | undefined): Record<stri
     for (const context of task.contexts) contexts.add(context);
     for (const tag of task.tags) tags.add(tag);
   }
+  // The stored task count reads far higher than what the app shows once sync
+  // tombstones accumulate; log the content-free composition so shared logs can
+  // attribute counts and growth without another instrumentation round (#766).
+  const lifecycle = summarizeTaskLifecycleCounts(data.tasks);
   return {
     hasData: 'true',
     tasks: String(data.tasks.length),
+    liveTasks: String(lifecycle.live),
+    trashedTasks: String(lifecycle.trashed),
+    tombstoneTasks: String(lifecycle.tombstones),
+    tasksCreatedLast7d: String(lifecycle.createdLast7d),
     projects: String(data.projects.length),
     areas: String(data.areas.length),
     contexts: String(contexts.size),

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { performance } from 'node:perf_hooks';
 import {
+    summarizeTaskLifecycleCounts,
     buildTasksByProjectId,
     getCalendarPlanningCandidates,
     sortTasks,
@@ -976,5 +977,40 @@ describe('task-utils', () => {
 
             expect(sorted.map((task) => task.id)).toEqual(['a', 'b', 'c']);
         });
+    });
+});
+
+describe('summarizeTaskLifecycleCounts (#766)', () => {
+    const now = Date.parse('2026-07-13T12:00:00.000Z');
+
+    it('buckets live, trashed, and tombstone tasks and counts recent creations', () => {
+        const counts = summarizeTaskLifecycleCounts([
+            { createdAt: '2026-07-12T12:00:00.000Z' },
+            { createdAt: '2026-01-01T00:00:00.000Z' },
+            { createdAt: '2026-07-10T12:00:00.000Z', deletedAt: '2026-07-11T00:00:00.000Z' },
+            { createdAt: '2026-01-01T00:00:00.000Z', deletedAt: '2026-02-01T00:00:00.000Z', purgedAt: '2026-03-01T00:00:00.000Z' },
+            // Purged without a deletedAt still counts as a tombstone.
+            { createdAt: '2026-01-01T00:00:00.000Z', purgedAt: '2026-03-01T00:00:00.000Z' },
+        ], now);
+
+        expect(counts).toEqual({
+            total: 5,
+            live: 2,
+            trashed: 1,
+            tombstones: 2,
+            createdLast7d: 2,
+        });
+    });
+
+    it('ignores unparsable or future createdAt values for the recent-creation count', () => {
+        const counts = summarizeTaskLifecycleCounts([
+            { createdAt: 'not-a-date' },
+            { createdAt: '2026-07-14T12:00:00.000Z' },
+            { createdAt: undefined as unknown as string },
+        ], now);
+
+        expect(counts.total).toBe(3);
+        expect(counts.live).toBe(3);
+        expect(counts.createdLast7d).toBe(0);
     });
 });

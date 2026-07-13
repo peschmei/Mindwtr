@@ -1125,3 +1125,42 @@ export function getChecklistProgress(task: Pick<Task, 'checklist'>): { completed
     const percent = total === 0 ? 0 : completed / total;
     return { completed, total, percent };
 }
+
+export interface TaskLifecycleCounts {
+    total: number;
+    live: number;
+    trashed: number;
+    tombstones: number;
+    createdLast7d: number;
+}
+
+/**
+ * Content-free composition of a stored task array for diagnostic logs (#766):
+ * how many tasks are live, sitting in Trash, or retained purely as sync
+ * tombstones, plus recent creation volume so unexplained growth between two
+ * shared logs can be attributed without another instrumentation round.
+ */
+export function summarizeTaskLifecycleCounts(
+    tasks: readonly Pick<Task, 'deletedAt' | 'purgedAt' | 'createdAt'>[],
+    nowMs: number = Date.now(),
+): TaskLifecycleCounts {
+    const weekAgoMs = nowMs - 7 * 24 * 60 * 60 * 1000;
+    let live = 0;
+    let trashed = 0;
+    let tombstones = 0;
+    let createdLast7d = 0;
+    for (const task of tasks) {
+        if (task.purgedAt) {
+            tombstones += 1;
+        } else if (task.deletedAt) {
+            trashed += 1;
+        } else {
+            live += 1;
+        }
+        const createdAtMs = task.createdAt ? Date.parse(task.createdAt) : Number.NaN;
+        if (Number.isFinite(createdAtMs) && createdAtMs >= weekAgoMs && createdAtMs <= nowMs) {
+            createdLast7d += 1;
+        }
+    }
+    return { total: tasks.length, live, trashed, tombstones, createdLast7d };
+}

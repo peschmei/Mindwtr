@@ -1,5 +1,6 @@
 import { safeParseDate } from './date';
 import { logInfo, logWarn } from './logger';
+import { summarizeTaskLifecycleCounts } from './task-utils';
 import { purgeExpiredTombstones } from './sync';
 import { markCoreStartupPhase, measureCoreStartupPhase } from './startup-profiler';
 import { normalizeTaskForLoad } from './task-status';
@@ -1181,6 +1182,11 @@ export const createSettingsActions = ({
             // Runtime diagnostic for shared beta logs: break the load pipeline down so a
             // slow refresh can be attributed to save-flush, storage read, or JS processing.
             if (totalFetchMs >= SLOW_FETCH_LOG_THRESHOLD_MS) {
+                // Content-free lifecycle breakdown: taskCount counts the whole
+                // stored array, which reads far higher than what the app shows
+                // once sync tombstones accumulate — log the composition so a
+                // shared log can attribute counts and growth directly (#766).
+                const lifecycle = summarizeTaskLifecycleCounts(allTasks);
                 logInfo('Slow data load pipeline', {
                     scope: 'store',
                     category: 'storage',
@@ -1192,6 +1198,10 @@ export const createSettingsActions = ({
                         setStateMs,
                         preloaded: Boolean(options?.preloadedData),
                         taskCount: allTasks.length,
+                        liveTasks: lifecycle.live,
+                        trashedTasks: lifecycle.trashed,
+                        tombstoneTasks: lifecycle.tombstones,
+                        tasksCreatedLast7d: lifecycle.createdLast7d,
                         skippedByLocalChange: skippedDueToConcurrentLocalChange,
                     },
                 });

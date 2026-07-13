@@ -388,6 +388,7 @@ export {
     sortTasksBySavedPreference,
     splitCompletedTasks,
     STATUS_COLORS,
+    summarizeTaskLifecycleCounts,
 } from './task-utils';
 export type {
     CalendarPlanningCandidateOptions,
@@ -396,6 +397,7 @@ export type {
     TaskFocusEligibilityOptions,
     TaskFocusEligibilityReason,
     TaskFocusEligibilityResult,
+    TaskLifecycleCounts,
     SpeechUpdatePlan,
 } from './task-utils';
 
