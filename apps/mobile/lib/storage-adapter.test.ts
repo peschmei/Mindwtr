@@ -104,6 +104,12 @@ describe('mobile storage adapter', () => {
     await mobileStorage.saveTask(currentTask, currentSnapshot);
 
     expect(sqliteAdapterSaveTask).toHaveBeenCalledWith(currentTask);
+    // The backup is deferred off the save path (#766): the save resolves after
+    // the SQLite write, and the JSON copy lands coalesced afterwards.
+    expect(asyncStorageMock.setItem).not.toHaveBeenCalledWith('mindwtr-data', expect.anything());
+
+    await __mobileStorageTestUtils.flushPendingStartupJsonBackup();
+
     expect(asyncStorageMock.setItem).toHaveBeenCalledWith(
       'mindwtr-data',
       JSON.stringify(currentSnapshot),
@@ -117,6 +123,136 @@ describe('mobile storage adapter', () => {
       expect.stringMatching(/^\d+$/),
     );
     expect(updateMobileWidgetFromDataMock).toHaveBeenCalledWith(currentSnapshot);
+  }, 10_000);
+
+  it('coalesces a burst of task saves into a single backup write with the newest payload (#766)', async () => {
+    const makeTask = (id: string): Task => ({
+      id,
+      title: `Task ${id}`,
+      status: 'next',
+      tags: [],
+      contexts: [],
+      createdAt: '2026-06-15T00:00:00.000Z',
+      updatedAt: '2026-06-15T00:00:00.000Z',
+    });
+    const makeSnapshot = (task: Task): AppData => ({
+      tasks: [task],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    });
+
+    const { mobileStorage, __mobileStorageTestUtils } = await import('./storage-adapter');
+    if (!mobileStorage.saveTask) {
+      throw new Error('Expected mobile storage to support saveTask');
+    }
+    __mobileStorageTestUtils.setSqliteStateForTests({
+      adapter: { saveTask: sqliteAdapterSaveTask },
+      client: {},
+    });
+
+    const first = makeTask('task-1');
+    const second = makeTask('task-2');
+    const third = makeTask('task-3');
+    await mobileStorage.saveTask(first, makeSnapshot(first));
+    await mobileStorage.saveTask(second, makeSnapshot(second));
+    await mobileStorage.saveTask(third, makeSnapshot(third));
+
+    await __mobileStorageTestUtils.flushPendingStartupJsonBackup();
+
+    const dataWrites = asyncStorageMock.setItem.mock.calls.filter(([key]) => key === 'mindwtr-data');
+    expect(dataWrites).toHaveLength(1);
+    expect(dataWrites[0]?.[1]).toBe(JSON.stringify(makeSnapshot(third)));
+    expect(updateMobileWidgetFromDataMock).toHaveBeenCalledTimes(1);
+  }, 10_000);
+
+  it('flushes a pending deferred backup before serving a JSON fallback read (#766)', async () => {
+    const stored = new Map<string, string>();
+    asyncStorageMock.getItem.mockImplementation(async (key: string) => stored.get(key) ?? null);
+    asyncStorageMock.setItem.mockImplementation(async (key: string, value: string) => {
+      stored.set(key, value);
+    });
+
+    const currentTask: Task = {
+      id: 'task-pending',
+      title: 'Pending backup task',
+      status: 'next',
+      tags: [],
+      contexts: [],
+      createdAt: '2026-06-15T00:00:00.000Z',
+      updatedAt: '2026-06-15T00:00:00.000Z',
+    };
+    const currentSnapshot: AppData = {
+      tasks: [currentTask],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    };
+
+    const { mobileStorage, __mobileStorageTestUtils } = await import('./storage-adapter');
+    if (!mobileStorage.saveTask) {
+      throw new Error('Expected mobile storage to support saveTask');
+    }
+    __mobileStorageTestUtils.setSqliteStateForTests({
+      adapter: {
+        saveTask: sqliteAdapterSaveTask,
+        // A read through this adapter fails, forcing the JSON fallback path.
+        getData: vi.fn().mockRejectedValue(new Error('database is locked')),
+      } as never,
+      client: {},
+    });
+
+    // The save resolves with the backup still pending (deferred off the queue).
+    await mobileStorage.saveTask(currentTask, currentSnapshot);
+    expect(stored.has('mindwtr-data')).toBe(false);
+
+    // The fallback read must land the pending backup first instead of refusing
+    // it as stale (freshness invariant: backupUpdatedAt >= latest queued write).
+    const data = await mobileStorage.getData();
+    expect(data.tasks.map((task) => task.id)).toEqual(['task-pending']);
+  }, 10_000);
+
+  it('writes the JSON backup before a failed SQLite task save resolves', async () => {
+    const currentTask: Task = {
+      id: 'task-fallback',
+      title: 'Fallback task',
+      status: 'next',
+      tags: [],
+      contexts: [],
+      createdAt: '2026-06-15T00:00:00.000Z',
+      updatedAt: '2026-06-15T00:00:00.000Z',
+    };
+    const currentSnapshot: AppData = {
+      tasks: [currentTask],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    };
+
+    sqliteAdapterSaveTask.mockRejectedValue(new Error('disk I/O error'));
+    const { mobileStorage, __mobileStorageTestUtils } = await import('./storage-adapter');
+    if (!mobileStorage.saveTask) {
+      throw new Error('Expected mobile storage to support saveTask');
+    }
+    __mobileStorageTestUtils.setSqliteStateForTests({
+      adapter: { saveTask: sqliteAdapterSaveTask },
+      client: {},
+    });
+
+    await mobileStorage.saveTask(currentTask, currentSnapshot);
+
+    // SQLite failed, so the JSON backup is the durable copy and must have
+    // landed by the time the save resolves.
+    expect(asyncStorageMock.setItem).toHaveBeenCalledWith(
+      'mindwtr-data',
+      JSON.stringify(currentSnapshot),
+    );
   }, 10_000);
 
   it('waits for queued SQLite writes before reading from SQLite', async () => {

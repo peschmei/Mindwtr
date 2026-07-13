@@ -352,14 +352,14 @@ describe('notification-service-local', () => {
       };
       mockLogInfo.mockClear();
       listener({ ...shared, isLoading: true }, { ...shared, isLoading: false });
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(3000);
       expect(mockLogInfo).not.toHaveBeenCalledWith(
         '[Local Notifications] Reschedule cycle started',
         expect.anything()
       );
 
       listener({ ...shared, tasks: [...mockStoreState.tasks] }, shared);
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(3000);
       expect(mockLogInfo).toHaveBeenCalledWith(
         '[Local Notifications] Reschedule cycle started',
         expect.anything()

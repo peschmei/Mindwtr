@@ -315,6 +315,92 @@ const saveStartupJsonBackup = async (
     );
 };
 
+// The full-dataset JSON backup (stringify + AsyncStorage write) and the widget
+// render took multiple seconds per save on large libraries and ran inside the
+// save queue, so every read and every following tap waited on them (#766).
+// Saves whose SQLite write succeeded only *schedule* the backup here: a single
+// pending slot keeps the newest payload, a trailing timer coalesces bursts, and
+// one serialized writer preserves write order. Paths where the backup IS the
+// durable copy (SQLite failure) or where a fallback read is about to trust it
+// await flushPendingStartupJsonBackup() to keep the freshness invariant
+// (backupUpdatedAt >= latestQueuedWriteStartedAt) observable at read time.
+const JSON_BACKUP_COALESCE_MS = 1_000;
+
+type PendingJsonBackup = {
+    data: AppData;
+    phasePrefix: string;
+    minimumUpdatedAtMs: number;
+    coalescedSaves: number;
+};
+
+let pendingJsonBackup: PendingJsonBackup | null = null;
+let jsonBackupTimer: ReturnType<typeof setTimeout> | null = null;
+let jsonBackupWriter: Promise<void> = Promise.resolve();
+
+const writePendingJsonBackup = async (): Promise<void> => {
+    const pending = pendingJsonBackup;
+    if (!pending) return;
+    pendingJsonBackup = null;
+    const backupStartedAt = Date.now();
+    await saveStartupJsonBackup(AsyncStorage, pending.data, pending.phasePrefix, pending.minimumUpdatedAtMs);
+    const jsonBackupMs = Date.now() - backupStartedAt;
+    const widgetStartedAt = Date.now();
+    try {
+        await measureStartupPhase(`${pending.phasePrefix}.widget_update`, async () =>
+            updateMobileWidgetFromData(pending.data)
+        );
+    } catch (error) {
+        logStorageWarn('[Widgets] Failed to update mobile widget after backup', error);
+    }
+    const widgetMs = Date.now() - widgetStartedAt;
+    if (jsonBackupMs + widgetMs >= SQLITE_SLOW_WRITE_LOG_THRESHOLD_MS) {
+        logStorageInfo('[Storage] Slow post-save backup', {
+            jsonBackupMs: String(jsonBackupMs),
+            widgetMs: String(widgetMs),
+            coalescedSaves: String(pending.coalescedSaves),
+        });
+    }
+};
+
+const drainJsonBackupQueue = (): Promise<void> => {
+    jsonBackupWriter = jsonBackupWriter
+        .catch(() => undefined)
+        .then(async () => {
+            while (pendingJsonBackup) {
+                await writePendingJsonBackup();
+            }
+        });
+    return jsonBackupWriter;
+};
+
+const scheduleStartupJsonBackup = (
+    data: AppData,
+    phasePrefix: string,
+    minimumUpdatedAtMs = 0,
+): void => {
+    pendingJsonBackup = {
+        data,
+        phasePrefix,
+        minimumUpdatedAtMs: Math.max(pendingJsonBackup?.minimumUpdatedAtMs ?? 0, minimumUpdatedAtMs),
+        coalescedSaves: (pendingJsonBackup?.coalescedSaves ?? 0) + 1,
+    };
+    if (jsonBackupTimer) return;
+    jsonBackupTimer = setTimeout(() => {
+        jsonBackupTimer = null;
+        void drainJsonBackupQueue().catch((error) => {
+            logStorageWarn('[Storage] Deferred JSON backup failed', error);
+        });
+    }, JSON_BACKUP_COALESCE_MS);
+};
+
+const flushPendingStartupJsonBackup = async (): Promise<void> => {
+    if (jsonBackupTimer) {
+        clearTimeout(jsonBackupTimer);
+        jsonBackupTimer = null;
+    }
+    await drainJsonBackupQueue();
+};
+
 const readStartupJsonBackupUpdatedAt = async (AsyncStorage: any): Promise<number | null> => {
     const raw = await AsyncStorage.getItem(STARTUP_BACKUP_UPDATED_AT_KEY);
     if (raw == null) return null;
@@ -475,6 +561,9 @@ const createStorage = (): StorageAdapter => {
         getData: async (): Promise<AppData> => {
             markStartupPhase('mobile.storage.get_data.start');
             const loadJsonBackup = async (phase = 'get_data') => {
+                // A deferred backup may still be pending; land it before trusting
+                // the stored copy (and before the freshness assert reads its stamp).
+                await flushPendingStartupJsonBackup();
                 await assertJsonBackupFreshEnough(AsyncStorage, phase);
                 const jsonValue = await getLegacyJson(AsyncStorage);
                 if (jsonValue == null) {
@@ -533,12 +622,7 @@ const createStorage = (): StorageAdapter => {
                     logStorageInfo('[Storage] Slow SQLite load', { readMs: String(readMs), ...(sqliteJournalDiagnostics ?? {}) });
                 }
                 data.areas = Array.isArray(data.areas) ? data.areas : [];
-                saveStartupJsonBackup(AsyncStorage, data, 'mobile.storage.get_data', latestQueuedWriteStartedAtMs).catch((error) => {
-                    logStorageWarn('[Storage] Failed to refresh startup JSON backup from SQLite load', error);
-                });
-                updateMobileWidgetFromData(data).catch((error) => {
-                    logStorageWarn('[Widgets] Failed to update mobile widget from storage load', error);
-                });
+                scheduleStartupJsonBackup(data, 'mobile.storage.get_data', latestQueuedWriteStartedAtMs);
                 markStartupPhase('mobile.storage.get_data.widget_update_dispatched');
                 clearPreferJsonBackup();
                 markStartupPhase('mobile.storage.get_data.end');
@@ -602,6 +686,11 @@ const createStorage = (): StorageAdapter => {
                         });
                     }
                     clearPreferJsonBackup();
+                    // SQLite is the durable copy; the JSON backup and widget render
+                    // land coalesced off the save queue so reads and following taps
+                    // never wait on them (#766).
+                    scheduleStartupJsonBackup(data, 'mobile.storage.save_data', queuedWriteStartedAtMs);
+                    markStartupPhase('mobile.storage.save_data.end');
                 } catch (error) {
                     markPreferJsonBackup();
                     if (__DEV__ && !shouldUseSqlite && String(error).includes('Expo Go')) {
@@ -609,25 +698,17 @@ const createStorage = (): StorageAdapter => {
                     } else {
                         logStorageWarn('[Storage] SQLite save failed, keeping JSON backup', error);
                     }
-                }
-                try {
-                    const backupStartedAt = Date.now();
-                    await saveStartupJsonBackup(AsyncStorage, data, 'mobile.storage.save_data', queuedWriteStartedAtMs);
-                    const jsonBackupMs = Date.now() - backupStartedAt;
-                    const widgetStartedAt = Date.now();
-                    await measureStartupPhase('mobile.storage.save_data.widget_update', async () => updateMobileWidgetFromData(data));
-                    const widgetMs = Date.now() - widgetStartedAt;
-                    if (jsonBackupMs + widgetMs >= SQLITE_SLOW_WRITE_LOG_THRESHOLD_MS) {
-                        logStorageInfo('[Storage] Slow post-save backup', {
-                            jsonBackupMs: String(jsonBackupMs),
-                            widgetMs: String(widgetMs),
-                        });
+                    try {
+                        // With SQLite down the JSON backup IS the durable copy; it
+                        // must land before this save reports success.
+                        scheduleStartupJsonBackup(data, 'mobile.storage.save_data.json_fallback', queuedWriteStartedAtMs);
+                        await flushPendingStartupJsonBackup();
+                        markStartupPhase('mobile.storage.save_data.end');
+                    } catch (e) {
+                        markStartupPhase('mobile.storage.save_data.error');
+                        logStorageError('Failed to save data', e);
+                        throw new Error('Failed to save data: ' + (e as Error).message);
                     }
-                    markStartupPhase('mobile.storage.save_data.end');
-                } catch (e) {
-                    markStartupPhase('mobile.storage.save_data.error');
-                    logStorageError('Failed to save data', e);
-                    throw new Error('Failed to save data: ' + (e as Error).message);
                 }
             });
         },
@@ -643,21 +724,12 @@ const createStorage = (): StorageAdapter => {
                     await measureStartupPhase('mobile.storage.save_task.sqlite_write', async () => adapter.saveTask(task));
                     const writeMs = Date.now() - writeStartedAt;
                     clearPreferJsonBackup();
-                    let jsonBackupMs = 0;
-                    let widgetMs = 0;
                     if (snapshot) {
-                        const backupStartedAt = Date.now();
-                        await saveStartupJsonBackup(AsyncStorage, snapshot, 'mobile.storage.save_task', queuedWriteStartedAtMs);
-                        jsonBackupMs = Date.now() - backupStartedAt;
-                        const widgetStartedAt = Date.now();
-                        await measureStartupPhase('mobile.storage.save_task.widget_update', async () => updateMobileWidgetFromData(snapshot));
-                        widgetMs = Date.now() - widgetStartedAt;
+                        scheduleStartupJsonBackup(snapshot, 'mobile.storage.save_task', queuedWriteStartedAtMs);
                     }
-                    if (writeMs + jsonBackupMs + widgetMs >= SQLITE_SLOW_WRITE_LOG_THRESHOLD_MS) {
+                    if (writeMs >= SQLITE_SLOW_WRITE_LOG_THRESHOLD_MS) {
                         logStorageInfo('[Storage] Slow task save', {
                             writeMs: String(writeMs),
-                            jsonBackupMs: String(jsonBackupMs),
-                            widgetMs: String(widgetMs),
                         });
                     }
                 } catch (error) {
@@ -668,10 +740,10 @@ const createStorage = (): StorageAdapter => {
                     }
 
                     try {
-                        await saveStartupJsonBackup(AsyncStorage, snapshot, 'mobile.storage.save_task.json_fallback', queuedWriteStartedAtMs);
-                        await measureStartupPhase('mobile.storage.save_task.json_fallback_widget_update', async () =>
-                            updateMobileWidgetFromData(snapshot)
-                        );
+                        // With SQLite down the JSON backup IS the durable copy; it
+                        // must land before this save reports success.
+                        scheduleStartupJsonBackup(snapshot, 'mobile.storage.save_task.json_fallback', queuedWriteStartedAtMs);
+                        await flushPendingStartupJsonBackup();
                     } catch (fallbackError) {
                         logStorageError('Failed to save task fallback data', fallbackError);
                         throw new Error('Failed to save task: ' + (fallbackError as Error).message);
@@ -762,10 +834,17 @@ export const mobileStorage = createStorage();
 
 export const __mobileStorageTestUtils = {
     createOpSqliteClientForTests: createOpSqliteClient,
+    flushPendingStartupJsonBackup,
     reset: () => {
         saveQueue = Promise.resolve();
         sqliteStatePromise = null;
         latestQueuedWriteStartedAtMs = 0;
+        if (jsonBackupTimer) {
+            clearTimeout(jsonBackupTimer);
+            jsonBackupTimer = null;
+        }
+        pendingJsonBackup = null;
+        jsonBackupWriter = Promise.resolve();
         clearPreferJsonBackup();
     },
     setSqliteStateForTests: (state: { adapter: Pick<SqliteAdapter, 'saveTask'>; client: Partial<SqliteClient> }) => {

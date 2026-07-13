@@ -101,6 +101,11 @@ const ALARM_SCHEDULE_BATCH_SIZE = 10;
 const ONE_SHOT_TOP_UP_DELAY_MS = 5_000;
 const MAX_SETTIMEOUT_DELAY_MS = 24 * 60 * 60 * 1000;
 const NOTIFICATION_EVENT_RESCHEDULE_DEBOUNCE_MS = 250;
+// A sync cycle updates the store several times within a few seconds
+// (write-local, write-remote bookkeeping, refresh); coalesce those into one
+// full reschedule scan instead of 2-4 per cycle (#766). Alarms fire minutes
+// out, so a short scheduling delay is imperceptible.
+const STORE_RESCHEDULE_DEBOUNCE_MS = 2_500;
 const TASK_REMINDER_SNOOZE_MINUTES = 10;
 
 let started = false;
@@ -1123,7 +1128,7 @@ export async function startLocalMobileNotifications(): Promise<void> {
     rescheduleTimer = setTimeout(() => {
       rescheduleTimer = null;
       enqueueReschedule(api);
-    }, 500);
+    }, STORE_RESCHEDULE_DEBOUNCE_MS);
   });
 }
 
