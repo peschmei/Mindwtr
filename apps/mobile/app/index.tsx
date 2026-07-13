@@ -28,5 +28,8 @@ export default function Index() {
     }, []);
 
     if (!target) return null;
-    return <Redirect href={target} />;
+    // withAnchor keeps the tabs underneath a restored stack screen, so the
+    // header back button and Android system back return into the app instead
+    // of closing it (#842).
+    return <Redirect href={target} withAnchor />;
 }
