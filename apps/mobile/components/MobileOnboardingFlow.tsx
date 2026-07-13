@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Database, Download, RefreshCw, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -29,34 +29,25 @@ export function MobileOnboardingFlow({
   const tc = useThemeColors();
   const filledButton = useFilledButtonColors();
   const { t } = useLanguage();
+  const { fontScale } = useWindowDimensions();
+  // At large font scales the note and the skip button cannot share a row;
+  // stack them so the note keeps the full card width (#632).
+  const stackFooter = fontScale >= 1.5;
 
   return (
     <Modal animationType="fade" transparent visible={isOpen} onRequestClose={onSkip}>
       <SafeAreaView style={styles.overlay}>
         <View style={[styles.card, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-          <View style={[styles.header, { borderBottomColor: tc.border }]}>
-            <View style={styles.headerText}>
-              <Text style={[styles.title, { color: tc.text }]}>{t('onboarding.title')}</Text>
-              <Text style={[styles.subtitle, { color: tc.secondaryText }]}>
-                {t('onboarding.subtitle')}
-              </Text>
+          <ScrollView bounces={false}>
+            <View style={[styles.header, { borderBottomColor: tc.border }]}>
+              <View style={styles.headerText}>
+                <Text style={[styles.title, { color: tc.text }]}>{t('onboarding.title')}</Text>
+                <Text style={[styles.subtitle, { color: tc.secondaryText }]}>
+                  {t('onboarding.subtitle')}
+                </Text>
+              </View>
             </View>
-            <Pressable
-              accessibilityLabel={t('onboarding.skip')}
-              accessibilityRole="button"
-              disabled={busy}
-              hitSlop={8}
-              onPress={onSkip}
-              style={({ pressed }) => [
-                styles.closeButton,
-                { opacity: pressed ? 0.72 : busy ? 0.45 : 1 },
-              ]}
-            >
-              <X color={tc.secondaryText} size={22} strokeWidth={2.2} />
-            </Pressable>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.body} bounces={false}>
+            <View style={styles.body}>
             <OnboardingOption
               disabled={busy}
               description={t('onboarding.syncDesc')}
@@ -101,16 +92,36 @@ export function MobileOnboardingFlow({
                 <Text style={[styles.errorText, { color: tc.danger }]}>{error}</Text>
               </View>
             ) : null}
+            </View>
+
+            <View style={[styles.footer, stackFooter ? styles.footerStacked : null, { borderTopColor: tc.border }]}>
+              <Text style={[styles.footerText, stackFooter ? styles.footerTextStacked : null, { color: tc.secondaryText }]}>
+                {t('onboarding.footer')}
+              </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={onSkip}
+                style={stackFooter ? styles.skipButtonStacked : null}
+              >
+                <Text style={[styles.skipText, { color: busy ? tc.secondaryText : tc.tint }]}>{t('onboarding.skipForNow')}</Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
 
-          <View style={[styles.footer, { borderTopColor: tc.border }]}>
-            <Text style={[styles.footerText, { color: tc.secondaryText }]}>
-              {t('onboarding.footer')}
-            </Text>
-            <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={onSkip}>
-              <Text style={[styles.skipText, { color: busy ? tc.secondaryText : tc.tint }]}>{t('onboarding.skipForNow')}</Text>
-            </TouchableOpacity>
-          </View>
+          <Pressable
+            accessibilityLabel={t('onboarding.skip')}
+            accessibilityRole="button"
+            disabled={busy}
+            hitSlop={8}
+            onPress={onSkip}
+            style={({ pressed }) => [
+              styles.closeButton,
+              { backgroundColor: tc.cardBg, opacity: pressed ? 0.72 : busy ? 0.45 : 1 },
+            ]}
+          >
+            <X color={tc.secondaryText} size={22} strokeWidth={2.2} />
+          </Pressable>
         </View>
       </SafeAreaView>
     </Modal>
@@ -173,14 +184,13 @@ const styles = StyleSheet.create({
   },
   header: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 18,
   },
   headerText: {
-    flex: 1,
     minWidth: 0,
+    // Keep the scrolling title clear of the pinned close button.
+    paddingRight: 38,
   },
   title: {
     fontSize: 24,
@@ -193,8 +203,12 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     alignItems: 'center',
+    borderRadius: 19,
     height: 38,
     justifyContent: 'center',
+    position: 'absolute',
+    right: 12,
+    top: 12,
     width: 38,
   },
   body: {
@@ -268,10 +282,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
+  footerStacked: {
+    alignItems: 'stretch',
+    flexDirection: 'column',
+  },
   footerText: {
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
+  },
+  footerTextStacked: {
+    flex: 0,
+  },
+  skipButtonStacked: {
+    alignSelf: 'flex-end',
   },
   skipText: {
     fontSize: 15,

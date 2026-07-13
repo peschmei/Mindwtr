@@ -157,6 +157,7 @@
       "expo-secure-store",
       "./plugins/android-app-shortcuts",
       "./plugins/android-quick-settings-tile",
+      "./plugins/android-legacy-text-metrics",
       "./plugins/android-manifest-fixes",
       "./plugins/android-monochrome-icon",
       "./plugins/android-system-bars",
