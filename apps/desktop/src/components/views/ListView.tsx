@@ -17,6 +17,7 @@ import {
     getPersonOptionNames,
     resolveDefaultNewTaskAreaId,
     safeParseDate,
+    selectionsFromCriteria,
     shallow,
     sortTasksBy,
     TaskPriority,
@@ -81,14 +82,6 @@ type ShowToast = (
     durationMs?: number,
     action?: { label: string; onClick: () => void }
 ) => void;
-
-function getListFilterTokens(criteria: FilterCriteria): string[] {
-    return [...(criteria.contexts ?? []), ...(criteria.tags ?? [])];
-}
-
-function getListFilterPriorities(criteria: FilterCriteria): TaskPriority[] {
-    return (criteria.priority ?? []).filter((priority): priority is TaskPriority => priority !== 'none');
-}
 
 function withListFilterValue<K extends keyof Pick<FilterCriteria, 'contexts' | 'tags' | 'priority' | 'timeEstimates'>>(
     criteria: FilterCriteria,
@@ -208,8 +201,9 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const [baseTasks, setBaseTasks] = useState<Task[]>(() => (statusFilter === 'archived' ? [] : tasks));
     const queryCacheRef = useRef<Map<string, Task[]>>(new Map());
     const listFilterCriteria = listFilters.criteria;
-    const selectedTokens = useMemo(() => getListFilterTokens(listFilterCriteria), [listFilterCriteria]);
-    const selectedPriorities = useMemo(() => getListFilterPriorities(listFilterCriteria), [listFilterCriteria]);
+    const listFilterSelections = useMemo(() => selectionsFromCriteria(listFilterCriteria), [listFilterCriteria]);
+    const selectedTokens = listFilterSelections.tokens;
+    const selectedPriorities = listFilterSelections.priorities;
     const selectedTimeEstimates = listFilterCriteria.timeEstimates ?? EMPTY_ESTIMATES;
     const filtersOpen = listFilters.open;
     const [selectedWaitingPerson, setSelectedWaitingPerson] = useState('');

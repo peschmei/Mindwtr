@@ -377,6 +377,13 @@ export type {
 } from './task-utils';
 
 export {
+    countActiveFilterCriteria,
+    criteriaFromSelections,
+    selectionsFromCriteria,
+} from './filter-criteria';
+export type { FilterSelections } from './filter-criteria';
+
+export {
     areDraftAttachmentsDirty,
     createTaskDraft,
     getTaskDraftRecurrenceRRuleValue,

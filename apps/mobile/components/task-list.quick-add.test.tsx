@@ -146,6 +146,8 @@ vi.mock('@mindwtr/core', async () => {
     canStarNewCapture: ({ focusedCount, focusTaskLimit }: { focusedCount: number; focusTaskLimit: number }) => focusedCount < focusTaskLimit,
     buildCaptureTaskProps: actual.buildCaptureTaskProps,
     applyCapturedProject: actual.applyCapturedProject,
+    countActiveFilterCriteria: actual.countActiveFilterCriteria,
+    criteriaFromSelections: actual.criteriaFromSelections,
     getDefaultTaskAreaMode: (settings: any) => {
       const mode = settings?.gtd?.defaultAreaMode;
       if (mode === 'none' || mode === 'fixed' || mode === 'active') return mode;

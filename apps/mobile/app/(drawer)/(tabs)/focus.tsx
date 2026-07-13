@@ -22,7 +22,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   applyFilter,
   buildAdvancedFilterCriteriaChips,
+  countActiveFilterCriteria,
+  criteriaFromSelections,
   removeAdvancedFilterCriteriaChip,
+  selectionsFromCriteria,
   sortFocusNextActions,
   shouldShowTaskForStart,
   isFocusSequentialCandidate,
@@ -90,7 +93,6 @@ import {
 
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
 const ENERGY_LEVEL_OPTIONS: TaskEnergyLevel[] = ['low', 'medium', 'high'];
-const ALL_TIME_ESTIMATE_OPTIONS: TimeEstimate[] = ['5min', '10min', '15min', '30min', '1hr', '2hr', '3hr', '4hr', '4hr+'];
 const DEFAULT_TIME_ESTIMATE_PRESETS: TimeEstimate[] = ['5min', '10min', '30min', '1hr', '2hr', '3hr', '4hr', '4hr+'];
 const FOCUS_GROUP_BY_OPTIONS: FocusGroupBy[] = ['none', 'context', 'project', 'area', 'energy', 'priority', 'person', 'tag'];
 const FOCUS_SORT_OPTIONS: SortField[] = ['default', 'due', 'start', 'priority', 'created', 'created-desc'];
@@ -184,57 +186,6 @@ const getUnknownErrorMessage = (error: unknown): string | undefined => {
 function filterSelectionStable<T>(current: T[], predicate: (item: T) => boolean): T[] {
   const next = current.filter(predicate);
   return next.length === current.length && next.every((item, index) => item === current[index]) ? current : next;
-}
-
-function buildFocusFilterCriteria({
-  energyLevels,
-  locations,
-  priorities,
-  projects,
-  contextMatchMode,
-  timeEstimates,
-  tokens,
-}: {
-  contextMatchMode: MultiValueFilterMatchMode;
-  energyLevels: TaskEnergyLevel[];
-  locations: string[];
-  priorities: TaskPriority[];
-  projects: string[];
-  timeEstimates: TimeEstimate[];
-  tokens: string[];
-}): FilterCriteria {
-  const contexts = tokens.filter((token) => token.trim().startsWith('@'));
-  const tags = tokens.filter((token) => token.trim().startsWith('#'));
-  return {
-    ...(contexts.length > 0 ? { contexts } : {}),
-    ...(contexts.length > 1 ? { contextMatchMode } : {}),
-    ...(tags.length > 0 ? { tags } : {}),
-    ...(projects.length > 0 ? { projects } : {}),
-    ...(locations.length > 0 ? { locations } : {}),
-    ...(priorities.length > 0 ? { priority: priorities } : {}),
-    ...(energyLevels.length > 0 ? { energy: energyLevels } : {}),
-    ...(timeEstimates.length > 0 ? { timeEstimates } : {}),
-  };
-}
-
-function countFilterCriteria(criteria: FilterCriteria): number {
-  return (
-    (criteria.contexts?.length ?? 0)
-    + (criteria.tags?.length ?? 0)
-    + (criteria.projects?.length ?? 0)
-    + (criteria.areas?.length ?? 0)
-    + (criteria.priority?.length ?? 0)
-    + (criteria.energy?.length ?? 0)
-    + (criteria.statuses?.length ?? 0)
-    + (criteria.assignedTo?.length ?? 0)
-    + (criteria.locations?.length ?? 0)
-    + (criteria.timeEstimates?.length ?? 0)
-    + (criteria.dueDateRange ? 1 : 0)
-    + (criteria.startDateRange ? 1 : 0)
-    + (criteria.timeEstimateRange ? 1 : 0)
-    + (criteria.hasDescription !== undefined ? 1 : 0)
-    + (criteria.isStarred !== undefined ? 1 : 0)
-  );
 }
 
 function normalizeFocusGroupBy(value: unknown): FocusGroupBy {
@@ -432,7 +383,7 @@ export default function FocusScreen() {
   );
   const effectiveFocusSortBy = activeSavedFilter?.sortBy ?? focusSortBy;
   const effectiveFocusGroupBy = normalizeFocusGroupBy(activeSavedFilter?.groupBy ?? focusGroupBy);
-  const currentFilterCriteria = useMemo(() => buildFocusFilterCriteria({
+  const currentFilterCriteria = useMemo(() => criteriaFromSelections({
     tokens: selectedTokens,
     projects: selectedProjects,
     locations: showLocationFilter && locationFilter.trim() ? [locationFilter.trim()] : [],
@@ -755,19 +706,14 @@ export default function FocusScreen() {
     setContextMatchMode('all');
   }, []);
   const applySavedFocusFilter = useCallback((filter: SavedFilter) => {
-    const criteria = filter.criteria ?? {};
-    const prioritySet = new Set<TaskPriority>(PRIORITY_OPTIONS);
-    const energySet = new Set<TaskEnergyLevel>(ENERGY_LEVEL_OPTIONS);
-    const estimateSet = new Set<TimeEstimate>(ALL_TIME_ESTIMATE_OPTIONS);
-    setSelectedTokens([...(criteria.contexts ?? []), ...(criteria.tags ?? [])]);
-    setSelectedProjects(criteria.projects ?? []);
-    setLocationFilter((criteria.locations ?? [])[0] ?? '');
-    setSelectedPriorities((criteria.priority ?? []).filter((priority): priority is TaskPriority => (
-      priority !== 'none' && prioritySet.has(priority)
-    )));
-    setSelectedEnergyLevels((criteria.energy ?? []).filter((energy): energy is TaskEnergyLevel => energySet.has(energy)));
-    setSelectedTimeEstimates((criteria.timeEstimates ?? []).filter((estimate): estimate is TimeEstimate => estimateSet.has(estimate)));
-    setContextMatchMode(criteria.contextMatchMode ?? 'all');
+    const selections = selectionsFromCriteria(filter.criteria);
+    setSelectedTokens(selections.tokens);
+    setSelectedProjects(selections.projects);
+    setLocationFilter(selections.locations[0] ?? '');
+    setSelectedPriorities(selections.priorities);
+    setSelectedEnergyLevels(selections.energyLevels);
+    setSelectedTimeEstimates(selections.timeEstimates);
+    setContextMatchMode(selections.contextMatchMode);
     setFocusSortBy(filter.sortBy ?? DEFAULT_FOCUS_SORT_BY);
     setActiveSavedFilterId(filter.id);
     setFiltersVisible(false);
@@ -1288,7 +1234,7 @@ export default function FocusScreen() {
     };
   }, [focusItemLayouts]);
   const hasTasks = focusedTasks.length > 0 || schedule.length > 0 || nextActions.length > 0 || reviewDue.length > 0 || reviewDueProjects.length > 0;
-  const activeFilterCount = countFilterCriteria(effectiveFilterCriteria);
+  const activeFilterCount = countActiveFilterCriteria(effectiveFilterCriteria);
   const advancedFilterChips = useMemo<FocusFilterChip[]>(() => {
     if (!activeSavedFilter) return [];
     return buildAdvancedFilterCriteriaChips(effectiveFilterCriteria, {

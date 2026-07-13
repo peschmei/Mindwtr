@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { shallow, useTaskStore, TaskPriority, TimeEstimate, applyFilter, buildAdvancedFilterCriteriaChips, removeAdvancedFilterCriteriaChip, formatFocusTaskLimitText,
+import { shallow, useTaskStore, TaskPriority, TimeEstimate, applyFilter, buildAdvancedFilterCriteriaChips, criteriaFromSelections, removeAdvancedFilterCriteriaChip, selectionsFromCriteria, formatFocusTaskLimitText,
     getFocusStarBlockedText, formatTimeEstimateLabel, generateUUID, getUsedTaskTokens, getFocusSequentialFirstTaskIds, getProjectDeadlineBoosts, getTaskMetadataFilterVisibility, hasActiveFilterCriteria, markSavedFilterDeleted, normalizeFocusTaskLimit, safeParseDate, safeParseDueDate, isDueForReview, isFocusSequentialCandidate, isTaskInActiveProject, SAVED_FILTER_NO_PROJECT_ID, shouldShowTaskForStart, sortFocusNextActions, sortTasksBySavedPreference, translateWithFallback } from '@mindwtr/core';
 import type { FilterCriteria, FocusGroupBy, MultiValueFilterMatchMode, ProjectDeadlineBoost, SavedFilter, SortField, Task, TaskEnergyLevel } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
@@ -123,37 +123,6 @@ function getProjectDeadlineBoostLabel(
     return boost.isOverdue
         ? resolveText('focus.projectOverdue', 'Project overdue')
         : resolveText('focus.projectDueToday', 'Project due today');
-}
-
-function buildFocusFilterCriteria({
-    locations,
-    priorities,
-    energyLevels,
-    projects,
-    contextMatchMode,
-    timeEstimates,
-    tokens,
-}: {
-    contextMatchMode: MultiValueFilterMatchMode;
-    energyLevels: TaskEnergyLevel[];
-    locations: string[];
-    priorities: TaskPriority[];
-    projects: string[];
-    timeEstimates: TimeEstimate[];
-    tokens: string[];
-}): FilterCriteria {
-    const contexts = tokens.filter((token) => token.trim().startsWith('@'));
-    const tags = tokens.filter((token) => token.trim().startsWith('#'));
-    return {
-        ...(contexts.length > 0 ? { contexts } : {}),
-        ...(contexts.length > 1 ? { contextMatchMode } : {}),
-        ...(tags.length > 0 ? { tags } : {}),
-        ...(projects.length > 0 ? { projects } : {}),
-        ...(locations.length > 0 ? { locations } : {}),
-        ...(priorities.length > 0 ? { priority: priorities } : {}),
-        ...(energyLevels.length > 0 ? { energy: energyLevels } : {}),
-        ...(timeEstimates.length > 0 ? { timeEstimates } : {}),
-    };
 }
 
 function getSavedFilterDefaultName(chips: AgendaActiveFilterChip[], fallback: string): string {
@@ -408,7 +377,7 @@ export function AgendaView() {
     const activeSavedFilter = savedFocusFilters.find((filter) => filter.id === activeSavedFilterId) ?? null;
     const effectiveFocusSortBy = activeSavedFilter?.sortBy ?? focusSortBy;
     const effectiveNextGroupBy = normalizeAgendaGroupBy(activeSavedFilter?.groupBy ?? nextGroupBy);
-    const currentFilterCriteria = buildFocusFilterCriteria({
+    const currentFilterCriteria = criteriaFromSelections({
         tokens: selectedTokens,
         contextMatchMode,
         projects: selectedProjects,
@@ -671,23 +640,18 @@ export function AgendaView() {
         setSearchQuery('');
     };
     const applySavedFocusFilter = useCallback((filter: SavedFilter) => {
-        const criteria = filter.criteria ?? {};
-        const prioritySet = new Set<TaskPriority>(priorityOptions);
-        const energySet = new Set<TaskEnergyLevel>(energyLevelOptions);
-        const estimateSet = new Set<TimeEstimate>(timeEstimateOptions);
-        setSelectedTokens([...(criteria.contexts ?? []), ...(criteria.tags ?? [])]);
-        setSelectedProjects(criteria.projects ?? []);
-        setLocationFilter((criteria.locations ?? [])[0] ?? '');
-        setSelectedPriorities((criteria.priority ?? []).filter((priority): priority is TaskPriority => (
-            priority !== 'none' && prioritySet.has(priority)
-        )));
-        setSelectedEnergyLevels((criteria.energy ?? []).filter((energy): energy is TaskEnergyLevel => energySet.has(energy)));
-        setSelectedTimeEstimates((criteria.timeEstimates ?? []).filter((estimate): estimate is TimeEstimate => estimateSet.has(estimate)));
-        setContextMatchMode(criteria.contextMatchMode ?? 'all');
+        const selections = selectionsFromCriteria(filter.criteria);
+        setSelectedTokens(selections.tokens);
+        setSelectedProjects(selections.projects);
+        setLocationFilter(selections.locations[0] ?? '');
+        setSelectedPriorities(selections.priorities);
+        setSelectedEnergyLevels(selections.energyLevels);
+        setSelectedTimeEstimates(selections.timeEstimates);
+        setContextMatchMode(selections.contextMatchMode);
         setFocusSortBy(filter.sortBy ?? DEFAULT_FOCUS_SORT_BY);
         setActiveSavedFilterId(filter.id);
         setFiltersOpen(false);
-    }, [energyLevelOptions, priorityOptions, timeEstimateOptions]);
+    }, []);
     const handleSaveFilterConfirm = useCallback((name: string) => {
         const trimmedName = name.trim();
         if (!trimmedName || !canSaveFocusPerspective) return;
