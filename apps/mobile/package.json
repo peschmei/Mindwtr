@@ -21,6 +21,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@fugood/react-native-audio-pcm-stream": "^1.1.4",
     "@mindwtr/core": "workspace:*",
+    "@op-engineering/op-sqlite": "^17.1.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-navigation/bottom-tabs": "^7.4.0",
@@ -53,7 +54,6 @@
     "expo-share-intent": "^5.1.1",
     "expo-sharing": "^14.0.8",
     "expo-splash-screen": "~31.0.13",
-    "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
     "expo-store-review": "~9.0.9",
     "expo-symbols": "~1.0.8",
@@ -95,6 +95,9 @@
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2",
     "vitest": "^3.2.4"
+  },
+  "op-sqlite": {
+    "fts5": true
   },
   "expo": {
     "install": {

@@ -27,6 +27,7 @@ This folder contains small, focused decision documents that explain **why** we m
 - [ADR 0021: Review candidates beyond review dates](0021-review-candidates-beyond-review-dates.md)
 - [ADR 0022: Checklist decoupled from description markdown](0022-checklist-decoupled-from-description-markdown.md)
 - [ADR 0023: Unified Projects-view DndContext](0023-unified-projects-view-dnd-context.md)
+- [ADR 0024: Mobile native SQLite engine (op-sqlite)](0024-mobile-native-sqlite-engine.md)
 
 ## Template
 

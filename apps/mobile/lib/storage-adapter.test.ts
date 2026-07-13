@@ -305,18 +305,17 @@ describe('mobile storage adapter', () => {
     }
   }, 10_000);
 
-  it('runs every legacy SQLite statement outside the per-statement transaction wrapper', async () => {
-    const directStatements: Array<{ sql: string; args: unknown[] }> = [];
-    const directExec = vi.fn((queries, _readOnly, callback) => {
-      directStatements.push(queries[0]);
-      callback?.(null, [{ rows: [] }]);
+  it('runs every SQLite statement one by one on the shared op-sqlite connection', async () => {
+    const executedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const execute = vi.fn(async (sql: string, args: unknown[]) => {
+      executedStatements.push({ sql, args });
+      return { rows: [] };
     });
-    const transaction = vi.fn();
-    const db = { exec: directExec, transaction };
+    const db = { execute };
 
     const { __mobileStorageTestUtils } = await import('./storage-adapter');
     const { SQLITE_BASE_SCHEMA } = await import('@mindwtr/core');
-    const client = __mobileStorageTestUtils.createLegacyClientForTests(db);
+    const client = __mobileStorageTestUtils.createOpSqliteClientForTests(db);
     expect(client.exec).toBeDefined();
 
     await client.exec?.(SQLITE_BASE_SCHEMA);
@@ -324,8 +323,8 @@ describe('mobile storage adapter', () => {
     await client.run('INSERT INTO tasks (id) VALUES (?)', ['task-1']);
     await client.run('COMMIT');
 
-    const statements = directStatements.map((entry) => entry.sql);
-    // Connection pragmas apply for real (a transaction wrapper would no-op them)…
+    const statements = executedStatements.map((entry) => entry.sql);
+    // Connection pragmas apply for real (a wrapper transaction would no-op them)…
     expect(statements.slice(0, 3)).toEqual([
       'PRAGMA journal_mode = WAL',
       'PRAGMA foreign_keys = ON',
@@ -339,28 +338,32 @@ describe('mobile storage adapter', () => {
       'INSERT INTO tasks (id) VALUES (?)',
       'COMMIT',
     ]);
-    expect(directStatements[directStatements.length - 2]?.args).toEqual(['task-1']);
-    expect(transaction).not.toHaveBeenCalled();
+    expect(executedStatements[executedStatements.length - 2]?.args).toEqual(['task-1']);
   }, 10_000);
 
-  it('falls back to the transaction wrapper when the legacy exec API is missing', async () => {
-    const transactionStatements: string[] = [];
-    const db = {
-      transaction: vi.fn((work) => {
-        work({
-          executeSql: (sql: string, _params: unknown[], success: (_tx: unknown, result: unknown) => void) => {
-            transactionStatements.push(sql);
-            success(null, { rows: { length: 0, item: () => undefined, _array: [] } });
-          },
-        });
-      }),
-    };
+  it('maps op-sqlite rows and binds undefined params as null', async () => {
+    const executedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const execute = vi.fn(async (sql: string, args: unknown[]) => {
+      executedStatements.push({ sql, args });
+      if (sql.startsWith('SELECT')) {
+        return { rows: [{ id: 'task-1' }, { id: 'task-2' }] };
+      }
+      return { rows: [] };
+    });
+    const db = { execute };
 
     const { __mobileStorageTestUtils } = await import('./storage-adapter');
-    const client = __mobileStorageTestUtils.createLegacyClientForTests(db);
-    await client.run('SELECT 1');
+    const client = __mobileStorageTestUtils.createOpSqliteClientForTests(db);
 
-    expect(transactionStatements).toEqual(['SELECT 1']);
+    await expect(client.all('SELECT id FROM tasks')).resolves.toEqual([
+      { id: 'task-1' },
+      { id: 'task-2' },
+    ]);
+    await expect(client.get('SELECT id FROM tasks')).resolves.toEqual({ id: 'task-1' });
+    await expect(client.get('UPDATE tasks SET title = ?', ['x'])).resolves.toBeUndefined();
+
+    await client.run('INSERT INTO tasks (id, title) VALUES (?, ?)', ['task-3', undefined]);
+    expect(executedStatements[executedStatements.length - 1]?.args).toEqual(['task-3', null]);
   }, 10_000);
 
   it('ignores an unmarked JSON backup startup snapshot', async () => {

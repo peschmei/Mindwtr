@@ -41,9 +41,9 @@ const waitForQueuedSqliteWrites = async (): Promise<void> => {
 };
 
 const SQLITE_DB_NAME = 'mindwtr.db';
-const PREFER_LEGACY_SQLITE_OPEN = true;
-const sqliteSyncOpenEnv = String(process.env.EXPO_PUBLIC_SQLITE_SYNC_OPEN || '').trim().toLowerCase();
-const ENABLE_SYNC_SQLITE_OPEN = sqliteSyncOpenEnv === '1' || sqliteSyncOpenEnv === 'true';
+// expo-sqlite stored the database under <documentDirectory>/SQLite; op-sqlite must
+// open the exact same directory or existing installs would come up empty (ADR 0024).
+const SQLITE_DIRECTORY_NAME = 'SQLite';
 
 type SqliteState = {
     adapter: SqliteAdapter;
@@ -52,6 +52,7 @@ type SqliteState = {
 
 let sqliteStatePromise: Promise<SqliteState> | null = null;
 let sqliteOpenMode = 'unknown';
+let sqliteDbPath: string | null = null;
 let sqliteJournalDiagnostics: Record<string, string> | null = null;
 let preferJsonBackup = false;
 let preferJsonBackupUntil = 0;
@@ -152,57 +153,19 @@ const clearPreferJsonBackup = () => {
     didWarnPreferJsonBackup = false;
 };
 
-const createLegacyClient = (db: any): SqliteClient => {
-    const execSqlInTransaction = (sql: string, params: unknown[] = []) =>
-        new Promise<any>((resolve, reject) => {
-            db.transaction(
-                (tx: any) => {
-                    tx.executeSql(
-                        sql,
-                        params,
-                        (_: any, result: any) => resolve(result),
-                        (_: any, error: any) => {
-                            reject(error);
-                            return true;
-                        }
-                    );
-                },
-                (error: any) => reject(error)
-            );
-        });
-
-    const execSqlDirect = (sql: string, params: unknown[] = []) =>
-        new Promise<any>((resolve, reject) => {
-            try {
-                db.exec([{ sql, args: params }], false, (error: any, result: any) => {
-                    if (error) {
-                        reject(error);
-                        return;
-                    }
-                    const first = Array.isArray(result) ? result[0] : result;
-                    if (first && typeof first === 'object' && 'error' in first && first.error) {
-                        reject(first.error);
-                        return;
-                    }
-                    resolve(first);
-                });
-            } catch (error) {
-                reject(error);
-            }
-        });
-
-    // Every statement goes through the raw exec API when available. The db.transaction
-    // wrapper issues its own BEGIN/COMMIT around each statement, which both no-ops
-    // connection pragmas (journal_mode) and breaks the adapter's explicit
-    // BEGIN IMMEDIATE…COMMIT — a full save then commits (and fsyncs) per statement
-    // instead of once, which took seconds per action on-device (#766).
+const createOpSqliteClient = (db: any): SqliteClient => {
     const execSql = (sql: string, params: unknown[] = []) => {
-        if (typeof db.exec === 'function') {
-            return execSqlDirect(sql, params);
-        }
-        return execSqlInTransaction(sql, params);
+        // op-sqlite rejects undefined bindings; the adapter's row builders emit null,
+        // so mapping here only guards stray callers.
+        const args = params.map((value) => (value === undefined ? null : value));
+        return db.execute(sql, args);
     };
 
+    // op-sqlite prepares a single statement per execute call, so multi-statement
+    // schema strings are split and run one by one on the shared connection. Each
+    // statement executes directly (no wrapper transaction), so connection pragmas
+    // (journal_mode) apply for real and the adapter's explicit BEGIN IMMEDIATE…COMMIT
+    // stays intact instead of committing per statement (#766).
     const exec = async (sql: string) => {
         const statements = sql
             .split(';')
@@ -219,97 +182,78 @@ const createLegacyClient = (db: any): SqliteClient => {
         },
         all: async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) => {
             const result = await execSql(sql, params);
-            const rows = result?.rows;
-            if (!rows) return [] as T[];
-            // Raw exec results carry rows as a plain array; executeSql results wrap them.
-            if (Array.isArray(rows)) return rows as T[];
-            if (Array.isArray(rows._array)) return rows._array as T[];
-            const collected: T[] = [];
-            for (let i = 0; i < rows.length; i += 1) {
-                collected.push(rows.item(i));
-            }
-            return collected;
+            return (result?.rows ?? []) as T[];
         },
         get: async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) => {
             const result = await execSql(sql, params);
             const rows = result?.rows;
             if (!rows || rows.length === 0) return undefined;
-            if (Array.isArray(rows)) return rows[0] as T;
-            if (Array.isArray(rows._array)) return rows._array[0] as T;
-            return rows.item(0) as T;
+            return rows[0] as T;
         },
         exec,
     };
 };
 
+const stripFileUriScheme = (uri: string) => uri.replace(/^file:\/\//, '');
+
+const resolveSqliteDirectoryUri = (): string | null => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const FileSystem = require('expo-file-system');
+        const documentUri: string | undefined = FileSystem?.Paths?.document?.uri;
+        if (documentUri) {
+            return `${documentUri.replace(/\/+$/, '')}/${SQLITE_DIRECTORY_NAME}`;
+        }
+    } catch {
+        // fall through to the legacy API
+    }
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const LegacyFileSystem = require('expo-file-system/legacy');
+        const documentDirectory: string | null | undefined = LegacyFileSystem?.documentDirectory;
+        if (documentDirectory) {
+            return `${documentDirectory.replace(/\/+$/, '')}/${SQLITE_DIRECTORY_NAME}`;
+        }
+    } catch {
+        // resolved below as an error
+    }
+    return null;
+};
+
+// Fresh installs have no <documentDirectory>/SQLite yet; sqlite3_open does not
+// create missing parent directories.
+const ensureSqliteDirectoryExists = (directoryUri: string): void => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const FileSystem = require('expo-file-system');
+        if (typeof FileSystem?.Directory === 'function') {
+            const directory = new FileSystem.Directory(directoryUri);
+            if (!directory.exists) {
+                directory.create({ intermediates: true });
+            }
+        }
+    } catch (error) {
+        logStorageWarn('[Storage] Failed to ensure SQLite directory exists', error, { directoryUri });
+    }
+};
+
 const createSqliteClient = async (): Promise<SqliteClient> => {
     markStartupPhase('mobile.storage.sqlite_client.create:start');
     // Use require to avoid async bundle loading in dev client.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const SQLite = require('expo-sqlite');
-    if (PREFER_LEGACY_SQLITE_OPEN && typeof (SQLite as any).openDatabase === 'function') {
-        const legacyDb = (SQLite as any).openDatabase(SQLITE_DB_NAME);
-        sqliteOpenMode = 'legacy_preferred';
-        markStartupPhase('mobile.storage.sqlite_client.create:end', { mode: 'legacy_preferred' });
-        return createLegacyClient(legacyDb);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { open } = require('@op-engineering/op-sqlite');
+    const directoryUri = resolveSqliteDirectoryUri();
+    if (!directoryUri) {
+        // Opening at op-sqlite's default location would look like an empty database
+        // to existing installs; failing here routes callers to the JSON backup instead.
+        throw new Error('Could not resolve the SQLite directory');
     }
-    const openDatabaseSync = (SQLite as any).openDatabaseSync as ((name: string) => any) | undefined;
-    if (ENABLE_SYNC_SQLITE_OPEN && openDatabaseSync) {
-        try {
-            const db = openDatabaseSync(SQLITE_DB_NAME);
-            if (db?.runAsync && db?.getAllAsync && db?.getFirstAsync && db?.execAsync) {
-                sqliteOpenMode = 'sync';
-                markStartupPhase('mobile.storage.sqlite_client.create:end', { mode: 'sync' });
-                return {
-                    run: async (sql: string, params: unknown[] = []) => {
-                        await db.runAsync(sql, params);
-                    },
-                    all: async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) =>
-                        db.getAllAsync(sql, params) as Promise<T[]>,
-                    get: async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) =>
-                        (await db.getFirstAsync(sql, params)) as T | undefined,
-                    exec: async (sql: string) => {
-                        await db.execAsync(sql);
-                    },
-                };
-            }
-        } catch (error) {
-            if (__DEV__) {
-                logStorageWarn('[Storage] Sync SQLite open failed; falling back', error);
-            }
-        }
-    }
-    const openDatabaseAsync = (SQLite as any).openDatabaseAsync as ((name: string) => Promise<any>) | undefined;
-    if (openDatabaseAsync) {
-        try {
-            const db = await openDatabaseAsync(SQLITE_DB_NAME);
-            if (db?.runAsync && db?.getAllAsync && db?.getFirstAsync && db?.execAsync) {
-                sqliteOpenMode = 'async';
-                markStartupPhase('mobile.storage.sqlite_client.create:end', { mode: 'async' });
-                return {
-                    run: async (sql: string, params: unknown[] = []) => {
-                        await db.runAsync(sql, params);
-                    },
-                    all: async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) =>
-                        db.getAllAsync(sql, params) as Promise<T[]>,
-                    get: async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) =>
-                        (await db.getFirstAsync(sql, params)) as T | undefined,
-                    exec: async (sql: string) => {
-                        await db.execAsync(sql);
-                    },
-                };
-            }
-        } catch (error) {
-            if (__DEV__) {
-                logStorageWarn('[Storage] Async SQLite open failed, falling back to legacy API', error);
-            }
-        }
-    }
-
-    const legacyDb = (SQLite as any).openDatabase(SQLITE_DB_NAME);
-    sqliteOpenMode = 'legacy';
-    markStartupPhase('mobile.storage.sqlite_client.create:end', { mode: 'legacy' });
-    return createLegacyClient(legacyDb);
+    ensureSqliteDirectoryExists(directoryUri);
+    const db = open({ name: SQLITE_DB_NAME, location: stripFileUriScheme(directoryUri) });
+    sqliteDbPath = typeof db.getDbPath === 'function' ? String(db.getDbPath()) : null;
+    sqliteOpenMode = 'op-sqlite';
+    markStartupPhase('mobile.storage.sqlite_client.create:end', { mode: 'op-sqlite' });
+    return createOpSqliteClient(db);
 };
 
 const sqliteHasAnyData = async (client: SqliteClient): Promise<boolean> => {
@@ -409,22 +353,9 @@ export const getMobileStartupSnapshotFromBackup = async (): Promise<AppData | nu
 
 const initSqliteState = async (): Promise<SqliteState> => {
     markStartupPhase('mobile.storage.sqlite_init.start');
-    let client = await measureStartupPhase('mobile.storage.sqlite_init.create_client', async () => createSqliteClient());
-    let adapter = new SqliteAdapter(client);
-    try {
-        await measureStartupPhase('mobile.storage.sqlite_init.ensure_schema', async () => adapter.ensureSchema());
-    } catch (error) {
-        if (__DEV__) {
-            logStorageWarn('[Storage] SQLite schema init failed, retrying with legacy API', error);
-        }
-        // Use require to avoid async bundle loading in dev client.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const SQLite = require('expo-sqlite');
-        const legacyDb = (SQLite as any).openDatabase(SQLITE_DB_NAME);
-        client = createLegacyClient(legacyDb);
-        adapter = new SqliteAdapter(client);
-        await measureStartupPhase('mobile.storage.sqlite_init.ensure_schema_legacy_retry', async () => adapter.ensureSchema());
-    }
+    const client = await measureStartupPhase('mobile.storage.sqlite_init.create_client', async () => createSqliteClient());
+    const adapter = new SqliteAdapter(client);
+    await measureStartupPhase('mobile.storage.sqlite_init.ensure_schema', async () => adapter.ensureSchema());
     // Diagnostic: confirm whether WAL actually took effect on this device. Init runs
     // during the getData that loads the settings which enable diagnostic logging, so a
     // log line written here is dropped — capture the values and attach them to the
@@ -436,6 +367,7 @@ const initSqliteState = async (): Promise<SqliteState> => {
             journalMode: String(journalRow?.journal_mode ?? 'unknown'),
             busyTimeoutMs: String(busyRow?.timeout ?? 'unknown'),
             openMode: sqliteOpenMode,
+            ...(sqliteDbPath ? { dbPath: sqliteDbPath } : {}),
         };
         logStorageInfo('[Storage] SQLite journal mode ready', sqliteJournalDiagnostics);
     } catch (error) {
@@ -829,7 +761,7 @@ const createStorage = (): StorageAdapter => {
 export const mobileStorage = createStorage();
 
 export const __mobileStorageTestUtils = {
-    createLegacyClientForTests: createLegacyClient,
+    createOpSqliteClientForTests: createOpSqliteClient,
     reset: () => {
         saveQueue = Promise.resolve();
         sqliteStatePromise = null;
