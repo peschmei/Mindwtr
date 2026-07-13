@@ -8,6 +8,8 @@ import {
     type ClarifyResponse,
     type Project,
     type Section,
+    type TaskDraft,
+    type TaskDraftSetter,
     type TaskEditorFieldId,
     type TaskEditorSectionId,
     type TimeEstimate,
@@ -22,12 +24,8 @@ import { FocusStarIcon } from '../FocusStarIcon';
 
 interface TaskItemEditorProps {
     t: (key: string) => string;
-    editTitle: string;
-    setEditTitle: (value: string) => void;
-    editContexts: string;
-    setEditContexts: (value: string) => void;
-    editTags: string;
-    setEditTags: (value: string) => void;
+    draft: TaskDraft;
+    setField: TaskDraftSetter;
     autoFocusTitle?: boolean;
     resetCopilotDraft: () => void;
     aiEnabled: boolean;
@@ -52,12 +50,6 @@ interface TaskItemEditorProps {
     projects: Project[];
     sections: Section[];
     areas: Area[];
-    editProjectId: string;
-    setEditProjectId: (value: string) => void;
-    editSectionId: string;
-    setEditSectionId: (value: string) => void;
-    editAreaId: string;
-    setEditAreaId: (value: string) => void;
     onCreateProject: (title: string, areaId?: string) => Promise<string | null>;
     onCreateArea?: (name: string) => Promise<string | null>;
     onCreateSection?: (title: string) => Promise<string | null>;
@@ -112,12 +104,8 @@ function ensureTokenPrefix(value: string, prefix: '@' | '#'): string {
 
 export function TaskItemEditor({
     t,
-    editTitle,
-    setEditTitle,
-    editContexts,
-    setEditContexts,
-    editTags,
-    setEditTags,
+    draft,
+    setField,
     autoFocusTitle = false,
     resetCopilotDraft,
     aiEnabled,
@@ -142,12 +130,6 @@ export function TaskItemEditor({
     projects,
     sections,
     areas,
-    editProjectId,
-    setEditProjectId,
-    editSectionId,
-    setEditSectionId,
-    editAreaId,
-    setEditAreaId,
     onCreateProject,
     onCreateArea,
     onCreateSection,
@@ -172,6 +154,22 @@ export function TaskItemEditor({
     onCancel,
     onSubmit,
 }: TaskItemEditorProps) {
+    // Draft values and setField bindings, under the names the form below was
+    // written against.
+    const {
+        title: editTitle,
+        contexts: editContexts,
+        tags: editTags,
+        projectId: editProjectId,
+        sectionId: editSectionId,
+        areaId: editAreaId,
+    } = draft;
+    const setEditTitle = (value: string) => setField('title', value);
+    const setEditContexts = (value: string) => setField('contexts', value);
+    const setEditTags = (value: string) => setField('tags', value);
+    const setEditProjectId = (value: string) => setField('projectId', value);
+    const setEditSectionId = (value: string) => setField('sectionId', value);
+    const setEditAreaId = (value: string) => setField('areaId', value);
     const titleDirection = resolveAutoTextDirection(editTitle, language);
     const aiAssistantLabel = t('taskEdit.aiAssistant');
     const aiAssistantAriaLabel = aiAssistantLabel === 'taskEdit.aiAssistant' ? 'AI assistant' : aiAssistantLabel;

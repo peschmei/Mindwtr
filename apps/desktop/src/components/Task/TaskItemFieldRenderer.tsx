@@ -38,6 +38,8 @@ import {
     type RecurrenceRule,
     type RecurrenceStrategy,
     type Task,
+    type TaskDraft,
+    type TaskDraftSetter,
     type TaskEditorFieldId,
     type TaskEnergyLevel,
     type TaskPriority,
@@ -577,130 +579,149 @@ export type MonthlyRecurrenceInfo = {
     interval: number;
 };
 
-export type TaskItemFieldRendererData = {
+/** Locale- and settings-derived facts the field editors render against. */
+export type TaskEditorEnv = {
     t: (key: string) => string;
-    task: Task;
-    taskId: string;
-    showDescriptionPreview: boolean;
-    editDescription: string;
-    attachmentError: string | null;
-    visibleEditAttachments: Attachment[];
-    editStartTime: string;
-    editRelativeStartOffset: Task['relativeStartOffset'];
-    editDueDate: string;
-    editReviewAt: string;
-    editRepeatReminderMinutes: number | undefined;
-    editStatus: TaskStatus;
-    editPriority: TaskPriority | '';
-    editEnergyLevel: NonNullable<TaskEnergyLevel> | '';
-    editAssignedTo: string;
-    editRecurrence: RecurrenceRule | '';
-    editRecurrenceStrategy: RecurrenceStrategy;
-    editRecurrenceRRule: string;
-    editShowFutureRecurrence: boolean;
-    monthlyRecurrence: MonthlyRecurrenceInfo;
-    editTimeEstimate: TimeEstimate | '';
-    editTimeSpentMinutes: number | undefined;
-    timeSpentEnabled: boolean;
-    editContexts: string;
-    editTags: string;
-    editLocation: string;
     language: string;
     dateFormatSetting?: string | null;
     nativeDateInputLocale: string;
     defaultScheduleTime: string;
+    timeSpentEnabled: boolean;
+    showObsidianNoteAttachment: boolean;
+};
+
+/** Token/person option lists (lazily loaded by useTaskItemProjectContext). */
+export type TaskEditorOptionLists = {
     allContextOptions: string[];
     allTagOptions: string[];
     popularContextOptions: string[];
     popularTagOptions: string[];
     assignedToOptions: string[];
-    showObsidianNoteAttachment: boolean;
 };
 
-export type TaskItemFieldRendererHandlers = {
-    toggleDescriptionPreview: () => void;
-    editDescriptionFromPreview: () => void;
-    setEditDescription: (value: string) => void;
+/** The slice of useTaskItemAttachments the attachments field consumes. */
+export type TaskEditorAttachments = {
+    attachmentError: string | null;
+    visibleEditAttachments: Attachment[];
     addFileAttachment: () => void;
     addLinkAttachment: () => void;
     addObsidianNoteAttachment: () => void;
     editLinkAttachment: (attachment: Attachment) => void;
     openAttachment: (attachment: Attachment) => void;
     removeAttachment: (id: string) => void;
-    setEditStartTime: (value: string) => void;
-    setEditRelativeStartOffset: (value: Task['relativeStartOffset']) => void;
-    setEditDueDate: (value: string) => void;
-    setEditReviewAt: (value: string) => void;
-    setEditRepeatReminderMinutes: (value: number | undefined) => void;
-    setEditStatus: (value: TaskStatus) => void;
-    setEditPriority: (value: TaskPriority | '') => void;
-    setEditEnergyLevel: (value: NonNullable<TaskEnergyLevel> | '') => void;
-    setEditAssignedTo: (value: string) => void;
-    createAssignedToPerson: (name: string) => void | Promise<void>;
-    setEditRecurrence: (value: RecurrenceRule | '') => void;
-    setEditRecurrenceStrategy: (value: RecurrenceStrategy) => void;
-    setEditRecurrenceRRule: (value: string) => void;
-    setEditShowFutureRecurrence: (value: boolean) => void;
+};
+
+export type TaskEditorDescriptionPreview = {
+    visible: boolean;
+    toggle: () => void;
+    editSource: () => void;
+};
+
+export type TaskEditorActions = {
     openCustomRecurrence: () => void;
-    setEditTimeEstimate: (value: TimeEstimate | '') => void;
-    setEditTimeSpentMinutes: (value: number | undefined) => void;
-    setEditContexts: (value: string) => void;
-    setEditTags: (value: string) => void;
-    setEditLocation: (value: string) => void;
+    createAssignedToPerson: (name: string) => void | Promise<void>;
     updateTask: (taskId: string, updates: Partial<Task>) => void;
     resetTaskChecklist: (taskId: string) => void;
 };
 
 type TaskItemFieldRendererProps = {
     fieldId: TaskEditorFieldId;
-    data: TaskItemFieldRendererData;
-    handlers: TaskItemFieldRendererHandlers;
+    task: Task;
+    draft: TaskDraft;
+    setField: TaskDraftSetter;
+    monthlyRecurrence: MonthlyRecurrenceInfo;
+    descriptionPreview: TaskEditorDescriptionPreview;
+    env: TaskEditorEnv;
+    options: TaskEditorOptionLists;
+    attachments: TaskEditorAttachments;
+    actions: TaskEditorActions;
 };
 
 export function TaskItemFieldRenderer({
     fieldId,
-    data,
-    handlers,
+    task,
+    draft,
+    setField,
+    monthlyRecurrence,
+    descriptionPreview,
+    env,
+    options,
+    attachments,
+    actions,
 }: TaskItemFieldRendererProps) {
     const {
         t,
-        task,
-        taskId,
-        showDescriptionPreview,
-        editDescription,
-        attachmentError,
-        visibleEditAttachments,
-        editStartTime,
-        editRelativeStartOffset,
-        editDueDate,
-        editReviewAt,
-        editRepeatReminderMinutes,
-        editStatus,
-        editPriority,
-        editEnergyLevel,
-        editAssignedTo,
-        editRecurrence,
-        editRecurrenceStrategy,
-        editRecurrenceRRule,
-        editShowFutureRecurrence,
-        monthlyRecurrence,
-        editTimeEstimate,
-        editTimeSpentMinutes,
-        timeSpentEnabled,
-        editContexts,
-        editTags,
-        editLocation,
         language,
         dateFormatSetting,
         nativeDateInputLocale,
         defaultScheduleTime,
+        timeSpentEnabled,
+        showObsidianNoteAttachment,
+    } = env;
+    const {
         allContextOptions,
         allTagOptions,
         popularContextOptions,
         popularTagOptions,
         assignedToOptions,
-        showObsidianNoteAttachment,
-    } = data;
+    } = options;
+    const {
+        attachmentError,
+        visibleEditAttachments,
+        addFileAttachment,
+        addLinkAttachment,
+        addObsidianNoteAttachment,
+        editLinkAttachment,
+        openAttachment,
+        removeAttachment,
+    } = attachments;
+    const { openCustomRecurrence, createAssignedToPerson, updateTask, resetTaskChecklist } = actions;
+    const taskId = task.id;
+    const showDescriptionPreview = descriptionPreview.visible;
+    const toggleDescriptionPreview = descriptionPreview.toggle;
+    const editDescriptionFromPreview = descriptionPreview.editSource;
+    // Draft values and their setField bindings, under the names the field
+    // editors below were written against.
+    const {
+        description: editDescription,
+        startTime: editStartTime,
+        relativeStartOffset: editRelativeStartOffset,
+        dueDate: editDueDate,
+        reviewAt: editReviewAt,
+        repeatReminderMinutes: editRepeatReminderMinutes,
+        status: editStatus,
+        priority: editPriority,
+        energyLevel: editEnergyLevel,
+        assignedTo: editAssignedTo,
+        recurrence: editRecurrence,
+        recurrenceStrategy: editRecurrenceStrategy,
+        recurrenceRRule: editRecurrenceRRule,
+        showFutureRecurrence: editShowFutureRecurrence,
+        timeEstimate: editTimeEstimate,
+        timeSpentMinutes: editTimeSpentMinutes,
+        contexts: editContexts,
+        tags: editTags,
+        location: editLocation,
+    } = draft;
+    const setEditDescription = (value: string) => setField('description', value);
+    const setEditStartTime = (value: string) => setField('startTime', value);
+    const setEditRelativeStartOffset = (value: Task['relativeStartOffset']) => setField('relativeStartOffset', value);
+    const setEditDueDate = (value: string) => setField('dueDate', value);
+    const setEditReviewAt = (value: string) => setField('reviewAt', value);
+    const setEditRepeatReminderMinutes = (value: number | undefined) => setField('repeatReminderMinutes', value);
+    const setEditStatus = (value: TaskStatus) => setField('status', value);
+    const setEditPriority = (value: TaskPriority | '') => setField('priority', value);
+    const setEditEnergyLevel = (value: NonNullable<TaskEnergyLevel> | '') => setField('energyLevel', value);
+    const setEditAssignedTo = (value: string) => setField('assignedTo', value);
+    const setEditRecurrence = (value: RecurrenceRule | '') => setField('recurrence', value);
+    const setEditRecurrenceStrategy = (value: RecurrenceStrategy) => setField('recurrenceStrategy', value);
+    const setEditRecurrenceRRule = (value: string) => setField('recurrenceRRule', value);
+    const setEditShowFutureRecurrence = (value: boolean) => setField('showFutureRecurrence', value);
+    const setEditTimeEstimate = (value: TimeEstimate | '') => setField('timeEstimate', value);
+    const setEditTimeSpentMinutes = (value: number | undefined) => setField('timeSpentMinutes', value);
+    const setEditContexts = (value: string) => setField('contexts', value);
+    const setEditTags = (value: string) => setField('tags', value);
+    const setEditLocation = (value: string) => setField('location', value);
 
     const markdownEditorAssist = useTaskStore((state) => isMarkdownEditorAssistEnabled(state.settings));
 
@@ -752,39 +773,6 @@ export function TaskItemFieldRenderer({
         setDescriptionUndoDepth(0);
         setDescriptionAudioError(null);
     }, [taskId]);
-    const {
-        toggleDescriptionPreview,
-        editDescriptionFromPreview,
-        setEditDescription,
-        addFileAttachment,
-        addLinkAttachment,
-        addObsidianNoteAttachment,
-        editLinkAttachment,
-        openAttachment,
-        removeAttachment,
-        setEditStartTime,
-        setEditRelativeStartOffset,
-        setEditDueDate,
-        setEditReviewAt,
-        setEditRepeatReminderMinutes,
-        setEditStatus,
-        setEditPriority,
-        setEditEnergyLevel,
-        setEditAssignedTo,
-        createAssignedToPerson,
-        setEditRecurrence,
-        setEditRecurrenceStrategy,
-        setEditRecurrenceRRule,
-        setEditShowFutureRecurrence,
-        openCustomRecurrence,
-        setEditTimeEstimate,
-        setEditTimeSpentMinutes,
-        setEditContexts,
-        setEditTags,
-        setEditLocation,
-        updateTask,
-        resetTaskChecklist,
-    } = handlers;
     const parsedRecurrenceRRule = parseRRuleString(editRecurrenceRRule);
     const recurrenceEndMode: 'never' | 'until' | 'count' = parsedRecurrenceRRule.count
         ? 'count'

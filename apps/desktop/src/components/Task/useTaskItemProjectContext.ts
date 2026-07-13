@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Project, Section, Task, Area } from '@mindwtr/core';
+import type { Project, Section, Task, TaskDraftSetter, Area } from '@mindwtr/core';
 import { getFrequentTaskTokens, getPersonOptionNames, getUsedTaskTokens, useTaskStore } from '@mindwtr/core';
 
 type UseTaskItemProjectContextParams = {
@@ -11,7 +11,7 @@ type UseTaskItemProjectContextParams = {
     isEditing: boolean;
     loadTokenOptions?: boolean;
     editProjectId: string;
-    setEditAreaId: (value: string) => void;
+    setField: TaskDraftSetter;
 };
 
 const normalizeTokenOption = (token: string, prefix: '@' | '#'): string => {
@@ -44,7 +44,7 @@ export function useTaskItemProjectContext({
     isEditing,
     loadTokenOptions = isEditing,
     editProjectId,
-    setEditAreaId,
+    setField,
 }: UseTaskItemProjectContextParams) {
     const sectionsByProject = useMemo(() => {
         const map = new Map<string, Section[]>();
@@ -78,7 +78,7 @@ export function useTaskItemProjectContext({
         const { tasks: storeTasks, projects: storeProjects, people: storePeople } = useTaskStore.getState();
         if (isEditing) {
             if (editProjectId) {
-                setEditAreaId('');
+                setField('areaId', '');
             }
             const projectId = editProjectId || task.projectId;
             const activeProject = project || (projectId ? storeProjects.find((item) => item.id === projectId) : undefined);
@@ -119,7 +119,7 @@ export function useTaskItemProjectContext({
         setAllContexts(sortTokenOptions(allContextOptions));
         setPopularContextOptions(frequentContextOptions);
         setAssignedToOptions(getPersonOptionNames(storePeople, storeTasks));
-    }, [editProjectId, isEditing, loadTokenOptions, project, setEditAreaId, task.id, task.projectId]);
+    }, [editProjectId, isEditing, loadTokenOptions, project, setField, task.id, task.projectId]);
 
     return {
         sectionsByProject,

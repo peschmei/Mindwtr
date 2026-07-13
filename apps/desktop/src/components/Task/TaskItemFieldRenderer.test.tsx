@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
-import type { Task } from '@mindwtr/core';
+import { createTaskDraft, setTaskDraftField, type Task, type TaskDraft } from '@mindwtr/core';
 
 import {
     TaskItemFieldRenderer,
-    type TaskItemFieldRendererData,
-    type TaskItemFieldRendererHandlers,
+    type TaskEditorEnv,
+    type TaskEditorOptionLists,
 } from './TaskItemFieldRenderer';
 import { LanguageProvider } from '../../contexts/language-context';
 
@@ -110,94 +110,98 @@ const t = (key: string) => {
     return labels[key] ?? key;
 };
 
-const createData = (overrides: Partial<TaskItemFieldRendererData> = {}): TaskItemFieldRendererData => ({
+const baseEnv: TaskEditorEnv = {
     t,
-    task: baseTask,
-    taskId: baseTask.id,
-    showDescriptionPreview: false,
-    editDescription: '',
-    attachmentError: null,
-    visibleEditAttachments: [],
-    editStartTime: '',
-    editRelativeStartOffset: undefined,
-    editDueDate: '',
-    editReviewAt: '',
-    editRepeatReminderMinutes: undefined,
-    editStatus: 'inbox',
-    editPriority: '',
-    editEnergyLevel: '',
-    editAssignedTo: '',
-    editRecurrence: '',
-    editRecurrenceStrategy: 'strict',
-    editRecurrenceRRule: '',
-    editShowFutureRecurrence: false,
-    monthlyRecurrence: { pattern: 'date', interval: 1 },
-    editTimeEstimate: '',
-    editTimeSpentMinutes: undefined,
-    timeSpentEnabled: true,
-    editContexts: '',
-    editTags: '',
-    editLocation: '',
     language: 'en',
     dateFormatSetting: 'system',
     nativeDateInputLocale: 'en-US',
     defaultScheduleTime: '',
+    timeSpentEnabled: true,
+    showObsidianNoteAttachment: true,
+};
+
+const baseOptions: TaskEditorOptionLists = {
     allContextOptions: [],
     allTagOptions: [],
     popularContextOptions: [],
     popularTagOptions: [],
     assignedToOptions: [],
-    showObsidianNoteAttachment: true,
-    ...overrides,
-});
+};
 
-const createHandlers = (): TaskItemFieldRendererHandlers => ({
-    toggleDescriptionPreview: vi.fn(),
-    editDescriptionFromPreview: vi.fn(),
-    setEditDescription: vi.fn(),
-    addFileAttachment: vi.fn(),
-    addLinkAttachment: vi.fn(),
-    addObsidianNoteAttachment: vi.fn(),
-    editLinkAttachment: vi.fn(),
-    openAttachment: vi.fn(),
-    removeAttachment: vi.fn(),
-    setEditStartTime: vi.fn(),
-    setEditRelativeStartOffset: vi.fn(),
-    setEditDueDate: vi.fn(),
-    setEditReviewAt: vi.fn(),
-    setEditRepeatReminderMinutes: vi.fn(),
-    setEditStatus: vi.fn(),
-    setEditPriority: vi.fn(),
-    setEditEnergyLevel: vi.fn(),
-    setEditAssignedTo: vi.fn(),
-    createAssignedToPerson: vi.fn(),
-    setEditRecurrence: vi.fn(),
-    setEditRecurrenceStrategy: vi.fn(),
-    setEditRecurrenceRRule: vi.fn(),
-    setEditShowFutureRecurrence: vi.fn(),
-    openCustomRecurrence: vi.fn(),
-    setEditTimeEstimate: vi.fn(),
-    setEditTimeSpentMinutes: vi.fn(),
-    setEditContexts: vi.fn(),
-    setEditTags: vi.fn(),
-    setEditLocation: vi.fn(),
-    updateTask: vi.fn(),
-    resetTaskChecklist: vi.fn(),
-});
+type RendererProps = Parameters<typeof TaskItemFieldRenderer>[0];
 
-function DescriptionHarness() {
-    const [editDescription, setEditDescription] = useState('');
+type FixtureOverrides = {
+    task?: Task;
+    draft?: Partial<TaskDraft>;
+    env?: Partial<TaskEditorEnv>;
+    options?: Partial<TaskEditorOptionLists>;
+    showDescriptionPreview?: boolean;
+    descriptionPreview?: Partial<RendererProps['descriptionPreview']>;
+    attachments?: Partial<RendererProps['attachments']>;
+    actions?: Partial<RendererProps['actions']>;
+    setField?: RendererProps['setField'];
+};
+
+const createProps = (overrides: FixtureOverrides = {}): Omit<RendererProps, 'fieldId'> => {
+    const task = overrides.task ?? baseTask;
+    return {
+        task,
+        draft: { ...createTaskDraft(task), ...overrides.draft },
+        setField: overrides.setField ?? vi.fn(),
+        monthlyRecurrence: { pattern: 'date', interval: 1 },
+        descriptionPreview: {
+            visible: overrides.showDescriptionPreview ?? false,
+            toggle: vi.fn(),
+            editSource: vi.fn(),
+            ...overrides.descriptionPreview,
+        },
+        env: { ...baseEnv, ...overrides.env },
+        options: { ...baseOptions, ...overrides.options },
+        attachments: {
+            attachmentError: null,
+            visibleEditAttachments: [],
+            addFileAttachment: vi.fn(),
+            addLinkAttachment: vi.fn(),
+            addObsidianNoteAttachment: vi.fn(),
+            editLinkAttachment: vi.fn(),
+            openAttachment: vi.fn(),
+            removeAttachment: vi.fn(),
+            ...overrides.attachments,
+        },
+        actions: {
+            openCustomRecurrence: vi.fn(),
+            createAssignedToPerson: vi.fn(),
+            updateTask: vi.fn(),
+            resetTaskChecklist: vi.fn(),
+            ...overrides.actions,
+        },
+    };
+};
+
+/** Field harness with a live draft: setField writes through the core reducer. */
+function DraftFieldHarness({
+    fieldId,
+    initialDraft = {},
+    options = {},
+}: {
+    fieldId: RendererProps['fieldId'];
+    initialDraft?: Partial<TaskDraft>;
+    options?: Partial<TaskEditorOptionLists>;
+}) {
+    const [draft, setDraft] = useState<TaskDraft>(() => ({ ...createTaskDraft(baseTask), ...initialDraft }));
 
     return (
         <TaskItemFieldRenderer
-            fieldId="description"
-            data={createData({ editDescription })}
-            handlers={{
-                ...createHandlers(),
-                setEditDescription,
-            }}
+            fieldId={fieldId}
+            {...createProps({ options })}
+            draft={draft}
+            setField={(field, value) => setDraft((current) => setTaskDraftField(current, field, value))}
         />
     );
+}
+
+function DescriptionHarness() {
+    return <DraftFieldHarness fieldId="description" />;
 }
 
 function DescriptionPreviewHarness() {
@@ -206,14 +210,13 @@ function DescriptionPreviewHarness() {
     return (
         <TaskItemFieldRenderer
             fieldId="description"
-            data={createData({
+            {...createProps({
+                draft: { description: '**Project notes**' },
                 showDescriptionPreview,
-                editDescription: '**Project notes**',
+                descriptionPreview: {
+                    editSource: () => setShowDescriptionPreview(false),
+                },
             })}
-            handlers={{
-                ...createHandlers(),
-                editDescriptionFromPreview: () => setShowDescriptionPreview(false),
-            }}
         />
     );
 }
@@ -227,39 +230,20 @@ function ContextAutocompleteHarness({
     allContextOptions?: string[];
     popularContextOptions?: string[];
 } = {}) {
-    const [editContexts, setEditContexts] = useState(initialValue);
-
     return (
-        <TaskItemFieldRenderer
+        <DraftFieldHarness
             fieldId="contexts"
-            data={createData({
-                editContexts,
-                allContextOptions,
-                popularContextOptions,
-            })}
-            handlers={{
-                ...createHandlers(),
-                setEditContexts,
-            }}
+            initialDraft={{ contexts: initialValue }}
+            options={{ allContextOptions, popularContextOptions }}
         />
     );
 }
 
 function TagAutocompleteHarness() {
-    const [editTags, setEditTags] = useState('');
-
     return (
-        <TaskItemFieldRenderer
+        <DraftFieldHarness
             fieldId="tags"
-            data={createData({
-                editTags,
-                allTagOptions: ['#music', '#mindwtr'],
-                popularTagOptions: [],
-            })}
-            handlers={{
-                ...createHandlers(),
-                setEditTags,
-            }}
+            options={{ allTagOptions: ['#music', '#mindwtr'], popularTagOptions: [] }}
         />
     );
 }
@@ -270,19 +254,10 @@ const selectTextareaRange = (textarea: HTMLTextAreaElement, start: number, end: 
 };
 
 function AssignedToAutocompleteHarness() {
-    const [editAssignedTo, setEditAssignedTo] = useState('');
-
     return (
-        <TaskItemFieldRenderer
+        <DraftFieldHarness
             fieldId="assignedTo"
-            data={createData({
-                editAssignedTo,
-                assignedToOptions: ['Alex', 'Jordan'],
-            })}
-            handlers={{
-                ...createHandlers(),
-                setEditAssignedTo,
-            }}
+            options={{ assignedToOptions: ['Alex', 'Jordan'] }}
         />
     );
 }
@@ -293,13 +268,12 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('edits the location field through the configurable renderer', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByLabelText } = render(
             <TaskItemFieldRenderer
                 fieldId="location"
-                data={createData({ editLocation: 'Office' })}
-                handlers={handlers}
+                {...createProps({ draft: { location: 'Office' }, setField })}
             />
         );
 
@@ -308,7 +282,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.change(input, { target: { value: 'Home' } });
 
-        expect(handlers.setEditLocation).toHaveBeenCalledWith('Home');
+        expect(setField).toHaveBeenCalledWith('location', 'Home');
     });
 
     it.each([
@@ -323,8 +297,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const { getByText } = render(
             <TaskItemFieldRenderer
                 fieldId={fieldId}
-                data={createData()}
-                handlers={createHandlers()}
+                {...createProps()}
             />
         );
 
@@ -333,16 +306,17 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('shows a date-coherence note on conflicting start and due date fields', () => {
-        const data = createData({
-            editStartTime: '2026-04-25',
-            editDueDate: '2026-04-24',
+        const props = createProps({
+            draft: {
+                startTime: '2026-04-25',
+                dueDate: '2026-04-24',
+            },
         });
 
         const { getByText, rerender } = render(
             <TaskItemFieldRenderer
                 fieldId="startTime"
-                data={data}
-                handlers={createHandlers()}
+                {...props}
             />
         );
 
@@ -351,8 +325,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         rerender(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={data}
-                handlers={createHandlers()}
+                {...props}
             />
         );
 
@@ -362,46 +335,42 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     it.each([
         {
             fieldId: 'startTime' as const,
-            editValue: { editStartTime: '2026-04-18T09:30' },
+            draftValue: { startTime: '2026-04-18T09:30' },
             clearLabel: 'Clear Start Date',
-            handlerKey: 'setEditStartTime' as const,
+            draftKey: 'startTime' as const,
         },
         {
             fieldId: 'dueDate' as const,
-            editValue: { editDueDate: '2026-04-19T11:45' },
+            draftValue: { dueDate: '2026-04-19T11:45' },
             clearLabel: 'Clear Due Date',
-            handlerKey: 'setEditDueDate' as const,
+            draftKey: 'dueDate' as const,
         },
         {
             fieldId: 'reviewAt' as const,
-            editValue: { editReviewAt: '2026-04-20T14:15' },
+            draftValue: { reviewAt: '2026-04-20T14:15' },
             clearLabel: 'Clear Review Date',
-            handlerKey: 'setEditReviewAt' as const,
+            draftKey: 'reviewAt' as const,
         },
-    ])('clears $fieldId when the clear button is clicked', ({ fieldId, editValue, clearLabel, handlerKey }) => {
-        const handlers = createHandlers();
+    ])('clears $fieldId when the clear button is clicked', ({ fieldId, draftValue, clearLabel, draftKey }) => {
+        const setField = vi.fn();
 
         const { getByRole } = render(
             <TaskItemFieldRenderer
                 fieldId={fieldId}
-                data={createData(editValue)}
-                handlers={handlers}
+                {...createProps({ draft: draftValue, setField })}
             />
         );
 
         fireEvent.click(getByRole('button', { name: clearLabel }));
 
-        expect(handlers[handlerKey]).toHaveBeenCalledWith('');
+        expect(setField).toHaveBeenCalledWith(draftKey, '');
     });
 
     it('hides the clear button when the date field is empty', () => {
-        const handlers = createHandlers();
-
         const { queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData()}
-                handlers={handlers}
+                {...createProps()}
             />
         );
 
@@ -411,49 +380,45 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     it.each([
         {
             fieldId: 'startTime' as const,
-            editValue: { editStartTime: '2026-04-18T09:30' },
+            draftValue: { startTime: '2026-04-18T09:30' },
             dateOnlyLabel: 'Date only: Start Date',
-            handlerKey: 'setEditStartTime' as const,
+            draftKey: 'startTime' as const,
             expected: '2026-04-18',
         },
         {
             fieldId: 'dueDate' as const,
-            editValue: { editDueDate: '2026-04-19T11:45' },
+            draftValue: { dueDate: '2026-04-19T11:45' },
             dateOnlyLabel: 'Date only: Due Date',
-            handlerKey: 'setEditDueDate' as const,
+            draftKey: 'dueDate' as const,
             expected: '2026-04-19',
         },
         {
             fieldId: 'reviewAt' as const,
-            editValue: { editReviewAt: '2026-04-20T14:15' },
+            draftValue: { reviewAt: '2026-04-20T14:15' },
             dateOnlyLabel: 'Date only: Review Date',
-            handlerKey: 'setEditReviewAt' as const,
+            draftKey: 'reviewAt' as const,
             expected: '2026-04-20',
         },
-    ])('strips the time from $fieldId when the date-only button is clicked', ({ fieldId, editValue, dateOnlyLabel, handlerKey, expected }) => {
-        const handlers = createHandlers();
+    ])('strips the time from $fieldId when the date-only button is clicked', ({ fieldId, draftValue, dateOnlyLabel, draftKey, expected }) => {
+        const setField = vi.fn();
 
         const { getByRole } = render(
             <TaskItemFieldRenderer
                 fieldId={fieldId}
-                data={createData(editValue)}
-                handlers={handlers}
+                {...createProps({ draft: draftValue, setField })}
             />
         );
 
         fireEvent.click(getByRole('button', { name: dateOnlyLabel }));
 
-        expect(handlers[handlerKey]).toHaveBeenCalledWith(expected);
+        expect(setField).toHaveBeenCalledWith(draftKey, expected);
     });
 
     it('hides the date-only button when the due date has no time component', () => {
-        const handlers = createHandlers();
-
         const { queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({ editDueDate: '2026-04-19' })}
-                handlers={handlers}
+                {...createProps({ draft: { dueDate: '2026-04-19' } })}
             />
         );
 
@@ -461,13 +426,12 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('collapses due-date repeat reminder options until the compact row is opened', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({ editDueDate: '2026-04-19T11:45' })}
-                handlers={handlers}
+                {...createProps({ draft: { dueDate: '2026-04-19T11:45' }, setField })}
             />
         );
 
@@ -477,20 +441,17 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         fireEvent.click(collapsedRow);
         fireEvent.click(getByRole('button', { name: '10 min' }));
 
-        expect(handlers.setEditRepeatReminderMinutes).toHaveBeenCalledWith(10);
+        expect(setField).toHaveBeenCalledWith('repeatReminderMinutes', 10);
     });
 
     it('applies the configured locale to native date and time inputs', () => {
-        const handlers = createHandlers();
-
         const { getByLabelText } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({
-                    editDueDate: '2026-04-19T11:45',
-                    nativeDateInputLocale: 'en-CA-u-hc-h23-fw-mon',
+                {...createProps({
+                    draft: { dueDate: '2026-04-19T11:45' },
+                    env: { nativeDateInputLocale: 'en-CA-u-hc-h23-fw-mon' },
                 })}
-                handlers={handlers}
             />
         );
 
@@ -499,19 +460,18 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('applies the default schedule time when a due date is selected without an existing time', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByLabelText } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({ defaultScheduleTime: '09:00' })}
-                handlers={handlers}
+                {...createProps({ env: { defaultScheduleTime: '09:00' }, setField })}
             />
         );
 
         fireEvent.change(getByLabelText('Due date'), { target: { value: '2026-04-19' } });
 
-        expect(handlers.setEditDueDate).toHaveBeenCalledWith('2026-04-19T09:00');
+        expect(setField).toHaveBeenCalledWith('dueDate', '2026-04-19T09:00');
     });
 
     it.each([
@@ -539,17 +499,16 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     ])(
         'formats and parses date text using the $dateFormatSetting date format setting',
         ({ dateFormatSetting, nativeDateInputLocale, initialDisplay, nextDisplay, expectedDate }) => {
-            const handlers = createHandlers();
+            const setField = vi.fn();
 
             const { getByLabelText } = render(
                 <TaskItemFieldRenderer
                     fieldId="dueDate"
-                    data={createData({
-                        editDueDate: '2026-04-19',
-                        dateFormatSetting,
-                        nativeDateInputLocale,
+                    {...createProps({
+                        draft: { dueDate: '2026-04-19' },
+                        env: { dateFormatSetting, nativeDateInputLocale },
+                        setField,
                     })}
-                    handlers={handlers}
                 />
             );
 
@@ -559,37 +518,34 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
             fireEvent.change(input, { target: { value: nextDisplay } });
 
-            expect(handlers.setEditDueDate).toHaveBeenCalledWith(expectedDate);
+            expect(setField).toHaveBeenCalledWith('dueDate', expectedDate);
         }
     );
 
     it.each([
         {
             fieldId: 'startTime' as const,
-            editValue: { editStartTime: '2026-04-18' },
+            draftValue: { startTime: '2026-04-18' },
             inputLabel: 'Start date',
             dialogLabel: 'Start Date calendar',
         },
         {
             fieldId: 'dueDate' as const,
-            editValue: { editDueDate: '2026-04-19' },
+            draftValue: { dueDate: '2026-04-19' },
             inputLabel: 'Due date',
             dialogLabel: 'Due Date calendar',
         },
         {
             fieldId: 'reviewAt' as const,
-            editValue: { editReviewAt: '2026-04-20' },
+            draftValue: { reviewAt: '2026-04-20' },
             inputLabel: 'Review date',
             dialogLabel: 'Review Date calendar',
         },
-    ])('closes the $fieldId mini calendar when clicking outside', ({ fieldId, editValue, dialogLabel }) => {
-        const handlers = createHandlers();
-
+    ])('closes the $fieldId mini calendar when clicking outside', ({ fieldId, draftValue, dialogLabel }) => {
         const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId={fieldId}
-                data={createData(editValue)}
-                handlers={handlers}
+                {...createProps({ draft: draftValue })}
             />
         );
 
@@ -602,13 +558,12 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('sets the date and closes the mini calendar when a day is selected', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({ editDueDate: '2026-04-12' })}
-                handlers={handlers}
+                {...createProps({ draft: { dueDate: '2026-04-12' }, setField })}
             />
         );
 
@@ -617,19 +572,16 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.pointerDown(within(dialog).getByRole('button', { name: /April 19, 2026/i }));
 
-        expect(handlers.setEditDueDate).toHaveBeenCalledWith('2026-04-19');
+        expect(setField).toHaveBeenCalledWith('dueDate', '2026-04-19');
         expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
         expect(dialog).not.toBeInTheDocument();
     });
 
     it('keeps the due-date mini calendar closed when the date input receives focus', () => {
-        const handlers = createHandlers();
-
         const { getByLabelText, getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({ editDueDate: '2026-04-12' })}
-                handlers={handlers}
+                {...createProps({ draft: { dueDate: '2026-04-12' } })}
             />
         );
 
@@ -640,13 +592,10 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('opens the due-date mini calendar from the calendar button and hides quick shortcuts', () => {
-        const handlers = createHandlers();
-
         const { getByLabelText, getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({ editDueDate: '2026-04-12' })}
-                handlers={handlers}
+                {...createProps({ draft: { dueDate: '2026-04-12' } })}
             />
         );
 
@@ -660,13 +609,12 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('keeps the mini calendar closed after selecting a date from another month', async () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="dueDate"
-                data={createData({ editDueDate: '2026-04-12' })}
-                handlers={handlers}
+                {...createProps({ draft: { dueDate: '2026-04-12' }, setField })}
             />
         );
 
@@ -681,7 +629,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         );
         await new Promise((resolve) => window.setTimeout(resolve, 0));
 
-        expect(handlers.setEditDueDate).toHaveBeenCalledWith('2026-05-19');
+        expect(setField).toHaveBeenCalledWith('dueDate', '2026-05-19');
         await waitFor(() => {
             expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
         });
@@ -691,26 +639,25 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         {
             fieldId: 'startTime' as const,
             inputLabel: 'Start date',
-            handlerKey: 'setEditStartTime' as const,
+            draftKey: 'startTime' as const,
         },
         {
             fieldId: 'dueDate' as const,
             inputLabel: 'Due date',
-            handlerKey: 'setEditDueDate' as const,
+            draftKey: 'dueDate' as const,
         },
         {
             fieldId: 'reviewAt' as const,
             inputLabel: 'Review date',
-            handlerKey: 'setEditReviewAt' as const,
+            draftKey: 'reviewAt' as const,
         },
-    ])('shows $fieldId quick shortcuts only while the date field is active', ({ fieldId, inputLabel, handlerKey }) => {
-        const handlers = createHandlers();
+    ])('shows $fieldId quick shortcuts only while the date field is active', ({ fieldId, inputLabel, draftKey }) => {
+        const setField = vi.fn();
 
         const { getByLabelText, getByText, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId={fieldId}
-                data={createData()}
-                handlers={handlers}
+                {...createProps({ setField })}
             />
         );
 
@@ -728,17 +675,16 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         fireEvent.mouseDown(nextMonthButton!);
         fireEvent.click(nextMonthButton!);
 
-        expect(handlers[handlerKey]).toHaveBeenCalled();
+        expect(setField).toHaveBeenCalledWith(draftKey, expect.anything());
     });
 
     it('renders status choices as pills and keeps archived available', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="status"
-                data={createData()}
-                handlers={handlers}
+                {...createProps({ setField })}
             />
         );
 
@@ -751,17 +697,16 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.click(getByRole('button', { name: 'Waiting' }));
 
-        expect(handlers.setEditStatus).toHaveBeenCalledWith('waiting');
+        expect(setField).toHaveBeenCalledWith('status', 'waiting');
     });
 
     it('changes status pill choices with arrow keys', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="status"
-                data={createData()}
-                handlers={handlers}
+                {...createProps({ setField })}
             />
         );
 
@@ -770,17 +715,16 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         fireEvent.keyDown(inboxButton, { key: 'ArrowDown' });
 
         expect(getByRole('button', { name: 'Next' })).toHaveFocus();
-        expect(handlers.setEditStatus).toHaveBeenCalledWith('next');
+        expect(setField).toHaveBeenCalledWith('status', 'next');
     });
 
     it('renders priority choices as pills including None', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="priority"
-                data={createData({ editPriority: 'low' })}
-                handlers={handlers}
+                {...createProps({ draft: { priority: 'low' }, setField })}
             />
         );
 
@@ -792,17 +736,16 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.click(getByRole('button', { name: 'None' }));
 
-        expect(handlers.setEditPriority).toHaveBeenCalledWith('');
+        expect(setField).toHaveBeenCalledWith('priority', '');
     });
 
     it('renders energy level choices as pills including None', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole, queryByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="energyLevel"
-                data={createData({ editEnergyLevel: 'medium' })}
-                handlers={handlers}
+                {...createProps({ draft: { energyLevel: 'medium' }, setField })}
             />
         );
 
@@ -814,20 +757,20 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.click(getByRole('button', { name: 'High energy' }));
 
-        expect(handlers.setEditEnergyLevel).toHaveBeenCalledWith('high');
+        expect(setField).toHaveBeenCalledWith('energyLevel', 'high');
     });
 
     it('emphasizes selected context tokens', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="contexts"
-                data={createData({
-                    editContexts: 'Home',
-                    popularContextOptions: ['Home', 'Office'],
+                {...createProps({
+                    draft: { contexts: 'Home' },
+                    options: { popularContextOptions: ['Home', 'Office'] },
+                    setField,
                 })}
-                handlers={handlers}
             />
         );
 
@@ -835,20 +778,20 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.click(getByRole('button', { name: 'Office' }));
 
-        expect(handlers.setEditContexts).toHaveBeenCalledWith('Home, Office');
+        expect(setField).toHaveBeenCalledWith('contexts', 'Home, Office');
     });
 
     it('emphasizes selected tag tokens', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
 
         const { getByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="tags"
-                data={createData({
-                    editTags: 'Launch',
-                    popularTagOptions: ['Launch', 'Follow-up'],
+                {...createProps({
+                    draft: { tags: 'Launch' },
+                    options: { popularTagOptions: ['Launch', 'Follow-up'] },
+                    setField,
                 })}
-                handlers={handlers}
             />
         );
 
@@ -856,7 +799,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.click(getByRole('button', { name: 'Follow-up' }));
 
-        expect(handlers.setEditTags).toHaveBeenCalledWith('Launch, Follow-up');
+        expect(setField).toHaveBeenCalledWith('tags', 'Launch, Follow-up');
     });
 
     it('suggests existing contexts while typing without requiring @', async () => {
@@ -940,12 +883,15 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
     });
 
     it('offers to create an assignee from an unmatched assigned-to value', async () => {
-        const handlers = createHandlers();
+        const createAssignedToPerson = vi.fn();
         const { findByRole, getByRole } = render(
             <TaskItemFieldRenderer
                 fieldId="assignedTo"
-                data={createData({ editAssignedTo: 'Morgan', assignedToOptions: ['Alex'] })}
-                handlers={handlers}
+                {...createProps({
+                    draft: { assignedTo: 'Morgan' },
+                    options: { assignedToOptions: ['Alex'] },
+                    actions: { createAssignedToPerson },
+                })}
             />
         );
 
@@ -954,20 +900,22 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.click(await findByRole('option', { name: 'New Person: Morgan' }));
 
-        expect(handlers.createAssignedToPerson).toHaveBeenCalledWith('Morgan');
+        expect(createAssignedToPerson).toHaveBeenCalledWith('Morgan');
     });
 
     it('updates weekly recurrence intervals without dropping selected weekdays', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
         const { container, getByRole } = render(
             <LanguageProvider>
                 <TaskItemFieldRenderer
                     fieldId="recurrence"
-                    data={createData({
-                        editRecurrence: 'weekly',
-                        editRecurrenceRRule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=TU',
+                    {...createProps({
+                        draft: {
+                            recurrence: 'weekly',
+                            recurrenceRRule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=TU',
+                        },
+                        setField,
                     })}
-                    handlers={handlers}
                 />
             </LanguageProvider>
         );
@@ -976,24 +924,26 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         expect(input).toBeTruthy();
         fireEvent.change(input!, { target: { value: '78' } });
 
-        expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=WEEKLY;INTERVAL=78;BYDAY=TU');
+        expect(setField).toHaveBeenCalledWith('recurrenceRRule', 'FREQ=WEEKLY;INTERVAL=78;BYDAY=TU');
 
         fireEvent.click(getByRole('button', { name: 'Wed' }));
 
-        expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,WE');
+        expect(setField).toHaveBeenCalledWith('recurrenceRRule', 'FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,WE');
     });
 
     it('updates yearly recurrence intervals', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
         const { container } = render(
             <LanguageProvider>
                 <TaskItemFieldRenderer
                     fieldId="recurrence"
-                    data={createData({
-                        editRecurrence: 'yearly',
-                        editRecurrenceRRule: 'FREQ=YEARLY',
+                    {...createProps({
+                        draft: {
+                            recurrence: 'yearly',
+                            recurrenceRRule: 'FREQ=YEARLY',
+                        },
+                        setField,
                     })}
-                    handlers={handlers}
                 />
             </LanguageProvider>
         );
@@ -1002,20 +952,22 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         expect(input).toBeTruthy();
         fireEvent.change(input!, { target: { value: '2' } });
 
-        expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=YEARLY;INTERVAL=2');
+        expect(setField).toHaveBeenCalledWith('recurrenceRRule', 'FREQ=YEARLY;INTERVAL=2');
     });
 
     it('updates monthly recurrence intervals from the monthly recurrence controls', () => {
-        const handlers = createHandlers();
+        const setField = vi.fn();
         const { container } = render(
             <LanguageProvider>
                 <TaskItemFieldRenderer
                     fieldId="recurrence"
-                    data={createData({
-                        editRecurrence: 'monthly',
-                        editRecurrenceRRule: 'FREQ=MONTHLY;BYMONTHDAY=15',
+                    {...createProps({
+                        draft: {
+                            recurrence: 'monthly',
+                            recurrenceRRule: 'FREQ=MONTHLY;BYMONTHDAY=15',
+                        },
+                        setField,
                     })}
-                    handlers={handlers}
                 />
             </LanguageProvider>
         );
@@ -1024,7 +976,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         expect(input).toBeTruthy();
         fireEvent.change(input!, { target: { value: '3' } });
 
-        expect(handlers.setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=MONTHLY;INTERVAL=3;BYMONTHDAY=15');
+        expect(setField).toHaveBeenCalledWith('recurrenceRRule', 'FREQ=MONTHLY;INTERVAL=3;BYMONTHDAY=15');
     });
 
     it('undoes markdown description edits with Ctrl+Z', async () => {

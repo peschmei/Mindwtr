@@ -61,6 +61,9 @@ export type TaskDraft = {
 
 export type TaskDraftField = keyof TaskDraft;
 
+/** The one write path surfaces get: bind this to setTaskDraftField. */
+export type TaskDraftSetter = <K extends TaskDraftField>(field: K, value: TaskDraft[K]) => void;
+
 type FieldSpec<K extends TaskDraftField> = {
     fromTask: (task: Task) => TaskDraft[K];
     /** Custom dirty comparison; defaults to `draftValue !== fromTask(task)`. */

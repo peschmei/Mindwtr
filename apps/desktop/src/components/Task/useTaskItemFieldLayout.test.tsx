@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import type { Task } from '@mindwtr/core';
+import { createTaskDraft, type Task, type TaskDraft } from '@mindwtr/core';
 
 import { DEFAULT_TASK_EDITOR_ORDER } from './task-item-helpers';
 import { useTaskItemFieldLayout } from './useTaskItemFieldLayout';
@@ -15,41 +15,50 @@ const baseTask: Task = {
     updatedAt: '2026-03-18T00:00:00.000Z',
 };
 
-const buildParams = (overrides: Partial<Parameters<typeof useTaskItemFieldLayout>[0]> = {}): Parameters<typeof useTaskItemFieldLayout>[0] => ({
-    settings: {},
-    task: {
+type LayoutParams = Parameters<typeof useTaskItemFieldLayout>[0];
+
+const buildParams = (
+    overrides: Partial<Omit<LayoutParams, 'draft'>> & { draft?: Partial<TaskDraft> } = {},
+): LayoutParams => {
+    const task = overrides.task ?? {
         ...baseTask,
         dueDate: '2026-03-20',
         checklist: [{ id: 'item-1', title: 'Checklist item', isCompleted: false }],
-    },
-    editStatus: 'next',
-    editProjectId: '',
-    editSectionId: '',
-    editAreaId: '',
-    editPriority: 'high',
-    editContexts: '@home',
-    editDescription: 'Reference notes',
-    editDueDate: '2026-03-20',
-    editRecurrence: 'daily',
-    editReviewAt: '2026-03-21T09:00',
-    editStartTime: '2026-03-19T09:00',
-    editTags: '#notes',
-    editLocation: 'Office',
-    editTimeEstimate: '30min',
-    prioritiesEnabled: true,
-    timeEstimatesEnabled: true,
-    visibleEditAttachmentsLength: 1,
-    ...overrides,
-});
+    };
+    return {
+        settings: overrides.settings ?? {},
+        task,
+        draft: {
+            ...createTaskDraft(task),
+            status: 'next',
+            priority: 'high',
+            contexts: '@home',
+            description: 'Reference notes',
+            dueDate: '2026-03-20',
+            recurrence: 'daily',
+            reviewAt: '2026-03-21T09:00',
+            startTime: '2026-03-19T09:00',
+            tags: '#notes',
+            location: 'Office',
+            timeEstimate: '30min',
+            ...overrides.draft,
+        },
+        prioritiesEnabled: overrides.prioritiesEnabled ?? true,
+        timeEstimatesEnabled: overrides.timeEstimatesEnabled ?? true,
+        visibleEditAttachmentsLength: overrides.visibleEditAttachmentsLength ?? 1,
+    };
+};
 
 describe('useTaskItemFieldLayout', () => {
     it('keeps the default editor shallow while leaving optional metadata hidden until used', () => {
         const { result } = renderHook(() => useTaskItemFieldLayout(buildParams({
-            editPriority: '',
-            editEnergyLevel: '',
-            editAssignedTo: '',
-            editLocation: '',
-            editTimeEstimate: '',
+            draft: {
+                priority: '',
+                energyLevel: '',
+                assignedTo: '',
+                location: '',
+                timeEstimate: '',
+            },
         })));
 
         expect(result.current.basicFields).toEqual(expect.arrayContaining(['status', 'contexts', 'dueDate']));
@@ -70,7 +79,7 @@ describe('useTaskItemFieldLayout', () => {
                     },
                 },
             },
-            editStatus: 'next',
+            draft: { status: 'next' },
         })));
 
         expect(result.current.basicFields).not.toContain('status');
@@ -86,22 +95,24 @@ describe('useTaskItemFieldLayout', () => {
                 },
             },
             task: baseTask,
-            editStatus: 'next',
-            editProjectId: '',
-            editSectionId: '',
-            editAreaId: '',
-            editPriority: '',
-            editEnergyLevel: '',
-            editAssignedTo: '',
-            editContexts: '',
-            editDescription: '',
-            editDueDate: '',
-            editRecurrence: '',
-            editReviewAt: '',
-            editStartTime: '',
-            editTags: '',
-            editLocation: '',
-            editTimeEstimate: '',
+            draft: {
+                status: 'next',
+                projectId: '',
+                sectionId: '',
+                areaId: '',
+                priority: '',
+                energyLevel: '',
+                assignedTo: '',
+                contexts: '',
+                description: '',
+                dueDate: '',
+                recurrence: '',
+                reviewAt: '',
+                startTime: '',
+                tags: '',
+                location: '',
+                timeEstimate: '',
+            },
             visibleEditAttachmentsLength: 0,
         })));
 
@@ -116,7 +127,7 @@ describe('useTaskItemFieldLayout', () => {
 
     it('hides action-only fields while a task is being edited as reference', () => {
         const { result } = renderHook(() => useTaskItemFieldLayout(buildParams({
-            editStatus: 'reference',
+            draft: { status: 'reference' },
         })));
 
         expect(result.current.basicFields).toContain('status');
@@ -138,7 +149,7 @@ describe('useTaskItemFieldLayout', () => {
                 status: 'reference',
                 checklist: [{ id: 'item-1', title: 'Checklist item', isCompleted: false }],
             },
-            editStatus: 'next',
+            draft: { status: 'next' },
         })));
 
         expect(result.current.basicFields).toContain('dueDate');

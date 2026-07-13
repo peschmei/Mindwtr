@@ -3,6 +3,7 @@ import {
     type AppData,
     type AIProviderId,
     type ClarifyResponse,
+    type TaskDraftSetter,
     type TimeEstimate,
     createAIProvider,
 } from '@mindwtr/core';
@@ -30,10 +31,7 @@ type UseTaskItemAiArgs = {
     tagOptions: string[];
     projectContext: TaskItemAiContext;
     timeEstimatesEnabled: boolean;
-    setEditTitle: (value: string) => void;
-    setEditContexts: (value: string) => void;
-    setEditTags: (value: string) => void;
-    setEditTimeEstimate: (value: TimeEstimate | '') => void;
+    setField: TaskDraftSetter;
 };
 
 export function useTaskItemAi({
@@ -51,10 +49,7 @@ export function useTaskItemAi({
     tagOptions,
     projectContext,
     timeEstimatesEnabled,
-    setEditTitle,
-    setEditContexts,
-    setEditTags,
-    setEditTimeEstimate,
+    setField,
 }: UseTaskItemAiArgs) {
     const aiEnabled = settings?.ai?.enabled === true;
     const aiProvider = (settings?.ai?.provider ?? 'openai') as AIProviderId;
@@ -228,31 +223,31 @@ export function useTaskItemAi({
         if (copilotSuggestion.context) {
             const currentContexts = editContexts.split(',').map((c) => c.trim()).filter(Boolean);
             const nextContexts = Array.from(new Set([...currentContexts, copilotSuggestion.context]));
-            setEditContexts(nextContexts.join(', '));
+            setField('contexts', nextContexts.join(', '));
             setCopilotContext(copilotSuggestion.context);
         }
         if (copilotSuggestion.tags?.length) {
             const currentTags = editTags.split(',').map((t) => t.trim()).filter(Boolean);
             const nextTags = Array.from(new Set([...currentTags, ...copilotSuggestion.tags]));
-            setEditTags(nextTags.join(', '));
+            setField('tags', nextTags.join(', '));
         }
         if (copilotSuggestion.timeEstimate && timeEstimatesEnabled) {
-            setEditTimeEstimate(copilotSuggestion.timeEstimate);
+            setField('timeEstimate', copilotSuggestion.timeEstimate);
             setCopilotEstimate(copilotSuggestion.timeEstimate);
         }
         setCopilotApplied(true);
-    }, [copilotSuggestion, editContexts, editTags, setEditContexts, setEditTags, setEditTimeEstimate, timeEstimatesEnabled]);
+    }, [copilotSuggestion, editContexts, editTags, setField, timeEstimatesEnabled]);
 
     const applyAISuggestion = useCallback((suggested: { title?: string; context?: string; timeEstimate?: TimeEstimate }) => {
-        if (suggested.title) setEditTitle(suggested.title);
-        if (suggested.timeEstimate && timeEstimatesEnabled) setEditTimeEstimate(suggested.timeEstimate);
+        if (suggested.title) setField('title', suggested.title);
+        if (suggested.timeEstimate && timeEstimatesEnabled) setField('timeEstimate', suggested.timeEstimate);
         if (suggested.context) {
             const currentContexts = editContexts.split(',').map((c) => c.trim()).filter(Boolean);
             const nextContexts = Array.from(new Set([...currentContexts, suggested.context]));
-            setEditContexts(nextContexts.join(', '));
+            setField('contexts', nextContexts.join(', '));
         }
         setAiClarifyResponse(null);
-    }, [editContexts, setEditContexts, setEditTimeEstimate, setEditTitle, timeEstimatesEnabled]);
+    }, [editContexts, setField, timeEstimatesEnabled]);
 
     const handleAIClarify = useCallback(async () => {
         if (isAIWorking) return;

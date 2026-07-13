@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Task } from '@mindwtr/core';
+import { createTaskDraft, type Task } from '@mindwtr/core';
 
 import { useTaskItemRecurrence } from './useTaskItemRecurrence';
 
@@ -16,19 +16,21 @@ const baseTask: Task = {
 
 describe('useTaskItemRecurrence', () => {
     it('anchors custom monthly recurrence controls to the start date when no due date is set', () => {
-        const setEditRecurrence = vi.fn();
-        const setEditRecurrenceRRule = vi.fn();
+        const setField = vi.fn();
+        const task: Task = {
+            ...baseTask,
+            startTime: '2026-06-04T09:00',
+        };
         const { result } = renderHook(() => useTaskItemRecurrence({
-            task: {
-                ...baseTask,
+            task,
+            draft: {
+                ...createTaskDraft(task),
                 startTime: '2026-06-04T09:00',
+                dueDate: '',
+                recurrence: 'monthly',
+                recurrenceRRule: '',
             },
-            editStartTime: '2026-06-04T09:00',
-            editDueDate: '',
-            editRecurrence: 'monthly',
-            editRecurrenceRRule: '',
-            setEditRecurrence,
-            setEditRecurrenceRRule,
+            setField,
         }));
 
         act(() => {
@@ -45,7 +47,7 @@ describe('useTaskItemRecurrence', () => {
             result.current.applyCustomRecurrence();
         });
 
-        expect(setEditRecurrence).toHaveBeenCalledWith('monthly');
-        expect(setEditRecurrenceRRule).toHaveBeenCalledWith('FREQ=MONTHLY;BYDAY=1TH');
+        expect(setField).toHaveBeenCalledWith('recurrence', 'monthly');
+        expect(setField).toHaveBeenCalledWith('recurrenceRRule', 'FREQ=MONTHLY;BYDAY=1TH');
     });
 });

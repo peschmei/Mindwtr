@@ -391,6 +391,7 @@ export {
 export type {
     TaskDraft,
     TaskDraftField,
+    TaskDraftSetter,
 } from './task-draft';
 
 export {

@@ -1,27 +1,25 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { RecurrenceByDay, RecurrenceRule, RecurrenceWeekday, Task } from '@mindwtr/core';
+import type { RecurrenceByDay, RecurrenceWeekday, Task, TaskDraft, TaskDraftSetter } from '@mindwtr/core';
 import { buildRRuleString, parseRRuleString, safeParseDate } from '@mindwtr/core';
 import { WEEKDAY_ORDER } from './recurrence-constants';
 
 type UseTaskItemRecurrenceProps = {
     task: Task;
-    editStartTime: string;
-    editDueDate: string;
-    editRecurrence: RecurrenceRule | '';
-    editRecurrenceRRule: string;
-    setEditRecurrence: (value: RecurrenceRule | '') => void;
-    setEditRecurrenceRRule: (value: string) => void;
+    draft: TaskDraft;
+    setField: TaskDraftSetter;
 };
 
 export function useTaskItemRecurrence({
     task,
-    editStartTime,
-    editDueDate,
-    editRecurrence,
-    editRecurrenceRRule,
-    setEditRecurrence,
-    setEditRecurrenceRRule,
+    draft,
+    setField,
 }: UseTaskItemRecurrenceProps) {
+    const {
+        startTime: editStartTime,
+        dueDate: editDueDate,
+        recurrence: editRecurrence,
+        recurrenceRRule: editRecurrenceRRule,
+    } = draft;
     const monthlyAnchorDate = safeParseDate(editDueDate || editStartTime || task.dueDate || task.startTime) ?? new Date();
     const monthlyWeekdayCode = WEEKDAY_ORDER[monthlyAnchorDate.getDay()];
 
@@ -91,8 +89,8 @@ export function useTaskItemRecurrence({
                 count: parsed.count,
                 until: parsed.until,
             });
-        setEditRecurrence('monthly');
-        setEditRecurrenceRRule(rrule);
+        setField('recurrence', 'monthly');
+        setField('recurrenceRRule', rrule);
         setShowCustomRecurrence(false);
     }, [
         customInterval,
@@ -101,8 +99,7 @@ export function useTaskItemRecurrence({
         customOrdinal,
         customWeekday,
         editRecurrenceRRule,
-        setEditRecurrence,
-        setEditRecurrenceRRule,
+        setField,
     ]);
 
     return {

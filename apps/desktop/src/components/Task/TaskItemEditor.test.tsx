@@ -1,7 +1,18 @@
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { createTaskDraft, type Task } from '@mindwtr/core';
 
 import { TaskItemEditor } from './TaskItemEditor';
+
+const baseTask: Task = {
+    id: 'task-1',
+    title: 'Reserve acupuncture',
+    status: 'next',
+    tags: [],
+    contexts: [],
+    createdAt: '2026-05-01T00:00:00.000Z',
+    updatedAt: '2026-05-01T00:00:00.000Z',
+};
 
 const translations: Record<string, string> = {
     'taskEdit.scheduling': 'Scheduling',
@@ -42,12 +53,8 @@ const t = (key: string) => translations[key] ?? key;
 
 const baseProps: Parameters<typeof TaskItemEditor>[0] = {
     t,
-    editTitle: 'Reserve acupuncture',
-    setEditTitle: vi.fn(),
-    editContexts: '',
-    setEditContexts: vi.fn(),
-    editTags: '',
-    setEditTags: vi.fn(),
+    draft: createTaskDraft(baseTask),
+    setField: vi.fn(),
     autoFocusTitle: false,
     resetCopilotDraft: vi.fn(),
     aiEnabled: false,
@@ -72,12 +79,6 @@ const baseProps: Parameters<typeof TaskItemEditor>[0] = {
     projects: [],
     sections: [],
     areas: [],
-    editProjectId: '',
-    setEditProjectId: vi.fn(),
-    editSectionId: '',
-    setEditSectionId: vi.fn(),
-    editAreaId: '',
-    setEditAreaId: vi.fn(),
     onCreateProject: vi.fn().mockResolvedValue(null),
     onCreateArea: vi.fn().mockResolvedValue(null),
     onCreateSection: vi.fn().mockResolvedValue(null),

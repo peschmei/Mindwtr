@@ -61,7 +61,24 @@ describe('useTaskItemEditState', () => {
             result.current.resetEditState();
         });
 
-        expect(result.current.editDescription).toBe('- Updated notes');
+        expect(result.current.draft.description).toBe('- Updated notes');
         expect(result.current.showDescriptionPreview).toBe(true);
+    });
+
+    it('setField writes through the core reducer, cascades included', () => {
+        const { result } = renderEditState({
+            ...baseTask,
+            isFocusedToday: true,
+        });
+
+        act(() => {
+            result.current.setField('title', 'Renamed');
+            result.current.setField('status', 'inbox');
+        });
+
+        expect(result.current.draft.title).toBe('Renamed');
+        expect(result.current.draft.status).toBe('inbox');
+        // Inbox drops the draft focus star (core cascade).
+        expect(result.current.draft.focusedToday).toBe(false);
     });
 });
