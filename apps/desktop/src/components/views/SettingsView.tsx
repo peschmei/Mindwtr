@@ -725,7 +725,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
     }
 
     try {
-      const result = await seedGettingStarted();
+      const result = await seedGettingStarted({ language });
       if (result.id) {
         useUiStore.getState().setProjectView({ selectedProjectId: result.id });
         showToast("Getting Started content is ready in Projects.", "success");
@@ -736,7 +736,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
       showToast("Failed to add Getting Started content.", "error");
       reportError("Failed to add Getting Started content", error);
     }
-  }, [cancelLabel, requestConfirmation, seedGettingStarted, showToast, visibleDataCount]);
+  }, [cancelLabel, language, requestConfirmation, seedGettingStarted, showToast, visibleDataCount]);
 
   const attachmentsLastCleanupDisplay = useMemo(() => {
     if (!attachmentsLastCleanupAt) return "";

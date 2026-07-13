@@ -1052,7 +1052,7 @@ function App() {
         if (desktopOnboardingBusy) return;
         setDesktopOnboardingBusy(true);
         setDesktopOnboardingError(null);
-        seedGettingStarted()
+        seedGettingStarted({ language })
             .then((result) => {
                 if (!result.id) {
                     setDesktopOnboardingError('Getting Started was not created. Try again or import your data instead.');
@@ -1070,7 +1070,7 @@ function App() {
                 void logError(error, { scope: 'onboarding', step: 'seedGettingStarted' });
             })
             .finally(() => setDesktopOnboardingBusy(false));
-    }, [desktopOnboardingBusy, dismissDesktopOnboarding, handleViewChange, seedGettingStarted, showToast]);
+    }, [desktopOnboardingBusy, dismissDesktopOnboarding, handleViewChange, language, seedGettingStarted, showToast]);
 
     const dismissAppAnnouncement = useCallback(() => {
         if (testAnnouncement) {

@@ -669,7 +669,7 @@ function RootLayoutContentInner() {
     if (mobileOnboardingBusy) return;
     setMobileOnboardingBusy(true);
     setMobileOnboardingError(null);
-    seedGettingStarted()
+    seedGettingStarted({ language })
       .then((result) => {
         if (!result.id) {
           setMobileOnboardingError('Getting Started was not created. Try again or import your data instead.');
@@ -697,6 +697,7 @@ function RootLayoutContentInner() {
       .finally(() => setMobileOnboardingBusy(false));
   }, [
     dismissMobileOnboarding,
+    language,
     mobileOnboardingBusy,
     router,
     seedGettingStarted,

@@ -30,6 +30,10 @@ import {
     withTimeout,
 } from './store-helpers';
 import { generateUUID as uuidv4 } from './uuid';
+import { translations } from './i18n/i18n-translations';
+import { isSupportedLanguage } from './i18n/i18n-constants';
+import { getSystemDefaultLanguage } from './i18n/i18n-storage';
+import type { Language } from './i18n/i18n-types';
 
 const MIGRATION_VERSION = 1;
 // Run auto-archive at most twice a day to keep background work bounded.
@@ -201,6 +205,16 @@ const normalizeAreaForLoad = (area: Area, fallbackOrder: number, nowIso: string)
 
 type StarterTaskTemplate = {
     key: StarterTaskKey;
+    titleKey: string;
+    descriptionKey: string;
+    checklistKeys: string[];
+    contexts?: string[];
+    tags?: string[];
+    isFocusedToday?: boolean;
+};
+
+type ResolvedStarterTemplate = {
+    key: StarterTaskKey;
     title: string;
     description: string;
     checklist: string[];
@@ -221,93 +235,87 @@ type StarterTaskKey =
 const normalizeStarterTaskTitle = (title: string): string => title.trim().toLowerCase();
 
 const STARTER_TASK_TEMPLATES: StarterTaskTemplate[] = [
-    {
-        key: 'process-inbox',
-        title: 'Start here: process your first inbox item',
-        description: 'Turn one captured thought into a small, doable step.',
-        checklist: [
-            'Open Inbox',
-            'Tap Process Inbox',
-            'Decide the next step for one sample item, or park it for later',
-        ],
-    },
-    {
-        key: 'quick-capture',
-        title: 'Capture a task in one line',
-        description: 'Type a thought and add details right in the text - no forms needed.',
-        checklist: [
-            'Tap the capture button',
-            'Try: Call Alex @phone /due:tomorrow',
-            'Only give dates to things with real deadlines',
-        ],
-        contexts: ['@computer'],
-    },
-    {
-        key: 'focus',
-        title: "Star up to 3 tasks for Today's Focus",
-        description: 'Pick the few things you will actually do today.',
-        checklist: [
-            'Open Focus',
-            'Use the star to pick your top tasks',
-            'Defer a task to hide it until you need it',
-        ],
-        contexts: ['@computer'],
-        isFocusedToday: true,
-    },
-    {
-        key: 'simplify',
-        title: "Make Mindwtr yours: hide what you don't use",
-        description: 'Prefer a simple list? Trim the task editor down to just the fields you need.',
-        checklist: [
-            'Open Settings -> GTD -> Task Editor Layout',
-            'Hide the fields you never use',
-            'Bring them back anytime - hiding never deletes data',
-        ],
-    },
-    {
-        key: 'sync',
-        title: 'Set up sync across your devices',
-        description: 'Choose one sync method when you want desktop and mobile to share data.',
-        checklist: [
-            'Open Settings -> Sync',
-            'Choose Dropbox, iCloud, WebDAV, File Sync, or self-hosted',
-            'Run Test connection when available, then Sync now',
-        ],
-    },
-    {
-        key: 'import',
-        title: 'Import tasks from another app',
-        description: 'Bring in existing tasks before you reorganize them in Mindwtr.',
-        checklist: [
-            'Open Settings -> Data',
-            'Import Todoist, DGT GTD, OmniFocus, or a backup file',
-            'Review imported items from Inbox',
-        ],
-    },
-    {
-        key: 'weekly-review',
-        title: 'Run your first weekly review',
-        description: 'A short weekly tidy-up keeps your lists worth trusting.',
-        checklist: [
-            'Open Review',
-            'Empty your Inbox',
-            'Pick the next few tasks and let the rest wait',
-        ],
-    },
+    { key: 'process-inbox', titleKey: 'starter.processInbox.title', descriptionKey: 'starter.processInbox.desc', checklistKeys: ['starter.processInbox.check1', 'starter.processInbox.check2', 'starter.processInbox.check3'] },
+    { key: 'quick-capture', titleKey: 'starter.quickCapture.title', descriptionKey: 'starter.quickCapture.desc', checklistKeys: ['starter.quickCapture.check1', 'starter.quickCapture.check2', 'starter.quickCapture.check3'], contexts: ['@computer'] },
+    { key: 'focus', titleKey: 'starter.focus.title', descriptionKey: 'starter.focus.desc', checklistKeys: ['starter.focus.check1', 'starter.focus.check2', 'starter.focus.check3'], contexts: ['@computer'], isFocusedToday: true },
+    { key: 'simplify', titleKey: 'starter.simplify.title', descriptionKey: 'starter.simplify.desc', checklistKeys: ['starter.simplify.check1', 'starter.simplify.check2', 'starter.simplify.check3'] },
+    { key: 'sync', titleKey: 'starter.sync.title', descriptionKey: 'starter.sync.desc', checklistKeys: ['starter.sync.check1', 'starter.sync.check2', 'starter.sync.check3'] },
+    { key: 'import', titleKey: 'starter.import.title', descriptionKey: 'starter.import.desc', checklistKeys: ['starter.import.check1', 'starter.import.check2', 'starter.import.check3'] },
+    { key: 'weekly-review', titleKey: 'starter.weeklyReview.title', descriptionKey: 'starter.weeklyReview.desc', checklistKeys: ['starter.weeklyReview.check1', 'starter.weeklyReview.check2', 'starter.weeklyReview.check3'] },
 ];
 
-const STARTER_TASK_KEY_BY_TITLE = new Map<string, StarterTaskKey>([
-    ...STARTER_TASK_TEMPLATES.map((template): [string, StarterTaskKey] => [
-        normalizeStarterTaskTitle(template.title),
-        template.key,
-    ]),
+const STARTER_SAMPLE_TASK_KEYS = ['starter.sampleBuyMilk', 'starter.sampleReplySam'] as const;
+
+const STARTER_PROJECT_TITLE_KEY = 'starter.projectTitle';
+const STARTER_PROJECT_NOTES_KEY = 'starter.projectNotes';
+
+const seedLanguages = (): Language[] => Object.keys(translations) as Language[];
+
+const resolveStarterString = (lang: Language, key: string): string =>
+    translations[lang]?.[key] ?? translations.en[key] ?? key;
+
+const resolveStarterTemplates = (lang: Language): ResolvedStarterTemplate[] =>
+    STARTER_TASK_TEMPLATES.map((template) => ({
+        key: template.key,
+        title: resolveStarterString(lang, template.titleKey),
+        description: resolveStarterString(lang, template.descriptionKey),
+        checklist: template.checklistKeys.map((checklistKey) => resolveStarterString(lang, checklistKey)),
+        contexts: template.contexts,
+        tags: template.tags,
+        isFocusedToday: template.isFocusedToday,
+    }));
+
+export const resolveSeedLanguage = (explicit?: string, settingsLanguage?: string): Language => {
+    if (explicit && isSupportedLanguage(explicit)) return explicit;
+    if (settingsLanguage && settingsLanguage !== 'system' && isSupportedLanguage(settingsLanguage)) return settingsLanguage;
+    return getSystemDefaultLanguage();
+};
+
+// Seeded titles are matched across every app language so a seed created in one
+// language repairs (never duplicates) after the user switches languages.
+let starterTaskKeyByTitleCache: Map<string, StarterTaskKey> | null = null;
+const getStarterTaskKeyByTitle = (): Map<string, StarterTaskKey> => {
+    if (starterTaskKeyByTitleCache) return starterTaskKeyByTitleCache;
+    const map = new Map<string, StarterTaskKey>();
+    for (const lang of seedLanguages()) {
+        for (const template of STARTER_TASK_TEMPLATES) {
+            map.set(normalizeStarterTaskTitle(resolveStarterString(lang, template.titleKey)), template.key);
+        }
+    }
     // Titles from older seed copy; keep so existing installs repair instead of duplicating.
-    ['process your first inbox item', 'process-inbox'],
-    ['try quick capture with a context and date', 'quick-capture'],
-]);
+    map.set('process your first inbox item', 'process-inbox');
+    map.set('start here: process your first inbox item', 'process-inbox');
+    map.set('try quick capture with a context and date', 'quick-capture');
+    starterTaskKeyByTitleCache = map;
+    return map;
+};
+
+let starterProjectTitlesCache: Set<string> | null = null;
+const getStarterProjectTitles = (): Set<string> => {
+    if (starterProjectTitlesCache) return starterProjectTitlesCache;
+    const titles = new Set<string>();
+    for (const lang of seedLanguages()) {
+        titles.add(normalizeStarterTaskTitle(resolveStarterString(lang, STARTER_PROJECT_TITLE_KEY)));
+    }
+    starterProjectTitlesCache = titles;
+    return titles;
+};
+
+let sampleTaskKeyByTitleCache: Map<string, string> | null = null;
+const getSampleTaskKeyByTitle = (): Map<string, string> => {
+    if (sampleTaskKeyByTitleCache) return sampleTaskKeyByTitleCache;
+    const map = new Map<string, string>();
+    for (const lang of seedLanguages()) {
+        for (const sampleKey of STARTER_SAMPLE_TASK_KEYS) {
+            map.set(normalizeStarterTaskTitle(resolveStarterString(lang, sampleKey)), sampleKey);
+        }
+    }
+    sampleTaskKeyByTitleCache = map;
+    return map;
+};
 
 const getStarterTaskKey = (task: Task): StarterTaskKey | null =>
-    STARTER_TASK_KEY_BY_TITLE.get(normalizeStarterTaskTitle(task.title)) ?? null;
+    getStarterTaskKeyByTitle().get(normalizeStarterTaskTitle(task.title)) ?? null;
 
 const getStarterTaskSortValue = (task: Task): number => {
     if (Number.isFinite(task.order)) return task.order as number;
@@ -316,7 +324,7 @@ const getStarterTaskSortValue = (task: Task): number => {
 };
 
 const buildStarterChecklist = (
-    template: StarterTaskTemplate,
+    template: ResolvedStarterTemplate,
     existingChecklist: Task['checklist']
 ): Task['checklist'] => {
     if (template.checklist.length === 0) return undefined;
@@ -350,7 +358,7 @@ const checklistShallowEqual = (left: Task['checklist'], right: Task['checklist']
 
 const normalizeExistingStarterTask = (
     task: Task,
-    template: StarterTaskTemplate,
+    template: ResolvedStarterTemplate,
     order: number,
     nowIso: string,
     deviceId?: string
@@ -388,23 +396,27 @@ const normalizeExistingStarterTask = (
     };
 };
 
-const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string): Pick<AppData, 'projects' | 'tasks'> => {
+const buildFreshInstallGettingStartedData = (
+    nowIso: string,
+    deviceId: string | undefined,
+    lang: Language
+): Pick<AppData, 'projects' | 'tasks'> => {
     const projectId = uuidv4();
     const revisionMeta = deviceId ? { revBy: deviceId } : {};
     const project: Project = {
         id: projectId,
-        title: 'Getting Started',
+        title: resolveStarterString(lang, STARTER_PROJECT_TITLE_KEY),
         status: 'active',
         color: '#3B82F6',
         order: 0,
         tagIds: [],
-        supportNotes: 'These getting-started tasks are optional. Delete this project anytime when Mindwtr feels set up.',
+        supportNotes: resolveStarterString(lang, STARTER_PROJECT_NOTES_KEY),
         rev: 1,
         ...revisionMeta,
         createdAt: nowIso,
         updatedAt: nowIso,
     };
-    const tasks: Task[] = STARTER_TASK_TEMPLATES.map((template, index) => ({
+    const tasks: Task[] = resolveStarterTemplates(lang).map((template, index) => ({
         id: uuidv4(),
         title: template.title,
         status: 'next',
@@ -429,32 +441,18 @@ const buildFreshInstallGettingStartedData = (nowIso: string, deviceId?: string):
         updatedAt: nowIso,
     }));
 
-    const sampleInboxTasks: Task[] = [
-        {
-            id: uuidv4(),
-            title: 'Buy milk',
-            status: 'inbox',
-            taskMode: 'task',
-            tags: [],
-            contexts: [],
-            rev: 1,
-            ...revisionMeta,
-            createdAt: nowIso,
-            updatedAt: nowIso,
-        },
-        {
-            id: uuidv4(),
-            title: 'Reply to Sam',
-            status: 'inbox',
-            taskMode: 'task',
-            tags: [],
-            contexts: [],
-            rev: 1,
-            ...revisionMeta,
-            createdAt: nowIso,
-            updatedAt: nowIso,
-        },
-    ];
+    const sampleInboxTasks: Task[] = STARTER_SAMPLE_TASK_KEYS.map((sampleKey) => ({
+        id: uuidv4(),
+        title: resolveStarterString(lang, sampleKey),
+        status: 'inbox',
+        taskMode: 'task',
+        tags: [],
+        contexts: [],
+        rev: 1,
+        ...revisionMeta,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+    }));
 
     return { projects: [project], tasks: [...tasks, ...sampleInboxTasks] };
 };
@@ -478,7 +476,7 @@ export const createSettingsActions = ({
     hasPendingSaveWork,
     getStorage,
 }: SettingsActionContext): SettingsActions => ({
-    seedGettingStarted: async (): Promise<StoreActionResult> => {
+    seedGettingStarted: async (options?: { language?: string }): Promise<StoreActionResult> => {
         const changeAt = Date.now();
         const nowIso = new Date().toISOString();
         let snapshot: AppData | null = null;
@@ -486,13 +484,18 @@ export const createSettingsActions = ({
 
         set((state) => {
             const deviceState = ensureDeviceId(state.settings);
-            const starterData = buildFreshInstallGettingStartedData(nowIso, deviceState.deviceId);
+            const lang = resolveSeedLanguage(
+                options?.language,
+                typeof state.settings.language === 'string' ? state.settings.language : undefined
+            );
+            const starterData = buildFreshInstallGettingStartedData(nowIso, deviceState.deviceId, lang);
             const starterTemplateProject = starterData.projects[0];
             if (!starterTemplateProject) return state;
+            const starterProjectTitles = getStarterProjectTitles();
             const existingProject = state._allProjects.find((project) =>
                 !project.deletedAt &&
                 typeof project.title === 'string' &&
-                project.title.trim().toLowerCase() === 'getting started'
+                starterProjectTitles.has(project.title.trim().toLowerCase())
             );
             const maxProjectOrder = state._allProjects.reduce(
                 (max, project) => Math.max(max, Number.isFinite(project.order) ? project.order : -1),
@@ -502,6 +505,21 @@ export const createSettingsActions = ({
                 ...starterTemplateProject,
                 order: maxProjectOrder + 1,
             };
+            // Repair the tutorial project's canonical copy into the seed language,
+            // mirroring how the starter tasks are repaired below.
+            let starterProjectUpdate: Project | null = null;
+            if (existingProject
+                && (existingProject.title !== starterTemplateProject.title
+                    || existingProject.supportNotes !== starterTemplateProject.supportNotes)) {
+                starterProjectUpdate = {
+                    ...existingProject,
+                    title: starterTemplateProject.title,
+                    supportNotes: starterTemplateProject.supportNotes,
+                    updatedAt: nowIso,
+                    rev: nextRevision(existingProject.rev),
+                    ...(deviceState.deviceId ? { revBy: deviceState.deviceId } : {}),
+                };
+            }
             const starterTasksByKey = new Map<StarterTaskKey, Task[]>();
             for (const task of state._allTasks) {
                 if (task.deletedAt || task.projectId !== starterProject.id) continue;
@@ -513,7 +531,8 @@ export const createSettingsActions = ({
             }
             const starterTaskUpdates = new Map<string, Task>();
             const existingStarterKeys = new Set<StarterTaskKey>();
-            for (const [index, template] of STARTER_TASK_TEMPLATES.entries()) {
+            const resolvedTemplates = resolveStarterTemplates(lang);
+            for (const [index, template] of resolvedTemplates.entries()) {
                 const candidates = (starterTasksByKey.get(template.key) ?? [])
                     .slice()
                     .sort((left, right) => getStarterTaskSortValue(left) - getStarterTaskSortValue(right));
@@ -544,6 +563,15 @@ export const createSettingsActions = ({
                     .filter((task) => !task.deletedAt)
                     .map(activeTaskTitleKey)
             );
+            // Sample inbox items are matched across languages too, so re-seeding
+            // after a language switch does not duplicate them.
+            const sampleTaskKeyByTitle = getSampleTaskKeyByTitle();
+            const existingSampleKeys = new Set<string>();
+            for (const task of state._allTasks) {
+                if (task.deletedAt || task.projectId || task.status !== 'inbox') continue;
+                const sampleKey = sampleTaskKeyByTitle.get(normalizeStarterTaskTitle(task.title));
+                if (sampleKey) existingSampleKeys.add(sampleKey);
+            }
             const tasksToAdd = starterData.tasks
                 .map((task) => ({
                     ...task,
@@ -552,15 +580,22 @@ export const createSettingsActions = ({
                 .filter((task) => {
                     const starterKey = task.projectId === starterProject.id ? getStarterTaskKey(task) : null;
                     if (starterKey && existingStarterKeys.has(starterKey)) return false;
+                    const sampleKey = task.projectId ? null : sampleTaskKeyByTitle.get(normalizeStarterTaskTitle(task.title));
+                    if (sampleKey && existingSampleKeys.has(sampleKey)) return false;
                     return !existingActiveTaskKeys.has(activeTaskTitleKey(task));
                 });
 
             projectId = starterProject.id;
-            if (existingProject && tasksToAdd.length === 0 && starterTaskUpdates.size === 0 && !deviceState.updated) {
+            if (existingProject && tasksToAdd.length === 0 && starterTaskUpdates.size === 0 && !starterProjectUpdate && !deviceState.updated) {
                 return state;
             }
 
-            const nextProjects = existingProject ? state._allProjects : [...state._allProjects, starterProject];
+            const starterProjectRepair = starterProjectUpdate;
+            const nextProjects = existingProject
+                ? (starterProjectRepair
+                    ? state._allProjects.map((project) => project.id === starterProjectRepair.id ? starterProjectRepair : project)
+                    : state._allProjects)
+                : [...state._allProjects, starterProject];
             const repairedTasks = starterTaskUpdates.size > 0
                 ? state._allTasks.map((task) => starterTaskUpdates.get(task.id) ?? task)
                 : state._allTasks;

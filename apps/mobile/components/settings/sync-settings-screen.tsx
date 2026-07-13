@@ -79,7 +79,7 @@ function SyncSettingsView({
     const router = useRouter();
     const tc = useThemeColors();
     const { showToast } = useToast();
-    const { tr, t } = useSettingsLocalization();
+    const { tr, t, language } = useSettingsLocalization();
     const scrollContentStyle = useSettingsScrollContent();
     const {
         tasks,
@@ -495,7 +495,7 @@ function SyncSettingsView({
     const addGettingStartedContent = useCallback((options?: { openProject?: boolean }) => {
         if (isGettingStartedActionBusy) return;
         setGettingStartedBusy(true);
-        seedGettingStarted()
+        seedGettingStarted({ language })
             .then((result) => {
                 if (!result.id) {
                     showToast({
@@ -526,7 +526,7 @@ function SyncSettingsView({
                 });
             })
             .finally(() => setGettingStartedBusy(false));
-    }, [isGettingStartedActionBusy, router, seedGettingStarted, showToast, t]);
+    }, [isGettingStartedActionBusy, language, router, seedGettingStarted, showToast, t]);
 
     const handleAddGettingStartedContent = useCallback((options?: { openProject?: boolean }) => {
         addGettingStartedContent(options);

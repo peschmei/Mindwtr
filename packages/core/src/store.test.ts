@@ -2286,6 +2286,45 @@ describe('TaskStore', () => {
         expect(useTaskStore.getState()._allTasks.find((task) => task.id === legacyProcessTask.id)?.deletedAt).toBeTruthy();
     });
 
+    it('seeds getting started content in the app language and repairs across language switches', async () => {
+        const german = await useTaskStore.getState().seedGettingStarted({ language: 'de' });
+        await flushPendingSave();
+
+        expect(german.success).toBe(true);
+        const germanState = useTaskStore.getState();
+        expect(germanState.projects).toHaveLength(1);
+        expect(germanState.projects[0].title).not.toBe('Getting Started');
+        expect(germanState.tasks).toHaveLength(9);
+        const germanTitles = germanState.tasks
+            .filter((task) => task.projectId === german.id)
+            .map((task) => task.title);
+        expect(germanTitles).toHaveLength(7);
+        expect(germanTitles).not.toContain('Start here: process your first inbox item');
+
+        const english = await useTaskStore.getState().seedGettingStarted({ language: 'en' });
+        await flushPendingSave();
+
+        expect(english).toEqual(german);
+        const englishState = useTaskStore.getState();
+        expect(englishState.projects.map((project) => project.title)).toEqual(['Getting Started']);
+        // Tutorial tasks repaired to English in place; samples not duplicated.
+        expect(englishState.tasks).toHaveLength(9);
+        expect(
+            englishState.tasks
+                .filter((task) => task.projectId === german.id)
+                .sort((left, right) => (left.order ?? 0) - (right.order ?? 0))
+                .map((task) => task.title)
+        ).toEqual([
+            'Start here: process your first inbox item',
+            'Capture a task in one line',
+            "Star up to 3 tasks for Today's Focus",
+            "Make Mindwtr yours: hide what you don't use",
+            'Set up sync across your devices',
+            'Import tasks from another app',
+            'Run your first weekly review',
+        ]);
+    });
+
     it('supports a basic task lifecycle', async () => {
         const { addTask, updateTask, moveTask } = useTaskStore.getState();
         addTask('Lifecycle Task');
