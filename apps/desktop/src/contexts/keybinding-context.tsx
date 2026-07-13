@@ -59,6 +59,14 @@ function isEditableTarget(target: EventTarget | null): boolean {
     return tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable;
 }
 
+// An open modal dialog (global search, quick add, prompts) owns the keyboard:
+// list shortcuts must never act on the view behind it. Without this, a stray
+// Enter or 'e' with focus outside the dialog's input completed a task in the
+// background Focus list from inside search (same class as the #848 menu fix).
+function hasModalDialogOpen(): boolean {
+    return document.querySelector('[role="dialog"][aria-modal="true"]') !== null;
+}
+
 // Enter must keep activating whatever control actually has focus (buttons,
 // menu items, links); the list-level Enter binding only fires when nothing
 // interactive is focused.
@@ -545,6 +553,7 @@ export function KeybindingProvider({
             }
             if (editingTaskIdRef.current) return;
             if (isEditableTarget(e.target)) return;
+            if (hasModalDialogOpen()) return;
 
             const scope = getActiveScope();
             const now = Date.now();
@@ -652,6 +661,7 @@ export function KeybindingProvider({
             }
             if (editingTaskIdRef.current) return;
             if (isEditableTarget(e.target)) return;
+            if (hasModalDialogOpen()) return;
 
             const scope = getActiveScope();
             const now = Date.now();
@@ -766,6 +776,7 @@ export function KeybindingProvider({
             }
             if (editingTaskIdRef.current) return;
             if (isEditableTarget(e.target)) return;
+            if (hasModalDialogOpen()) return;
             const scope = getActiveScope();
 
             if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key === 'Enter') {
@@ -853,6 +864,9 @@ export function KeybindingProvider({
             // An open menu owns the keyboard: don't fire list shortcuts (j/k,
             // e, x, dd…) while focus sits on a menu item (#848).
             if (e.target instanceof HTMLElement && e.target.closest('[role="menu"]')) return;
+            // Same for modal dialogs: arrows and app shortcuts must not reach
+            // the list behind global search / quick add / prompts.
+            if (hasModalDialogOpen()) return;
             if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === 'Comma') {
                 e.preventDefault();
                 onNavigate('settings');

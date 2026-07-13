@@ -104,9 +104,12 @@ export function GlobalSearch({ onNavigate }: GlobalSearchProps) {
         return () => window.removeEventListener('mindwtr:open-search', handleOpen);
     }, []);
 
-    // Auto-focus input when opened
+    // Auto-focus input when opened. Focus immediately so keys typed right
+    // after "/" land in the query instead of nowhere; the delayed retry covers
+    // the portal/animation frame where the first attempt can be swallowed.
     useEffect(() => {
         if (isOpen) {
+            inputRef.current?.focus();
             setTimeout(() => inputRef.current?.focus(), 50);
             setQuery('');
             setSelectedIndex(0);
@@ -263,6 +266,28 @@ export function GlobalSearch({ onNavigate }: GlobalSearchProps) {
         }
     };
 
+    // Keys pressed inside the dialog but outside the query input (after
+    // clicking a result or a filter chip) still drive the search instead of
+    // going dead: arrows/Enter navigate the results, and plain typing
+    // refocuses the query input. A stray Enter here used to fall through to
+    // the task list behind the dialog and act on it.
+    const handleDialogKeyDown = (e: React.KeyboardEvent) => {
+        if (e.target === inputRef.current) return;
+        if (
+            e.target instanceof HTMLElement
+            && e.target.closest('button, a[href], input, select, textarea, [contenteditable="true"]')
+        ) {
+            return;
+        }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+            handleListKeyDown(e);
+            return;
+        }
+        if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            inputRef.current?.focus();
+        }
+    };
+
     const handleSelect = (result: { type: 'project'; item: SearchProjectResult } | { type: 'task'; item: SearchTaskResult }) => {
         setIsOpen(false);
         const shouldSwitchToAllAreas = activeAreaFilter !== AREA_FILTER_ALL && (
@@ -407,6 +432,7 @@ export function GlobalSearch({ onNavigate }: GlobalSearchProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={dialogTitleId}
+            onKeyDown={handleDialogKeyDown}
         >
             <div
                 className="w-full max-w-lg bg-popover text-popover-foreground rounded-xl border shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-100"

@@ -445,6 +445,55 @@ describe('KeybindingProvider (vim)', () => {
         expect(toggleDoneSelected).not.toHaveBeenCalled();
     });
 
+    it('ignores list shortcuts while a modal dialog is open, even with focus outside it', () => {
+        const editSelected = vi.fn();
+        const toggleDoneSelected = vi.fn();
+        const openSelected = vi.fn();
+        const selectNext = vi.fn();
+
+        const DialogHarness = () => {
+            const { registerTaskListScope } = useKeybindings();
+            useEffect(() => {
+                registerTaskListScope({
+                    kind: 'taskList',
+                    selectNext,
+                    selectPrev: vi.fn(),
+                    selectFirst: vi.fn(),
+                    selectLast: vi.fn(),
+                    editSelected,
+                    openSelected,
+                    toggleDoneSelected,
+                    deleteSelected: vi.fn(),
+                });
+                return () => registerTaskListScope(null);
+            }, [registerTaskListScope]);
+            // Same shape as the global search / quick add overlays.
+            return <div role="dialog" aria-modal="true" />;
+        };
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <DialogHarness />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        // Focus is nowhere interactive (e.g. after clicking a non-focusable
+        // element inside the dialog) — the exact state that used to let Enter
+        // and action keys reach the task list behind the dialog.
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'ArrowDown' });
+        fireEvent.keyDown(window, { key: 'Enter' });
+        fireEvent.keyDown(window, { key: 'e' });
+        fireEvent.keyDown(window, { key: 'x' });
+
+        expect(selectNext).not.toHaveBeenCalled();
+        expect(openSelected).not.toHaveBeenCalled();
+        expect(editSelected).not.toHaveBeenCalled();
+        expect(toggleDoneSelected).not.toHaveBeenCalled();
+    });
+
     it('opens the selected task with Enter when nothing interactive is focused', () => {
         const openSelected = vi.fn();
 
