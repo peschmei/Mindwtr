@@ -1339,7 +1339,9 @@ export default function FocusScreen() {
   );
   const showContextMatchMode = selectedContextCount > 1;
   const emptyTitle = hasFilters ? resolveText('filters.noMatch', 'No tasks match these filters.') : t('agenda.allClear');
-  const emptySubtitle = hasFilters ? resolveText('filters.label', 'Filters') : t('agenda.noTasks');
+  const emptySubtitle = hasFilters
+    ? resolveText('filters.label', 'Filters')
+    : tasks.length > 0 ? t('agenda.noTasks') : t('agenda.emptyStart');
   const pomodoroTasks = useMemo(() => {
     const byId = new Map<string, Task>();
     [...focusedTasks, ...schedule, ...nextActions, ...reviewDue].forEach((task) => {

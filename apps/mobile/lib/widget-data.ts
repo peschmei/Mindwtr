@@ -241,7 +241,7 @@ export function buildWidgetPayload(
         inboxCount,
         focusedCount: starredTasks.length,
         items,
-        emptyMessage: tr['agenda.noTasks'] ?? 'No tasks',
+        emptyMessage: tr['agenda.allClear'] ?? 'All clear',
         captureLabel: tr['widget.capture'] ?? 'Quick capture',
         focusUri: WIDGET_FOCUS_URI,
         quickCaptureUri: WIDGET_QUICK_CAPTURE_URI,

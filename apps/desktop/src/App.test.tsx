@@ -76,7 +76,7 @@ describe('App', () => {
             expect(queryByRole('dialog', { name: /welcome to mindwtr/i })).not.toBeInTheDocument();
         });
         expect(useTaskStore.getState().projects.some((project) => project.title === 'Getting Started')).toBe(true);
-        expect(useTaskStore.getState().tasks).toHaveLength(8);
+        expect(useTaskStore.getState().tasks).toHaveLength(9);
         expect(useUiStore.getState().projectView.selectedProjectId).toBe(
             useTaskStore.getState().projects.find((project) => project.title === 'Getting Started')?.id
         );

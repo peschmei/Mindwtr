@@ -2157,15 +2157,16 @@ describe('TaskStore', () => {
         expect(firstResult.success).toBe(true);
         expect(firstResult.id).toBeTruthy();
         expect(useTaskStore.getState().projects.map((project) => project.title)).toEqual(['Getting Started']);
-        expect(useTaskStore.getState().tasks).toHaveLength(8);
+        expect(useTaskStore.getState().tasks).toHaveLength(9);
         const state = useTaskStore.getState();
         const starterTasks = state.tasks
             .filter((task) => task.projectId === firstResult.id)
             .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
         expect(starterTasks.map((task) => task.title)).toEqual([
             'Start here: process your first inbox item',
-            'Try quick capture with a context and date',
+            'Capture a task in one line',
             "Star up to 3 tasks for Today's Focus",
+            "Make Mindwtr yours: hide what you don't use",
             'Set up sync across your devices',
             'Import tasks from another app',
             'Run your first weekly review',
@@ -2176,9 +2177,9 @@ describe('TaskStore', () => {
         expect(starterTasks[0].checklist?.map((item) => item.title)).toEqual([
             'Open Inbox',
             'Tap Process Inbox',
-            'Clarify one sample item into a next action or project',
+            'Decide the next step for one sample item, or park it for later',
         ]);
-        expect(starterTasks[3].checklist?.map((item) => item.title)).toContain('Open Settings -> Sync');
+        expect(starterTasks[4].checklist?.map((item) => item.title)).toContain('Open Settings -> Sync');
         expect(starterTasks[2].isFocusedToday).toBe(true);
         const sampleInboxTasks = state.tasks
             .filter((task) => task.status === 'inbox')
@@ -2191,7 +2192,7 @@ describe('TaskStore', () => {
 
         expect(secondResult).toEqual(firstResult);
         expect(useTaskStore.getState().projects.map((project) => project.title)).toEqual(['Getting Started']);
-        expect(useTaskStore.getState().tasks).toHaveLength(8);
+        expect(useTaskStore.getState().tasks).toHaveLength(9);
     });
 
     it('backfills missing getting started tasks into an existing empty project', async () => {
@@ -2208,15 +2209,16 @@ describe('TaskStore', () => {
 
         expect(result).toEqual({ success: true, id: existingProject.id });
         expect(useTaskStore.getState().projects.map((project) => project.title)).toEqual(['Getting Started']);
-        expect(useTaskStore.getState().tasks).toHaveLength(8);
+        expect(useTaskStore.getState().tasks).toHaveLength(9);
         expect(
             useTaskStore.getState().tasks
                 .filter((task) => task.projectId === existingProject.id)
                 .map((task) => task.title)
         ).toEqual([
             'Start here: process your first inbox item',
-            'Try quick capture with a context and date',
+            'Capture a task in one line',
             "Star up to 3 tasks for Today's Focus",
+            "Make Mindwtr yours: hide what you don't use",
             'Set up sync across your devices',
             'Import tasks from another app',
             'Run your first weekly review',
@@ -2245,10 +2247,18 @@ describe('TaskStore', () => {
                 { id: 'check-1', title: 'Open Inbox', isCompleted: true },
             ],
         });
+        const legacyQuickCaptureTask = createStoreTask('legacy-quick-capture', {
+            title: 'Try quick capture with a context and date',
+            status: 'next',
+            taskMode: 'list',
+            projectId: existingProject.id,
+            order: 2,
+            orderNum: 2,
+        });
         useTaskStore.setState({
-            tasks: [legacyProcessTask, currentProcessTask],
+            tasks: [legacyProcessTask, currentProcessTask, legacyQuickCaptureTask],
             projects: [existingProject],
-            _allTasks: [legacyProcessTask, currentProcessTask],
+            _allTasks: [legacyProcessTask, currentProcessTask, legacyQuickCaptureTask],
             _allProjects: [existingProject],
         });
 
@@ -2261,8 +2271,9 @@ describe('TaskStore', () => {
             .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
         expect(visibleStarterTasks.map((task) => task.title)).toEqual([
             'Start here: process your first inbox item',
-            'Try quick capture with a context and date',
+            'Capture a task in one line',
             "Star up to 3 tasks for Today's Focus",
+            "Make Mindwtr yours: hide what you don't use",
             'Set up sync across your devices',
             'Import tasks from another app',
             'Run your first weekly review',
@@ -2270,6 +2281,8 @@ describe('TaskStore', () => {
         expect(visibleStarterTasks.filter((task) => task.title === 'Start here: process your first inbox item')).toHaveLength(1);
         expect(visibleStarterTasks[0].checklist?.[0]?.isCompleted).toBe(true);
         expect(visibleStarterTasks.every((task) => task.checklist?.length === 3)).toBe(true);
+        // The renamed quick-capture lesson is repaired in place, not re-added.
+        expect(visibleStarterTasks.find((task) => task.title === 'Capture a task in one line')?.id).toBe(legacyQuickCaptureTask.id);
         expect(useTaskStore.getState()._allTasks.find((task) => task.id === legacyProcessTask.id)?.deletedAt).toBeTruthy();
     });
 

@@ -1181,7 +1181,8 @@ export const itOverrides: Record<string, string> = {
         'agenda.reviewDueProjects': 'Progetti da rivedere',
         'agenda.upcoming': 'In arrivo',
         'agenda.allClear': 'Tutto a posto!',
-        'agenda.noTasks': 'Nulla in programma. Scegli una prossima azione su cui concentrarti.',
+        'agenda.noTasks': 'Niente su cui concentrarsi al momento. Aggiungi una stella o una scadenza a un’attività e apparirà qui.',
+        'agenda.emptyStart': 'Ancora nessuna attività. Aggiungi quello che hai in mente in Entrata e sistemalo più tardi.',
         'focus.schedule': 'Oggi',
         'focus.nextActions': 'Prossime azioni',
 

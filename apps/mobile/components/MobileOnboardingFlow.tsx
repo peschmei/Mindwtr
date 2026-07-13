@@ -36,7 +36,8 @@ export function MobileOnboardingFlow({
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: tc.text }]}>Welcome to Mindwtr</Text>
               <Text style={[styles.subtitle, { color: tc.secondaryText }]}>
-                Start with your existing data, or add a small Getting Started project to learn the loop.
+                Capture what&apos;s on your mind, sort it out later, and focus on a few things at a time.
+                Bring your existing data, or start with a small guided project.
               </Text>
             </View>
             <Pressable

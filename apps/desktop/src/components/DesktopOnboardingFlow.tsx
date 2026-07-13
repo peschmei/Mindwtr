@@ -37,7 +37,8 @@ export function DesktopOnboardingFlow({
                             Welcome to Mindwtr
                         </h2>
                         <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                            Start with your existing data, or create a small Getting Started project to learn the loop.
+                            Capture what&apos;s on your mind, sort it out later, and focus on a few things at a time.
+                            Bring your existing data, or start with a small guided project.
                         </p>
                     </div>
                     <button

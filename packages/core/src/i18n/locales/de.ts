@@ -1069,7 +1069,8 @@ export const deOverrides: Record<string, string> = {
         'agenda.reviewDueProjects': 'Projekte zu Revidieren',
         'agenda.upcoming': 'Anstehend',
         'agenda.allClear': 'Alles geklärt!',
-        'agenda.noTasks': 'Im Moment kein dringenden Aufgaben.',
+        'agenda.noTasks': 'Gerade nichts im Fokus. Markiere eine Aufgabe mit einem Stern oder gib ihr ein Fälligkeitsdatum, dann erscheint sie hier.',
+        'agenda.emptyStart': 'Noch keine Aufgaben. Schreib alles, was dir durch den Kopf geht, in den Posteingang und sortiere es später.',
         'focus.schedule': 'Heute',
         'focus.nextActions': 'Nächste Aktionen',
         

@@ -227,8 +227,27 @@ describe('AgendaView', () => {
         const { getByText, queryByText } = renderAgenda();
 
         expect(getByText('All Clear!')).toBeInTheDocument();
-        expect(getByText('Nothing on deck. Pick a next action to focus on.')).toBeInTheDocument();
+        expect(getByText('Nothing to focus on right now. Star a task or give it a due date and it will show up here.')).toBeInTheDocument();
         expect(queryByText('Inbox only task')).not.toBeInTheDocument();
+    });
+
+    it('shows capture guidance in the empty state when there are no tasks at all', () => {
+        useTaskStore.setState({
+            tasks: [],
+            _allTasks: [],
+            projects: [],
+            _allProjects: [],
+            areas: [],
+            _allAreas: [],
+            settings: {},
+            error: null,
+            highlightTaskId: null,
+        });
+
+        const { getByText } = renderAgenda();
+
+        expect(getByText('All Clear!')).toBeInTheDocument();
+        expect(getByText('No tasks yet. Add whatever is on your mind to the Inbox and sort it out later.')).toBeInTheDocument();
     });
 
     it('does not show the saved-filter chip row when no Focus filters exist', () => {

@@ -248,7 +248,7 @@ function AgendaTaskList({
 
 export function AgendaView() {
     const perf = usePerformanceMonitor('AgendaView');
-    const { projects, areas, updateTask, updateSettings, settings, error, highlightTaskId, setHighlightTask, taskChangeToken } = useTaskStore(
+    const { projects, areas, updateTask, updateSettings, settings, error, highlightTaskId, setHighlightTask, taskChangeToken, hasAnyTasks } = useTaskStore(
         (state) => ({
             projects: state.projects,
             areas: state.areas,
@@ -259,6 +259,7 @@ export function AgendaView() {
             highlightTaskId: state.highlightTaskId,
             setHighlightTask: state.setHighlightTask,
             taskChangeToken: state.lastDataChangeAt,
+            hasAnyTasks: state.tasks.length > 0,
         }),
         shallow
     );
@@ -1297,7 +1298,11 @@ export function AgendaView() {
                 <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-2">
                     <CheckCircle2 className="w-10 h-10 text-emerald-500/80" aria-hidden="true" strokeWidth={1.5} />
                     <p className="text-lg font-medium text-foreground">{t('agenda.allClear')}</p>
-                    <p className="text-sm">{hasTaskFilters ? t('filters.noMatch') : t('agenda.noTasks')}</p>
+                    <p className="text-sm">
+                        {hasTaskFilters
+                            ? t('filters.noMatch')
+                            : hasAnyTasks ? t('agenda.noTasks') : t('agenda.emptyStart')}
+                    </p>
                 </div>
             )}
             <PromptModal

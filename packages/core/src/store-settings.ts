@@ -213,6 +213,7 @@ type StarterTaskKey =
     | 'process-inbox'
     | 'quick-capture'
     | 'focus'
+    | 'simplify'
     | 'weekly-review'
     | 'sync'
     | 'import';
@@ -223,35 +224,45 @@ const STARTER_TASK_TEMPLATES: StarterTaskTemplate[] = [
     {
         key: 'process-inbox',
         title: 'Start here: process your first inbox item',
-        description: 'Turn one loose thought into a clear next action, project, or someday item.',
+        description: 'Turn one captured thought into a small, doable step.',
         checklist: [
             'Open Inbox',
             'Tap Process Inbox',
-            'Clarify one sample item into a next action or project',
+            'Decide the next step for one sample item, or park it for later',
         ],
     },
     {
         key: 'quick-capture',
-        title: 'Try quick capture with a context and date',
-        description: 'Capture a task and light structure in one line.',
+        title: 'Capture a task in one line',
+        description: 'Type a thought and add details right in the text - no forms needed.',
         checklist: [
             'Tap the capture button',
             'Try: Call Alex @phone /due:tomorrow',
-            'Keep dates for real deadlines or ticklers',
+            'Only give dates to things with real deadlines',
         ],
         contexts: ['@computer'],
     },
     {
         key: 'focus',
         title: "Star up to 3 tasks for Today's Focus",
-        description: 'Pick the few actions you can commit to now.',
+        description: 'Pick the few things you will actually do today.',
         checklist: [
             'Open Focus',
-            'Use the star to pick your top actions',
-            'Defer an action when it should hide until later',
+            'Use the star to pick your top tasks',
+            'Defer a task to hide it until you need it',
         ],
         contexts: ['@computer'],
         isFocusedToday: true,
+    },
+    {
+        key: 'simplify',
+        title: "Make Mindwtr yours: hide what you don't use",
+        description: 'Prefer a simple list? Trim the task editor down to just the fields you need.',
+        checklist: [
+            'Open Settings -> GTD -> Task Editor Layout',
+            'Hide the fields you never use',
+            'Bring them back anytime - hiding never deletes data',
+        ],
     },
     {
         key: 'sync',
@@ -276,11 +287,11 @@ const STARTER_TASK_TEMPLATES: StarterTaskTemplate[] = [
     {
         key: 'weekly-review',
         title: 'Run your first weekly review',
-        description: 'Refresh your lists so the system stays trustworthy.',
+        description: 'A short weekly tidy-up keeps your lists worth trusting.',
         checklist: [
             'Open Review',
-            'Clarify Inbox items',
-            'Promote the next few actions and leave the rest quiet',
+            'Empty your Inbox',
+            'Pick the next few tasks and let the rest wait',
         ],
     },
 ];
@@ -290,7 +301,9 @@ const STARTER_TASK_KEY_BY_TITLE = new Map<string, StarterTaskKey>([
         normalizeStarterTaskTitle(template.title),
         template.key,
     ]),
+    // Titles from older seed copy; keep so existing installs repair instead of duplicating.
     ['process your first inbox item', 'process-inbox'],
+    ['try quick capture with a context and date', 'quick-capture'],
 ]);
 
 const getStarterTaskKey = (task: Task): StarterTaskKey | null =>
