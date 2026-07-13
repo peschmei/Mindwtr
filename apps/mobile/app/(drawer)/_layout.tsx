@@ -55,6 +55,14 @@ function DrawerHeader({
   );
 }
 
+// Cold starts and deep links that land directly on a stack screen (session
+// restore to Archive, widget/notification links) must still have the tabs
+// beneath them, so the header back button and Android system back return to
+// the app instead of exiting it (#842).
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
+
 export default function AppLayout() {
   const tc = useThemeColors();
   const { t } = useLanguage();

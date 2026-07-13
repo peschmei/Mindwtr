@@ -5,6 +5,7 @@ import { act, create } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Index from '../app/index';
+import { unstable_settings as drawerLayoutSettings } from '../app/(drawer)/_layout';
 import TabLayout from '../app/(drawer)/(tabs)/_layout';
 
 const mockRouterPush = vi.hoisted(() => vi.fn());
@@ -84,6 +85,10 @@ vi.mock('@react-navigation/native', () => ({
   CommonActions: {
     navigate: vi.fn((route) => ({ type: 'NAVIGATE', payload: route })),
   },
+}));
+
+vi.mock('@react-navigation/elements', () => ({
+  getHeaderTitle: (_options: unknown, fallback: string) => fallback,
 }));
 
 vi.mock('@mindwtr/core', () => ({
@@ -406,6 +411,10 @@ describe('mobile tab quick capture', () => {
     const tabs = tree.root.find((node) => String(node.type) === 'Tabs');
     expect(tabs.props.initialRouteName).toBe('focus');
     expect(getBottomTabLabels(tree).slice(0, 2)).toEqual(['Focus', 'Inbox']);
+  });
+
+  it('anchors restored stack screens above tabs so Android Back stays in the app', () => {
+    expect(drawerLayoutSettings).toEqual({ anchor: '(tabs)' });
   });
 
   it('shrinks mobile header titles before React Navigation truncates them', () => {
