@@ -672,9 +672,9 @@ function RootLayoutContentInner() {
     seedGettingStarted({ language })
       .then((result) => {
         if (!result.id) {
-          setMobileOnboardingError('Getting Started was not created. Try again or import your data instead.');
+          setMobileOnboardingError(t('onboarding.errorNotCreated'));
           showToast({
-            message: 'Getting Started was not created.',
+            message: t('onboarding.toastNotCreated'),
             tone: 'info',
           });
           return;
@@ -682,14 +682,14 @@ function RootLayoutContentInner() {
         dismissMobileOnboarding();
         router.push({ pathname: '/projects-screen', params: { projectId: result.id } } as never);
         showToast({
-          message: 'Getting Started is ready in Projects.',
+          message: t('onboarding.toastReady'),
           tone: 'success',
         });
       })
       .catch((error) => {
-        setMobileOnboardingError('Failed to create Getting Started onboarding. Try again, or use Import/Sync instead.');
+        setMobileOnboardingError(t('onboarding.errorFailed'));
         showToast({
-          message: 'Failed to create Getting Started onboarding.',
+          message: t('onboarding.toastFailed'),
           tone: 'error',
         });
         void logError(error, { scope: 'onboarding', extra: { step: 'seedGettingStarted' } });
@@ -702,6 +702,7 @@ function RootLayoutContentInner() {
     router,
     seedGettingStarted,
     showToast,
+    t,
   ]);
 
   const dismissAppAnnouncement = useCallback(() => {

@@ -1,5 +1,6 @@
 export const allowedEnglishMirrorTerms = [
     'Mindwtr',
+    'Apple',
     'WebDAV',
     'CalDAV',
     'Dropbox',

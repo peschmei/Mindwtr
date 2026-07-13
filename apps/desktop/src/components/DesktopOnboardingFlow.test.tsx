@@ -1,6 +1,9 @@
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { DesktopOnboardingFlow } from './DesktopOnboardingFlow';
+import { LanguageProvider } from '../contexts/language-context';
+
+const renderFlow = (ui: React.ReactElement) => render(<LanguageProvider>{ui}</LanguageProvider>);
 
 describe('DesktopOnboardingFlow', () => {
     const baseProps = () => ({
@@ -13,7 +16,7 @@ describe('DesktopOnboardingFlow', () => {
 
     it('renders the three first-run choices', () => {
         const props = baseProps();
-        const { getByRole } = render(<DesktopOnboardingFlow {...props} />);
+        const { getByRole } = renderFlow(<DesktopOnboardingFlow {...props} />);
 
         expect(getByRole('heading', { name: 'Welcome to Mindwtr' })).toBeInTheDocument();
         expect(getByRole('button', { name: /set up sync/i })).toBeInTheDocument();
@@ -23,7 +26,7 @@ describe('DesktopOnboardingFlow', () => {
 
     it('routes each choice to its callback', () => {
         const props = baseProps();
-        const { getByRole } = render(<DesktopOnboardingFlow {...props} />);
+        const { getByRole } = renderFlow(<DesktopOnboardingFlow {...props} />);
 
         fireEvent.click(getByRole('button', { name: /set up sync/i }));
         fireEvent.click(getByRole('button', { name: /import tasks/i }));
@@ -38,14 +41,14 @@ describe('DesktopOnboardingFlow', () => {
 
     it('does not render when closed', () => {
         const props = baseProps();
-        const { queryByRole } = render(<DesktopOnboardingFlow {...props} isOpen={false} />);
+        const { queryByRole } = renderFlow(<DesktopOnboardingFlow {...props} isOpen={false} />);
 
         expect(queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('shows progress and inline errors for start fresh', () => {
         const props = baseProps();
-        const { getByRole, getByText } = render(
+        const { getByRole, getByText } = renderFlow(
             <DesktopOnboardingFlow
                 {...props}
                 busy

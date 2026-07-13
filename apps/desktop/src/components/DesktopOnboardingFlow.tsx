@@ -1,5 +1,6 @@
 import { Database, Download, RefreshCw, X } from 'lucide-react';
 import { ModalPortal } from './ModalPortal';
+import { useLanguage } from '../contexts/language-context';
 
 type DesktopOnboardingFlowProps = {
     isOpen: boolean;
@@ -20,6 +21,7 @@ export function DesktopOnboardingFlow({
     onStartFresh,
     onSkip,
 }: DesktopOnboardingFlowProps) {
+    const { t } = useLanguage();
     if (!isOpen) return null;
 
     return (
@@ -34,11 +36,10 @@ export function DesktopOnboardingFlow({
                 <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
                     <div className="min-w-0">
                         <h2 id="desktop-onboarding-title" className="text-xl font-semibold tracking-tight">
-                            Welcome to Mindwtr
+                            {t('onboarding.title')}
                         </h2>
                         <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                            Capture what&apos;s on your mind, sort it out later, and focus on a few things at a time.
-                            Bring your existing data, or start with a small guided project.
+                            {t('onboarding.subtitle')}
                         </p>
                     </div>
                     <button
@@ -46,7 +47,7 @@ export function DesktopOnboardingFlow({
                         onClick={onSkip}
                         disabled={busy}
                         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label="Skip onboarding"
+                        aria-label={t('onboarding.skip')}
                     >
                         <X className="h-4 w-4" aria-hidden="true" />
                     </button>
@@ -63,9 +64,9 @@ export function DesktopOnboardingFlow({
                             <RefreshCw className="h-5 w-5" aria-hidden="true" />
                         </span>
                         <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold text-foreground">Set up sync</span>
+                            <span className="block text-sm font-semibold text-foreground">{t('onboarding.syncTitle')}</span>
                             <span className="mt-0.5 block text-xs text-muted-foreground">
-                                Connect Dropbox, WebDAV, CloudKit, or a local sync folder before adding starter data.
+                                {t('onboarding.syncDesc')}
                             </span>
                         </span>
                     </button>
@@ -80,9 +81,9 @@ export function DesktopOnboardingFlow({
                             <Download className="h-5 w-5" aria-hidden="true" />
                         </span>
                         <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold text-foreground">Import tasks</span>
+                            <span className="block text-sm font-semibold text-foreground">{t('onboarding.importTitle')}</span>
                             <span className="mt-0.5 block text-xs text-muted-foreground">
-                                Bring in a Todoist, OmniFocus, DGT, or Mindwtr backup file first.
+                                {t('onboarding.importDesc')}
                             </span>
                         </span>
                     </button>
@@ -98,10 +99,10 @@ export function DesktopOnboardingFlow({
                         </span>
                         <span className="min-w-0 flex-1">
                             <span className="block text-sm font-semibold">
-                                {busy ? 'Starting...' : 'Start fresh'}
+                                {busy ? t('onboarding.startFreshBusy') : t('onboarding.startFreshTitle')}
                             </span>
                             <span className="mt-0.5 block text-xs text-primary-foreground/80">
-                                Add a guided Getting Started project and two sample inbox items.
+                                {t('onboarding.startFreshDesc')}
                             </span>
                         </span>
                     </button>
@@ -114,7 +115,7 @@ export function DesktopOnboardingFlow({
 
                 <div className="flex items-center justify-between gap-4 border-t border-border bg-muted/20 px-6 py-4">
                     <p className="text-xs text-muted-foreground">
-                        You can change sync and import settings later.
+                        {t('onboarding.footer')}
                     </p>
                     <button
                         type="button"
@@ -122,7 +123,7 @@ export function DesktopOnboardingFlow({
                         disabled={busy}
                         className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        Skip for now
+                        {t('onboarding.skipForNow')}
                     </button>
                 </div>
             </div>

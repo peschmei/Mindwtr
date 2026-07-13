@@ -1055,22 +1055,22 @@ function App() {
         seedGettingStarted({ language })
             .then((result) => {
                 if (!result.id) {
-                    setDesktopOnboardingError('Getting Started was not created. Try again or import your data instead.');
-                    showToast('Getting Started was not created.', 'info');
+                    setDesktopOnboardingError(t('onboarding.errorNotCreated'));
+                    showToast(t('onboarding.toastNotCreated'), 'info');
                     return;
                 }
                 dismissDesktopOnboarding();
                 useUiStore.getState().setProjectView({ selectedProjectId: result.id });
                 handleViewChange('projects');
-                showToast('Getting Started is ready in Projects.', 'success');
+                showToast(t('onboarding.toastReady'), 'success');
             })
             .catch((error) => {
-                setDesktopOnboardingError('Failed to create Getting Started onboarding. Try again, or use Import/Sync instead.');
-                showToast('Failed to create Getting Started onboarding.', 'error');
+                setDesktopOnboardingError(t('onboarding.errorFailed'));
+                showToast(t('onboarding.toastFailed'), 'error');
                 void logError(error, { scope: 'onboarding', step: 'seedGettingStarted' });
             })
             .finally(() => setDesktopOnboardingBusy(false));
-    }, [desktopOnboardingBusy, dismissDesktopOnboarding, handleViewChange, language, seedGettingStarted, showToast]);
+    }, [desktopOnboardingBusy, dismissDesktopOnboarding, handleViewChange, language, seedGettingStarted, showToast, t]);
 
     const dismissAppAnnouncement = useCallback(() => {
         if (testAnnouncement) {

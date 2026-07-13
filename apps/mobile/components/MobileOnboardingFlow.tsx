@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
+import { useLanguage } from '@/contexts/language-context';
 
 type MobileOnboardingFlowProps = {
   busy?: boolean;
@@ -27,6 +28,7 @@ export function MobileOnboardingFlow({
 }: MobileOnboardingFlowProps) {
   const tc = useThemeColors();
   const filledButton = useFilledButtonColors();
+  const { t } = useLanguage();
 
   return (
     <Modal animationType="fade" transparent visible={isOpen} onRequestClose={onSkip}>
@@ -34,14 +36,13 @@ export function MobileOnboardingFlow({
         <View style={[styles.card, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
           <View style={[styles.header, { borderBottomColor: tc.border }]}>
             <View style={styles.headerText}>
-              <Text style={[styles.title, { color: tc.text }]}>Welcome to Mindwtr</Text>
+              <Text style={[styles.title, { color: tc.text }]}>{t('onboarding.title')}</Text>
               <Text style={[styles.subtitle, { color: tc.secondaryText }]}>
-                Capture what&apos;s on your mind, sort it out later, and focus on a few things at a time.
-                Bring your existing data, or start with a small guided project.
+                {t('onboarding.subtitle')}
               </Text>
             </View>
             <Pressable
-              accessibilityLabel="Skip onboarding"
+              accessibilityLabel={t('onboarding.skip')}
               accessibilityRole="button"
               disabled={busy}
               hitSlop={8}
@@ -58,17 +59,17 @@ export function MobileOnboardingFlow({
           <ScrollView contentContainerStyle={styles.body} bounces={false}>
             <OnboardingOption
               disabled={busy}
-              description="Connect Dropbox, WebDAV, iCloud, or a local sync folder before adding starter data."
+              description={t('onboarding.syncDesc')}
               icon={<RefreshCw color={tc.tint} size={22} strokeWidth={2.2} />}
               onPress={onOpenSync}
-              title="Set up sync"
+              title={t('onboarding.syncTitle')}
             />
             <OnboardingOption
               disabled={busy}
-              description="Bring in a Todoist, OmniFocus, DGT, Apple Reminders, or Mindwtr backup file first."
+              description={t('onboarding.importDescMobile')}
               icon={<Download color={tc.tint} size={22} strokeWidth={2.2} />}
               onPress={onOpenImport}
-              title="Import tasks"
+              title={t('onboarding.importTitle')}
             />
             <TouchableOpacity
               accessibilityRole="button"
@@ -89,9 +90,9 @@ export function MobileOnboardingFlow({
                 )}
               </View>
               <View style={styles.optionText}>
-                <Text style={[styles.primaryOptionTitle, filledButton.textColor ? { color: filledButton.textColor } : null]}>{busy ? 'Starting...' : 'Start fresh'}</Text>
+                <Text style={[styles.primaryOptionTitle, filledButton.textColor ? { color: filledButton.textColor } : null]}>{busy ? t('onboarding.startFreshBusy') : t('onboarding.startFreshTitle')}</Text>
                 <Text style={styles.primaryOptionDescription}>
-                  Add a guided Getting Started project and two sample inbox items.
+                  {t('onboarding.startFreshDesc')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -104,10 +105,10 @@ export function MobileOnboardingFlow({
 
           <View style={[styles.footer, { borderTopColor: tc.border }]}>
             <Text style={[styles.footerText, { color: tc.secondaryText }]}>
-              You can set these up or add sample content later.
+              {t('onboarding.footer')}
             </Text>
             <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={onSkip}>
-              <Text style={[styles.skipText, { color: busy ? tc.secondaryText : tc.tint }]}>Skip for now</Text>
+              <Text style={[styles.skipText, { color: busy ? tc.secondaryText : tc.tint }]}>{t('onboarding.skipForNow')}</Text>
             </TouchableOpacity>
           </View>
         </View>

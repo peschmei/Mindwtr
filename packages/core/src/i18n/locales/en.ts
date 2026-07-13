@@ -1938,6 +1938,26 @@ export const en: Record<string, string> = {
     'obsidian.bringIntoMindwtrFailed': 'Could not add the task to Mindwtr.',
         'obsidian.sourceAttachmentTitle': 'Obsidian source',
 
+        // First-run onboarding modal (both platforms).
+        'onboarding.title': 'Welcome to Mindwtr',
+        'onboarding.subtitle': 'Capture what’s on your mind, sort it out later, and focus on a few things at a time. Bring your existing data, or start with a small guided project.',
+        'onboarding.skip': 'Skip onboarding',
+        'onboarding.skipForNow': 'Skip for now',
+        'onboarding.syncTitle': 'Set up sync',
+        'onboarding.syncDesc': 'Connect Dropbox, iCloud, WebDAV, or a local sync folder before adding starter data.',
+        'onboarding.importTitle': 'Import tasks',
+        'onboarding.importDesc': 'Bring in a Todoist, OmniFocus, DGT, or Mindwtr backup file first.',
+        'onboarding.importDescMobile': 'Bring in a Todoist, OmniFocus, DGT, Apple Reminders, or Mindwtr backup file first.',
+        'onboarding.startFreshTitle': 'Start fresh',
+        'onboarding.startFreshBusy': 'Starting...',
+        'onboarding.startFreshDesc': 'Add a guided Getting Started project and two sample inbox items.',
+        'onboarding.footer': 'You can set up sync, import, and sample content later.',
+        'onboarding.errorNotCreated': 'Getting Started was not created. Try again or import your data instead.',
+        'onboarding.errorFailed': 'Failed to create Getting Started onboarding. Try again, or use Import/Sync instead.',
+        'onboarding.toastNotCreated': 'Getting Started was not created.',
+        'onboarding.toastReady': 'Getting Started is ready in Projects.',
+        'onboarding.toastFailed': 'Failed to create Getting Started onboarding.',
+
         // Seeded Getting Started content (first-run tutorial data).
         'starter.projectTitle': 'Getting Started',
         'starter.projectNotes': 'These getting-started tasks are optional. Delete this project anytime when Mindwtr feels set up.',
