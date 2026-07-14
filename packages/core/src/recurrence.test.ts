@@ -392,6 +392,148 @@ describe('recurrence', () => {
         expect(next?.startTime).toBeUndefined();
     });
 
+    it('applies the weekly interval for fluid BYDAY recurrence', () => {
+        const task: Task = {
+            id: 't2c-weekly-byday-fluid-interval',
+            title: 'Change bedsheets',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            dueDate: '2026-07-12',
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'fluid',
+                rrule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=SU',
+            },
+            createdAt: '2026-07-01T00:00:00.000Z',
+            updatedAt: '2026-07-01T00:00:00.000Z',
+        };
+
+        // Completed Tue 2026-07-14: the next Sunday lands in the 2nd week after
+        // completion (Jul 26), not the Sunday of the completion week (Jul 19).
+        const next = createNextRecurringTask(task, '2026-07-14T10:00:00.000Z', 'done');
+        expect(next?.dueDate).toBe('2026-07-26');
+
+        const everyThreeWeeks: Task = {
+            ...task,
+            recurrence: { rule: 'weekly', strategy: 'fluid', rrule: 'FREQ=WEEKLY;INTERVAL=3;BYDAY=SU' },
+        };
+        const nextInThree = createNextRecurringTask(everyThreeWeeks, '2026-07-14T10:00:00.000Z', 'done');
+        expect(nextInThree?.dueDate).toBe('2026-08-02');
+    });
+
+    it('spawns a full interval later when a fluid BYDAY task is completed on its weekday', () => {
+        const task: Task = {
+            id: 't2c-weekly-byday-fluid-on-weekday',
+            title: 'Change bedsheets',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            dueDate: '2026-07-19',
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'fluid',
+                rrule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=SU',
+            },
+            createdAt: '2026-07-01T00:00:00.000Z',
+            updatedAt: '2026-07-01T00:00:00.000Z',
+        };
+
+        // Completed on a Sunday: the next occurrence is exactly two weeks out.
+        const next = createNextRecurringTask(task, '2026-07-19T10:00:00.000Z', 'done');
+        expect(next?.dueDate).toBe('2026-08-02');
+    });
+
+    it('applies the monthly interval for fluid BYMONTHDAY recurrence', () => {
+        const task: Task = {
+            id: 't2c-monthly-bymonthday-fluid-interval',
+            title: 'Replace water filter',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            dueDate: '2026-07-10',
+            recurrence: {
+                rule: 'monthly',
+                strategy: 'fluid',
+                byMonthDay: [15],
+                rrule: 'FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=15',
+            },
+            createdAt: '2026-07-01T00:00:00.000Z',
+            updatedAt: '2026-07-01T00:00:00.000Z',
+        };
+
+        // Completed 2026-07-14: the next 15th lands in the 2nd month after
+        // completion (Aug 15), not the following day (Jul 15).
+        const next = createNextRecurringTask(task, '2026-07-14T10:00:00.000Z', 'done');
+        expect(next?.dueDate).toBe('2026-08-15');
+    });
+
+    it('applies the monthly interval for fluid ordinal BYDAY recurrence', () => {
+        const task: Task = {
+            id: 't2c-monthly-byday-fluid-interval',
+            title: 'Team retro',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            dueDate: '2026-07-14',
+            recurrence: {
+                rule: 'monthly',
+                strategy: 'fluid',
+                rrule: 'FREQ=MONTHLY;INTERVAL=2;BYDAY=2TU',
+            },
+            createdAt: '2026-07-01T00:00:00.000Z',
+            updatedAt: '2026-07-01T00:00:00.000Z',
+        };
+
+        // Completed Tue 2026-07-14 (July's 2nd Tuesday): August's 2nd Tuesday
+        // (Aug 11) falls before the shifted base (Aug 14), so the next match is
+        // September's 2nd Tuesday.
+        const next = createNextRecurringTask(task, '2026-07-14T10:00:00.000Z', 'done');
+        expect(next?.dueDate).toBe('2026-09-08');
+    });
+
+    it('applies the weekly interval when deferring unscheduled fluid BYDAY recurrence', () => {
+        const task: Task = {
+            id: 't2d-weekly-byday-unscheduled',
+            title: 'Water the plants',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'fluid',
+                rrule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=SU',
+            },
+            createdAt: '2026-07-01T00:00:00.000Z',
+            updatedAt: '2026-07-01T00:00:00.000Z',
+        };
+
+        const next = createNextRecurringTask(task, '2026-07-14T10:00:00.000Z', 'next');
+        expect(next?.dueDate).toBeUndefined();
+        expect(next?.startTime).toBe('2026-07-26');
+    });
+
+    it('keeps strict BYDAY interval recurrence anchored to the previous occurrence', () => {
+        const task: Task = {
+            id: 't2c-weekly-byday-strict-interval',
+            title: 'Change bedsheets',
+            status: 'done',
+            tags: [],
+            contexts: [],
+            dueDate: '2026-07-12',
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'strict',
+                rrule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=SU',
+            },
+            createdAt: '2026-07-01T00:00:00.000Z',
+            updatedAt: '2026-07-01T00:00:00.000Z',
+        };
+
+        const next = createNextRecurringTask(task, '2026-07-14T10:00:00.000Z', 'done');
+        expect(next?.dueDate).toBe('2026-07-26');
+    });
+
     it('defers unscheduled fluid recurrence from completion date', () => {
         const task: Task = {
             id: 't2d',
@@ -1018,6 +1160,31 @@ describe('recurrence', () => {
         expect(projected?.id).toBe(getProjectedRecurringTaskId(task.id));
         expect(projected?.startTime).toBe('2026-07-16');
         expect(projected?.dueDate).toBeUndefined();
+    });
+
+    it('projects fluid BYDAY interval recurrence to the same date completion would spawn', () => {
+        const task: Task = {
+            id: 't-projected-fluid-byday-interval',
+            title: 'Change bedsheets',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            dueDate: '2026-07-12',
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'fluid',
+                rrule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=SU',
+            },
+            showFutureRecurrence: true,
+            createdAt: '2026-07-01T00:00:00.000Z',
+            updatedAt: '2026-07-01T00:00:00.000Z',
+        };
+
+        const projected = createProjectedRecurringTask(task, '2026-07-14T10:00:00.000Z');
+        const spawned = createNextRecurringTask(task, '2026-07-14T10:00:00.000Z', 'done');
+
+        expect(projected?.dueDate?.slice(0, 10)).toBe('2026-07-26');
+        expect(projected?.dueDate?.slice(0, 10)).toBe(spawned?.dueDate);
     });
 
     it('does not project recurring tasks unless the calendar preview is enabled', () => {

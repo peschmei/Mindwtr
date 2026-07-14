@@ -704,6 +704,35 @@ function nextIsoFrom(
     return hasTimezone ? nextDate.toISOString() : format(nextDate, "yyyy-MM-dd'T'HH:mm");
 }
 
+/**
+ * Next occurrence for "repeat after completion" bases. Fluid recurrence has no
+ * series anchor — the completion date is the only base — so a day-aligned rule
+ * (weekly BYDAY, monthly BYDAY/BYMONTHDAY) with INTERVAL=N must land in the Nth
+ * week/month after the base. Shift the search base by N-1 whole units and scan
+ * the following unit for the first matching day; without the shift the base's
+ * own week/month satisfies the scan and the interval is silently ignored (#867).
+ */
+function nextFluidIsoFrom(
+    baseIso: string | undefined,
+    rule: RecurrenceRule,
+    fallbackBase: Date,
+    byDay?: RecurrenceByDay[],
+    interval: number = 1,
+    byMonthDay?: number[],
+    weekStart?: RecurrenceWeekday
+): string | undefined {
+    const hasByDay = !!byDay && byDay.length > 0;
+    const hasByMonthDay = !!byMonthDay && byMonthDay.length > 0;
+    const dayAligned = (rule === 'weekly' && hasByDay)
+        || (rule === 'monthly' && (hasByDay || hasByMonthDay));
+    if (!dayAligned || interval <= 1) {
+        return nextIsoFrom(baseIso, rule, fallbackBase, byDay, interval, byMonthDay, weekStart);
+    }
+    const base = safeParseDate(baseIso) || fallbackBase;
+    const shiftedBase = rule === 'weekly' ? addWeeks(base, interval - 1) : addMonths(base, interval - 1);
+    return nextIsoFrom(baseIso, rule, fallbackBase, byDay, 1, byMonthDay, weekStart, shiftedBase);
+}
+
 const preserveDateOnlyFormat = (
     nextIso: string | undefined,
     sourceIso: string | undefined
@@ -830,7 +859,7 @@ export function createProjectedRecurringTask(
         if (!baseIso) return { iso: undefined, steps: 0 };
         if (strategy === 'fluid') {
             return {
-                iso: nextIsoFrom(projectedAtIso, rule, projectionBase, byDay, interval, byMonthDay, weekStart),
+                iso: nextFluidIsoFrom(projectedAtIso, rule, projectionBase, byDay, interval, byMonthDay, weekStart),
                 steps: 1,
             };
         }
@@ -982,33 +1011,17 @@ export function createNextRecurringTask(
     const completedAtDate = parsedCompletedAt ?? fallbackCompletedAt;
     const nextDueDate = task.dueDate
         ? preserveDateOnlyFormat(
-            nextIsoFrom(
-                strategy === 'fluid' ? completedAtIso : task.dueDate,
-                rule,
-                completedAtDate,
-                byDay,
-                interval,
-                byMonthDay,
-                weekStart,
-                undefined,
-                strategy === 'fluid' ? undefined : dueAnchorDay
-            ),
+            strategy === 'fluid'
+                ? nextFluidIsoFrom(completedAtIso, rule, completedAtDate, byDay, interval, byMonthDay, weekStart)
+                : nextIsoFrom(task.dueDate, rule, completedAtDate, byDay, interval, byMonthDay, weekStart, undefined, dueAnchorDay),
             task.dueDate
         )
         : undefined;
     let nextStartTime = task.startTime
         ? preserveDateOnlyFormat(
-            nextIsoFrom(
-                strategy === 'fluid' ? completedAtIso : task.startTime,
-                rule,
-                completedAtDate,
-                byDay,
-                interval,
-                byMonthDay,
-                weekStart,
-                undefined,
-                strategy === 'fluid' ? undefined : startAnchorDay
-            ),
+            strategy === 'fluid'
+                ? nextFluidIsoFrom(completedAtIso, rule, completedAtDate, byDay, interval, byMonthDay, weekStart)
+                : nextIsoFrom(task.startTime, rule, completedAtDate, byDay, interval, byMonthDay, weekStart, undefined, startAnchorDay),
             task.startTime
         )
         : undefined;
@@ -1033,17 +1046,9 @@ export function createNextRecurringTask(
     }
     const nextReviewAt = task.reviewAt
         ? preserveDateOnlyFormat(
-            nextIsoFrom(
-                strategy === 'fluid' ? completedAtIso : task.reviewAt,
-                rule,
-                completedAtDate,
-                byDay,
-                interval,
-                byMonthDay,
-                weekStart,
-                undefined,
-                strategy === 'fluid' ? undefined : reviewAnchorDay
-            ),
+            strategy === 'fluid'
+                ? nextFluidIsoFrom(completedAtIso, rule, completedAtDate, byDay, interval, byMonthDay, weekStart)
+                : nextIsoFrom(task.reviewAt, rule, completedAtDate, byDay, interval, byMonthDay, weekStart, undefined, reviewAnchorDay),
             task.reviewAt
         )
         : undefined;
@@ -1055,7 +1060,7 @@ export function createNextRecurringTask(
         // ISO prefix (not the local date) keeps parity with the Rust local API.
         const completedAtDatePart = /^\d{4}-\d{2}-\d{2}/.exec(completedAtIso)?.[0]
             ?? format(completedAtDate, 'yyyy-MM-dd');
-        nextStartTime = nextIsoFrom(completedAtDatePart, rule, completedAtDate, byDay, interval, byMonthDay, weekStart);
+        nextStartTime = nextFluidIsoFrom(completedAtDatePart, rule, completedAtDate, byDay, interval, byMonthDay, weekStart);
     }
 
     if (count && completedOccurrences + 1 >= count) {
