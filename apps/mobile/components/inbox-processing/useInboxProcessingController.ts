@@ -16,6 +16,7 @@ import {
   hasTimeComponent,
   isTaskInActiveProject,
   normalizeClockTimeInput,
+  resolveProcessInboxWorkflowEvent,
   resolveAreaFilter,
   safeFormatDate,
   safeParseDate,
@@ -24,6 +25,7 @@ import {
   taskMatchesAreaFilter,
   useTaskStore,
   type AIProviderId,
+  type ProcessInboxWorkflowEvent,
   type Task,
   type TaskEditorFieldId,
   type TaskPriority,
@@ -470,17 +472,31 @@ export function useInboxProcessingController({
     return true;
   }, [currentTask, processingDescription, processingTitle, updateTask]);
 
+  const applyWorkflowEvent = useCallback((
+    event: ProcessInboxWorkflowEvent,
+    titleOverride?: string,
+    fallbackTitle?: string,
+  ) => {
+    if (!currentTask) return false;
+    const effect = resolveProcessInboxWorkflowEvent(event);
+    if (effect.type === 'delete') {
+      deleteTask(currentTask.id);
+      return true;
+    }
+    return applyProcessingEdits(effect.updates, titleOverride, fallbackTitle);
+  }, [applyProcessingEdits, currentTask, deleteTask]);
+
   const handleNotActionable = useCallback((action: 'trash' | 'someday' | 'reference') => {
     if (!currentTask) return;
     if (action === 'trash') {
-      deleteTask(currentTask.id);
+      applyWorkflowEvent({ type: 'discard' });
     } else if (action === 'someday') {
-      applyProcessingEdits({ status: 'someday' });
+      applyWorkflowEvent({ type: 'someday' });
     } else {
-      applyProcessingEdits({ status: 'reference' });
+      applyWorkflowEvent({ type: 'reference' });
     }
     moveToNext();
-  }, [applyProcessingEdits, currentTask, deleteTask, moveToNext]);
+  }, [applyWorkflowEvent, currentTask, moveToNext]);
 
   const handleLaterMobile = useCallback(() => {
     if (!currentTask) return;
@@ -492,17 +508,19 @@ export function useInboxProcessingController({
       });
       return;
     }
-    applyProcessingEdits({
-      status: 'next',
-      ...(showProjectField ? { projectId: selectedProjectId ?? undefined } : {}),
-      ...(showAreaField ? { areaId: selectedProjectId ? undefined : (selectedAreaId ?? undefined) } : {}),
-      startTime: pendingStartDate ? formatScheduledDateValue(pendingStartDate, pendingStartDateOnly) : undefined,
+    applyWorkflowEvent({
+      type: 'later',
+      fields: {
+        ...(showProjectField ? { projectId: selectedProjectId ?? undefined } : {}),
+        ...(showAreaField ? { areaId: selectedProjectId ? undefined : (selectedAreaId ?? undefined) } : {}),
+        startTime: pendingStartDate ? formatScheduledDateValue(pendingStartDate, pendingStartDateOnly) : undefined,
+      },
     });
     setPendingStartDate(null);
     setLaterNoDateSelected(false);
     moveToNext();
   }, [
-    applyProcessingEdits,
+    applyWorkflowEvent,
     currentTask,
     formatScheduledDateValue,
     laterNoDateSelected,
@@ -519,10 +537,10 @@ export function useInboxProcessingController({
 
   const handleTwoMinYes = useCallback(() => {
     if (currentTask) {
-      applyProcessingEdits({ status: 'done' });
+      applyWorkflowEvent({ type: 'complete' });
     }
     moveToNext();
-  }, [applyProcessingEdits, currentTask, moveToNext]);
+  }, [applyWorkflowEvent, currentTask, moveToNext]);
 
   const buildScheduleUpdates = useCallback(() => {
     const updates: Partial<Task> = {};
@@ -553,8 +571,7 @@ export function useInboxProcessingController({
     if (currentTask) {
       const who = delegateWho.trim() || selectedAssignedTo.trim();
       if (!who) return;
-      const updates: Partial<Task> = {
-        status: 'waiting',
+      const fields: Partial<Task> = {
         assignedTo: who,
         ...(showPriorityField ? { priority: selectedPriority ?? undefined } : {}),
         ...(showEnergyLevelField ? { energyLevel: selectedEnergyLevel ?? undefined } : {}),
@@ -565,16 +582,19 @@ export function useInboxProcessingController({
         ...(showTagsField ? { tags: selectedTags } : {}),
         ...buildScheduleUpdates(),
       };
-      if (delegateFollowUpDate) {
-        updates.reviewAt = formatScheduledDateValue(delegateFollowUpDate, delegateFollowUpDateOnly);
-      }
-      applyProcessingEdits(updates);
+      applyWorkflowEvent({
+        type: 'waiting',
+        fields,
+        followUpAt: delegateFollowUpDate
+          ? formatScheduledDateValue(delegateFollowUpDate, delegateFollowUpDateOnly)
+          : undefined,
+      });
     }
     setDelegateWho('');
     setDelegateFollowUpDate(null);
     moveToNext();
   }, [
-    applyProcessingEdits,
+    applyWorkflowEvent,
     buildScheduleUpdates,
     currentTask,
     delegateFollowUpDate,
@@ -708,24 +728,26 @@ export function useInboxProcessingController({
   }, []);
 
   const finalizeNextAction = useCallback((projectId: string | null) => {
-    applyProcessingEdits({
-      status: 'next',
-      ...(showProjectField ? { projectId: projectId ?? undefined } : {}),
-      ...(showAreaField ? { areaId: projectId ? undefined : (selectedAreaId ?? undefined) } : {}),
-      ...(showContextsField ? { contexts: selectedContexts } : {}),
-      ...(showTagsField ? { tags: selectedTags } : {}),
-      ...(showPriorityField ? { priority: selectedPriority ?? undefined } : {}),
-      ...(showEnergyLevelField ? { energyLevel: selectedEnergyLevel ?? undefined } : {}),
-      ...(showAssignedToField ? { assignedTo: selectedAssignedTo.trim() || undefined } : {}),
-      ...(showTimeEstimateField ? { timeEstimate: selectedTimeEstimate ?? undefined } : {}),
-      ...buildScheduleUpdates(),
+    applyWorkflowEvent({
+      type: 'next',
+      fields: {
+        ...(showProjectField ? { projectId: projectId ?? undefined } : {}),
+        ...(showAreaField ? { areaId: projectId ? undefined : (selectedAreaId ?? undefined) } : {}),
+        ...(showContextsField ? { contexts: selectedContexts } : {}),
+        ...(showTagsField ? { tags: selectedTags } : {}),
+        ...(showPriorityField ? { priority: selectedPriority ?? undefined } : {}),
+        ...(showEnergyLevelField ? { energyLevel: selectedEnergyLevel ?? undefined } : {}),
+        ...(showAssignedToField ? { assignedTo: selectedAssignedTo.trim() || undefined } : {}),
+        ...(showTimeEstimateField ? { timeEstimate: selectedTimeEstimate ?? undefined } : {}),
+        ...buildScheduleUpdates(),
+      },
     });
     setPendingStartDate(null);
     setPendingDueDate(null);
     setPendingReviewDate(null);
     moveToNext();
   }, [
-    applyProcessingEdits,
+    applyWorkflowEvent,
     buildScheduleUpdates,
     moveToNext,
     selectedAreaId,
@@ -768,17 +790,19 @@ export function useInboxProcessingController({
       );
       if (!project) return;
 
-      const applied = applyProcessingEdits({
-        status: 'next',
-        projectId: project.id,
-        ...(showAreaField ? { areaId: undefined } : {}),
-        ...(showContextsField ? { contexts: selectedContexts } : {}),
-        ...(showTagsField ? { tags: selectedTags } : {}),
-        ...(showPriorityField ? { priority: selectedPriority ?? undefined } : {}),
-        ...(showEnergyLevelField ? { energyLevel: selectedEnergyLevel ?? undefined } : {}),
-        ...(showAssignedToField ? { assignedTo: selectedAssignedTo.trim() || undefined } : {}),
-        ...(showTimeEstimateField ? { timeEstimate: selectedTimeEstimate ?? undefined } : {}),
-        ...buildScheduleUpdates(),
+      const applied = applyWorkflowEvent({
+        type: 'next',
+        fields: {
+          projectId: project.id,
+          ...(showAreaField ? { areaId: undefined } : {}),
+          ...(showContextsField ? { contexts: selectedContexts } : {}),
+          ...(showTagsField ? { tags: selectedTags } : {}),
+          ...(showPriorityField ? { priority: selectedPriority ?? undefined } : {}),
+          ...(showEnergyLevelField ? { energyLevel: selectedEnergyLevel ?? undefined } : {}),
+          ...(showAssignedToField ? { assignedTo: selectedAssignedTo.trim() || undefined } : {}),
+          ...(showTimeEstimateField ? { timeEstimate: selectedTimeEstimate ?? undefined } : {}),
+          ...buildScheduleUpdates(),
+        },
       }, nextAction, currentTask.title);
       if (!applied) return;
 
@@ -810,7 +834,7 @@ export function useInboxProcessingController({
   }, [
     addProject,
     addTask,
-    applyProcessingEdits,
+    applyWorkflowEvent,
     buildScheduleUpdates,
     currentTask,
     extraActionDrafts,

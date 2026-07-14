@@ -150,6 +150,15 @@ export type {
 } from './user-prompts';
 
 export {
+    resolveProcessInboxWorkflowEvent,
+} from './process-inbox-workflow';
+export type {
+    ProcessInboxWorkflowEffect,
+    ProcessInboxWorkflowEvent,
+    ProcessInboxWorkflowFields,
+} from './process-inbox-workflow';
+
+export {
     buildFeedbackSubmissionPayload,
     FEEDBACK_CATEGORIES,
     isFeedbackCategory,

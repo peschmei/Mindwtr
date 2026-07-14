@@ -14,6 +14,7 @@
     "./sync-service-utils": "./src/sync-service-utils.ts",
     "./task-utils": "./src/task-utils.ts",
     "./task-draft": "./src/task-draft.ts",
+    "./process-inbox-workflow": "./src/process-inbox-workflow.ts",
     "./task-sync-schema": "./src/task-sync-schema.ts",
     "./contexts": "./src/contexts.ts",
     "./i18n": "./src/i18n.ts",
