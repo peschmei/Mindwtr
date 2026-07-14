@@ -16,7 +16,7 @@ import {
 } from '@mindwtr/core';
 import type { RangeSelectionOptions } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
-import { ArrowUpDown, AtSign, CheckSquare, ChevronDown, ChevronRight, Filter, Hash, Tag, type LucideIcon } from 'lucide-react';
+import { AtSign, CheckSquare, ChevronDown, ChevronRight, Filter, Hash, Tag, type LucideIcon } from 'lucide-react';
 import { TokenPickerModal } from '../TokenPickerModal';
 import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
 import { ListBulkActions } from './list/ListBulkActions';
@@ -47,6 +47,7 @@ import {
 import { groupTasks, type TaskGroup } from './list/next-grouping';
 import { GroupedTaskSections } from './list/GroupedTaskSections';
 import { GroupBySelect } from './list/GroupBySelect';
+import { SortBySelect, ToolbarButton } from './list/list-toolbar';
 
 type BulkTokenPickerState = {
     field: 'tags' | 'contexts';
@@ -413,7 +414,6 @@ export function ContextsView() {
     const contextsLabel = tFallback(t, 'taskEdit.contextsLabel', 'Contexts');
     const tagsLabel = tFallback(t, 'taskEdit.tagsLabel', 'Tags');
     const allTokensLabel = `${contextsLabel} & ${tagsLabel}`;
-    const sortLabel = tFallback(t, 'sort.label', 'Sort');
 
     const renderTokenRow = (token: string, marker: '@' | '#') => {
         const taskCount = scopedTasks.filter(t => matchesSelected(t, token)).length;
@@ -585,49 +585,23 @@ export function ContextsView() {
                             </div>
                             <div className="ml-auto">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <button
+                                    <ToolbarButton
+                                        active={selectionMode}
                                         onClick={() => {
                                             if (selectionMode) exitSelectionMode();
                                             else setSelectionMode(true);
                                         }}
-                                        className={cn(
-                                            "inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40",
-                                            selectionMode
-                                                ? "bg-primary/10 text-primary border-primary"
-                                                : "bg-card text-muted-foreground border-border hover:bg-muted/70 hover:text-foreground"
-                                        )}
+                                        aria-pressed={selectionMode}
+                                        icon={<CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />}
                                     >
-                                        <CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />
                                         {selectionMode ? t('bulk.exitSelect') : t('bulk.select')}
-                                    </button>
-                                    <div className="relative flex h-9 min-w-[160px] items-center rounded-lg border border-border bg-card pl-2 text-xs transition-colors hover:bg-muted/70 focus-within:ring-2 focus-within:ring-primary/40">
-                                        <ArrowUpDown
-                                            className="mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                                            aria-hidden="true"
-                                            data-testid="contexts-sort-icon"
-                                        />
-                                        <span className="mr-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                            {sortLabel}
-                                        </span>
-                                        <select
-                                            value={sortBy}
-                                            onChange={(event) => updateSettings({ taskSortBy: event.target.value as TaskSortBy })}
-                                            aria-label={sortLabel}
-                                            className="h-full min-w-0 flex-1 appearance-none bg-transparent pr-8 text-xs text-foreground focus:outline-none"
-                                        >
-                                            <option value="default">{t('sort.default')}</option>
-                                            <option value="due">{t('sort.due')}</option>
-                                            <option value="start">{t('sort.start')}</option>
-                                            <option value="review">{t('sort.review')}</option>
-                                            <option value="title">{t('sort.title')}</option>
-                                            <option value="created">{t('sort.created')}</option>
-                                            <option value="created-desc">{t('sort.created-desc')}</option>
-                                        </select>
-                                        <ChevronDown
-                                            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
+                                    </ToolbarButton>
+                                    <SortBySelect
+                                        value={sortBy}
+                                        onChange={(value) => updateSettings({ taskSortBy: value })}
+                                        t={t}
+                                        iconTestId="contexts-sort-icon"
+                                    />
                                     <GroupBySelect
                                         value={groupBy}
                                         axes={['none', 'status', 'tag', 'context', 'area', 'project'] as const}

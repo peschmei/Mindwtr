@@ -1,8 +1,8 @@
-import { ArrowUpDown, CheckSquare, ChevronDown, ChevronsUpDown, List, SlidersHorizontal } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { CheckSquare, ChevronsUpDown, List, SlidersHorizontal } from 'lucide-react';
 import type { TaskSortBy } from '@mindwtr/core';
 import type { TaskListGroupBy } from './next-grouping';
 import { GroupBySelect } from './GroupBySelect';
+import { SortBySelect, ToolbarButton } from './list-toolbar';
 
 const DEFAULT_GROUP_BY_OPTIONS: TaskListGroupBy[] = ['none', 'context', 'area', 'project', 'tag', 'energy', 'priority', 'person'];
 
@@ -55,10 +55,6 @@ export function ListHeader({
         const value = t('list.density');
         return value === 'list.density' ? 'Density' : value;
     })();
-    const sortLabel = (() => {
-        const value = t('sort.label');
-        return value === 'sort.label' ? 'Sort' : value;
-    })();
     const densityLabel = densityMode === 'compact'
         ? (() => {
             const value = t('list.densityCompact');
@@ -68,9 +64,6 @@ export function ListHeader({
             const value = t('list.densityComfortable');
             return value === 'list.densityComfortable' ? 'Comfortable' : value;
         })();
-    const controlBaseClass = "h-9 text-xs border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40";
-    const controlMutedClass = "bg-card text-muted-foreground border-border hover:bg-muted/70 hover:text-foreground";
-    const controlActiveClass = "bg-primary/10 text-primary border-primary";
 
     return (
         <header className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -95,89 +88,46 @@ export function ListHeader({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-                <button
-                    type="button"
+                <ToolbarButton
+                    active={selectionMode}
                     onClick={onToggleSelection}
-                    className={cn(
-                        controlBaseClass,
-                        "inline-flex items-center gap-1.5 rounded-lg px-3",
-                        selectionMode
-                            ? controlActiveClass
-                            : controlMutedClass
-                    )}
+                    aria-pressed={selectionMode}
+                    icon={<CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />}
                 >
-                    <CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />
                     {selectionMode ? t('bulk.exitSelect') : t('bulk.select')}
-                </button>
-                <div className={cn(controlBaseClass, controlMutedClass, "relative flex min-w-[160px] items-center rounded-lg pl-2") }>
-                    <ArrowUpDown
-                        className="mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                        data-testid="list-sort-icon"
-                    />
-                    <span className="mr-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        {sortLabel}
-                    </span>
-                    <select
-                        value={sortBy}
-                        onChange={(e) => onChangeSortBy(e.target.value as TaskSortBy)}
-                        aria-label={sortLabel}
-                        className="h-full min-w-0 flex-1 appearance-none bg-transparent pr-8 text-xs text-foreground focus:outline-none"
-                    >
-                        <option value="default">{t('sort.default')}</option>
-                        <option value="due">{t('sort.due')}</option>
-                        <option value="start">{t('sort.start')}</option>
-                        <option value="review">{t('sort.review')}</option>
-                        <option value="title">{t('sort.title')}</option>
-                        <option value="created">{t('sort.created')}</option>
-                        <option value="created-desc">{t('sort.created-desc')}</option>
-                    </select>
-                    <ChevronDown
-                        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        aria-hidden="true"
-                    />
-                </div>
+                </ToolbarButton>
+                <SortBySelect
+                    value={sortBy}
+                    onChange={onChangeSortBy}
+                    t={t}
+                    iconTestId="list-sort-icon"
+                />
                 {showGroupBy && onChangeGroupBy && (
                     <GroupBySelect
                         value={groupBy}
                         axes={groupByOptions}
                         onChange={onChangeGroupBy}
                         t={t}
-                        className="min-w-[180px]"
                     />
                 )}
-                <button
-                    type="button"
+                <ToolbarButton
+                    active={showListDetails}
                     onClick={onToggleDetails}
                     aria-pressed={showListDetails}
-                    className={cn(
-                        controlBaseClass,
-                        "inline-flex items-center gap-1.5 rounded-lg px-3",
-                        showListDetails
-                            ? controlActiveClass
-                            : controlMutedClass
-                    )}
                     title={showListDetails ? (t('list.details') || 'Details on') : (t('list.detailsOff') || 'Details off')}
+                    icon={<List className="h-3.5 w-3.5" aria-hidden="true" />}
                 >
-                    <List className="w-3.5 h-3.5" />
                     {showListDetails ? (t('list.details') || 'Details') : (t('list.detailsOff') || 'Details off')}
-                </button>
-                <button
-                    type="button"
+                </ToolbarButton>
+                <ToolbarButton
+                    active={densityMode === 'compact'}
                     onClick={onToggleDensity}
                     aria-pressed={densityMode === 'compact'}
-                    className={cn(
-                        controlBaseClass,
-                        "inline-flex items-center gap-1.5 rounded-lg px-3",
-                        densityMode === 'compact'
-                            ? controlActiveClass
-                            : controlMutedClass
-                    )}
                     title={densityTitle}
+                    icon={<ChevronsUpDown className="h-3.5 w-3.5" aria-hidden="true" />}
                 >
-                    <ChevronsUpDown className="w-3.5 h-3.5" />
                     {densityLabel}
-                </button>
+                </ToolbarButton>
             </div>
         </header>
     );
