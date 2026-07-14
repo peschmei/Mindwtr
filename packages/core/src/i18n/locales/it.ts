@@ -140,6 +140,7 @@ export const itOverrides: Record<string, string> = {
         'keybindings.list.toggleDone': 'Segna come completata',
         'keybindings.list.delete': 'Elimina attività selezionata',
         'keybindings.list.newTask': 'Focus sul campo aggiungi attività',
+        'keybindings.list.setStatus': 'Imposta stato: Entrata / Prossima / In attesa / Un giorno / Completata / Archiviata',
         'keybindings.list.toggleDetails': 'Mostra/nascondi dettagli elenco',
         'keybindings.list.toggleDensity': 'Cambia densità',
 
@@ -162,6 +163,7 @@ export const itOverrides: Record<string, string> = {
         'list.confirmBatchDelete': 'Eliminare le attività selezionate?',
         'list.taskDeleted': 'Attività eliminata',
         'task.markedDone': '{title} contrassegnata come completata',
+        'task.movedToStatus': '{{title}} spostata in {{status}}',
         'list.tasksDeleted': '{{count}} attività eliminate',
         'list.noTasks': 'Nessuna attività trovata',
         'list.filtering': 'Filtrando...',

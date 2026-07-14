@@ -15,6 +15,7 @@ import {
     normalizeGlobalQuickAddShortcut,
 } from '../lib/global-quick-add-shortcut';
 import { AREA_FILTER_ALL } from '@mindwtr/core';
+import type { TaskStatus } from '@mindwtr/core';
 
 export type KeybindingStyle = 'vim' | 'emacs' | 'standard';
 
@@ -34,8 +35,20 @@ export interface TaskListScope {
     toggleDoneSelected: () => void;
     toggleSelectSelected?: () => void;
     deleteSelected: () => void;
+    setStatusSelected?: (status: TaskStatus) => void;
     focusAddInput?: () => void;
 }
+
+// Status chord: `s` then a letter sets the selected task's status (#860).
+// Letters mirror the g-navigation chords (gi/gn/gw/gs/gd/ga).
+const STATUS_CHORD_MAP: Record<string, TaskStatus> = {
+    i: 'inbox',
+    n: 'next',
+    w: 'waiting',
+    s: 'someday',
+    d: 'done',
+    a: 'archived',
+};
 
 interface KeybindingContextType {
     style: KeybindingStyle;
@@ -188,6 +201,12 @@ export function KeybindingProvider({
     const formatTaskMarkedDoneMessage = useCallback((title: string) => {
         return translateWithFallback(t, 'task.markedDone', '{title} marked Done')
             .replace('{title}', title);
+    }, [t]);
+    const formatTaskMovedMessage = useCallback((title: string, status: TaskStatus) => {
+        const statusLabel = translateWithFallback(t, `status.${status}`, status);
+        return translateWithFallback(t, 'task.movedToStatus', '{{title}} moved to {{status}}')
+            .replace('{{title}}', title)
+            .replace('{{status}}', statusLabel);
     }, [t]);
     const sortedAreas = useMemo(
         () => [...areas].sort((a, b) => a.order - b.order),
@@ -426,6 +445,47 @@ export function KeybindingProvider({
             .catch((error) => reportError('Failed to change task status', error));
     }, [formatTaskMarkedDoneMessage, pickFallbackTaskElement, settings.undoNotificationsEnabled, showToast, undoLabel]);
 
+    const fallbackSetStatusSelected = useCallback((status: TaskStatus) => {
+        const selectedElement = pickFallbackTaskElement();
+        const selectedTaskId = selectedElement?.dataset.taskId;
+        if (!selectedTaskId) return;
+        const state = useTaskStore.getState();
+        const task = state.tasks.find((item) => item.id === selectedTaskId);
+        if (!task || task.status === status) return;
+        const previousStatus = task.status;
+        const wasFocusedToday = task.isFocusedToday === true;
+        void state.moveTask(task.id, status)
+            .then((result) => {
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to change task status');
+                }
+                const undo = registerUndoableAction(() => {
+                    // Completion has side effects (Today star, completedAt), so
+                    // undoing into/out of done goes through the shared core rule.
+                    if (status === 'done') {
+                        void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
+                            .catch((error) => reportError('Failed to undo task status change', error));
+                        return;
+                    }
+                    void useTaskStore.getState().moveTask(task.id, previousStatus)
+                        .catch((error) => reportError('Failed to undo task status change', error));
+                });
+                if (settings.undoNotificationsEnabled === false) return;
+                showToast(
+                    status === 'done'
+                        ? formatTaskMarkedDoneMessage(task.title)
+                        : formatTaskMovedMessage(task.title, status),
+                    'info',
+                    5000,
+                    {
+                        label: undoLabel,
+                        onClick: undo,
+                    }
+                );
+            })
+            .catch((error) => reportError('Failed to change task status', error));
+    }, [formatTaskMarkedDoneMessage, formatTaskMovedMessage, pickFallbackTaskElement, settings.undoNotificationsEnabled, showToast, undoLabel]);
+
     const fallbackDeleteSelected = useCallback(() => {
         const selectedElement = pickFallbackTaskElement();
         const selectedTaskId = selectedElement?.dataset.taskId;
@@ -471,6 +531,7 @@ export function KeybindingProvider({
         openQuickActions: fallbackOpenQuickActionsSelected,
         toggleDoneSelected: fallbackToggleDoneSelected,
         deleteSelected: fallbackDeleteSelected,
+        setStatusSelected: fallbackSetStatusSelected,
     }), [
         fallbackDeleteSelected,
         fallbackEditSelected,
@@ -480,6 +541,7 @@ export function KeybindingProvider({
         fallbackSelectLast,
         fallbackSelectNext,
         fallbackSelectPrev,
+        fallbackSetStatusSelected,
         fallbackToggleDoneSelected,
     ]);
 
@@ -883,12 +945,21 @@ export function KeybindingProvider({
             if (!e.metaKey && !e.ctrlKey && !e.altKey && !isEditableTarget(e.target)) {
                 const appShortcutKey = getAppScopedShortcutKey(e);
                 const now = Date.now();
-                if (pendingRef.current.key === 'A' && now - pendingRef.current.timestamp > 700) {
+                if ((pendingRef.current.key === 'A' || pendingRef.current.key === 's') && now - pendingRef.current.timestamp > 700) {
                     pendingRef.current.key = null;
                 }
                 if (pendingRef.current.key === 'A') {
                     e.preventDefault();
                     applyAreaFilterShortcut(appShortcutKey);
+                    pendingRef.current.key = null;
+                    return;
+                }
+                if (pendingRef.current.key === 's') {
+                    e.preventDefault();
+                    const status = STATUS_CHORD_MAP[e.key];
+                    if (status) {
+                        getActiveScope().setStatusSelected?.(status);
+                    }
                     pendingRef.current.key = null;
                     return;
                 }
@@ -900,6 +971,21 @@ export function KeybindingProvider({
                 if (!pendingRef.current.key && appShortcutKey === 'a') {
                     e.preventDefault();
                     triggerQuickAdd();
+                    return;
+                }
+                if (!pendingRef.current.key && appShortcutKey === 's') {
+                    e.preventDefault();
+                    pendingRef.current = { key: 's', timestamp: now };
+                    return;
+                }
+                if (e.key === 'Insert') {
+                    const scope = getActiveScope();
+                    e.preventDefault();
+                    if (scope.focusAddInput) {
+                        scope.focusAddInput();
+                    } else {
+                        triggerQuickAdd();
+                    }
                     return;
                 }
                 if (e.key === 'ArrowDown') {

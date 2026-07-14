@@ -133,6 +133,7 @@ export const deOverrides: Record<string, string> = {
         'keybindings.list.toggleDone': 'Umschalten zu Erledigt',
         'keybindings.list.delete': 'Ausgewählte Aufgaben löschen',
         'keybindings.list.newTask': 'Auf Aufgaben hinzufügen fokussieren',
+        'keybindings.list.setStatus': 'Status setzen: Posteingang / Nächstes / Abwarten / Irgendwann / Erledigt / Archiviert',
         'keybindings.list.toggleDetails': 'Listendetails umschalten',
         'keybindings.list.toggleDensity': 'Dichte umschalten',
         
@@ -157,6 +158,7 @@ export const deOverrides: Record<string, string> = {
         'list.confirmBatchDelete': 'Ausgewählte Aufgaben löschen?',
         'list.taskDeleted': 'Aufgabe gelöscht',
         'task.markedDone': '{title} als erledigt markiert',
+        'task.movedToStatus': '{{title}} verschoben nach {{status}}',
         'list.tasksDeleted': '{{count}} Aufgaben gelöscht',
         'list.noTasks': 'Keine Aufgaben gefunden',
         'list.detailsOff': 'Details ausschalten',

@@ -103,6 +103,7 @@ export const frOverrides: Record<string, string> = {
         'keybindings.list.toggleDone': 'Marquer comme terminé/non terminé',
         'keybindings.list.delete': 'Supprimer la tâche sélectionnée',
         'keybindings.list.newTask': 'Commencer la saisie d’une tâche supplémentaire',
+        'keybindings.list.setStatus': 'Définir le statut : Boîte de réception / Prochaine action / En attente / Un jour / Terminé / Archivé',
         'keybindings.list.toggleDetails': 'Afficher/masquer les détails de la liste',
         'keybindings.list.toggleDensity': 'Changer la densité d’affichage',
 
@@ -128,6 +129,7 @@ export const frOverrides: Record<string, string> = {
         'list.confirmBatchDelete': 'Supprimer les tâches sélectionnées ?',
         'list.taskDeleted': 'Tâche supprimée',
         'task.markedDone': '{title} marquée comme terminée',
+        'task.movedToStatus': '{{title}} déplacée vers {{status}}',
         'list.tasksDeleted': '{{count}} tâches supprimées',
         'list.noTasks': 'Aucune tâche trouvée',
         'list.filtering': 'Filtrage…',

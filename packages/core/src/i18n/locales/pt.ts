@@ -104,6 +104,7 @@ export const ptOverrides: Record<string, string> = {
         'keybindings.list.toggleDone': 'Alternar concluído',
         'keybindings.list.delete': 'Excluir tarefa selecionada',
         'keybindings.list.newTask': 'Foco na entrada de adição de tarefa',
+        'keybindings.list.setStatus': 'Definir status: Caixa de entrada / Próximo / Aguardando / Algum dia / Feito / Arquivado',
         'keybindings.list.toggleDetails': 'Alternar detalhes da lista',
         'keybindings.list.toggleDensity': 'Alternar densidade',
 
@@ -127,6 +128,7 @@ export const ptOverrides: Record<string, string> = {
         'list.confirmBatchDelete': 'Excluir tarefas selecionadas?',
         'list.taskDeleted': 'Tarefa excluída',
         'task.markedDone': '{title} marcada como concluída',
+        'task.movedToStatus': '{{title}} movida para {{status}}',
         'list.tasksDeleted': '{{count}} tarefas excluídas',
         'list.noTasks': 'Nenhuma tarefa encontrada',
         'list.details': 'Detalhes',

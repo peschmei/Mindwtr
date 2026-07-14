@@ -8,7 +8,7 @@ import { useKeybindings } from './keybinding-context';
 import { useUiStore } from '../store/ui-store';
 import { AREA_FILTER_ALL } from '@mindwtr/core';
 
-const DummyList = ({ focusAddInput, openSelected }: { focusAddInput?: () => void; openSelected?: () => void } = {}) => {
+const DummyList = ({ focusAddInput, openSelected, setStatusSelected }: { focusAddInput?: () => void; openSelected?: () => void; setStatusSelected?: (status: string) => void } = {}) => {
     const { registerTaskListScope } = useKeybindings();
     const [selectedIndex, setSelectedIndex] = useState(0);
     const ids = ['1', '2'];
@@ -35,10 +35,11 @@ const DummyList = ({ focusAddInput, openSelected }: { focusAddInput?: () => void
             openSelected,
             toggleDoneSelected: vi.fn(),
             deleteSelected: vi.fn(),
+            setStatusSelected,
             focusAddInput,
         });
         return () => registerTaskListScope(null);
-    }, [focusAddInput, openSelected, registerTaskListScope, selectNext, selectPrev, selectFirst, selectLast]);
+    }, [focusAddInput, openSelected, registerTaskListScope, selectNext, selectPrev, selectFirst, selectLast, setStatusSelected]);
 
     return (
         <div>
@@ -685,6 +686,162 @@ describe('KeybindingProvider (vim)', () => {
         fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
 
         expect(restoreTask).toHaveBeenCalledWith('1');
+    });
+
+    it.each(['vim', 'emacs', 'standard'] as const)('sets status with the s chord in %s style', (style) => {
+        const setStatusSelected = vi.fn();
+        useTaskStore.setState((state) => ({
+            settings: {
+                ...state.settings,
+                keybindingStyle: style,
+            },
+        }));
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <DummyList setStatusSelected={setStatusSelected} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 's' });
+        fireEvent.keyDown(window, { key: 'n' });
+
+        expect(setStatusSelected).toHaveBeenCalledTimes(1);
+        expect(setStatusSelected).toHaveBeenCalledWith('next');
+    });
+
+    it('finishes the status chord with a as archived instead of opening quick add', () => {
+        const setStatusSelected = vi.fn();
+        const quickAddListener = vi.fn();
+        window.addEventListener('mindwtr:quick-add', quickAddListener);
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <DummyList setStatusSelected={setStatusSelected} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 's' });
+        fireEvent.keyDown(window, { key: 'a' });
+
+        expect(setStatusSelected).toHaveBeenCalledWith('archived');
+        expect(quickAddListener).not.toHaveBeenCalled();
+        window.removeEventListener('mindwtr:quick-add', quickAddListener);
+    });
+
+    it('does not navigate when s starts the status chord after g navigation chords', () => {
+        const onNavigate = vi.fn();
+        const setStatusSelected = vi.fn();
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={onNavigate}>
+                    <DummyList setStatusSelected={setStatusSelected} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'g' });
+        fireEvent.keyDown(window, { key: 's' });
+
+        expect(onNavigate).toHaveBeenCalledWith('someday');
+        expect(setStatusSelected).not.toHaveBeenCalled();
+    });
+
+    it('focuses the add-task input with Insert', () => {
+        const focusAddInput = vi.fn();
+        const quickAddListener = vi.fn();
+        window.addEventListener('mindwtr:quick-add', quickAddListener);
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <DummyList focusAddInput={focusAddInput} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'Insert' });
+
+        expect(focusAddInput).toHaveBeenCalledTimes(1);
+        expect(quickAddListener).not.toHaveBeenCalled();
+        window.removeEventListener('mindwtr:quick-add', quickAddListener);
+    });
+
+    it('falls back to quick add on Insert when the scope has no add input', () => {
+        const quickAddListener = vi.fn();
+        window.addEventListener('mindwtr:quick-add', quickAddListener);
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="projects" onNavigate={vi.fn()}>
+                    <div data-main-content tabIndex={-1} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'Insert' });
+
+        expect(quickAddListener).toHaveBeenCalledTimes(1);
+        window.removeEventListener('mindwtr:quick-add', quickAddListener);
+    });
+
+    it('moves the fallback-selected task with the status chord and offers undo', async () => {
+        const moveTask = vi.fn(async () => ({ success: true }));
+        const showToast = vi.fn();
+        useUiStore.setState({ showToast });
+        useTaskStore.setState((state) => ({
+            ...state,
+            tasks: [{
+                id: '1',
+                title: 'Task 1',
+                status: 'next',
+                tags: [],
+                contexts: [],
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+            }],
+            settings: {
+                ...state.settings,
+                keybindingStyle: 'vim',
+                undoNotificationsEnabled: true,
+            },
+            moveTask,
+        }));
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="projects" onNavigate={vi.fn()}>
+                    <FallbackTaskList onEditTask1={vi.fn()} onEditTask2={vi.fn()} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        fireEvent.keyDown(window, { key: 's' });
+        fireEvent.keyDown(window, { key: 's' });
+
+        await waitFor(() => {
+            expect(moveTask).toHaveBeenCalledWith('1', 'someday');
+            expect(showToast).toHaveBeenCalledWith(
+                expect.any(String),
+                'info',
+                5000,
+                expect.objectContaining({ label: expect.any(String) })
+            );
+        });
+
+        const undoAction = showToast.mock.calls[0]?.[3];
+        undoAction.onClick();
+        expect(moveTask).toHaveBeenCalledWith('1', 'next');
     });
 });
 

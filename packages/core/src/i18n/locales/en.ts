@@ -113,6 +113,7 @@ export const en: Record<string, string> = {
         'keybindings.list.toggleDone': 'Toggle done',
         'keybindings.list.delete': 'Delete selected task',
         'keybindings.list.newTask': 'Focus add-task input',
+        'keybindings.list.setStatus': 'Set status: Inbox / Next / Waiting / Someday / Done / Archived',
         'keybindings.list.toggleDetails': 'Toggle list details',
         'keybindings.list.toggleDensity': 'Toggle density',
 
@@ -138,6 +139,7 @@ export const en: Record<string, string> = {
         'list.confirmBatchDelete': 'Delete selected tasks?',
         'list.taskDeleted': 'Task deleted',
         'task.markedDone': '{title} marked Done',
+        'task.movedToStatus': '{{title}} moved to {{status}}',
         'list.tasksDeleted': '{{count}} tasks deleted',
         'list.noTasks': 'No tasks found',
         'list.filtering': 'Filtering...',

@@ -108,6 +108,7 @@ export const viOverrides: Record<string, string> = {
         'keybindings.list.toggleDone': 'Bật/tắt hoàn thành',
         'keybindings.list.delete': 'Xóa nhiệm vụ đã chọn',
         'keybindings.list.newTask': 'Tập trung ô nhập nhiệm vụ',
+        'keybindings.list.setStatus': 'Đặt trạng thái: Hộp thư đến / Tiếp theo / Đang chờ / Tương lai / Hoàn thành / Đã lưu trữ',
         'keybindings.list.toggleDetails': 'Bật/tắt chi tiết danh sách',
         'keybindings.list.toggleDensity': 'Bật/tắt mật độ',
 
@@ -133,6 +134,7 @@ export const viOverrides: Record<string, string> = {
         'list.confirmBatchDelete': 'Xóa các nhiệm vụ đã chọn?',
         'list.taskDeleted': 'Đã xóa nhiệm vụ',
         'task.markedDone': '{title} đã được đánh dấu hoàn thành',
+        'task.movedToStatus': '{{title}} đã chuyển sang {{status}}',
         'list.tasksDeleted': 'Đã xóa {{count}} nhiệm vụ',
         'list.noTasks': 'Không tìm thấy nhiệm vụ nào',
         'list.filtering': 'Đang lọc...',

@@ -41,6 +41,7 @@ type TaskListScope = {
     toggleDoneSelected: () => void;
     toggleSelectSelected: () => void;
     deleteSelected: () => void;
+    setStatusSelected: (status: TaskStatus) => void;
     focusAddInput: () => void;
 };
 
@@ -381,6 +382,46 @@ export function useListSelection({
             .catch((error) => reportError('Failed to update task status', error));
     }, [filteredTasks, moveTask, selectedIndex, showToast, t, undoNotificationsEnabled]);
 
+    // Status chord (#860): `s` then a letter moves the selected task straight
+    // to that status through the shared moveTask path (recurrence/completion
+    // metadata applied by updateTask).
+    const setStatusSelected = useCallback((status: TaskStatus) => {
+        const task = filteredTasks[selectedIndex];
+        if (!task || task.status === status) return;
+        const previousStatus = task.status;
+        const wasFocusedToday = task.isFocusedToday === true;
+        void Promise.resolve(moveTask(task.id, status))
+            .then(() => {
+                const undo = registerUndoableAction(() => {
+                    // Completion has side effects (Today star, completedAt), so
+                    // undoing a move to done goes through the shared core rule.
+                    if (status === 'done') {
+                        void undoTaskCompletion(task.id, previousStatus, wasFocusedToday)
+                            .catch((error) => reportError('Failed to undo task status change', error));
+                        return;
+                    }
+                    void Promise.resolve(moveTask(task.id, previousStatus))
+                        .catch((error) => reportError('Failed to undo task status change', error));
+                });
+                if (!undoNotificationsEnabled) return;
+                const message = status === 'done'
+                    ? translateWithFallback('task.markedDone', '{title} marked Done').replace('{title}', task.title)
+                    : translateWithFallback('task.movedToStatus', '{{title}} moved to {{status}}')
+                        .replace('{{title}}', task.title)
+                        .replace('{{status}}', translateWithFallback(`status.${status}`, status));
+                showToast(
+                    message,
+                    'info',
+                    5000,
+                    {
+                        label: t('common.undo') || 'Undo',
+                        onClick: undo,
+                    },
+                );
+            })
+            .catch((error) => reportError('Failed to update task status', error));
+    }, [filteredTasks, moveTask, selectedIndex, showToast, t, translateWithFallback, undoNotificationsEnabled]);
+
     const runSingleDelete = useCallback(async (task: Task) => {
         await Promise.resolve(deleteTask(task.id));
         const undo = registerUndoableAction(() => {
@@ -450,6 +491,7 @@ export function useListSelection({
             toggleDoneSelected,
             toggleSelectSelected,
             deleteSelected,
+            setStatusSelected,
             focusAddInput: () => {
                 if (addInputRef.current) {
                     addInputRef.current.focus();
@@ -474,6 +516,7 @@ export function useListSelection({
         selectLast,
         selectNext,
         selectPrev,
+        setStatusSelected,
         showViewFilterInput,
         toggleDoneSelected,
         toggleSelectSelected,

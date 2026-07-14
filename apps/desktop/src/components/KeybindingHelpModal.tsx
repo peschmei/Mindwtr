@@ -77,6 +77,8 @@ export function KeybindingHelpModal({
         { keys: 'Esc', labelKey: 'keybindings.list.cancelEdit' },
         { keys: 'x', labelKey: 'keybindings.list.toggleDone' },
         { keys: 'dd', labelKey: 'keybindings.list.delete' },
+        { keys: 'si / sn / sw / ss / sd / sa', labelKey: 'keybindings.list.setStatus', fallbackLabel: 'Set status: Inbox / Next / Waiting / Someday / Done / Archived' },
+        { keys: 'Insert', labelKey: 'keybindings.list.newTask', fallbackLabel: 'Focus add-task input' },
     ];
 
     const standardList: HelpItem[] = [
@@ -91,6 +93,8 @@ export function KeybindingHelpModal({
         { keys: '.', labelKey: 'taskEdit.moreOptions' },
         { keys: 'Ctrl+Enter / Cmd+Enter', labelKey: 'keybindings.list.saveEdit' },
         { keys: 'Esc', labelKey: 'keybindings.list.cancelEdit' },
+        { keys: 'si / sn / sw / ss / sd / sa', labelKey: 'keybindings.list.setStatus', fallbackLabel: 'Set status: Inbox / Next / Waiting / Someday / Done / Archived' },
+        { keys: 'Insert', labelKey: 'keybindings.list.newTask', fallbackLabel: 'Focus add-task input' },
     ];
 
     const emacsGlobal: HelpItem[] = [
@@ -121,6 +125,8 @@ export function KeybindingHelpModal({
         { keys: 'Esc', labelKey: 'keybindings.list.cancelEdit' },
         { keys: 'Ctrl-t', labelKey: 'keybindings.list.toggleDone' },
         { keys: 'Ctrl-d', labelKey: 'keybindings.list.delete' },
+        { keys: 'si / sn / sw / ss / sd / sa', labelKey: 'keybindings.list.setStatus', fallbackLabel: 'Set status: Inbox / Next / Waiting / Someday / Done / Archived' },
+        { keys: 'Insert', labelKey: 'keybindings.list.newTask', fallbackLabel: 'Focus add-task input' },
     ];
 
     const globalItems = style === 'emacs' ? emacsGlobal : vimGlobal;
