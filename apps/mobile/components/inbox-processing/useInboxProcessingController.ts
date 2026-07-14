@@ -16,7 +16,6 @@ import {
   hasTimeComponent,
   isTaskInActiveProject,
   normalizeClockTimeInput,
-  resolveProcessInboxWorkflowEvent,
   resolveAreaFilter,
   safeFormatDate,
   safeParseDate,
@@ -25,12 +24,15 @@ import {
   taskMatchesAreaFilter,
   useTaskStore,
   type AIProviderId,
-  type ProcessInboxWorkflowEvent,
   type Task,
   type TaskEditorFieldId,
   type TaskPriority,
   type TimeEstimate,
 } from '@mindwtr/core';
+import {
+  resolveProcessInboxWorkflowEvent,
+  type ProcessInboxWorkflowEvent,
+} from '@mindwtr/core/process-inbox-workflow';
 
 import type { AIResponseAction } from '../ai-response-modal';
 import {

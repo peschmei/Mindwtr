@@ -139,25 +139,6 @@ vi.mock('@mindwtr/core', () => {
       if (!value || value === '__all__' || value === '__none__') return value ?? '__all__';
       return areas.some((area: any) => !area.deletedAt && area.id === value) ? value : '__all__';
     }),
-    resolveProcessInboxWorkflowEvent: vi.fn((event: any) => {
-      if (event.type === 'discard') return { type: 'delete' };
-      const status = ({
-        someday: 'someday',
-        reference: 'reference',
-        complete: 'done',
-        later: 'next',
-        waiting: 'waiting',
-        next: 'next',
-      } as Record<string, string>)[event.type];
-      const fields = { ...(event.fields ?? {}) };
-      if (event.type === 'waiting' && event.followUpAt !== undefined) {
-        fields.reviewAt = event.followUpAt;
-      }
-      if (Object.prototype.hasOwnProperty.call(fields, 'assignedTo')) {
-        fields.assignedTo = fields.assignedTo?.trim() || undefined;
-      }
-      return { type: 'update', updates: { status, ...fields } };
-    }),
     taskMatchesAreaFilter: vi.fn((task: any, filter: string, projectMap: Map<string, any>, areaById?: Map<string, any>) => {
       if (filter === '__all__') return true;
       const taskAreaId = task.areaId || (task.projectId ? projectMap.get(task.projectId)?.areaId : undefined);
