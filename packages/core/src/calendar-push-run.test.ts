@@ -28,7 +28,7 @@ const createHarness = () => {
         status: 'updated' as const,
         eventId: entry.calendarEventId,
     }));
-    const deleteEvent = vi.fn(async () => 'deleted' as const);
+    const deleteEvent = vi.fn(async () => undefined);
     const ports: CalendarPushRunPorts = {
         platform: 'test',
         nowIso: () => now,
@@ -65,7 +65,6 @@ describe('runCalendarPushFullSync', () => {
 
         expect(harness.createEvent).toHaveBeenCalledWith(
             expect.objectContaining({ id: 'task-1' }),
-            { id: 'calendar-1' },
         );
         expect(harness.entries.get('task-1')).toEqual({
             taskId: 'task-1',
@@ -126,7 +125,6 @@ describe('runCalendarPushFullSync', () => {
         expect(harness.updateEvent).toHaveBeenCalledWith(
             expect.objectContaining({ calendarEventId: 'event-old' }),
             expect.objectContaining({ id: 'task-1' }),
-            { id: 'calendar-1' },
         );
         expect(harness.createEvent).not.toHaveBeenCalled();
         expect(harness.entries.get('task-1')?.lastSyncedAt).toBe(now);

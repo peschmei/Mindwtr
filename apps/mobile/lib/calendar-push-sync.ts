@@ -647,10 +647,9 @@ function createCalendarPushRunPorts(target: CalendarPushTarget): CalendarPushRun
         deleteEvent: async (entry) => {
             try {
                 await Calendar.deleteEventAsync(entry.calendarEventId);
-                return 'deleted';
             } catch (error) {
                 if (isCalendarEventMissingError(error)) {
-                    return 'missing';
+                    return;
                 }
                 void logWarn('Failed to delete calendar event; keeping local sync mapping for retry', {
                     scope: 'calendar-push',

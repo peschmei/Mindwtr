@@ -14,18 +14,15 @@ export type CalendarPushUpdateResult =
     | { status: 'updated'; eventId: string }
     | { status: 'missing' };
 
-export type CalendarPushDeleteResult = 'deleted' | 'missing';
-
 export type CalendarPushRunPorts = {
     platform: string;
     nowIso: () => string;
-    createEvent: (task: Task, target: CalendarPushRunTarget) => Promise<string>;
+    createEvent: (task: Task) => Promise<string>;
     updateEvent: (
         entry: CalendarSyncEntry,
         task: Task,
-        target: CalendarPushRunTarget,
     ) => Promise<CalendarPushUpdateResult>;
-    deleteEvent: (entry: CalendarSyncEntry) => Promise<CalendarPushDeleteResult>;
+    deleteEvent: (entry: CalendarSyncEntry) => Promise<void>;
     getSyncEntry: (taskId: string) => Promise<CalendarSyncEntry | null>;
     getAllSyncEntries: () => Promise<CalendarSyncEntry[]>;
     upsertSyncEntry: (entry: CalendarSyncEntry) => Promise<void>;
@@ -99,7 +96,7 @@ async function createCalendarEvent(
     target: CalendarPushRunTarget,
     ports: CalendarPushRunPorts,
 ): Promise<void> {
-    const eventId = await ports.createEvent(task, target);
+    const eventId = await ports.createEvent(task);
     await ports.upsertSyncEntry({
         taskId: task.id,
         calendarEventId: eventId,
@@ -137,7 +134,7 @@ async function syncCalendarPushTask(
     }
     const existing = await ports.getSyncEntry(task.id);
     if (existing && existing.calendarId === target.id) {
-        const update = await ports.updateEvent(existing, task, target);
+        const update = await ports.updateEvent(existing, task);
         if (update.status === 'updated') {
             await ports.upsertSyncEntry({
                 taskId: task.id,

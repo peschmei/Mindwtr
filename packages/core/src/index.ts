@@ -707,7 +707,6 @@ export {
     shouldRemoveCalendarPushTask,
 } from './calendar-push-run';
 export type {
-    CalendarPushDeleteResult,
     CalendarPushFullSyncOptions,
     CalendarPushFullSyncResult,
     CalendarPushPartialSyncOptions,

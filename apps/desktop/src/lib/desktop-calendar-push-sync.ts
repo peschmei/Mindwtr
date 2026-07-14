@@ -336,8 +336,7 @@ function createCalendarPushRunPorts(target: CalendarPushTarget): CalendarPushRun
         },
         deleteEvent: async (entry) => {
             const result = await dependencies.deleteEvent(entry.calendarEventId);
-            if (result.ok) return 'deleted';
-            if (isMissingCalendarEventResult(result)) return 'missing';
+            if (result.ok || isMissingCalendarEventResult(result)) return;
             void logWarn('Failed to delete macOS calendar event; keeping local sync mapping for retry', {
                 scope: 'calendar-push',
                 extra: {
