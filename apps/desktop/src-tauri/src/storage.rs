@@ -2219,6 +2219,74 @@ mod tests {
     use rusqlite::Connection;
 
     #[test]
+    fn rust_task_mapper_matches_core_schema_fixture() {
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../../packages/core/src/task-sync-schema.fixture.json"
+        ))
+        .expect("valid Task schema fixture");
+        let fields = schema
+            .get("fields")
+            .and_then(Value::as_array)
+            .expect("Task schema fields");
+        let fixture = schema.get("fixture").expect("Task schema payload");
+
+        let mut expected_keys: Vec<String> = fields
+            .iter()
+            .map(|field| {
+                field
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .expect("Task schema field name")
+                    .to_string()
+            })
+            .collect();
+        expected_keys.sort();
+
+        let mut fixture_keys: Vec<String> = fixture
+            .as_object()
+            .expect("Task schema fixture object")
+            .keys()
+            .cloned()
+            .collect();
+        fixture_keys.sort();
+        assert_eq!(
+            fixture_keys, expected_keys,
+            "fixture must cover every Task field"
+        );
+
+        let conn = Connection::open_in_memory().expect("should open in-memory db");
+        conn.execute_batch(SQLITE_SCHEMA)
+            .expect("should create schema");
+        conn.execute_batch("PRAGMA foreign_keys = OFF;")
+            .expect("should disable fixture foreign keys");
+        upsert_task_row(&conn, fixture).expect("should write exhaustive Task fixture");
+
+        let task_id = fixture
+            .get("id")
+            .and_then(Value::as_str)
+            .expect("Task fixture id");
+        let mapped = conn
+            .query_row(
+                "SELECT * FROM tasks WHERE id = ?1",
+                [task_id],
+                row_to_task_value,
+            )
+            .expect("should map exhaustive Task row");
+        let mut actual_keys: Vec<String> = mapped
+            .as_object()
+            .expect("mapped Task object")
+            .keys()
+            .cloned()
+            .collect();
+        actual_keys.sort();
+
+        assert_eq!(
+            actual_keys, expected_keys,
+            "Rust row_to_task_value must return every core Task field"
+        );
+    }
+
+    #[test]
     fn detect_storage_mode_returns_standard_without_marker() {
         let exe_dir = std::env::temp_dir().join("mindwtr-portable-mode-without-marker");
 

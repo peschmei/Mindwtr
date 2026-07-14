@@ -1,31 +1,23 @@
 #!/usr/bin/env bun
 import { readFileSync } from 'node:fs';
+import { TASK_SYNC_FIELD_SCHEMA } from '../packages/core/src/task-sync-schema';
 
 type Entity = 'task' | 'project' | 'section';
 type Surface = 'cloud' | 'sqlite';
 
+const expectedTaskCloudFields = TASK_SYNC_FIELD_SCHEMA
+    .filter((field) => field.cloudKit !== null)
+    .map((field) => field.name);
+const expectedTaskSqliteFields = Array.from(new Set(
+    TASK_SYNC_FIELD_SCHEMA
+        .map((field) => field.sqliteColumn)
+        .filter((column): column is string => column !== null),
+));
+
 const EXPECTED: Record<Entity, Record<Surface, string[]>> = {
     task: {
-        cloud: [
-            'title', 'status', 'priority', 'energyLevel', 'assignedTo', 'taskMode', 'startTime',
-            'relativeStartOffset', 'dueDate', 'recurrence', 'showFutureRecurrence', 'pushCount',
-            'tags', 'contexts', 'checklist', 'description', 'textDirection', 'attachments', 'location',
-            'projectId', 'sectionId', 'areaId', 'isFocusedToday', 'timeEstimate', 'timeSpentMinutes',
-            'suppressMindwtrReminders', 'repeatReminderMinutes', 'reviewAt', 'completedAt',
-            'statusBeforeProjectArchive', 'completedAtBeforeProjectArchive',
-            'isFocusedTodayBeforeProjectArchive', 'projectArchivedAt', 'rev', 'revBy', 'createdAt',
-            'updatedAt', 'deletedAt', 'purgedAt', 'order', 'orderNum',
-        ],
-        sqlite: [
-            'id', 'title', 'status', 'priority', 'energyLevel', 'assignedTo', 'taskMode', 'startTime',
-            'relativeStartOffset', 'dueDate', 'recurrence', 'showFutureRecurrence', 'pushCount',
-            'repeatReminderMinutes', 'tags', 'contexts', 'checklist', 'description', 'textDirection',
-            'attachments', 'location', 'projectId', 'sectionId', 'areaId', 'orderNum', 'boardOrder',
-            'isFocusedToday', 'timeEstimate', 'timeSpentMinutes', 'suppressMindwtrReminders', 'reviewAt', 'completedAt',
-            'statusBeforeProjectArchive', 'completedAtBeforeProjectArchive',
-            'isFocusedTodayBeforeProjectArchive', 'projectArchivedAt', 'rev', 'revBy', 'createdAt',
-            'updatedAt', 'deletedAt', 'purgedAt',
-        ],
+        cloud: expectedTaskCloudFields,
+        sqlite: expectedTaskSqliteFields,
     },
     project: {
         cloud: [
@@ -52,6 +44,7 @@ const EXPECTED: Record<Entity, Record<Surface, string[]>> = {
 };
 
 const PATHS = {
+    coreTypes: 'packages/core/src/types.ts',
     coreSqliteAdapter: 'packages/core/src/sqlite-adapter.ts',
     coreSqliteSchema: 'packages/core/src/sqlite-schema.ts',
     desktopRustSchema: 'apps/desktop/src-tauri/src/lib.rs',
@@ -99,6 +92,101 @@ const parseRustInsertColumns = (source: string, table: string): string[] => {
     return unique(match[1].split(',').map((column) => column.trim()).filter(Boolean), `Rust INSERT ${table}`);
 };
 
+const parseCoreTaskUpdateColumns = (source: string): string[] => {
+    const match = source.match(/const TASK_UPSERT_UPDATE_CLAUSE = \x60([\s\S]*?)\x60;/);
+    if (!match) throw new Error('Could not find TASK_UPSERT_UPDATE_CLAUSE.');
+    return unique(
+        Array.from(match[1].matchAll(/^([A-Za-z][A-Za-z0-9]*)=excluded\./gm), (entry) => entry[1]),
+        'TASK_UPSERT_UPDATE_CLAUSE',
+    );
+};
+
+const parseCoreTaskMigrationColumns = (source: string): string[] => {
+    const match = source.match(/private async ensureTaskColumns\(\) \{([\s\S]*?)\n    \}/);
+    if (!match) throw new Error('Could not find ensureTaskColumns.');
+    return unique(
+        Array.from(match[1].matchAll(/\{ name: '([^']+)', sql:/g), (entry) => entry[1]),
+        'ensureTaskColumns',
+    );
+};
+
+type ParsedTaskField = {
+    name: string;
+    nullability: 'required' | 'optional' | 'optional-nullable';
+};
+
+const parseTaskInterfaceFields = (source: string): ParsedTaskField[] => {
+    const match = source.match(/export interface Task \{([\s\S]*?)\n\}/);
+    if (!match) throw new Error('Could not find Task interface.');
+    return match[1]
+        .split('\n')
+        .map((line) => line.replace(/\/\/.*$/, '').trim())
+        .map((line) => line.match(/^([A-Za-z][A-Za-z0-9]*)(\?)?:\s*([^;]+);$/))
+        .filter((entry): entry is RegExpMatchArray => entry !== null)
+        .map((entry) => ({
+            name: entry[1],
+            nullability: entry[2]
+                ? /\bnull\b/.test(entry[3])
+                    ? 'optional-nullable' as const
+                    : 'optional' as const
+                : 'required' as const,
+        }));
+};
+
+type NativeTaskFieldSpec = {
+    jsKey: string;
+    storageKey: string;
+    kind: string;
+};
+
+const SWIFT_KIND_MAP: Record<string, string> = {
+    string: 'string',
+    date: 'date',
+    jsonString: 'json-string',
+    bool: 'boolean',
+    int: 'integer',
+    stringArray: 'string-array',
+};
+
+const OBJC_KIND_MAP: Record<string, string> = {
+    String: 'string',
+    Date: 'date',
+    JsonString: 'json-string',
+    Bool: 'boolean',
+    Int: 'integer',
+    StringArray: 'string-array',
+};
+
+const parseSwiftTaskFieldSpecs = (source: string): NativeTaskFieldSpec[] => {
+    const match = source.match(/private static let taskFieldSpecs: \[FieldSpec\] = \[([\s\S]*?)\n    \]/);
+    if (!match) throw new Error('Could not find Swift taskFieldSpecs.');
+    const specs = Array.from(
+        match[1].matchAll(/FieldSpec\(jsKey: "([^"]+)", ckKey: "([^"]+)", kind: \.([A-Za-z]+)\)/g),
+        (entry) => ({
+            jsKey: entry[1],
+            storageKey: entry[2],
+            kind: SWIFT_KIND_MAP[entry[3]] ?? entry[3],
+        }),
+    );
+    unique(specs.map((spec) => spec.jsKey), 'Swift taskFieldSpecs');
+    return specs;
+};
+
+const parseObjcTaskFieldSpecs = (source: string): NativeTaskFieldSpec[] => {
+    const match = source.match(/static const MWFieldSpec kTaskFields\[\] = \{([\s\S]*?)\n\};/);
+    if (!match) throw new Error('Could not find ObjC kTaskFields.');
+    const specs = Array.from(
+        match[1].matchAll(/\{"([^"]+)",\s*"([^"]+)",\s*MWFieldKind([A-Za-z]+)\}/g),
+        (entry) => ({
+            jsKey: entry[1],
+            storageKey: entry[2],
+            kind: OBJC_KIND_MAP[entry[3]] ?? entry[3],
+        }),
+    );
+    unique(specs.map((spec) => spec.jsKey), 'ObjC kTaskFields');
+    return specs;
+};
+
 const parseSwiftFields = (source: string, entity: Entity): string[] => {
     const name = `${entity}FieldSpecs`;
     const match = source.match(new RegExp(`private static let ${name}: \\[FieldSpec\\] = \\[([\\s\\S]*?)\\n    \\]`));
@@ -125,8 +213,69 @@ const compareSet = (label: string, actual: string[], expected: string[]): string
     return lines;
 };
 
+const compareTaskInterface = (source: string): string[] => {
+    const actual = parseTaskInterfaceFields(source);
+    unique(actual.map((field) => field.name), 'Task interface');
+    const failures = compareSet(
+        'core Task interface',
+        actual.map((field) => field.name),
+        TASK_SYNC_FIELD_SCHEMA.map((field) => field.name),
+    );
+    const actualByName = new Map(actual.map((field) => [field.name, field]));
+    const mismatches = TASK_SYNC_FIELD_SCHEMA
+        .filter((field) => actualByName.get(field.name)?.nullability !== field.nullability)
+        .map((field) => {
+            const actualNullability = actualByName.get(field.name)?.nullability ?? 'missing';
+            return field.name + ' expected ' + field.nullability + ', got ' + actualNullability;
+        });
+    if (mismatches.length > 0) {
+        failures.push('core Task interface nullability:');
+        failures.push('  ' + mismatches.join('; '));
+    }
+    return failures;
+};
+
+const compareNativeTaskFieldSpecs = (
+    label: string,
+    actual: NativeTaskFieldSpec[],
+): string[] => {
+    const expected = TASK_SYNC_FIELD_SCHEMA.flatMap((field) => (
+        field.cloudKit
+            ? [{
+                jsKey: field.name,
+                storageKey: field.cloudKit.key,
+                kind: field.cloudKit.kind,
+            }]
+            : []
+    ));
+    const failures = compareSet(
+        label,
+        actual.map((field) => field.jsKey),
+        expected.map((field) => field.jsKey),
+    );
+    const actualByName = new Map(actual.map((field) => [field.jsKey, field]));
+    const mismatches = expected
+        .filter((field) => {
+            const actualField = actualByName.get(field.jsKey);
+            return actualField
+                && (actualField.storageKey !== field.storageKey || actualField.kind !== field.kind);
+        })
+        .map((field) => {
+            const actualField = actualByName.get(field.jsKey)!;
+            return field.jsKey
+                + ' expected ' + field.storageKey + '/' + field.kind
+                + ', got ' + actualField.storageKey + '/' + actualField.kind;
+        });
+    if (mismatches.length > 0) {
+        failures.push(label + ' storage mapping:');
+        failures.push('  ' + mismatches.join('; '));
+    }
+    return failures;
+};
+
 const failures: string[] = [];
 
+const coreTypes = read(PATHS.coreTypes);
 const coreSqliteAdapter = read(PATHS.coreSqliteAdapter);
 const coreSqliteSchema = read(PATHS.coreSqliteSchema);
 const desktopRustSchema = read(PATHS.desktopRustSchema);
@@ -134,7 +283,26 @@ const desktopRustStorage = read(PATHS.desktopRustStorage);
 const swiftMapper = read(PATHS.swiftMapper);
 const objcMapper = read(PATHS.objcMapper);
 
+failures.push(...compareTaskInterface(coreTypes));
 failures.push(...compareSet('core TASK_SQLITE_COLUMNS', parseCoreTaskColumns(coreSqliteAdapter), EXPECTED.task.sqlite));
+failures.push(...compareSet(
+    'core TASK_UPSERT_UPDATE_CLAUSE',
+    parseCoreTaskUpdateColumns(coreSqliteAdapter),
+    EXPECTED.task.sqlite.filter((field) => field !== 'id'),
+));
+failures.push(...compareSet(
+    'core ensureTaskColumns',
+    parseCoreTaskMigrationColumns(coreSqliteAdapter),
+    EXPECTED.task.sqlite.filter((field) => !['id', 'title', 'status'].includes(field)),
+));
+failures.push(...compareNativeTaskFieldSpecs(
+    'iOS CloudKit task fields',
+    parseSwiftTaskFieldSpecs(swiftMapper),
+));
+failures.push(...compareNativeTaskFieldSpecs(
+    'macOS CloudKit task fields',
+    parseObjcTaskFieldSpecs(objcMapper),
+));
 
 for (const entity of ['task', 'project', 'section'] as const) {
     const table = `${entity}s`;
