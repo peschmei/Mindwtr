@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
     applyAttachmentCleanupResult,
     findDeletedAttachmentsForFileCleanup,
@@ -9,6 +9,7 @@ import {
     PENDING_REMOTE_ATTACHMENT_DELETE_MAX_ATTEMPTS,
     removeAttachmentsByIdFromData,
     removeOrphanedAttachmentsFromData,
+    runAttachmentCleanupLifecycle,
 } from './attachment-cleanup';
 import type { AppData } from './types';
 
@@ -201,7 +202,7 @@ describe('findDeletedAttachmentsForFileCleanup', () => {
 });
 
 describe('findLiveAttachmentResourceReferences', () => {
-    it('tracks live local URIs and cloud keys while ignoring deleted records', () => {
+    it('tracks live local URIs and cloud keys while ignoring purged records', () => {
         const data = buildData();
         data.tasks.push({
             id: 'live-task',
@@ -242,6 +243,7 @@ describe('findLiveAttachmentResourceReferences', () => {
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
             deletedAt: '2026-01-02T00:00:00.000Z',
+            purgedAt: '2026-01-02T00:00:00.000Z',
             attachments: [
                 {
                     id: 'deleted-parent',
@@ -537,5 +539,209 @@ describe('applyAttachmentCleanupResult', () => {
 
         expect(cleaned.tasks[0].attachments?.map((attachment) => attachment.id)).toEqual(['deferred']);
         expect(cleaned.settings.attachments?.pendingRemoteDeletes).toBeUndefined();
+    });
+});
+
+describe('runAttachmentCleanupLifecycle', () => {
+    const now = '2026-07-14T12:00:00.000Z';
+
+    it('removes orphaned metadata without deleting resources still referenced by a live task', async () => {
+        const data = buildData();
+        data.tasks.push(
+            {
+                id: 'purged',
+                title: 'Purged',
+                status: 'done',
+                contexts: [],
+                createdAt: now,
+                updatedAt: now,
+                deletedAt: now,
+                purgedAt: now,
+                attachments: [{
+                    id: 'orphan',
+                    kind: 'file',
+                    title: 'shared',
+                    uri: 'file:///managed/shared.pdf',
+                    cloudKey: 'attachments/shared.pdf',
+                    createdAt: now,
+                    updatedAt: now,
+                }],
+            },
+            {
+                id: 'live',
+                title: 'Live',
+                status: 'next',
+                contexts: [],
+                createdAt: now,
+                updatedAt: now,
+                attachments: [{
+                    id: 'live-copy',
+                    kind: 'file',
+                    title: 'shared',
+                    uri: '/managed/shared.pdf',
+                    cloudKey: 'attachments/shared.pdf',
+                    createdAt: now,
+                    updatedAt: now,
+                }],
+            },
+        );
+        const deleteLocalAttachment = vi.fn(async () => undefined);
+        const deleteRemoteAttachment = vi.fn(async () => undefined);
+
+        const result = await runAttachmentCleanupLifecycle({
+            appData: data,
+            now: () => now,
+            deleteLocalAttachment,
+            deleteRemoteAttachment,
+        });
+
+        expect(deleteLocalAttachment).not.toHaveBeenCalled();
+        expect(deleteRemoteAttachment).not.toHaveBeenCalled();
+        expect(result.appData.tasks[0].attachments).toEqual([]);
+        expect(result.appData.tasks[1].attachments?.map((attachment) => attachment.id)).toEqual(['live-copy']);
+        expect(result.shouldInvalidateFastSyncState).toBe(true);
+    });
+
+    it('treats attachments on soft-deleted parents as live resource references', async () => {
+        const data = buildData();
+        data.tasks.push({
+            id: 'restorable',
+            title: 'Restorable',
+            status: 'done',
+            contexts: [],
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: now,
+            attachments: [{
+                id: 'restorable-attachment',
+                kind: 'file',
+                title: 'keep',
+                uri: '/managed/keep.pdf',
+                cloudKey: 'attachments/keep.pdf',
+                createdAt: now,
+                updatedAt: now,
+            }],
+        });
+        data.settings.attachments = {
+            pendingRemoteDeletes: [{
+                cloudKey: 'attachments/keep.pdf',
+                title: 'keep',
+                attempts: 1,
+                lastErrorAt: now,
+            }],
+        };
+        const deleteRemoteAttachment = vi.fn(async () => undefined);
+
+        const result = await runAttachmentCleanupLifecycle({
+            appData: data,
+            now: () => now,
+            deleteLocalAttachment: vi.fn(async () => undefined),
+            deleteRemoteAttachment,
+        });
+
+        expect(deleteRemoteAttachment).not.toHaveBeenCalled();
+        expect(result.appData.settings.attachments?.pendingRemoteDeletes).toBeUndefined();
+        expect(result.appData.tasks[0].attachments).toHaveLength(1);
+    });
+
+    it('treats remote 404 as terminal instead of scheduling another retry', async () => {
+        const data = buildData();
+        data.settings.attachments = {
+            pendingRemoteDeletes: [{
+                cloudKey: 'attachments/missing.pdf',
+                title: 'missing',
+                attempts: 2,
+                lastErrorAt: now,
+            }],
+        };
+        const onRemoteAttachmentMissing = vi.fn();
+
+        const result = await runAttachmentCleanupLifecycle({
+            appData: data,
+            now: () => now,
+            deleteLocalAttachment: vi.fn(async () => undefined),
+            deleteRemoteAttachment: vi.fn(async () => {
+                throw Object.assign(new Error('missing'), { status: 404 });
+            }),
+            onRemoteAttachmentMissing,
+        });
+
+        expect(onRemoteAttachmentMissing).toHaveBeenCalledWith(
+            expect.objectContaining({ cloudKey: 'attachments/missing.pdf' }),
+        );
+        expect(result.appData.settings.attachments?.pendingRemoteDeletes).toBeUndefined();
+    });
+
+    it('increments retry state for retryable remote deletion failures', async () => {
+        const data = buildData();
+        data.settings.attachments = {
+            pendingRemoteDeletes: [{
+                cloudKey: 'attachments/retry.pdf',
+                title: 'retry',
+                attempts: 2,
+                lastErrorAt: '2026-07-13T12:00:00.000Z',
+            }],
+        };
+        const error = new Error('offline');
+        const onRemoteDeleteError = vi.fn();
+
+        const result = await runAttachmentCleanupLifecycle({
+            appData: data,
+            now: () => now,
+            deleteLocalAttachment: vi.fn(async () => undefined),
+            deleteRemoteAttachment: vi.fn(async () => {
+                throw error;
+            }),
+            onRemoteDeleteError,
+        });
+
+        expect(onRemoteDeleteError).toHaveBeenCalledWith(
+            expect.objectContaining({ cloudKey: 'attachments/retry.pdf' }),
+            error,
+        );
+        expect(result.appData.settings.attachments?.pendingRemoteDeletes).toEqual([{
+            cloudKey: 'attachments/retry.pdf',
+            title: 'retry',
+            attempts: 3,
+            lastErrorAt: now,
+        }]);
+    });
+
+    it('applies only the processed orphaned metadata when the batch limit is reached', async () => {
+        const data = buildData();
+        data.tasks.push({
+            id: 'purged',
+            title: 'Purged',
+            status: 'done',
+            contexts: [],
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: now,
+            purgedAt: now,
+            attachments: ['first', 'second'].map((id) => ({
+                id,
+                kind: 'file' as const,
+                title: id,
+                uri: '/managed/' + id + '.pdf',
+                createdAt: now,
+                updatedAt: now,
+            })),
+        });
+        const deleteLocalAttachment = vi.fn(async () => undefined);
+        const onBatchLimitReached = vi.fn();
+
+        const result = await runAttachmentCleanupLifecycle({
+            appData: data,
+            now: () => now,
+            maxAttachmentTargets: 1,
+            deleteLocalAttachment,
+            onBatchLimitReached,
+        });
+
+        expect(deleteLocalAttachment).toHaveBeenCalledTimes(1);
+        expect(result.appData.tasks[0].attachments?.map((attachment) => attachment.id)).toEqual(['second']);
+        expect(result.reachedBatchLimit).toBe(true);
+        expect(result.processedOrphanedIds).toEqual(new Set(['first']));
+        expect(onBatchLimitReached).toHaveBeenCalledWith({ limit: 1, total: 2 });
     });
 });

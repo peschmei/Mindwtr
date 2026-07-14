@@ -965,10 +965,15 @@ export {
     prunePendingRemoteAttachmentDeletes,
     removeAttachmentsByIdFromData,
     removeOrphanedAttachmentsFromData,
+    runAttachmentCleanupLifecycle,
     shouldRetainPendingRemoteAttachmentDelete,
 } from './attachment-cleanup';
 export type {
     AttachmentCleanupApplyResult,
+    AttachmentCleanupLifecycleOptions,
+    AttachmentCleanupLifecycleResult,
+    AttachmentCleanupRemoteDelete,
+    AttachmentCleanupRemoteTarget,
     CleanupResult,
     LiveAttachmentResourceReferences,
 } from './attachment-cleanup';

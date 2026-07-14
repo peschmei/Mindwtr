@@ -1,25 +1,18 @@
 import {
-    applyAttachmentCleanupResult,
     type AppData,
     type Attachment,
-    type PendingRemoteAttachmentDelete,
+    type AttachmentCleanupRemoteDelete,
     cloudDeleteFile,
-    findDeletedAttachmentsForFileCleanup,
-    findLiveAttachmentResourceReferences,
-    findOrphanedAttachments,
-    getErrorStatus,
-    isAttachmentCloudResourceReferenced,
-    isAttachmentLocalResourceReferenced,
     LEGACY_SYNC_FILE_NAME,
-    sanitizeAttachmentCloudKeyForSyncMerge,
     sanitizeAttachmentUriForSyncMerge,
     type CloudProvider,
+    runAttachmentCleanupLifecycle,
     SYNC_FILE_NAME,
     webdavDeleteFile,
 } from '@mindwtr/core';
 
 import { deleteDropboxFile, DropboxFileNotFoundError, DropboxUnauthorizedError } from './dropbox-sync';
-import { getBaseSyncUrl, getCloudBaseUrl, normalizePendingRemoteDeletes } from './sync-attachments';
+import { getBaseSyncUrl, getCloudBaseUrl } from './sync-attachments';
 import type { CloudConfig, WebDavConfig } from './sync-attachment-backends';
 import {
     ATTACHMENTS_DIR_NAME,
@@ -45,8 +38,6 @@ export type AttachmentCleanupDeps = {
     logSyncWarning: (message: string, error?: unknown) => void;
     resolveWebdavPassword: (config: WebDavConfig) => Promise<string>;
 };
-
-type PendingRemoteAttachmentDeleteEntry = PendingRemoteAttachmentDelete;
 
 export const cleanupAttachmentTempFiles = async (deps: Pick<AttachmentCleanupDeps, 'isTauriRuntimeEnv' | 'logSyncWarning'>): Promise<void> => {
     if (!deps.isTauriRuntimeEnv()) return;
@@ -97,129 +88,67 @@ export const cleanupOrphanedAttachments = async (
     backend: SyncBackend,
     deps: AttachmentCleanupDeps,
 ): Promise<AppData> => {
-    const orphaned = findOrphanedAttachments(appData);
-    const deletedAttachments = findDeletedAttachmentsForFileCleanup(appData);
-    const previousPendingRemoteDeletes = normalizePendingRemoteDeletes(appData.settings.attachments?.pendingRemoteDeletes);
-    const previousPendingByCloudKey = new Map<string, PendingRemoteAttachmentDeleteEntry>();
-    for (const item of previousPendingRemoteDeletes) {
-        const cloudKey = sanitizeAttachmentCloudKeyForSyncMerge(item.cloudKey);
-        if (!cloudKey) continue;
-        previousPendingByCloudKey.set(cloudKey, { ...item, cloudKey });
-    }
-    const cleanupTargets = new Map<string, Attachment>();
-    const liveResourceReferences = findLiveAttachmentResourceReferences(appData);
     const maybeYield = createCooperativeYield(4);
+    const resolveRemoteDeleteAttachment = async (): Promise<AttachmentCleanupRemoteDelete | undefined> => {
+        let webdavConfig: WebDavConfig | null = null;
+        let cloudConfig: CloudConfig | null = null;
+        let cloudProvider: CloudProvider = 'selfhosted';
+        let dropboxAppKey = '';
+        let fileBaseDir: string | null = null;
 
-    for (const attachment of orphaned) cleanupTargets.set(attachment.id, attachment);
-    for (const attachment of deletedAttachments) cleanupTargets.set(attachment.id, attachment);
-
-    const remoteCleanupTargets = new Map<string, { cloudKey: string; title: string }>();
-    for (const attachment of cleanupTargets.values()) {
-        await maybeYield();
-        const cloudKey = sanitizeAttachmentCloudKeyForSyncMerge(attachment.cloudKey);
-        if (!cloudKey) continue;
-        if (isAttachmentCloudResourceReferenced({ cloudKey }, liveResourceReferences)) continue;
-        remoteCleanupTargets.set(cloudKey, {
-            cloudKey,
-            title: attachment.title || cloudKey,
-        });
-    }
-    for (const pending of previousPendingRemoteDeletes) {
-        await maybeYield();
-        const cloudKey = sanitizeAttachmentCloudKeyForSyncMerge(pending.cloudKey);
-        if (!cloudKey) continue;
-        if (isAttachmentCloudResourceReferenced({ cloudKey }, liveResourceReferences)) continue;
-        remoteCleanupTargets.set(cloudKey, {
-            cloudKey,
-            title: pending.title || cloudKey,
-        });
-    }
-
-    const lastCleanupAt = new Date().toISOString();
-    if (cleanupTargets.size === 0 && remoteCleanupTargets.size === 0) {
-        await cleanupAttachmentTempFiles(deps);
-        return applyAttachmentCleanupResult(appData, { lastCleanupAt });
-    }
-
-    let webdavConfig: WebDavConfig | null = null;
-    let cloudConfig: CloudConfig | null = null;
-    let cloudProvider: CloudProvider = 'selfhosted';
-    let dropboxAppKey = '';
-    let dropboxAccessToken: string | null = null;
-    let fileBaseDir: string | null = null;
-
-    if (backend === 'webdav') {
-        webdavConfig = await deps.getWebDavConfig();
-    } else if (backend === 'cloud') {
-        cloudProvider = await deps.getCloudProvider();
-        if (cloudProvider === 'dropbox') {
-            dropboxAppKey = (await deps.getDropboxAppKey()).trim();
-        } else {
-            cloudConfig = await deps.getCloudConfig();
-        }
-    } else if (backend === 'file') {
-        const syncPath = await deps.getSyncPath();
-        const baseDir = getFileSyncDir(syncPath, SYNC_FILE_NAME, LEGACY_SYNC_FILE_NAME);
-        fileBaseDir = baseDir || null;
-    }
-
-    const fetcher = await deps.getTauriFetch();
-    const dropboxFetcher = fetcher ?? fetch;
-    const webdavPassword = webdavConfig ? await deps.resolveWebdavPassword(webdavConfig) : '';
-    const nextPendingRemoteDeletes = new Map<string, PendingRemoteAttachmentDeleteEntry>();
-    const resolveDropboxAccessToken = async (forceRefresh = false): Promise<string> => {
-        if (!dropboxAppKey) {
-            throw new Error('Dropbox app key is not configured');
-        }
-        if (!dropboxAccessToken || forceRefresh) {
-            dropboxAccessToken = await deps.getDropboxAccessToken(dropboxAppKey, { forceRefresh });
-        }
-        return dropboxAccessToken;
-    };
-    const deleteDropboxAttachment = async (cloudKey: string): Promise<void> => {
-        const run = async (forceRefresh: boolean) => {
-            const token = await resolveDropboxAccessToken(forceRefresh);
-            await deleteDropboxFile(token, cloudKey, dropboxFetcher);
-        };
-        try {
-            await run(false);
-        } catch (error) {
-            if (error instanceof DropboxUnauthorizedError) {
-                await run(true);
-                return;
+        if (backend === 'webdav') {
+            webdavConfig = await deps.getWebDavConfig();
+            if (!webdavConfig.url) return undefined;
+        } else if (backend === 'cloud') {
+            cloudProvider = await deps.getCloudProvider();
+            if (cloudProvider === 'dropbox') {
+                dropboxAppKey = (await deps.getDropboxAppKey()).trim();
+                if (!dropboxAppKey) return undefined;
+            } else {
+                cloudConfig = await deps.getCloudConfig();
+                if (!cloudConfig.url) return undefined;
             }
-            throw error;
+        } else if (backend === 'file') {
+            const syncPath = await deps.getSyncPath();
+            fileBaseDir = getFileSyncDir(syncPath, SYNC_FILE_NAME, LEGACY_SYNC_FILE_NAME) || null;
+            if (!fileBaseDir) return undefined;
+        } else {
+            return undefined;
         }
-    };
 
-    for (const attachment of cleanupTargets.values()) {
-        await maybeYield();
-        if (isAttachmentLocalResourceReferenced(attachment, liveResourceReferences)) continue;
-        await deleteAttachmentFile(attachment, deps);
-    }
+        const fetcher = await deps.getTauriFetch();
+        const dropboxFetcher = fetcher ?? fetch;
+        const webdavPassword = webdavConfig ? await deps.resolveWebdavPassword(webdavConfig) : '';
+        let dropboxAccessToken: string | null = null;
+        const resolveDropboxAccessToken = async (forceRefresh = false): Promise<string> => {
+            if (!dropboxAppKey) {
+                throw new Error('Dropbox app key is not configured');
+            }
+            if (!dropboxAccessToken || forceRefresh) {
+                dropboxAccessToken = await deps.getDropboxAccessToken(dropboxAppKey, { forceRefresh });
+            }
+            return dropboxAccessToken;
+        };
+        const deleteDropboxAttachment = async (cloudKey: string): Promise<void> => {
+            const run = async (forceRefresh: boolean) => {
+                const token = await resolveDropboxAccessToken(forceRefresh);
+                await deleteDropboxFile(token, cloudKey, dropboxFetcher);
+            };
+            try {
+                await run(false);
+            } catch (error) {
+                if (error instanceof DropboxUnauthorizedError) {
+                    await run(true);
+                    return;
+                }
+                throw error;
+            }
+        };
 
-    const canAttemptRemoteDelete = (
-        (backend === 'webdav' && !!webdavConfig?.url)
-        || (backend === 'cloud' && cloudProvider === 'selfhosted' && !!cloudConfig?.url)
-        || (backend === 'cloud' && cloudProvider === 'dropbox' && !!dropboxAppKey)
-        || (backend === 'file' && !!fileBaseDir)
-    );
-    for (const target of remoteCleanupTargets.values()) {
-        await maybeYield();
-        const existing = previousPendingByCloudKey.get(target.cloudKey);
-        if (!canAttemptRemoteDelete) {
-            nextPendingRemoteDeletes.set(target.cloudKey, {
-                cloudKey: target.cloudKey,
-                title: target.title,
-                attempts: existing?.attempts ?? 0,
-                lastErrorAt: existing?.lastErrorAt,
-            });
-            continue;
-        }
-        try {
+        return async (target) => {
             if (backend === 'webdav' && webdavConfig?.url) {
                 const baseUrl = getBaseSyncUrl(webdavConfig.url);
-                await webdavDeleteFile(`${baseUrl}/${target.cloudKey}`, {
+                await webdavDeleteFile(baseUrl + '/' + target.cloudKey, {
                     allowInsecureHttp: webdavConfig.allowInsecureHttp,
                     username: webdavConfig.username,
                     password: webdavPassword,
@@ -227,7 +156,7 @@ export const cleanupOrphanedAttachments = async (
                 });
             } else if (backend === 'cloud' && cloudProvider === 'selfhosted' && cloudConfig?.url) {
                 const baseUrl = getCloudBaseUrl(cloudConfig.url);
-                await cloudDeleteFile(`${baseUrl}/${target.cloudKey}`, {
+                await cloudDeleteFile(baseUrl + '/' + target.cloudKey, {
                     allowInsecureHttp: cloudConfig.allowInsecureHttp,
                     token: cloudConfig.token,
                     fetcher,
@@ -240,30 +169,26 @@ export const cleanupOrphanedAttachments = async (
                 const targetPath = await resolveFileBackendPath(join, fileBaseDir, target.cloudKey);
                 await remove(targetPath);
             }
-        } catch (error) {
-            const status = getErrorStatus(error);
-            if (status === 404 || error instanceof DropboxFileNotFoundError) {
-                deps.logSyncInfo('Remote attachment already missing during cleanup', {
-                    cloudKey: target.cloudKey,
-                });
-                continue;
-            }
-            deps.logSyncWarning(`Failed to delete remote attachment ${target.title}`, error);
-            nextPendingRemoteDeletes.set(target.cloudKey, {
+        };
+    };
+
+    const result = await runAttachmentCleanupLifecycle({
+        appData,
+        beforeEachAttachment: maybeYield,
+        beforeEachRemoteDelete: maybeYield,
+        deleteLocalAttachment: (attachment) => deleteAttachmentFile(attachment, deps),
+        resolveRemoteDeleteAttachment,
+        isRemoteMissingError: (error) => error instanceof DropboxFileNotFoundError,
+        onRemoteAttachmentMissing: (target) => {
+            deps.logSyncInfo('Remote attachment already missing during cleanup', {
                 cloudKey: target.cloudKey,
-                title: target.title,
-                attempts: (existing?.attempts ?? 0) + 1,
-                lastErrorAt: lastCleanupAt,
             });
-        }
-    }
+        },
+        onRemoteDeleteError: (target, error) => {
+            deps.logSyncWarning('Failed to delete remote attachment ' + target.title, error);
+        },
+    });
 
     await cleanupAttachmentTempFiles(deps);
-
-    const pendingRemoteDeletes = Array.from(nextPendingRemoteDeletes.values());
-    return applyAttachmentCleanupResult(appData, {
-        lastCleanupAt,
-        orphanedAttachments: orphaned,
-        pendingRemoteDeletes,
-    });
+    return result.appData;
 };
