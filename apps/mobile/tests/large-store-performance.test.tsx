@@ -20,6 +20,7 @@ import {
 } from '@mindwtr/core';
 
 import FocusScreen from '../app/(drawer)/(tabs)/focus';
+import ArchivedScreen from '../app/(drawer)/archived';
 import { ProjectRow } from '../components/projects-screen/ProjectRow';
 import {
   buildProjectListRows,
@@ -40,12 +41,17 @@ const translate = vi.hoisted(() => {
     'agenda.noTasks': 'No tasks',
     'agenda.reviewDue': 'Review Due',
     'agenda.todaysFocus': "Today's Focus",
+    'archived.empty': 'No archived tasks',
+    'archived.emptyHint': 'Archived tasks appear here',
+    'bulk.select': 'Select',
+    'bulk.selected': 'selected',
     'common.all': 'All',
     'common.cancel': 'Cancel',
     'common.delete': 'Delete',
     'common.done': 'Done',
     'common.error': 'Error',
     'common.undo': 'Undo',
+    'common.tasks': 'tasks',
     'energyLevel.high': 'High energy',
     'filters.label': 'Filters',
     'focus.nextActions': 'Next Actions',
@@ -54,6 +60,7 @@ const translate = vi.hoisted(() => {
     'task.updateFailed': 'Could not update task.',
     'taskEdit.locationLabel': 'Location',
     'taskEdit.locationPlaceholder': 'e.g. Office',
+    'trash.restoreToInbox': 'Restore to Inbox',
   };
   return (key: string) => labels[key] ?? key;
 });
@@ -64,6 +71,8 @@ const PERFORMANCE_BUDGET_MS = {
   saveWhileEditorMounted: 150,
   toggleCompleteWhileEditorMounted: 150,
   renderFocus: 350,
+  renderArchived: 350,
+  selectAllArchived: 150,
   renderProjects: 350,
 } as const;
 
@@ -266,14 +275,14 @@ vi.mock('../lib/ai-config', () => ({
 }));
 
 vi.mock('../components/task-edit/TaskEditViewTab', () => ({
-  TaskEditViewTab: React.memo((props: Record<string, unknown>) => {
+  TaskEditViewTab: React.memo(function TaskEditViewTabMock(props: Record<string, unknown>) {
     heavyEditorTabRenderCounts.view += 1;
     return React.createElement('TaskEditViewTab', props);
   }),
 }));
 
 vi.mock('../components/task-edit/TaskEditFormTab', () => ({
-  TaskEditFormTab: React.memo((props: Record<string, unknown>) => {
+  TaskEditFormTab: React.memo(function TaskEditFormTabMock(props: Record<string, unknown>) {
     heavyEditorTabRenderCounts.form += 1;
     return React.createElement('TaskEditFormTab', props);
   }),
@@ -290,6 +299,7 @@ vi.mock('../components/pomodoro-panel', () => ({
 vi.mock('lucide-react-native', () => {
   const Icon = (props: Record<string, unknown>) => React.createElement('Icon', props);
   return {
+    Archive: Icon,
     AlertTriangle: Icon,
     BookmarkPlus: Icon,
     Copy: Icon,
@@ -678,6 +688,62 @@ describe('large-store mobile interaction performance', () => {
       editorTree?.unmount();
     });
   });
+
+  it('keeps Archived select-all within the large-store budget', async () => {
+    const data = createLargeStoreData();
+    const archivedTasks = data.tasks.map((task) => ({
+      ...task,
+      status: 'archived' as const,
+      completedAt: task.completedAt ?? '2026-05-03T12:00:00.000Z',
+    }));
+    loadLargeStore({
+      ...data,
+      tasks: archivedTasks,
+      targetTask: archivedTasks[1234],
+    });
+
+    let archivedTree: ReactTestRenderer | null = null;
+    const renderArchivedMs = measureSync(() => {
+      act(() => {
+        archivedTree = renderer.create(<ArchivedScreen />);
+      });
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expectWithinBudget('Render Archived', renderArchivedMs, PERFORMANCE_BUDGET_MS.renderArchived);
+    const selectButton = archivedTree!.root.find(
+      (node) => node.props.accessibilityLabel === 'Select',
+    );
+    act(() => {
+      selectButton.props.onPress();
+    });
+    const selectAllButton = archivedTree!.root.find(
+      (node) => node.props.accessibilityLabel === 'Select All',
+    );
+    const selectAllArchivedMs = measureSync(() => {
+      act(() => {
+        selectAllButton.props.onPress();
+      });
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expectWithinBudget(
+      'Select all Archived tasks',
+      selectAllArchivedMs,
+      PERFORMANCE_BUDGET_MS.selectAllArchived,
+    );
+    expect(archivedTree!.root.findAll(
+      (node) => node.props.accessibilityLabel === `${LARGE_TASK_COUNT} selected`,
+    ).length).toBeGreaterThan(0);
+
+    act(() => {
+      archivedTree?.unmount();
+    });
+  }, 15_000);
 
   it('keeps core mobile interactions under the large-store budget', async () => {
     const data = createLargeStoreData();

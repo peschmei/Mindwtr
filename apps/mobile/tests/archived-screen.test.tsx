@@ -6,12 +6,16 @@ import ArchivedScreen from '../app/(drawer)/archived';
 
 const mocks = vi.hoisted(() => {
   const alert = vi.fn();
+  const batchDeleteTasks = vi.fn();
+  const batchMoveTasks = vi.fn();
   const deleteTask = vi.fn();
   const updateTask = vi.fn();
   const purgeTask = vi.fn();
   const setHighlightTask = vi.fn();
   return {
     alert,
+    batchDeleteTasks,
+    batchMoveTasks,
     deleteTask,
     updateTask,
     purgeTask,
@@ -19,6 +23,8 @@ const mocks = vi.hoisted(() => {
     storeState: {
       _allTasks: [] as any[],
       projects: [] as any[],
+      batchDeleteTasks,
+      batchMoveTasks,
       deleteTask,
       updateTask,
       purgeTask,
@@ -80,11 +86,18 @@ vi.mock('../contexts/language-context', () => ({
     t: (key: string) => ({
       'archived.empty': 'No archived tasks',
       'archived.emptyHint': 'Archived tasks appear here',
+      'bulk.confirmDeleteBody': 'Delete selected tasks?',
+      'bulk.confirmDeleteTitle': 'Delete tasks',
+      'bulk.select': 'Select',
+      'bulk.selected': 'selected',
+      'common.all': 'all',
       'common.cancel': 'Cancel',
       'common.delete': 'Delete',
+      'common.done': 'Done',
       'common.tasks': 'tasks',
       'list.done': 'Completed',
       'task.deleteConfirmBody': 'Move this task to Trash?',
+      'trash.restoreToInbox': 'Restore to Inbox',
     }[key] ?? key),
   }),
 }));
@@ -218,5 +231,59 @@ describe('ArchivedScreen', () => {
 
     expect(mocks.deleteTask).toHaveBeenCalledWith('task-1');
     expect(mocks.purgeTask).not.toHaveBeenCalled();
+  });
+
+  it('bulk restores selected archived tasks to Inbox', async () => {
+    mocks.storeState._allTasks = [
+      ...mocks.storeState._allTasks,
+      {
+        ...mocks.storeState._allTasks[0],
+        id: 'task-2',
+        title: 'Second archived task',
+      },
+    ];
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<ArchivedScreen />);
+    });
+
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Select').props.onPress();
+    });
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Select all').props.onPress();
+    });
+    await renderer.act(async () => {
+      await tree.root.find((node) => node.props.accessibilityLabel === 'Restore to Inbox').props.onPress();
+    });
+
+    expect(mocks.batchMoveTasks).toHaveBeenCalledWith(['task-1', 'task-2'], 'inbox');
+    expect(mocks.updateTask).not.toHaveBeenCalledWith('task-1', { status: 'inbox' });
+  });
+
+  it('bulk moves selected archived tasks to Trash', async () => {
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<ArchivedScreen />);
+    });
+
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Select').props.onPress();
+    });
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Select Archived task').props.onPress();
+    });
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Delete').props.onPress();
+    });
+
+    const alertButtons = mocks.alert.mock.calls[0]?.[2] as { style?: string; onPress?: () => Promise<void> | void }[];
+    const confirmButton = alertButtons.find((button) => button.style === 'destructive');
+    await renderer.act(async () => {
+      await confirmButton?.onPress?.();
+    });
+
+    expect(mocks.batchDeleteTasks).toHaveBeenCalledWith(['task-1']);
+    expect(mocks.deleteTask).not.toHaveBeenCalled();
   });
 });

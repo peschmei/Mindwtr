@@ -58,4 +58,53 @@ describe('ArchiveView', () => {
             expect(deletedTask?.purgedAt).toBeUndefined();
         });
     });
+
+    it('bulk restores selected archived tasks to Inbox', async () => {
+        const secondArchivedTask: Task = {
+            ...archivedTask,
+            id: 'task-2',
+            title: 'Second archived task',
+        };
+        useTaskStore.setState({
+            _allTasks: [archivedTask, secondArchivedTask],
+            _tasksById: new Map([
+                [archivedTask.id, archivedTask],
+                [secondArchivedTask.id, secondArchivedTask],
+            ]),
+        });
+
+        render(
+            <LanguageProvider>
+                <ArchiveView />
+            </LanguageProvider>
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+        fireEvent.click(screen.getByRole('button', { name: /Select all/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Restore to Inbox' }));
+
+        await waitFor(() => {
+            expect(useTaskStore.getState()._tasksById.get(archivedTask.id)?.status).toBe('inbox');
+            expect(useTaskStore.getState()._tasksById.get(secondArchivedTask.id)?.status).toBe('inbox');
+        });
+    });
+
+    it('bulk moves selected archived tasks to Trash', async () => {
+        render(
+            <LanguageProvider>
+                <ArchiveView />
+            </LanguageProvider>
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Select Archived task' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+
+        await waitFor(() => {
+            const deletedTask = useTaskStore.getState()._tasksById.get(archivedTask.id);
+            expect(deletedTask?.deletedAt).toBeTruthy();
+            expect(deletedTask?.purgedAt).toBeUndefined();
+        });
+    });
 });

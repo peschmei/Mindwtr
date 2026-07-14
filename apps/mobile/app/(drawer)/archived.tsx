@@ -21,9 +21,13 @@ function ArchivedTaskItem({
     onRestore,
     onDelete,
     onEditCompletedAt,
+    onToggleSelect,
     completedLabel,
     editCompletedAtLabel,
-    isHighlighted
+    selectLabel,
+    selectionMode,
+    isSelected,
+    isHighlighted,
 }: {
     task: Task;
     tc: ThemeColors;
@@ -31,8 +35,12 @@ function ArchivedTaskItem({
     onRestore: () => void;
     onDelete: () => void;
     onEditCompletedAt: () => void;
+    onToggleSelect: () => void;
     completedLabel: string;
     editCompletedAtLabel: string;
+    selectLabel: string;
+    selectionMode: boolean;
+    isSelected: boolean;
     isHighlighted?: boolean;
 }) {
     const swipeableRef = useRef<Swipeable>(null);
@@ -68,22 +76,34 @@ function ArchivedTaskItem({
     return (
         <Swipeable
             ref={swipeableRef}
-            renderLeftActions={renderLeftActions}
-            renderRightActions={renderRightActions}
+            renderLeftActions={selectionMode ? undefined : renderLeftActions}
+            renderRightActions={selectionMode ? undefined : renderRightActions}
             overshootLeft={false}
             overshootRight={false}
         >
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Open archived task details: ${task.title}`}
-                onPress={onOpen}
+                accessibilityLabel={selectionMode ? `${selectLabel} ${task.title}` : `Open archived task details: ${task.title}`}
+                accessibilityState={selectionMode ? { selected: isSelected } : undefined}
+                onPress={selectionMode ? onToggleSelect : onOpen}
                 style={({ pressed }) => [
                     styles.taskItem,
                     { backgroundColor: tc.taskItemBg },
                     pressed && styles.taskItemPressed,
-                    isHighlighted && { borderWidth: 2, borderColor: tc.tint },
+                    isHighlighted && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
+                    selectionMode && isSelected && { borderWidth: 2, borderColor: tc.tint },
                 ]}
             >
+                {selectionMode && (
+                    <View
+                        style={[
+                            styles.selectionIndicator,
+                            { borderColor: tc.tint, backgroundColor: isSelected ? tc.tint : 'transparent' },
+                        ]}
+                    >
+                        {isSelected && <Text style={styles.selectionMark}>✓</Text>}
+                    </View>
+                )}
                 <View style={styles.taskContent}>
                     <Text style={[styles.taskTitle, { color: tc.secondaryText }]} numberOfLines={2}>
                         {task.title}
@@ -97,6 +117,7 @@ function ArchivedTaskItem({
                         />
                     )}
                     <Pressable
+                        disabled={selectionMode}
                         onPress={(event) => {
                             event.stopPropagation();
                             onEditCompletedAt();
@@ -118,16 +139,29 @@ function ArchivedTaskItem({
 }
 
 export default function ArchivedScreen() {
-    const { _allTasks, projects, updateTask, deleteTask, highlightTaskId, setHighlightTask } = useTaskStore((state) => ({
+    const {
+        _allTasks,
+        projects,
+        updateTask,
+        deleteTask,
+        batchMoveTasks,
+        batchDeleteTasks,
+        highlightTaskId,
+        setHighlightTask,
+    } = useTaskStore((state) => ({
         _allTasks: state._allTasks,
         projects: state.projects,
         updateTask: state.updateTask,
         deleteTask: state.deleteTask,
+        batchMoveTasks: state.batchMoveTasks,
+        batchDeleteTasks: state.batchDeleteTasks,
         highlightTaskId: state.highlightTaskId,
         setHighlightTask: state.setHighlightTask,
     }), shallow);
     const { t } = useLanguage();
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     const tc = useThemeColors();
     const { areaById, resolvedAreaFilter } = useMobileAreaFilter();
@@ -147,6 +181,11 @@ export default function ArchivedScreen() {
     const selectedTask = useMemo(
         () => selectedTaskId ? _allTasks.find((task) => task.id === selectedTaskId && !task.deletedAt) ?? null : null,
         [_allTasks, selectedTaskId],
+    );
+    const selectedIdsArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
+    const listExtraData = useMemo(
+        () => ({ highlightTaskId, selectedIds, selectionMode }),
+        [highlightTaskId, selectedIds, selectionMode],
     );
 
     const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -171,6 +210,14 @@ export default function ArchivedScreen() {
         }
     }, [selectedTask, selectedTaskId]);
 
+    useEffect(() => {
+        const visibleIds = new Set(archivedTasks.map((task) => task.id));
+        setSelectedIds((previous) => {
+            const next = new Set(Array.from(previous).filter((id) => visibleIds.has(id)));
+            return next.size === previous.size ? previous : next;
+        });
+    }, [archivedTasks]);
+
     const handleOpenTask = useCallback((taskId: string) => {
         setSelectedTaskId(taskId);
     }, []);
@@ -183,6 +230,50 @@ export default function ArchivedScreen() {
     const handleRestore = useCallback((taskId: string) => {
         updateTask(taskId, { status: 'inbox' });
     }, [updateTask]);
+
+    const exitSelectionMode = useCallback(() => {
+        setSelectionMode(false);
+        setSelectedIds(new Set());
+    }, []);
+
+    const toggleTaskSelection = useCallback((taskId: string) => {
+        setSelectionMode(true);
+        setSelectedIds((previous) => {
+            const next = new Set(previous);
+            if (next.has(taskId)) next.delete(taskId);
+            else next.add(taskId);
+            return next;
+        });
+    }, []);
+
+    const selectAllTasks = useCallback(() => {
+        setSelectedIds(new Set(archivedTasks.map((task) => task.id)));
+    }, [archivedTasks]);
+
+    const handleBulkRestore = useCallback(async () => {
+        if (selectedIdsArray.length === 0) return;
+        await batchMoveTasks(selectedIdsArray, 'inbox');
+        exitSelectionMode();
+    }, [batchMoveTasks, exitSelectionMode, selectedIdsArray]);
+
+    const handleBulkDelete = useCallback(() => {
+        if (selectedIdsArray.length === 0) return;
+        Alert.alert(
+            t('bulk.confirmDeleteTitle') || t('common.delete'),
+            t('bulk.confirmDeleteBody') || 'Delete selected tasks?',
+            [
+                { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+                {
+                    text: t('common.delete') || 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await batchDeleteTasks(selectedIdsArray);
+                        exitSelectionMode();
+                    },
+                },
+            ],
+        );
+    }, [batchDeleteTasks, exitSelectionMode, selectedIdsArray, t]);
 
     const [completedAtTaskId, setCompletedAtTaskId] = useState<string | null>(null);
     const completedAtTask = useMemo(
@@ -221,11 +312,15 @@ export default function ArchivedScreen() {
             onRestore={() => handleRestore(item.id)}
             onDelete={() => handleDelete(item.id)}
             onEditCompletedAt={() => setCompletedAtTaskId(item.id)}
+            onToggleSelect={() => toggleTaskSelection(item.id)}
             completedLabel={t('list.done') || 'Completed'}
             editCompletedAtLabel={tFallback(t, 'task.editCompletedAt', 'Edit completion time')}
+            selectLabel={tFallback(t, 'bulk.select', 'Select')}
+            selectionMode={selectionMode}
+            isSelected={selectedIds.has(item.id)}
             isHighlighted={item.id === highlightTaskId}
         />
-    ), [tc, handleDelete, handleOpenTask, handleRestore, highlightTaskId, t]);
+    ), [tc, handleDelete, handleOpenTask, handleRestore, highlightTaskId, selectedIds, selectionMode, t, toggleTaskSelection]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -235,13 +330,68 @@ export default function ArchivedScreen() {
                         <Text style={[styles.summaryText, { color: tc.secondaryText }]}>
                             {archivedTasks.length} {t('common.tasks') || 'tasks'}
                         </Text>
+                        <Pressable
+                            onPress={selectionMode ? exitSelectionMode : () => setSelectionMode(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel={selectionMode ? tFallback(t, 'common.done', 'Done') : tFallback(t, 'bulk.select', 'Select')}
+                            style={[styles.selectButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+                        >
+                            <Text style={[styles.selectButtonText, { color: tc.text }]}>
+                                {selectionMode ? tFallback(t, 'common.done', 'Done') : tFallback(t, 'bulk.select', 'Select')}
+                            </Text>
+                        </Pressable>
+                    </View>
+                )}
+                {selectionMode && (
+                    <View style={[styles.bulkBar, { borderColor: tc.border, backgroundColor: tc.cardBg }]}>
+                        <Text
+                            accessibilityLabel={`${selectedIds.size} ${t('bulk.selected')}`}
+                            style={[styles.bulkCount, { color: tc.secondaryText }]}
+                        >
+                            {selectedIds.size} {t('bulk.selected')}
+                        </Text>
+                        <View style={styles.bulkActions}>
+                            <Pressable
+                                onPress={selectAllTasks}
+                                disabled={archivedTasks.length === 0 || selectedIds.size === archivedTasks.length}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${tFallback(t, 'bulk.select', 'Select')} ${tFallback(t, 'common.all', 'all')}`}
+                                style={[styles.bulkButton, { backgroundColor: tc.taskItemBg }]}
+                            >
+                                <Text style={[styles.bulkButtonText, { color: tc.text }]}>
+                                    {tFallback(t, 'bulk.select', 'Select')} {tFallback(t, 'common.all', 'all')}
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => { void handleBulkRestore(); }}
+                                disabled={selectedIds.size === 0}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('trash.restoreToInbox')}
+                                style={[styles.bulkButton, { backgroundColor: tc.taskItemBg }]}
+                            >
+                                <Text style={[styles.bulkButtonText, { color: tc.text }]}>
+                                    {t('trash.restoreToInbox')}
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleBulkDelete}
+                                disabled={selectedIds.size === 0}
+                                accessibilityRole="button"
+                                accessibilityLabel={tFallback(t, 'common.delete', 'Delete')}
+                                style={[styles.bulkButton, { backgroundColor: tc.taskItemBg }]}
+                            >
+                                <Text style={[styles.bulkButtonText, { color: tc.danger }]}>
+                                    {tFallback(t, 'common.delete', 'Delete')}
+                                </Text>
+                            </Pressable>
+                        </View>
                     </View>
                 )}
                 <FlatList
                     data={archivedTasks}
                     renderItem={renderArchivedTask}
                     keyExtractor={(item) => item.id}
-                    extraData={highlightTaskId}
+                    extraData={listExtraData}
                     style={styles.taskList}
                     contentContainerStyle={[
                         styles.taskListContent,
@@ -297,10 +447,50 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 12,
         paddingBottom: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
     },
     summaryText: {
         fontSize: 13,
         fontWeight: '500',
+    },
+    selectButton: {
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    selectButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    bulkBar: {
+        marginHorizontal: 16,
+        marginTop: 10,
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 10,
+        gap: 8,
+    },
+    bulkCount: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    bulkActions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    bulkButton: {
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 7,
+    },
+    bulkButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
     },
     taskList: {
         flex: 1,
@@ -324,6 +514,21 @@ const styles = StyleSheet.create({
     },
     taskItemPressed: {
         opacity: 0.85,
+    },
+    selectionIndicator: {
+        width: 22,
+        height: 22,
+        borderWidth: 2,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    selectionMark: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '700',
+        lineHeight: 16,
     },
     taskContent: {
         flex: 1,

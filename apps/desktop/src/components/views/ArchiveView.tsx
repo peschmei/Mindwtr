@@ -16,12 +16,16 @@ import {
     LIST_VIRTUAL_OVERSCAN,
     useVirtualList,
 } from './list/useVirtualList';
+import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
 
 type ArchiveTaskRowInnerProps = {
     task: Task;
     onRestore: (taskId: string) => void;
     onDelete: (taskId: string) => void;
     onEditCompletedAt: (taskId: string) => void;
+    onToggleSelect: (taskId: string) => void;
+    selectionMode: boolean;
+    isSelected: boolean;
     t: (key: string) => string;
 };
 
@@ -30,11 +34,15 @@ const ArchiveTaskRowInner = memo(function ArchiveTaskRowInner({
     onRestore,
     onDelete,
     onEditCompletedAt,
+    onToggleSelect,
+    selectionMode,
+    isSelected,
     t,
 }: ArchiveTaskRowInnerProps) {
     const handleRestore = useCallback(() => onRestore(task.id), [onRestore, task.id]);
     const handleDelete = useCallback(() => onDelete(task.id), [onDelete, task.id]);
     const handleEditCompletedAt = useCallback(() => onEditCompletedAt(task.id), [onEditCompletedAt, task.id]);
+    const handleToggleSelect = useCallback(() => onToggleSelect(task.id), [onToggleSelect, task.id]);
     const completionTimestamp = task.completedAt || task.updatedAt;
     const completedLabel = t('list.done') || 'Completed';
     const editCompletedAtLabel = tFallback(t, 'task.editCompletedAt', 'Edit completion time');
@@ -46,22 +54,33 @@ const ArchiveTaskRowInner = memo(function ArchiveTaskRowInner({
 
     return (
         <div className="rounded-lg px-3 py-3 flex items-center justify-between group hover:bg-muted/50 transition-colors">
-            <div>
-                <h3 className="font-medium text-foreground line-through opacity-70">{task.title}</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                    <button
-                        type="button"
-                        onClick={handleEditCompletedAt}
-                        title={editCompletedAtLabel}
-                        aria-label={editCompletedAtLabel}
-                        className="hover:text-foreground hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
-                    >
-                        {completedText}
-                    </button>
-                    {otherMetadataParts.length > 0 ? ` • ${otherMetadataParts.join(' • ')}` : ''}
-                </p>
+            <div className="flex min-w-0 items-center gap-3">
+                {selectionMode && (
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={handleToggleSelect}
+                        aria-label={`${tFallback(t, 'bulk.select', 'Select')} ${task.title}`}
+                        className="h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary"
+                    />
+                )}
+                <div>
+                    <h3 className="font-medium text-foreground line-through opacity-70">{task.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        <button
+                            type="button"
+                            onClick={handleEditCompletedAt}
+                            title={editCompletedAtLabel}
+                            aria-label={editCompletedAtLabel}
+                            className="hover:text-foreground hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
+                        >
+                            {completedText}
+                        </button>
+                        {otherMetadataParts.length > 0 ? ` • ${otherMetadataParts.join(' • ')}` : ''}
+                    </p>
+                </div>
             </div>
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {!selectionMode && <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                     onClick={handleRestore}
                     className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-primary transition-colors"
@@ -76,7 +95,7 @@ const ArchiveTaskRowInner = memo(function ArchiveTaskRowInner({
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
-            </div>
+            </div>}
         </div>
     );
 });
@@ -92,6 +111,9 @@ const VirtualArchiveTaskRow = memo(function VirtualArchiveTaskRow({
     onRestore,
     onDelete,
     onEditCompletedAt,
+    onToggleSelect,
+    selectionMode,
+    isSelected,
     onMeasure,
     t,
 }: VirtualArchiveTaskRowProps) {
@@ -107,7 +129,16 @@ const VirtualArchiveTaskRow = memo(function VirtualArchiveTaskRow({
     return (
         <div ref={rowRef} style={{ position: 'absolute', top, left: 0, right: 0 }}>
             <div className="border-b border-border/30">
-                <ArchiveTaskRowInner task={task} onRestore={onRestore} onDelete={onDelete} onEditCompletedAt={onEditCompletedAt} t={t} />
+                <ArchiveTaskRowInner
+                    task={task}
+                    onRestore={onRestore}
+                    onDelete={onDelete}
+                    onEditCompletedAt={onEditCompletedAt}
+                    onToggleSelect={onToggleSelect}
+                    selectionMode={selectionMode}
+                    isSelected={isSelected}
+                    t={t}
+                />
             </div>
         </div>
     );
@@ -115,11 +146,13 @@ const VirtualArchiveTaskRow = memo(function VirtualArchiveTaskRow({
 
 export function ArchiveView() {
     const perf = usePerformanceMonitor('ArchiveView');
-    const { _allTasks, updateTask, deleteTask, settings } = useTaskStore(
+    const { _allTasks, updateTask, deleteTask, batchMoveTasks, batchDeleteTasks, settings } = useTaskStore(
         (state) => ({
             _allTasks: state._allTasks,
             updateTask: state.updateTask,
             deleteTask: state.deleteTask,
+            batchMoveTasks: state.batchMoveTasks,
+            batchDeleteTasks: state.batchDeleteTasks,
             settings: state.settings,
         }),
         shallow
@@ -128,6 +161,8 @@ export function ArchiveView() {
     const { requestConfirmation, confirmModal } = useConfirmDialog();
     const [searchQuery, setSearchQuery] = useState('');
     const [completedAtTaskId, setCompletedAtTaskId] = useState<string | null>(null);
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const listScrollRef = useRef<HTMLDivElement>(null);
     const rowHeightsRef = useRef<Map<string, number>>(new Map());
     const [measureVersion, setMeasureVersion] = useState(0);
@@ -174,6 +209,17 @@ export function ArchiveView() {
             t.title.toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [_allTasks, searchQuery, sortBy]);
+    const selectedIdsArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
+    const allVisibleSelected = archivedTasks.length > 0
+        && selectedIds.size === archivedTasks.length;
+
+    useEffect(() => {
+        const visibleIds = new Set(archivedTasks.map((task) => task.id));
+        setSelectedIds((previous) => {
+            const next = new Set(Array.from(previous).filter((id) => visibleIds.has(id)));
+            return next.size === previous.size ? previous : next;
+        });
+    }, [archivedTasks]);
     const shouldVirtualize = archivedTasks.length > LIST_VIRTUALIZATION_THRESHOLD;
     const handleVirtualRowMeasure = useCallback((id: string, height: number) => {
         if (rowHeightsRef.current.get(id) === height) return;
@@ -197,6 +243,55 @@ export function ArchiveView() {
     const handleRestore = useCallback((taskId: string) => {
         updateTask(taskId, { status: 'inbox' }); // Restore to inbox? Or previous status? Inbox is safest.
     }, [updateTask]);
+
+    const exitSelectionMode = useCallback(() => {
+        setSelectionMode(false);
+        setSelectedIds(new Set());
+    }, []);
+
+    const toggleSelectionMode = useCallback(() => {
+        if (selectionMode) {
+            exitSelectionMode();
+            return;
+        }
+        setSelectionMode(true);
+    }, [exitSelectionMode, selectionMode]);
+
+    const toggleTaskSelection = useCallback((taskId: string) => {
+        setSelectedIds((previous) => {
+            const next = new Set(previous);
+            if (next.has(taskId)) next.delete(taskId);
+            else next.add(taskId);
+            return next;
+        });
+    }, []);
+
+    const selectAllVisible = useCallback(() => {
+        setSelectedIds(new Set(archivedTasks.map((task) => task.id)));
+    }, [archivedTasks]);
+
+    const clearSelection = useCallback(() => {
+        setSelectedIds(new Set());
+    }, []);
+
+    const handleBulkRestore = useCallback(async () => {
+        if (selectedIdsArray.length === 0) return;
+        await batchMoveTasks(selectedIdsArray, 'inbox');
+        exitSelectionMode();
+    }, [batchMoveTasks, exitSelectionMode, selectedIdsArray]);
+
+    const handleBulkDelete = useCallback(async () => {
+        if (selectedIdsArray.length === 0) return;
+        const confirmed = await requestConfirmation({
+            title: t('bulk.confirmDeleteTitle'),
+            description: t('bulk.confirmDeleteBody'),
+            confirmLabel: t('common.delete'),
+            cancelLabel: t('common.cancel') || 'Cancel',
+        });
+        if (!confirmed) return;
+        await batchDeleteTasks(selectedIdsArray);
+        exitSelectionMode();
+    }, [batchDeleteTasks, exitSelectionMode, requestConfirmation, selectedIdsArray, t]);
 
     const handleEditCompletedAt = useCallback((taskId: string) => {
         setCompletedAtTaskId(taskId);
@@ -229,10 +324,54 @@ export function ArchiveView() {
             <div className={shouldVirtualize ? "flex h-full min-h-0 flex-col gap-6" : "flex flex-col gap-6"}>
             <header className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">{t('archived.title')}</h2>
-                <div className="text-sm text-muted-foreground">
-                    {archivedTasks.length} {t('common.tasks')}
+                <div className="flex items-center gap-3">
+                    <div className="text-sm text-muted-foreground">
+                        {archivedTasks.length} {t('common.tasks')}
+                    </div>
+                    {archivedTasks.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={toggleSelectionMode}
+                            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                        >
+                            {selectionMode ? t('common.done') : t('bulk.select')}
+                        </button>
+                    )}
                 </div>
             </header>
+
+            {selectionMode && (
+                <div className="space-y-2">
+                    <BulkSelectionToolbar
+                        selectionCount={selectedIds.size}
+                        totalCount={archivedTasks.length}
+                        allSelected={allVisibleSelected}
+                        onSelectAll={selectAllVisible}
+                        onClearSelection={clearSelection}
+                        t={t}
+                    />
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => { void handleBulkRestore(); }}
+                            disabled={selectedIds.size === 0}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Undo2 className="h-3.5 w-3.5" />
+                            {t('trash.restoreToInbox')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { void handleBulkDelete(); }}
+                            disabled={selectedIds.size === 0}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {t('common.delete')}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="relative">
                 <input
@@ -267,6 +406,9 @@ export function ArchiveView() {
                                     onRestore={handleRestore}
                                     onDelete={handleDelete}
                                     onEditCompletedAt={handleEditCompletedAt}
+                                    onToggleSelect={toggleTaskSelection}
+                                    selectionMode={selectionMode}
+                                    isSelected={selectedIds.has(task.id)}
                                     t={t}
                                 />
                             );
@@ -281,6 +423,9 @@ export function ArchiveView() {
                                 onRestore={handleRestore}
                                 onDelete={handleDelete}
                                 onEditCompletedAt={handleEditCompletedAt}
+                                onToggleSelect={toggleTaskSelection}
+                                selectionMode={selectionMode}
+                                isSelected={selectedIds.has(task.id)}
                                 t={t}
                             />
                         ))}
