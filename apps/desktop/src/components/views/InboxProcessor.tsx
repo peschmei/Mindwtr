@@ -3,7 +3,7 @@ import type { AppData, Area, Project, Task } from '@mindwtr/core';
 
 import { InboxProcessingQuickPanel } from '../InboxProcessingQuickPanel';
 import { InboxProcessingWizard } from '../InboxProcessingWizard';
-import { MindSweepLauncher } from '../MindSweepModal';
+import { MindSweepLauncher, MindSweepTrigger } from '../MindSweepModal';
 import { useInboxProcessingController } from './inbox/useInboxProcessingController';
 
 type InboxProcessorProps = {
@@ -21,6 +21,7 @@ type InboxProcessorProps = {
     allTags: string[];
     isProcessing: boolean;
     setIsProcessing: (value: boolean) => void;
+    onOpenMindSweep?: () => void;
 };
 
 export function InboxProcessor({
@@ -38,6 +39,7 @@ export function InboxProcessor({
     allTags,
     isProcessing,
     setIsProcessing,
+    onOpenMindSweep,
 }: InboxProcessorProps) {
     const {
         inboxCount,
@@ -74,7 +76,11 @@ export function InboxProcessor({
                         <Play className="w-4 h-4" />
                         {t('process.btn')} ({inboxCount})
                     </button>
-                    <MindSweepLauncher t={t} addTask={addTask} variant="secondary" />
+                    {onOpenMindSweep ? (
+                        <MindSweepTrigger t={t} onOpen={onOpenMindSweep} variant="secondary" />
+                    ) : (
+                        <MindSweepLauncher t={t} addTask={addTask} variant="secondary" />
+                    )}
                 </div>
             )}
 

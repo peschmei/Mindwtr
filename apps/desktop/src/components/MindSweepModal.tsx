@@ -286,20 +286,29 @@ type MindSweepLauncherProps = {
     variant?: 'primary' | 'secondary';
 };
 
-export function MindSweepLauncher({ t, addTask, variant = 'secondary' }: MindSweepLauncherProps) {
-    const [isOpen, setIsOpen] = useState(false);
+type MindSweepTriggerProps = {
+    t: (key: string) => string;
+    onOpen: () => void;
+    variant?: 'primary' | 'secondary';
+};
+
+export function MindSweepTrigger({ t, onOpen, variant = 'secondary' }: MindSweepTriggerProps) {
     const buttonClass = variant === 'primary'
         ? 'w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors'
         : 'flex items-center justify-center gap-2 whitespace-nowrap border border-border text-muted-foreground px-3 rounded-lg text-sm font-medium hover:bg-accent hover:text-foreground transition-colors';
     return (
+        <button type="button" onClick={onOpen} className={buttonClass}>
+            <Brain className="w-4 h-4" />
+            {t('mindSweep.launchButton')}
+        </button>
+    );
+}
+
+export function MindSweepLauncher({ t, addTask, variant = 'secondary' }: MindSweepLauncherProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
         <>
-            <button
-                onClick={() => setIsOpen(true)}
-                className={buttonClass}
-            >
-                <Brain className="w-4 h-4" />
-                {t('mindSweep.launchButton')}
-            </button>
+            <MindSweepTrigger t={t} onOpen={() => setIsOpen(true)} variant={variant} />
             <MindSweepModal
                 isOpen={isOpen}
                 onClose={() => setIsOpen(false)}

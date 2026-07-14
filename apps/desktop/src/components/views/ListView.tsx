@@ -34,7 +34,7 @@ import { ListEmptyState } from './list/ListEmptyState';
 import { ListControlsPanel } from './list/ListControlsPanel';
 import { PromptModal } from '../PromptModal';
 import { InboxProcessor } from './InboxProcessor';
-import { MindSweepLauncher } from '../MindSweepModal';
+import { MindSweepModal, MindSweepTrigger } from '../MindSweepModal';
 import { TaskBulkOrganizeModal } from './list/TaskBulkOrganizeModal';
 import { useLanguage } from '../../contexts/language-context';
 import { useKeybindings } from '../../contexts/keybinding-context';
@@ -185,6 +185,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const resolvedAreaFilter = resolveAreaFilter(settings?.filters?.areaId, areas);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [quickAddSyntaxOpen, setQuickAddSyntaxOpen] = useState(false);
+    const [mindSweepOpen, setMindSweepOpen] = useState(false);
     const listFilters = useUiStore((state) => state.listFilters);
     const setListFilters = useUiStore((state) => state.setListFilters);
     const resetListFilters = useUiStore((state) => state.resetListFilters);
@@ -830,6 +831,8 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
             detail: { initialProps: { status: initialStatus }, captureMode },
         }));
     }, []);
+    const openMindSweep = useCallback(() => setMindSweepOpen(true), []);
+    const closeMindSweep = useCallback(() => setMindSweepOpen(false), []);
 
     const emptyState = (() => {
         switch (statusFilter) {
@@ -951,6 +954,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                             allTags={allTags}
                             isProcessing={isProcessing}
                             setIsProcessing={setIsProcessing}
+                            onOpenMindSweep={openMindSweep}
                         />
                     )}
                     showViewFilterInput={showViewFilterInput}
@@ -1061,7 +1065,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                         emptyState={emptyState}
                         onAddTask={() => openQuickAdd(statusFilter)}
                         primaryAction={isInbox && !hasFilters
-                            ? <MindSweepLauncher t={t} addTask={addTask} variant="primary" />
+                            ? <MindSweepTrigger t={t} onOpen={openMindSweep} variant="primary" />
                             : undefined}
                         t={t}
                     />
@@ -1153,6 +1157,12 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 )}
             </div>
         </div>
+        <MindSweepModal
+            isOpen={mindSweepOpen}
+            onClose={closeMindSweep}
+            t={t}
+            addTask={addTask}
+        />
         <PromptModal
             isOpen={tagPromptOpen}
             title={t('bulk.addTag')}

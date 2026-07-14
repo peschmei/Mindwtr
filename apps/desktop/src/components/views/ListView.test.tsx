@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import type { Task } from '@mindwtr/core';
 import { useTaskStore } from '@mindwtr/core';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -104,6 +104,37 @@ describe('ListView', () => {
       expect.stringContaining('/start:<when>')
     );
     expect(queryByText(/Quick add supports/)).not.toBeInTheDocument();
+  });
+
+  it('keeps Mind Sweep open when the first capture populates an empty inbox', async () => {
+    const addTask = vi.fn(async (title: string, initialProps?: Partial<Task>) => {
+      const task = makeTask('captured', {
+        title,
+        status: initialProps?.status ?? 'inbox',
+      });
+      useTaskStore.setState({
+        tasks: [task],
+        _allTasks: [task],
+        lastDataChangeAt: 1,
+      });
+      return { success: true, task };
+    });
+    useTaskStore.setState({ addTask, tasks: [], _allTasks: [] });
+
+    const { getByRole } = renderListView('inbox', 'Inbox');
+    fireEvent.click(getByRole('button', { name: /mind sweep/i }));
+
+    const introDialog = getByRole('dialog');
+    fireEvent.click(within(introDialog).getByRole('button', { name: /start/i }));
+    const input = within(introDialog).getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'First captured thought' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(addTask).toHaveBeenCalledWith('First captured thought', { status: 'inbox' });
+      expect(getByRole('dialog')).toBeInTheDocument();
+      expect(within(getByRole('dialog')).getByText('First captured thought')).toBeInTheDocument();
+    });
   });
 
   it.each([
