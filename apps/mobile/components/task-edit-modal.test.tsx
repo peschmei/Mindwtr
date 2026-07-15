@@ -219,6 +219,59 @@ describe('TaskEditModal', () => {
     }));
   });
 
+  it('drops a backdated completion time when the status is changed away from done before saving', async () => {
+    const completedAt = '2026-07-14T18:30:00.000Z';
+    const onSave = vi.fn();
+    let tree!: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />
+      );
+    });
+
+    const viewTab = tree.root.find((node) => (
+      node.props.mergedTask?.id === 't1' && typeof node.props.onBackdatedComplete === 'function'
+    ));
+    act(() => {
+      viewTab.props.onBackdatedComplete();
+    });
+
+    const picker = tree.root.findByType('CompletedAtPicker' as any);
+    act(() => {
+      picker.props.onConfirm(completedAt);
+    });
+
+    act(() => {
+      viewTab.props.onStatusUpdate('next');
+    });
+
+    const header = tree.root.find((node) => (
+      typeof node.props.onDone === 'function' && typeof node.props.onDelete === 'function'
+    ));
+    await act(async () => {
+      header.props.onDone();
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][1]).not.toHaveProperty('completedAt');
+    expect(onSave.mock.calls[0][1]).not.toHaveProperty('status');
+  });
+
   it('passes the project field to the mobile form tab', () => {
     let tree: renderer.ReactTestRenderer;
 

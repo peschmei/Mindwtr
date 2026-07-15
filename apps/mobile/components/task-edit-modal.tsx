@@ -60,6 +60,17 @@ import { useTaskTokenSuggestions } from './task-edit/use-task-token-suggestions'
 
 const EMPTY_COPILOT_TAGS: string[] = [];
 
+// A backdated completedAt in the draft only makes sense while the draft status
+// stays done; picking another status must drop it or it would be written onto
+// a live task at save time.
+const applyDraftStatus = (prev: Partial<Task>, status: TaskStatus): Partial<Task> => {
+    if (status !== 'done' && prev.completedAt !== undefined) {
+        const { completedAt: _dropped, ...rest } = prev;
+        return { ...rest, status };
+    }
+    return { ...prev, status };
+};
+
 interface TaskEditModalProps {
     visible: boolean;
     task: Task | null;
@@ -553,7 +564,7 @@ function TaskEditModalInner({
     }, []);
     const confirmWaitingAssignment = useCallback(() => {
         const assignedTo = waitingAssignmentInput.trim() || undefined;
-        setEditedTask((prev) => ({ ...prev, status: 'waiting', assignedTo }));
+        setEditedTask((prev) => ({ ...applyDraftStatus(prev, 'waiting'), assignedTo }));
         setWaitingAssignmentModalVisible(false);
     }, [setEditedTask, waitingAssignmentInput]);
     const requestStatusChange = useCallback((status: TaskStatus) => {
@@ -563,7 +574,7 @@ function TaskEditModalInner({
             setWaitingAssignmentModalVisible(true);
             return;
         }
-        setEditedTask((prev) => ({ ...prev, status }));
+        setEditedTask((prev) => applyDraftStatus(prev, status));
     }, [editedTask.assignedTo, editedTask.status, setEditedTask, task?.assignedTo, task?.status]);
     const requestBackdatedCompletion = useCallback(() => {
         setCompletedAtPickerVisible(true);
