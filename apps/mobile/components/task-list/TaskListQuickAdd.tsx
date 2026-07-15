@@ -45,7 +45,6 @@ type TaskListQuickAddProps = {
   onToggleFocusNewTask: () => void;
   projectId?: string;
   setTypeaheadIndex: (index: number) => void;
-  showQuickAddHelp: boolean;
   t: (key: string) => string;
   themeColors: ThemeColors;
   title: string;
@@ -79,7 +78,6 @@ export function TaskListQuickAdd({
   onToggleFocusNewTask,
   projectId,
   setTypeaheadIndex,
-  showQuickAddHelp,
   t,
   themeColors,
   title,
@@ -258,11 +256,6 @@ export function TaskListQuickAdd({
             </Text>
           </View>
         </View>
-      )}
-      {showQuickAddHelp && !projectId && (
-        <Text style={[styles.quickAddHelp, { color: themeColors.secondaryText }]}>
-          {t('quickAdd.help')}
-        </Text>
       )}
     </>
   );

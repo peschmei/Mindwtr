@@ -29,7 +29,6 @@ export default function ReferenceScreen() {
         emptyText={emptyText}
         emptyHint={emptyHint}
         allowAdd={false}
-        showQuickAddHelp={false}
         showTimeEstimateFilters={false}
         referenceGroupBy={referenceGroupBy}
         onChangeReferenceGroupBy={setReferenceGroupBy}

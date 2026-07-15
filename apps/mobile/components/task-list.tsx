@@ -148,7 +148,6 @@ export interface TaskListProps {
   bulkBarPlacement?: 'inline' | 'external';
   onBulkBarPropsChange?: (props: TaskListBulkBarProps | null) => void;
   showSort?: boolean;
-  showQuickAddHelp?: boolean;
   emptyText?: string;
   emptyHint?: string;
   emptyActionLabel?: string;
@@ -201,7 +200,6 @@ function TaskListComponent({
   bulkBarPlacement = 'inline',
   onBulkBarPropsChange,
   showSort = true,
-  showQuickAddHelp = true,
   emptyText,
   emptyHint,
   emptyActionLabel,
@@ -1902,7 +1900,6 @@ function TaskListComponent({
           onToggleFocusNewTask={() => setQuickAddFocus((current) => !current)}
           projectId={projectId}
           setTypeaheadIndex={setTypeaheadIndex}
-          showQuickAddHelp={showQuickAddHelp}
           t={t}
           themeColors={themeColorsMemo}
           title={title}

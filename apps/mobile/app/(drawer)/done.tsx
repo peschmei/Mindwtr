@@ -29,7 +29,6 @@ export default function DoneScreen() {
         emptyText={emptyText}
         emptyHint={emptyHint}
         allowAdd={false}
-        showQuickAddHelp={false}
         showTimeEstimateFilters={false}
         groupBy={groupBy}
         onChangeGroupBy={setGroupBy}

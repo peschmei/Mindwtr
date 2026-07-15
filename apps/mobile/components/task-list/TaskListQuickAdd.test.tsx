@@ -73,7 +73,6 @@ const getQuickAddProps = (overrides: Partial<React.ComponentProps<typeof TaskLis
     onToggleFocusNewTask: vi.fn(),
     onSelectionChange: vi.fn(),
     setTypeaheadIndex: vi.fn(),
-    showQuickAddHelp: false,
     t: (key: string) => ({
       'copilot.applyHint': 'Apply',
       'copilot.applied': 'Applied',
