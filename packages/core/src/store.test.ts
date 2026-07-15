@@ -1028,6 +1028,33 @@ describe('TaskStore', () => {
         expect(task?.boardOrder).toBeUndefined();
     });
 
+    it('clears focusOrder when a task leaves Focus', async () => {
+        const { addTask, updateTask } = useTaskStore.getState();
+        const created = await addTask('Focused task', { status: 'next', isFocusedToday: true });
+        const id = created.id!;
+        await updateTask(id, { focusOrder: 3 });
+        expect(useTaskStore.getState()._tasksById.get(id)?.focusOrder).toBe(3);
+
+        await expect(updateTask(id, { isFocusedToday: false })).resolves.toEqual({ success: true });
+
+        const task = useTaskStore.getState()._tasksById.get(id);
+        expect(task?.isFocusedToday).toBe(false);
+        expect(task?.focusOrder).toBeUndefined();
+    });
+
+    it('preserves focusOrder when the same patch explicitly supplies it while leaving Focus', async () => {
+        const { addTask, updateTask } = useTaskStore.getState();
+        const created = await addTask('Focused task', { status: 'next', isFocusedToday: true });
+        const id = created.id!;
+        await updateTask(id, { focusOrder: 3 });
+
+        await expect(updateTask(id, { isFocusedToday: false, focusOrder: 3 })).resolves.toEqual({ success: true });
+
+        const task = useTaskStore.getState()._tasksById.get(id);
+        expect(task?.isFocusedToday).toBe(false);
+        expect(task?.focusOrder).toBe(3);
+    });
+
     it('creates a task with a start date and no explicit status as next', async () => {
         const { addTask } = useTaskStore.getState();
         const created = await addTask('Dated capture', { startTime: '2026-07-20' });
@@ -1743,6 +1770,25 @@ describe('TaskStore', () => {
         expect(untouchedLiveTask?.deletedAt).toBeUndefined();
         expect(untouchedLiveTask?.purgedAt).toBeUndefined();
         expect(state.tasks.some((task) => task.id === restoreMe.id)).toBe(true);
+    });
+
+    it('reorders focused tasks by assigning focusOrder 0..n-1 in one batch, skipping no-op tasks', async () => {
+        const { addTask, updateTask, reorderFocusedTasks } = useTaskStore.getState();
+        const a = await addTask('A', { status: 'next', isFocusedToday: true });
+        const b = await addTask('B', { status: 'next', isFocusedToday: true });
+        const c = await addTask('C', { status: 'next', isFocusedToday: true });
+
+        // Seed b already at its target position so the reorder should leave it untouched.
+        await updateTask(b.id!, { focusOrder: 1 });
+        const revBefore = useTaskStore.getState()._tasksById.get(b.id!)?.rev;
+
+        await reorderFocusedTasks([a.id!, b.id!, c.id!]);
+
+        const state = useTaskStore.getState();
+        expect(state._tasksById.get(a.id!)?.focusOrder).toBe(0);
+        expect(state._tasksById.get(b.id!)?.focusOrder).toBe(1);
+        expect(state._tasksById.get(c.id!)?.focusOrder).toBe(2);
+        expect(state._tasksById.get(b.id!)?.rev).toBe(revBefore);
     });
 
     it('skips fetch while edits are in progress', async () => {

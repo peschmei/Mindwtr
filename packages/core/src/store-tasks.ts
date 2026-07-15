@@ -156,6 +156,7 @@ type TaskActions = Pick<
     | 'batchUpdateTasks'
     | 'batchMoveTasks'
     | 'batchDeleteTasks'
+    | 'reorderFocusedTasks'
     | 'queryTasks'
     | 'getFocusStarAction'
 >;
@@ -449,6 +450,24 @@ const normalizeTaskUpdateForStore = ({
         adjustedUpdates = {
             ...adjustedUpdates,
             boardOrder: undefined,
+        };
+    }
+    // A manual Focus position only means something while the task is in
+    // Today's Focus: any path that turns isFocusedToday off — explicit unstar
+    // or one of the auto-unstars above (future-start defer, demotion to
+    // inbox) — drops focusOrder with it, unless the same patch sets
+    // focusOrder itself.
+    const resolvedIsFocusedToday = hasOwnField(adjustedUpdates, 'isFocusedToday')
+        ? adjustedUpdates.isFocusedToday
+        : task.isFocusedToday;
+    if (
+        task.isFocusedToday === true
+        && resolvedIsFocusedToday !== true
+        && !hasOwnField(updates, 'focusOrder')
+    ) {
+        adjustedUpdates = {
+            ...adjustedUpdates,
+            focusOrder: undefined,
         };
     }
     return adjustedUpdates;
@@ -1236,6 +1255,19 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
         return mutateTasks({ set, debouncedSave }, {
             selectTasks: (state) => state._allTasks.filter((task) => idSet.has(task.id)),
             buildUpdates: (_task, { now }) => ({ deletedAt: now }),
+        });
+    },
+
+    reorderFocusedTasks: async (orderedIds: string[]) => {
+        if (orderedIds.length === 0) return actionOk();
+        const targetOrderById = new Map(Array.from(new Set(orderedIds)).map((id, index) => [id, index]));
+        return mutateTasks({ set, debouncedSave }, {
+            selectTasks: (state) => state._allTasks.filter((task) => {
+                if (task.deletedAt) return false;
+                const targetOrder = targetOrderById.get(task.id);
+                return targetOrder !== undefined && task.focusOrder !== targetOrder;
+            }),
+            buildUpdates: (task) => ({ focusOrder: targetOrderById.get(task.id) as number }),
         });
     },
 

@@ -85,6 +85,8 @@ export interface TaskStore {
     batchMoveTasks: (ids: string[], newStatus: TaskStatus) => Promise<StoreActionResult>;
     /** Batch soft-delete tasks */
     batchDeleteTasks: (ids: string[]) => Promise<StoreActionResult>;
+    /** Reorder Today's Focus by id list, assigning focusOrder 0..n-1 in one update */
+    reorderFocusedTasks: (orderedIds: string[]) => Promise<StoreActionResult>;
     /** Query tasks using storage adapter when available */
     queryTasks: (options: TaskQueryOptions) => Promise<Task[]>;
     /** Resolve the Today's Focus star action for a task: eligibility, cap, label key, patch */

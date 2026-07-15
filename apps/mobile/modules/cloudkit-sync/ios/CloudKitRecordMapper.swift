@@ -133,6 +133,7 @@ enum CloudKitRecordMapper {
         FieldSpec(jsKey: "isFocusedToday", ckKey: "isFocusedToday", kind: .bool),
         FieldSpec(jsKey: "timeEstimate", ckKey: "timeEstimate", kind: .string),
         FieldSpec(jsKey: "timeSpentMinutes", ckKey: "timeSpentMinutes", kind: .int),
+        FieldSpec(jsKey: "focusOrder", ckKey: "focusOrder", kind: .int),
         FieldSpec(jsKey: "suppressMindwtrReminders", ckKey: "suppressMindwtrReminders", kind: .bool),
         FieldSpec(jsKey: "repeatReminderMinutes", ckKey: "repeatReminderMinutes", kind: .int),
         FieldSpec(jsKey: "reviewAt", ckKey: "reviewAt", kind: .date),

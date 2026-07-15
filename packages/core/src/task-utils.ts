@@ -706,6 +706,19 @@ export function sortTasksByBoardOrder<T extends Pick<Task, 'boardOrder'>>(tasks:
     });
 }
 
+/**
+ * Stable sort for Today's Focus: tasks with a manual focusOrder come first
+ * in ascending order; tasks without one keep their incoming relative order.
+ */
+export function sortTasksByFocusOrder<T extends Pick<Task, 'focusOrder'>>(tasks: T[]): T[] {
+    return [...tasks].sort((a, b) => {
+        const aOrder = Number.isFinite(a.focusOrder) ? (a.focusOrder as number) : Number.POSITIVE_INFINITY;
+        const bOrder = Number.isFinite(b.focusOrder) ? (b.focusOrder as number) : Number.POSITIVE_INFINITY;
+        if (aOrder === bOrder) return 0;
+        return aOrder - bOrder;
+    });
+}
+
 export function splitCompletedTasks<T extends Pick<Task, 'status'>>(tasks: T[]): {
     activeTasks: T[];
     completedTasks: T[];

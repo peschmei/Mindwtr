@@ -22,6 +22,7 @@ import {
     shouldShowTaskForStart,
     sortDoneTasksForListView,
     sortTasksByBoardOrder,
+    sortTasksByFocusOrder,
     splitCompletedTasks,
 } from './task-utils';
 import { Project, Task } from './types';
@@ -994,6 +995,30 @@ describe('task-utils', () => {
             const input = [boardTask('a'), boardTask('b'), boardTask('c')];
 
             const sorted = sortTasksByBoardOrder(input);
+
+            expect(sorted.map((task) => task.id)).toEqual(['a', 'b', 'c']);
+        });
+    });
+
+    describe('sortTasksByFocusOrder', () => {
+        const focusTask = (id: string, focusOrder?: number) => ({ id, focusOrder });
+
+        it('sorts tasks with focusOrder ascending ahead of tasks without one', () => {
+            const sorted = sortTasksByFocusOrder([
+                focusTask('no-order-1'),
+                focusTask('third', 2),
+                focusTask('first', 0),
+                focusTask('no-order-2'),
+                focusTask('second', 1),
+            ]);
+
+            expect(sorted.map((task) => task.id)).toEqual(['first', 'second', 'third', 'no-order-1', 'no-order-2']);
+        });
+
+        it('keeps the incoming order when no task has a focusOrder', () => {
+            const input = [focusTask('a'), focusTask('b'), focusTask('c')];
+
+            const sorted = sortTasksByFocusOrder(input);
 
             expect(sorted.map((task) => task.id)).toEqual(['a', 'b', 'c']);
         });

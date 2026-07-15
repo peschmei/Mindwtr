@@ -396,6 +396,7 @@ export {
     sortTasks,
     sortTasksBy,
     sortTasksByBoardOrder,
+    sortTasksByFocusOrder,
     sortTasksBySavedPreference,
     splitCompletedTasks,
     STATUS_COLORS,

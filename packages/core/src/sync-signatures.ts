@@ -30,6 +30,7 @@ const CONTENT_DIFF_IGNORED_KEYS = new Set([
     'order',
     'orderNum',
     'boardOrder',
+    'focusOrder',
 ]);
 
 const SIGNATURE_OPAQUE_KEYS = new Set([
@@ -85,6 +86,7 @@ type TaskContentComparisonExcludedKey =
     | 'order'
     | 'orderNum'
     | 'boardOrder'
+    | 'focusOrder'
     | 'statusBeforeProjectArchive'
     | 'completedAtBeforeProjectArchive'
     | 'isFocusedTodayBeforeProjectArchive'

@@ -231,6 +231,7 @@ export interface Task {
     order?: number; // Manual ordering within a project (for sequential projects)
     orderNum?: number; // Legacy alias kept for backward compatibility with older payloads
     boardOrder?: number; // Manual ordering within a Board status column; cleared on status change
+    focusOrder?: number; // Manual ordering within Today's Focus; cleared when the task leaves Focus
 }
 
 export interface SavedSearch {

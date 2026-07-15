@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   areaId TEXT REFERENCES areas(id) ON DELETE SET NULL,
   orderNum INTEGER,
   boardOrder INTEGER,
+  focusOrder INTEGER,
   isFocusedToday INTEGER,
   timeEstimate TEXT,
   timeSpentMinutes INTEGER,

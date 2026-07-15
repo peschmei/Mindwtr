@@ -126,6 +126,7 @@ describeSqlite('SqliteAdapter', () => {
                     rev: 5,
                     revBy: 'device-desktop',
                     boardOrder: 4,
+                    focusOrder: 7,
                     repeatReminderMinutes: 30,
                     timeSpentMinutes: 95,
                     tags: ['#docs', '#writing'],
@@ -291,6 +292,7 @@ describeSqlite('SqliteAdapter', () => {
         expect(task.rev).toBe(5);
         expect(task.revBy).toBe('device-desktop');
         expect(task.boardOrder).toBe(4);
+        expect(task.focusOrder).toBe(7);
         expect(task.repeatReminderMinutes).toBe(30);
         expect(task.timeSpentMinutes).toBe(95);
 
@@ -1071,6 +1073,7 @@ describeSqlite('SqliteAdapter', () => {
         const names = columns.map((col) => col.name);
         expect(names).toContain('orderNum');
         expect(names).toContain('boardOrder');
+        expect(names).toContain('focusOrder');
         expect(names).toContain('areaId');
         expect(names).toContain('sectionId');
         expect(names).toContain('purgedAt');

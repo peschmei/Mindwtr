@@ -281,6 +281,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   areaId TEXT,
   orderNum INTEGER,
   boardOrder INTEGER,
+  focusOrder INTEGER,
   isFocusedToday INTEGER,
   timeEstimate TEXT,
   timeSpentMinutes INTEGER,
