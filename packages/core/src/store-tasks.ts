@@ -145,7 +145,9 @@ type TaskActions = Pick<
     | 'updateTask'
     | 'deleteTask'
     | 'restoreTask'
+    | 'restoreTasks'
     | 'purgeTask'
+    | 'purgeTasks'
     | 'purgeDeletedTasks'
     | 'duplicateTask'
     | 'promoteTaskToProject'
@@ -764,6 +766,47 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                     : undefined;
             },
             missingMessage: 'Task not found',
+        });
+    },
+
+    /**
+     * Restore multiple soft-deleted tasks in a single store update.
+     */
+    restoreTasks: async (ids: string[]) => {
+        const idSet = new Set(ids);
+        return mutateTasks({ set, debouncedSave }, {
+            selectTasks: (state) => state._allTasks.filter((task) => idSet.has(task.id) && task.deletedAt && !task.purgedAt),
+            buildUpdates: (task, { state }) => ({
+                deletedAt: undefined,
+                purgedAt: undefined,
+                ...sanitizeRestoredTaskContainerReferences(task, state),
+            }),
+            missingMessage: 'Tasks not found',
+        });
+    },
+
+    /**
+     * Permanently delete multiple soft-deleted tasks in a single store update.
+     * Only already-trashed tasks are purged, so the visible list is untouched.
+     */
+    purgeTasks: async (ids: string[]) => {
+        const idSet = new Set(ids);
+        return mutateTasks({ set, debouncedSave }, {
+            selectTasks: (state) => state._allTasks.filter((task) => idSet.has(task.id) && task.deletedAt && !task.purgedAt),
+            buildUpdates: (task, { now }) => ({
+                purgedAt: now,
+                attachments: stripAttachmentRemoteMetadata(task.attachments),
+            }),
+            buildSettings: (state, selectedTasks, { settings }) => {
+                const selectedIds = new Set(selectedTasks.map((task) => task.id));
+                const remainingTasks = state._allTasks.filter((task) => !selectedIds.has(task.id));
+                const pendingDeletes = collectPendingRemoteDeletesForTasks(selectedTasks, remainingTasks);
+                return pendingDeletes.length > 0
+                    ? appendPendingRemoteDeletes(settings, pendingDeletes)
+                    : undefined;
+            },
+            missingMessage: 'Tasks not found',
+            updateVisible: false,
         });
     },
 

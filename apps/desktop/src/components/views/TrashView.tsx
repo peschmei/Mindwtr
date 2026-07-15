@@ -1,12 +1,13 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { buildTrashTimeline, shallow, useTaskStore, safeFormatDate } from '@mindwtr/core';
+import { buildTrashTimeline, shallow, useTaskStore, safeFormatDate, tFallback } from '@mindwtr/core';
 import type { Project } from '@mindwtr/core';
 import { Undo2, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../contexts/language-context';
 import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
 import { checkBudget } from '../../config/performanceBudgets';
 import { useConfirmDialog } from '../../hooks/useConfirmDialog';
+import { BulkSelectionToolbar } from './list/BulkSelectionToolbar';
 
 export function TrashView() {
     const perf = usePerformanceMonitor('TrashView');
@@ -14,8 +15,10 @@ export function TrashView() {
         _allTasks,
         _allProjects,
         restoreTask,
+        restoreTasks,
         restoreProject,
         purgeTask,
+        purgeTasks,
         purgeProject,
         purgeDeletedTasks,
         purgeDeletedProjects,
@@ -24,8 +27,10 @@ export function TrashView() {
             _allTasks: state._allTasks,
             _allProjects: state._allProjects,
             restoreTask: state.restoreTask,
+            restoreTasks: state.restoreTasks,
             restoreProject: state.restoreProject,
             purgeTask: state.purgeTask,
+            purgeTasks: state.purgeTasks,
             purgeProject: state.purgeProject,
             purgeDeletedTasks: state.purgeDeletedTasks,
             purgeDeletedProjects: state.purgeDeletedProjects,
@@ -35,6 +40,9 @@ export function TrashView() {
     const { t } = useLanguage();
     const { requestConfirmation, confirmModal } = useConfirmDialog();
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+    const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (!perf.enabled) return;
@@ -64,6 +72,92 @@ export function TrashView() {
     );
 
     const trashedItemCount = trashItems.length;
+    const selectionCount = selectedTaskIds.size + selectedProjectIds.size;
+    const allVisibleSelected = trashedItemCount > 0 && selectionCount === trashedItemCount;
+
+    useEffect(() => {
+        const visibleTaskIds = new Set(trashedTasks.map((task) => task.id));
+        setSelectedTaskIds((previous) => {
+            const next = new Set(Array.from(previous).filter((id) => visibleTaskIds.has(id)));
+            return next.size === previous.size ? previous : next;
+        });
+        const visibleProjectIds = new Set(trashedProjects.map((project) => project.id));
+        setSelectedProjectIds((previous) => {
+            const next = new Set(Array.from(previous).filter((id) => visibleProjectIds.has(id)));
+            return next.size === previous.size ? previous : next;
+        });
+    }, [trashedProjects, trashedTasks]);
+
+    const exitSelectionMode = useCallback(() => {
+        setSelectionMode(false);
+        setSelectedTaskIds(new Set());
+        setSelectedProjectIds(new Set());
+    }, []);
+
+    const toggleSelectionMode = useCallback(() => {
+        if (selectionMode) {
+            exitSelectionMode();
+            return;
+        }
+        setSelectionMode(true);
+    }, [exitSelectionMode, selectionMode]);
+
+    const toggleTaskSelection = useCallback((taskId: string) => {
+        setSelectedTaskIds((previous) => {
+            const next = new Set(previous);
+            if (next.has(taskId)) next.delete(taskId);
+            else next.add(taskId);
+            return next;
+        });
+    }, []);
+
+    const toggleProjectSelection = useCallback((projectId: string) => {
+        setSelectedProjectIds((previous) => {
+            const next = new Set(previous);
+            if (next.has(projectId)) next.delete(projectId);
+            else next.add(projectId);
+            return next;
+        });
+    }, []);
+
+    const selectAllVisible = useCallback(() => {
+        setSelectedTaskIds(new Set(trashedTasks.map((task) => task.id)));
+        setSelectedProjectIds(new Set(trashedProjects.map((project) => project.id)));
+    }, [trashedProjects, trashedTasks]);
+
+    const clearSelection = useCallback(() => {
+        setSelectedTaskIds(new Set());
+        setSelectedProjectIds(new Set());
+    }, []);
+
+    const handleBulkRestore = useCallback(async () => {
+        if (selectionCount === 0) return;
+        const taskIds = Array.from(selectedTaskIds);
+        const projectIds = Array.from(selectedProjectIds);
+        await Promise.all([
+            taskIds.length > 0 ? restoreTasks(taskIds) : Promise.resolve(),
+            ...projectIds.map((projectId) => restoreProject(projectId)),
+        ]);
+        exitSelectionMode();
+    }, [exitSelectionMode, restoreProject, restoreTasks, selectedProjectIds, selectedTaskIds, selectionCount]);
+
+    const handleBulkPurge = useCallback(async () => {
+        if (selectionCount === 0) return;
+        const confirmed = await requestConfirmation({
+            title: t('trash.deleteConfirm'),
+            description: t('trash.deleteConfirmBody'),
+            confirmLabel: t('trash.deletePermanently'),
+            cancelLabel: t('common.cancel') || 'Cancel',
+        });
+        if (!confirmed) return;
+        const taskIds = Array.from(selectedTaskIds);
+        const projectIds = Array.from(selectedProjectIds);
+        await Promise.all([
+            taskIds.length > 0 ? purgeTasks(taskIds) : Promise.resolve(),
+            ...projectIds.map((projectId) => purgeProject(projectId)),
+        ]);
+        exitSelectionMode();
+    }, [exitSelectionMode, purgeProject, purgeTasks, requestConfirmation, selectedProjectIds, selectedTaskIds, selectionCount, t]);
 
     const handleClearTrash = async () => {
         if (trashedItemCount === 0) return;
@@ -107,6 +201,16 @@ export function TrashView() {
         deletedAt ? [t('trash.deletedAt'), safeFormatDate(deletedAt, 'P')].join(': ') : null
     );
 
+    const renderSelectCheckbox = (checked: boolean, onChange: () => void, title: string) => (
+        <input
+            type="checkbox"
+            checked={checked}
+            onChange={onChange}
+            aria-label={`${tFallback(t, 'bulk.select', 'Select')} ${title}`}
+            className="h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary"
+        />
+    );
+
     return (
         <ErrorBoundary>
             <div className="space-y-6">
@@ -116,6 +220,15 @@ export function TrashView() {
                     <div className="text-sm text-muted-foreground">
                         {trashedTasks.length} {t('common.tasks')} · {trashedProjects.length} {t('projects.title')}
                     </div>
+                    {trashedItemCount > 0 && (
+                        <button
+                            type="button"
+                            onClick={toggleSelectionMode}
+                            className="text-xs px-3 py-1 rounded-md border transition-colors bg-card text-foreground border-border hover:bg-muted"
+                        >
+                            {selectionMode ? t('common.done') : t('bulk.select')}
+                        </button>
+                    )}
                     <button
                         onClick={handleClearTrash}
                         disabled={trashedItemCount === 0}
@@ -125,6 +238,39 @@ export function TrashView() {
                     </button>
                 </div>
             </header>
+
+            {selectionMode && (
+                <div className="space-y-2">
+                    <BulkSelectionToolbar
+                        selectionCount={selectionCount}
+                        totalCount={trashedItemCount}
+                        allSelected={allVisibleSelected}
+                        onSelectAll={selectAllVisible}
+                        onClearSelection={clearSelection}
+                        t={t}
+                    />
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => { void handleBulkRestore(); }}
+                            disabled={selectionCount === 0}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Undo2 className="h-3.5 w-3.5" />
+                            {t('trash.restoreToInbox')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { void handleBulkPurge(); }}
+                            disabled={selectionCount === 0}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {t('trash.deletePermanently')}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="relative">
                 <input
@@ -152,13 +298,20 @@ export function TrashView() {
                                         key={`project-${project.id}`}
                                         className="rounded-lg px-3 py-3 flex items-center justify-between group hover:bg-muted/50 transition-colors"
                                     >
-                                        <div>
-                                            <h4 className="font-medium text-foreground line-through opacity-70">{project.title}</h4>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                {t('trash.projectType')} · {renderDeletedAt(project.deletedAt)}
-                                            </p>
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            {selectionMode && renderSelectCheckbox(
+                                                selectedProjectIds.has(project.id),
+                                                () => toggleProjectSelection(project.id),
+                                                project.title,
+                                            )}
+                                            <div>
+                                                <h4 className="font-medium text-foreground line-through opacity-70">{project.title}</h4>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {t('trash.projectType')} · {renderDeletedAt(project.deletedAt)}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {!selectionMode && <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => restoreProject(project.id)}
                                                 className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-primary transition-colors"
@@ -175,7 +328,7 @@ export function TrashView() {
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
-                                        </div>
+                                        </div>}
                                     </div>
                                 );
                             }
@@ -186,13 +339,20 @@ export function TrashView() {
                                     key={`task-${task.id}`}
                                     className="rounded-lg px-3 py-3 flex items-center justify-between group hover:bg-muted/50 transition-colors"
                                 >
-                                    <div>
-                                        <h4 className="font-medium text-foreground line-through opacity-70">{task.title}</h4>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {t('trash.taskType')} · {renderDeletedAt(task.deletedAt)}
-                                        </p>
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        {selectionMode && renderSelectCheckbox(
+                                            selectedTaskIds.has(task.id),
+                                            () => toggleTaskSelection(task.id),
+                                            task.title,
+                                        )}
+                                        <div>
+                                            <h4 className="font-medium text-foreground line-through opacity-70">{task.title}</h4>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {t('trash.taskType')} · {renderDeletedAt(task.deletedAt)}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {!selectionMode && <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => restoreTask(task.id)}
                                             className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-primary transition-colors"
@@ -209,7 +369,7 @@ export function TrashView() {
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
-                                    </div>
+                                    </div>}
                                 </div>
                             );
                         })}

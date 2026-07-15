@@ -63,8 +63,12 @@ export interface TaskStore {
     deleteTask: (id: string) => Promise<StoreActionResult>;
     /** Restore a soft-deleted task */
     restoreTask: (id: string) => Promise<StoreActionResult>;
+    /** Restore multiple soft-deleted tasks in one store update */
+    restoreTasks: (ids: string[]) => Promise<StoreActionResult>;
     /** Permanently remove a task from storage */
     purgeTask: (id: string) => Promise<StoreActionResult>;
+    /** Permanently remove multiple soft-deleted tasks from storage in one store update */
+    purgeTasks: (ids: string[]) => Promise<StoreActionResult>;
     /** Permanently remove all soft-deleted tasks from storage */
     purgeDeletedTasks: () => Promise<StoreActionResult>;
     /** Duplicate a task (useful for reusable lists/templates) */

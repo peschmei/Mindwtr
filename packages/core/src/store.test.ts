@@ -1565,6 +1565,33 @@ describe('TaskStore', () => {
         ]);
     });
 
+    it('restores and purges only the requested trashed tasks in one batch', async () => {
+        const { addTask, deleteTask, restoreTasks, purgeTasks } = useTaskStore.getState();
+        addTask('Keep in trash');
+        addTask('Restore me');
+        addTask('Purge me');
+        addTask('Still live');
+
+        const [keepTask, restoreMe, purgeMe, liveTask] = useTaskStore.getState()._allTasks;
+        deleteTask(keepTask.id);
+        deleteTask(restoreMe.id);
+        deleteTask(purgeMe.id);
+
+        // Live task ids are ignored: only trashed tasks are eligible.
+        await restoreTasks([restoreMe.id, liveTask.id]);
+        await purgeTasks([purgeMe.id, liveTask.id]);
+
+        const state = useTaskStore.getState();
+        expect(state._allTasks.find((task) => task.id === restoreMe.id)?.deletedAt).toBeUndefined();
+        expect(state._allTasks.find((task) => task.id === purgeMe.id)?.purgedAt).toBeTruthy();
+        expect(state._allTasks.find((task) => task.id === keepTask.id)?.deletedAt).toBeTruthy();
+        expect(state._allTasks.find((task) => task.id === keepTask.id)?.purgedAt).toBeUndefined();
+        const untouchedLiveTask = state._allTasks.find((task) => task.id === liveTask.id);
+        expect(untouchedLiveTask?.deletedAt).toBeUndefined();
+        expect(untouchedLiveTask?.purgedAt).toBeUndefined();
+        expect(state.tasks.some((task) => task.id === restoreMe.id)).toBe(true);
+    });
+
     it('skips fetch while edits are in progress', async () => {
         const { lockEditing, unlockEditing, fetchData } = useTaskStore.getState();
         lockEditing();

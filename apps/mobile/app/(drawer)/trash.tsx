@@ -1,5 +1,5 @@
 import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
-import { buildTrashTimeline, getInlineMarkdownPreview, projectMatchesAreaFilter, shallow, taskMatchesAreaFilter, useTaskStore } from '@mindwtr/core';
+import { buildTrashTimeline, getInlineMarkdownPreview, projectMatchesAreaFilter, shallow, taskMatchesAreaFilter, tFallback, useTaskStore } from '@mindwtr/core';
 import type { Project, Task } from '@mindwtr/core';
 import { MarkdownInlineText } from '@/components/markdown-text';
 import { useTheme } from '../../contexts/theme-context';
@@ -8,16 +8,18 @@ import { useLanguage } from '../../contexts/language-context';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
 import { useThemeColors, ThemeColors } from '@/hooks/use-theme-colors';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
-import React, { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 function TrashSwipeRow({
   children,
   onRestore,
   onDelete,
+  swipeDisabled,
 }: {
   children: ReactNode;
   onRestore: () => void;
   onDelete: () => void;
+  swipeDisabled?: boolean;
 }) {
   const swipeableRef = useRef<Swipeable>(null);
 
@@ -48,8 +50,8 @@ function TrashSwipeRow({
   return (
     <Swipeable
       ref={swipeableRef}
-      renderLeftActions={renderLeftActions}
-      renderRightActions={renderRightActions}
+      renderLeftActions={swipeDisabled ? undefined : renderLeftActions}
+      renderRightActions={swipeDisabled ? undefined : renderRightActions}
       overshootLeft={false}
       overshootRight={false}
     >
@@ -58,11 +60,28 @@ function TrashSwipeRow({
   );
 }
 
+function TrashSelectionIndicator({ isSelected, tc }: { isSelected: boolean; tc: ThemeColors }) {
+  return (
+    <View
+      style={[
+        styles.selectionIndicator,
+        { borderColor: tc.tint, backgroundColor: isSelected ? tc.tint : 'transparent' },
+      ]}
+    >
+      {isSelected && <Text style={styles.selectionMark}>✓</Text>}
+    </View>
+  );
+}
+
 function TrashTaskItem({
   task,
   tc,
   onRestore,
   onDelete,
+  onToggleSelect,
+  selectLabel,
+  selectionMode,
+  isSelected,
   isHighlighted,
   typeLabel,
   deletedLabel,
@@ -71,19 +90,30 @@ function TrashTaskItem({
   tc: ThemeColors;
   onRestore: () => void;
   onDelete: () => void;
+  onToggleSelect: () => void;
+  selectLabel: string;
+  selectionMode: boolean;
+  isSelected: boolean;
   isHighlighted?: boolean;
   typeLabel: string;
   deletedLabel: string;
 }) {
   return (
-    <TrashSwipeRow onRestore={onRestore} onDelete={onDelete}>
-      <View
+    <TrashSwipeRow onRestore={onRestore} onDelete={onDelete} swipeDisabled={selectionMode}>
+      <Pressable
+        disabled={!selectionMode}
+        onPress={onToggleSelect}
+        accessibilityRole={selectionMode ? 'button' : undefined}
+        accessibilityLabel={selectionMode ? `${selectLabel} ${task.title}` : undefined}
+        accessibilityState={selectionMode ? { selected: isSelected } : undefined}
         style={[
           styles.taskItem,
           { backgroundColor: tc.taskItemBg },
-          isHighlighted && { borderWidth: 2, borderColor: tc.tint },
+          isHighlighted && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
+          selectionMode && isSelected && { borderWidth: 2, borderColor: tc.tint },
         ]}
       >
+        {selectionMode && <TrashSelectionIndicator isSelected={isSelected} tc={tc} />}
         <View style={styles.taskContent}>
           <Text style={[styles.taskTitle, { color: tc.secondaryText }]} numberOfLines={2}>
             {task.title}
@@ -100,7 +130,7 @@ function TrashTaskItem({
           <Text style={[styles.archivedDate, { color: tc.secondaryText }]}>{deletedLabel}: {task.deletedAt ? new Date(task.deletedAt).toLocaleDateString() : 'Unknown'}</Text>
         </View>
         <View style={[styles.statusIndicator, { backgroundColor: '#6B7280' }]} />
-      </View>
+      </Pressable>
     </TrashSwipeRow>
   );
 }
@@ -110,6 +140,10 @@ function TrashProjectItem({
   tc,
   onRestore,
   onDelete,
+  onToggleSelect,
+  selectLabel,
+  selectionMode,
+  isSelected,
   typeLabel,
   deletedLabel,
 }: {
@@ -117,12 +151,28 @@ function TrashProjectItem({
   tc: ThemeColors;
   onRestore: () => void;
   onDelete: () => void;
+  onToggleSelect: () => void;
+  selectLabel: string;
+  selectionMode: boolean;
+  isSelected: boolean;
   typeLabel: string;
   deletedLabel: string;
 }) {
   return (
-    <TrashSwipeRow onRestore={onRestore} onDelete={onDelete}>
-      <View style={[styles.taskItem, { backgroundColor: tc.taskItemBg }]}>
+    <TrashSwipeRow onRestore={onRestore} onDelete={onDelete} swipeDisabled={selectionMode}>
+      <Pressable
+        disabled={!selectionMode}
+        onPress={onToggleSelect}
+        accessibilityRole={selectionMode ? 'button' : undefined}
+        accessibilityLabel={selectionMode ? `${selectLabel} ${project.title}` : undefined}
+        accessibilityState={selectionMode ? { selected: isSelected } : undefined}
+        style={[
+          styles.taskItem,
+          { backgroundColor: tc.taskItemBg },
+          selectionMode && isSelected && { borderWidth: 2, borderColor: tc.tint },
+        ]}
+      >
+        {selectionMode && <TrashSelectionIndicator isSelected={isSelected} tc={tc} />}
         <View style={styles.taskContent}>
           <Text style={[styles.taskTitle, { color: tc.secondaryText }]} numberOfLines={2}>
             {project.title}
@@ -131,7 +181,7 @@ function TrashProjectItem({
           <Text style={[styles.archivedDate, { color: tc.secondaryText }]}>{deletedLabel}: {project.deletedAt ? new Date(project.deletedAt).toLocaleDateString() : 'Unknown'}</Text>
         </View>
         <View style={[styles.statusIndicator, { backgroundColor: project.color || '#6B7280' }]} />
-      </View>
+      </Pressable>
     </TrashSwipeRow>
   );
 }
@@ -142,8 +192,10 @@ export default function TrashScreen() {
     _allProjects,
     projects,
     restoreTask,
+    restoreTasks,
     restoreProject,
     purgeTask,
+    purgeTasks,
     purgeProject,
     purgeDeletedTasks,
     purgeDeletedProjects,
@@ -154,8 +206,10 @@ export default function TrashScreen() {
     _allProjects: state._allProjects,
     projects: state.projects,
     restoreTask: state.restoreTask,
+    restoreTasks: state.restoreTasks,
     restoreProject: state.restoreProject,
     purgeTask: state.purgeTask,
+    purgeTasks: state.purgeTasks,
     purgeProject: state.purgeProject,
     purgeDeletedTasks: state.purgeDeletedTasks,
     purgeDeletedProjects: state.purgeDeletedProjects,
@@ -184,6 +238,92 @@ export default function TrashScreen() {
     () => buildTrashTimeline(trashedTasks, trashedProjects),
     [trashedProjects, trashedTasks],
   );
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const selectionCount = selectedTaskIds.size + selectedProjectIds.size;
+  const listExtraData = useMemo(
+    () => ({ highlightTaskId, selectedProjectIds, selectedTaskIds, selectionMode }),
+    [highlightTaskId, selectedProjectIds, selectedTaskIds, selectionMode],
+  );
+
+  useEffect(() => {
+    const visibleTaskIds = new Set(trashedTasks.map((task) => task.id));
+    setSelectedTaskIds((previous) => {
+      const next = new Set(Array.from(previous).filter((id) => visibleTaskIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+    const visibleProjectIds = new Set(trashedProjects.map((project) => project.id));
+    setSelectedProjectIds((previous) => {
+      const next = new Set(Array.from(previous).filter((id) => visibleProjectIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [trashedProjects, trashedTasks]);
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedTaskIds(new Set());
+    setSelectedProjectIds(new Set());
+  }, []);
+
+  const toggleTaskSelection = useCallback((taskId: string) => {
+    setSelectedTaskIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }, []);
+
+  const toggleProjectSelection = useCallback((projectId: string) => {
+    setSelectedProjectIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }, []);
+
+  const selectAllItems = useCallback(() => {
+    setSelectedTaskIds(new Set(trashedTasks.map((task) => task.id)));
+    setSelectedProjectIds(new Set(trashedProjects.map((project) => project.id)));
+  }, [trashedProjects, trashedTasks]);
+
+  const handleBulkRestore = useCallback(async () => {
+    if (selectionCount === 0) return;
+    const taskIds = Array.from(selectedTaskIds);
+    const projectIds = Array.from(selectedProjectIds);
+    await Promise.all([
+      taskIds.length > 0 ? restoreTasks(taskIds) : Promise.resolve(),
+      ...projectIds.map((projectId) => restoreProject(projectId)),
+    ]);
+    exitSelectionMode();
+  }, [exitSelectionMode, restoreProject, restoreTasks, selectedProjectIds, selectedTaskIds, selectionCount]);
+
+  const handleBulkPurge = useCallback(() => {
+    if (selectionCount === 0) return;
+    Alert.alert(
+      t('trash.deleteConfirm') || 'Delete permanently?',
+      t('trash.deleteConfirmBody') || 'This action cannot be undone.',
+      [
+        { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+        {
+          text: t('trash.deletePermanently') || 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const taskIds = Array.from(selectedTaskIds);
+            const projectIds = Array.from(selectedProjectIds);
+            await Promise.all([
+              taskIds.length > 0 ? purgeTasks(taskIds) : Promise.resolve(),
+              ...projectIds.map((projectId) => purgeProject(projectId)),
+            ]);
+            exitSelectionMode();
+          },
+        },
+      ],
+    );
+  }, [exitSelectionMode, purgeProject, purgeTasks, selectedProjectIds, selectedTaskIds, selectionCount, t]);
 
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -266,14 +406,71 @@ export default function TrashScreen() {
             <Text style={[styles.summaryText, { color: tc.secondaryText }]}>
               {trashedTasks.length} {t('common.tasks') || 'tasks'} · {trashedProjects.length} {t('projects.title') || 'projects'}
             </Text>
-            <Pressable
-              onPress={handleClearAll}
-              style={[styles.clearButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+            <View style={styles.summaryActions}>
+              <Pressable
+                onPress={selectionMode ? exitSelectionMode : () => setSelectionMode(true)}
+                accessibilityRole="button"
+                accessibilityLabel={selectionMode ? tFallback(t, 'common.done', 'Done') : tFallback(t, 'bulk.select', 'Select')}
+                style={[styles.clearButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+              >
+                <Text style={[styles.clearButtonText, { color: tc.text }]}>
+                  {selectionMode ? tFallback(t, 'common.done', 'Done') : tFallback(t, 'bulk.select', 'Select')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleClearAll}
+                style={[styles.clearButton, { borderColor: tc.border, backgroundColor: tc.cardBg }]}
+              >
+                <Text style={[styles.clearButtonText, { color: tc.secondaryText }]}>
+                  {t('trash.clearAll') || 'Clear Trash'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+        {selectionMode && (
+          <View style={[styles.bulkBar, { borderColor: tc.border, backgroundColor: tc.cardBg }]}>
+            <Text
+              accessibilityLabel={`${selectionCount} ${t('bulk.selected')}`}
+              style={[styles.bulkCount, { color: tc.secondaryText }]}
             >
-              <Text style={[styles.clearButtonText, { color: tc.secondaryText }]}>
-                {t('trash.clearAll') || 'Clear Trash'}
-              </Text>
-            </Pressable>
+              {selectionCount} {t('bulk.selected')}
+            </Text>
+            <View style={styles.bulkActions}>
+              <Pressable
+                onPress={selectAllItems}
+                disabled={trashItems.length === 0 || selectionCount === trashItems.length}
+                accessibilityRole="button"
+                accessibilityLabel={`${tFallback(t, 'bulk.select', 'Select')} ${tFallback(t, 'common.all', 'all')}`}
+                style={[styles.bulkButton, { backgroundColor: tc.taskItemBg }]}
+              >
+                <Text style={[styles.bulkButtonText, { color: tc.text }]}>
+                  {tFallback(t, 'bulk.select', 'Select')} {tFallback(t, 'common.all', 'all')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { void handleBulkRestore(); }}
+                disabled={selectionCount === 0}
+                accessibilityRole="button"
+                accessibilityLabel={t('trash.restoreToInbox')}
+                style={[styles.bulkButton, { backgroundColor: tc.taskItemBg }]}
+              >
+                <Text style={[styles.bulkButtonText, { color: tc.text }]}>
+                  {t('trash.restoreToInbox')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleBulkPurge}
+                disabled={selectionCount === 0}
+                accessibilityRole="button"
+                accessibilityLabel={t('trash.deletePermanently')}
+                style={[styles.bulkButton, { backgroundColor: tc.taskItemBg }]}
+              >
+                <Text style={[styles.bulkButtonText, { color: tc.danger }]}>
+                  {t('trash.deletePermanently')}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         )}
         <FlatList
@@ -286,6 +483,10 @@ export default function TrashScreen() {
                   tc={tc}
                   onRestore={() => handleRestoreProject(item.project.id)}
                   onDelete={() => handleDeleteProject(item.project.id)}
+                  onToggleSelect={() => toggleProjectSelection(item.project.id)}
+                  selectLabel={tFallback(t, 'bulk.select', 'Select')}
+                  selectionMode={selectionMode}
+                  isSelected={selectedProjectIds.has(item.project.id)}
                   typeLabel={t('trash.projectType') || 'Project'}
                   deletedLabel={t('trash.deletedAt') || 'Deleted'}
                 />
@@ -296,6 +497,10 @@ export default function TrashScreen() {
                   tc={tc}
                   onRestore={() => handleRestoreTask(item.task.id)}
                   onDelete={() => handleDeleteTask(item.task.id)}
+                  onToggleSelect={() => toggleTaskSelection(item.task.id)}
+                  selectLabel={tFallback(t, 'bulk.select', 'Select')}
+                  selectionMode={selectionMode}
+                  isSelected={selectedTaskIds.has(item.task.id)}
                   isHighlighted={item.task.id === highlightTaskId}
                   typeLabel={t('trash.taskType') || 'Task'}
                   deletedLabel={t('trash.deletedAt') || 'Deleted'}
@@ -303,6 +508,7 @@ export default function TrashScreen() {
               )
           )}
           keyExtractor={(item) => item.type === 'project' ? 'project-' + item.project.id : 'task-' + item.task.id}
+          extraData={listExtraData}
           style={styles.taskList}
           contentContainerStyle={[
             styles.taskListContent,
@@ -346,6 +552,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
+  summaryActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   clearButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -355,6 +565,47 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  bulkBar: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 8,
+  },
+  bulkCount: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  bulkActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  bulkButton: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  bulkButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  selectionIndicator: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  selectionMark: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 16,
   },
   taskList: {
     flex: 1,

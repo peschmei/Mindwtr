@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import renderer from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,8 +11,10 @@ const mocks = vi.hoisted(() => ({
     _allProjects: [] as any[],
     projects: [] as any[],
     restoreTask: vi.fn(),
+    restoreTasks: vi.fn(async () => ({ success: true })),
     restoreProject: vi.fn(),
     purgeTask: vi.fn(),
+    purgeTasks: vi.fn(async () => ({ success: true })),
     purgeProject: vi.fn(),
     purgeDeletedTasks: vi.fn(),
     purgeDeletedProjects: vi.fn(),
@@ -137,5 +140,48 @@ describe('TrashScreen', () => {
     ));
 
     expect(itemIds).toEqual(['recent-task', 'older-project']);
+  });
+
+  const findPressableByLabel = (tree: renderer.ReactTestRenderer, label: string) => tree.root.findAll((node) => (
+    node.props?.accessibilityLabel === label && typeof node.props?.onPress === 'function'
+  ))[0];
+
+  it('bulk restores all selected tasks and projects', async () => {
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<TrashScreen />);
+    });
+
+    renderer.act(() => { findPressableByLabel(tree, 'Select').props.onPress(); });
+    renderer.act(() => { findPressableByLabel(tree, 'Select all').props.onPress(); });
+    await renderer.act(async () => {
+      findPressableByLabel(tree, 'trash.restoreToInbox').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mocks.storeState.restoreTasks).toHaveBeenCalledWith(['recent-task']);
+    expect(mocks.storeState.restoreProject).toHaveBeenCalledWith('older-project');
+  });
+
+  it('bulk purges selected items after confirming the alert', async () => {
+    const alertSpy = vi.spyOn(Alert, 'alert');
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<TrashScreen />);
+    });
+
+    renderer.act(() => { findPressableByLabel(tree, 'Select').props.onPress(); });
+    renderer.act(() => { findPressableByLabel(tree, 'Select all').props.onPress(); });
+    renderer.act(() => { findPressableByLabel(tree, 'trash.deletePermanently').props.onPress(); });
+
+    const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
+    const confirmButton = buttons.find((button) => button.style === 'destructive');
+    expect(confirmButton).toBeTruthy();
+    await renderer.act(async () => {
+      await confirmButton?.onPress?.();
+    });
+
+    expect(mocks.storeState.purgeTasks).toHaveBeenCalledWith(['recent-task']);
+    expect(mocks.storeState.purgeProject).toHaveBeenCalledWith('older-project');
   });
 });
