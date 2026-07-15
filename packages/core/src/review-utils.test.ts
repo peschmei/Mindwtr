@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAdvancedReviewDate, getStaleItems, partitionByReviewDate } from './review-utils';
+import { getAdvancedReviewDate, getStaleItems, getWeeklyReviewSummary, partitionByReviewDate } from './review-utils';
 import type { Project, Task } from './types';
 
 const staleUpdatedAt = '2026-01-01T00:00:00.000Z';
@@ -82,6 +82,65 @@ describe('getStaleItems', () => {
         const items = getStaleItems([], [deferred, undated], 14, now);
 
         expect(items.map((item) => item.id)).toEqual(['project:project-undated']);
+    });
+});
+
+describe('getWeeklyReviewSummary', () => {
+    const freshUpdatedAt = '2026-02-28T00:00:00.000Z';
+
+    it('counts inbox items but excludes deleted and archived-project tasks', () => {
+        const activeProject = createProject({ id: 'p-active', status: 'active' });
+        const archivedProject = createProject({ id: 'p-archived', status: 'archived' });
+        const tasks = [
+            createTask({ id: 'inbox-loose', status: 'inbox', projectId: undefined }),
+            createTask({ id: 'inbox-active', status: 'inbox', projectId: 'p-active' }),
+            createTask({ id: 'inbox-deleted', status: 'inbox', deletedAt: staleUpdatedAt }),
+            createTask({ id: 'inbox-archived', status: 'inbox', projectId: 'p-archived' }),
+            createTask({ id: 'next-not-inbox', status: 'next' }),
+        ];
+
+        const summary = getWeeklyReviewSummary(tasks, [activeProject, archivedProject], now);
+
+        expect(summary.inboxCount).toBe(2);
+    });
+
+    it('counts active projects without a live next action', () => {
+        const withNext = createProject({ id: 'p-with', status: 'active' });
+        const without = createProject({ id: 'p-without', status: 'active' });
+        const deletedNextOnly = createProject({ id: 'p-deleted-next', status: 'active' });
+        const archived = createProject({ id: 'p-archived', status: 'archived' });
+        const tasks = [
+            createTask({ id: 't-with', status: 'next', projectId: 'p-with' }),
+            createTask({ id: 't-with-inbox', status: 'inbox', projectId: 'p-without' }),
+            createTask({ id: 't-deleted-next', status: 'next', projectId: 'p-deleted-next', deletedAt: staleUpdatedAt }),
+        ];
+
+        const summary = getWeeklyReviewSummary(tasks, [withNext, without, deletedNextOnly, archived], now);
+
+        expect(summary.activeProjectCount).toBe(3);
+        expect(summary.projectsWithoutNextAction).toBe(2);
+    });
+
+    it('counts stale waiting items but exempts a future review date', () => {
+        const staleWaiting = createTask({ id: 'w-stale', status: 'waiting', updatedAt: staleUpdatedAt });
+        const deferredWaiting = createTask({ id: 'w-deferred', status: 'waiting', updatedAt: staleUpdatedAt, reviewAt: '2026-11-01' });
+        const freshWaiting = createTask({ id: 'w-fresh', status: 'waiting', updatedAt: freshUpdatedAt });
+        const staleNext = createTask({ id: 'n-stale', status: 'next', updatedAt: staleUpdatedAt });
+
+        const summary = getWeeklyReviewSummary([staleWaiting, deferredWaiting, freshWaiting, staleNext], [], now);
+
+        expect(summary.staleWaitingCount).toBe(1);
+    });
+
+    it('reports zeros for the no-projects case', () => {
+        const summary = getWeeklyReviewSummary([createTask({ id: 'loose-inbox', status: 'inbox' })], [], now);
+
+        expect(summary).toEqual({
+            inboxCount: 1,
+            activeProjectCount: 0,
+            projectsWithoutNextAction: 0,
+            staleWaitingCount: 0,
+        });
     });
 });
 

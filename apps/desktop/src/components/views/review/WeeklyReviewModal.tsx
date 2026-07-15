@@ -6,6 +6,7 @@ import {
     getPersonOptionNames,
     getStaleItems,
     getUsedTaskTokens,
+    getWeeklyReviewSummary,
     isDueForReview,
     isTaskInActiveProject,
     normalizeClockTimeInput,
@@ -62,6 +63,17 @@ type ExternalCalendarDaySummary = {
 type WeeklyReviewGuideModalProps = {
     onClose: () => void;
 };
+
+function SummaryRow({ good, text }: { good: boolean; text: string }) {
+    return (
+        <div className="flex items-center gap-2.5 text-sm">
+            {good
+                ? <Check className="w-4 h-4 shrink-0 text-green-600" />
+                : <span className="w-2 h-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />}
+            <span className={good ? "text-muted-foreground" : "text-foreground"}>{text}</span>
+        </div>
+    );
+}
 
 export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps) {
     const [currentStep, setCurrentStep] = useState<ReviewStep>('inbox');
@@ -223,6 +235,7 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
         () => projects.filter((project) => project.status === 'active' && !project.deletedAt),
         [projects],
     );
+    const reviewSummary = useMemo(() => getWeeklyReviewSummary(tasks, projects), [tasks, projects]);
     const dueProjects = useMemo(() => activeProjects.filter((project) => isDueForReview(project.reviewAt)), [activeProjects]);
     const futureProjects = useMemo(() => activeProjects.filter((project) => !isDueForReview(project.reviewAt)), [activeProjects]);
     const orderedProjects = useMemo(() => [...dueProjects, ...futureProjects], [dueProjects, futureProjects]);
@@ -1022,6 +1035,28 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                         <p className="text-muted-foreground text-lg max-w-md mx-auto">
                             {t('review.completeDesc')}
                         </p>
+                        <div className="mx-auto max-w-lg text-left rounded-lg border border-border bg-muted/30 p-4 space-y-2.5">
+                            <SummaryRow
+                                good={reviewSummary.inboxCount === 0}
+                                text={reviewSummary.inboxCount === 0
+                                    ? t('review.summaryInboxEmpty')
+                                    : formatI18nTemplate(t('review.summaryInboxCount'), { count: reviewSummary.inboxCount })}
+                            />
+                            {reviewSummary.activeProjectCount > 0 && (
+                                <SummaryRow
+                                    good={reviewSummary.projectsWithoutNextAction === 0}
+                                    text={reviewSummary.projectsWithoutNextAction === 0
+                                        ? t('review.summaryProjectsOk')
+                                        : formatI18nTemplate(t('review.summaryProjectsMissing'), { count: reviewSummary.projectsWithoutNextAction })}
+                                />
+                            )}
+                            {reviewSummary.staleWaitingCount > 0 && (
+                                <SummaryRow
+                                    good={false}
+                                    text={formatI18nTemplate(t('review.summaryWaitingStale'), { count: reviewSummary.staleWaitingCount })}
+                                />
+                            )}
+                        </div>
                         <div className="mx-auto max-w-lg text-left">
                             {renderMindSweepNudge()}
                         </div>

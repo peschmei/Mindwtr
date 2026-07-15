@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     createAIProvider,
     getStaleItems,
+    getWeeklyReviewSummary,
     isTaskInActiveProject,
     isDueForReview,
     normalizeClockTimeInput,
@@ -267,6 +268,7 @@ export function useReviewModalController({
     }, [handleClose]);
 
     const staleItems = useMemo(() => getStaleItems(tasks, projects), [tasks, projects]);
+    const reviewSummary = useMemo(() => getWeeklyReviewSummary(tasks, projects), [tasks, projects]);
     const staleItemTitleMap = useMemo(() => staleItems.reduce((acc, item) => {
         acc[item.id] = item.title;
         return acc;
@@ -626,6 +628,7 @@ export function useReviewModalController({
         projectReviewEntries,
         projectTaskPrompt,
         projectTaskTitle,
+        reviewSummary,
         runAiAnalysis,
         safeStepIndex,
         scheduledSomedayTasks,

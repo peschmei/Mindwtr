@@ -3,7 +3,7 @@ import { addDays, format } from 'date-fns';
 import type { ReviewSnapshotItem } from './ai/types';
 import type { Project, Task } from './types';
 import { hasTimeComponent, isDueForReview, safeParseDate } from './date';
-import { isTaskInActiveProject } from './project-utils';
+import { filterProjectsNeedingNextAction, isTaskInActiveProject } from './project-utils';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -64,6 +64,49 @@ export function partitionByReviewDate<T extends { reviewAt?: string | null }>(
         }
     });
     return { due, scheduled, unscheduled };
+}
+
+export type WeeklyReviewSummary = {
+    inboxCount: number;
+    activeProjectCount: number;
+    projectsWithoutNextAction: number;
+    staleWaitingCount: number;
+};
+
+/**
+ * Factual snapshot for the weekly review's completed step. Every count mirrors
+ * the filter a review step itself uses, so the summary can never disagree with
+ * what the user just saw:
+ * - `inboxCount` matches the inbox step's `inboxTasks` filter.
+ * - `projectsWithoutNextAction` matches the projects step's next-action predicate.
+ * - `staleWaitingCount` is derived from `getStaleItems`, inheriting its
+ *   future-reviewAt/startTime exemption rather than re-deriving staleness.
+ */
+export function getWeeklyReviewSummary(
+    tasks: Task[],
+    projects: Project[],
+    now: Date = new Date(),
+): WeeklyReviewSummary {
+    const projectMap = new Map(projects.map((project) => [project.id, project]));
+
+    const inboxCount = tasks.filter((task) => (
+        task.status === 'inbox'
+        && !task.deletedAt
+        && isTaskInActiveProject(task, projectMap)
+    )).length;
+
+    const activeProjects = projects.filter((project) => project.status === 'active' && !project.deletedAt);
+    const projectsWithoutNextAction = filterProjectsNeedingNextAction(projects, tasks).length;
+
+    const staleWaitingCount = getStaleItems(tasks, projects, 14, now)
+        .filter((item) => item.status === 'waiting').length;
+
+    return {
+        inboxCount,
+        activeProjectCount: activeProjects.length,
+        projectsWithoutNextAction,
+        staleWaitingCount,
+    };
 }
 
 export function getStaleItems(

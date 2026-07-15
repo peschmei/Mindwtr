@@ -557,8 +557,10 @@ export {
     DEFAULT_REVIEW_ADVANCE_DAYS,
     getAdvancedReviewDate,
     getStaleItems,
+    getWeeklyReviewSummary,
     partitionByReviewDate,
     type ReviewSchedulePartition,
+    type WeeklyReviewSummary,
 } from './review-utils';
 
 export {

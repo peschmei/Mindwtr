@@ -94,6 +94,7 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
         projectReviewEntries,
         projectTaskPrompt,
         projectTaskTitle,
+        reviewSummary,
         runAiAnalysis,
         staleProjectItems,
         staleTasks,
@@ -126,6 +127,17 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
             setShowMindSweep(false);
         }
     }, [showInboxProcessing, showMindSweep, visible]);
+
+    const renderSummaryRow = (good: boolean, text: string) => (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {good
+                ? <CheckCircle2 size={16} color={tc.success} strokeWidth={2.2} />
+                : <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tc.warning }} />}
+            <Text style={{ flex: 1, fontSize: 14, color: good ? tc.secondaryText : tc.text }}>
+                {text}
+            </Text>
+        </View>
+    );
 
     const renderMindSweepNudge = () => (
         <View style={[styles.mindSweepNudge, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
@@ -779,6 +791,24 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                         <Text style={[styles.description, { color: tc.secondaryText }]}>
                             {labels.completeDesc}
                         </Text>
+                        <View style={{ alignSelf: 'stretch', borderWidth: 1, borderColor: tc.border, borderRadius: 10, padding: 14, gap: 10, marginBottom: 16 }}>
+                            {renderSummaryRow(
+                                reviewSummary.inboxCount === 0,
+                                reviewSummary.inboxCount === 0
+                                    ? labels.summaryInboxEmpty
+                                    : formatI18nTemplate(labels.summaryInboxCount, { count: reviewSummary.inboxCount }),
+                            )}
+                            {reviewSummary.activeProjectCount > 0 && renderSummaryRow(
+                                reviewSummary.projectsWithoutNextAction === 0,
+                                reviewSummary.projectsWithoutNextAction === 0
+                                    ? labels.summaryProjectsOk
+                                    : formatI18nTemplate(labels.summaryProjectsMissing, { count: reviewSummary.projectsWithoutNextAction }),
+                            )}
+                            {reviewSummary.staleWaitingCount > 0 && renderSummaryRow(
+                                false,
+                                formatI18nTemplate(labels.summaryWaitingStale, { count: reviewSummary.staleWaitingCount }),
+                            )}
+                        </View>
                         {renderMindSweepNudge()}
                         <TouchableOpacity style={[styles.primaryButton, filledButton.textColor ? { backgroundColor: filledButton.backgroundColor } : null]} onPress={handleFinish}>
                             <Text style={[styles.primaryButtonText, filledButton.textColor ? { color: filledButton.textColor } : null]}>

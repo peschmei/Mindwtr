@@ -100,6 +100,12 @@ vi.mock('@mindwtr/core', () => ({
     formatI18nTemplate: vi.fn((template: string, values: Record<string, string | number>) =>
         template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, key) => String(values[key] ?? match))),
     getStaleItems: vi.fn(() => []),
+    getWeeklyReviewSummary: vi.fn(() => ({
+        inboxCount: 0,
+        activeProjectCount: 0,
+        projectsWithoutNextAction: 0,
+        staleWaitingCount: 0,
+    })),
     isDueForReview: vi.fn(() => false),
     partitionByReviewDate: vi.fn((items: unknown[]) => ({ due: [], scheduled: [], unscheduled: items })),
     isTaskInActiveProject: vi.fn(() => true),

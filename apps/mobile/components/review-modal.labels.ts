@@ -57,6 +57,11 @@ type ReviewLabelKey =
     | 'listEmpty'
     | 'reviewComplete'
     | 'completeDesc'
+    | 'summaryInboxEmpty'
+    | 'summaryInboxCount'
+    | 'summaryProjectsOk'
+    | 'summaryProjectsMissing'
+    | 'summaryWaitingStale'
     | 'finish'
     | 'next'
     | 'back'
@@ -128,6 +133,11 @@ const defaultReviewLabels: ReviewLabels = {
     listEmpty: 'List is empty',
     reviewComplete: 'Review Complete!',
     completeDesc: 'Your system is clean and you\'re ready for the week ahead!',
+    summaryInboxEmpty: 'Inbox is empty',
+    summaryInboxCount: '{{count}} item(s) still in Inbox',
+    summaryProjectsOk: 'Every active project has a next action',
+    summaryProjectsMissing: '{{count}} project(s) have no next action',
+    summaryWaitingStale: '{{count}} waiting item(s) untouched for more than two weeks',
     finish: 'Finish',
     next: 'Next',
     back: 'Back',
@@ -196,6 +206,11 @@ const reviewLabelTranslationKeys: Record<ReviewLabelKey, string> = {
     listEmpty: 'review.listEmpty',
     reviewComplete: 'review.complete',
     completeDesc: 'review.completeDesc',
+    summaryInboxEmpty: 'review.summaryInboxEmpty',
+    summaryInboxCount: 'review.summaryInboxCount',
+    summaryProjectsOk: 'review.summaryProjectsOk',
+    summaryProjectsMissing: 'review.summaryProjectsMissing',
+    summaryWaitingStale: 'review.summaryWaitingStale',
     finish: 'review.finish',
     next: 'review.next',
     back: 'review.back',
