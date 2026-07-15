@@ -96,6 +96,7 @@ describe('TaskEditViewTab', () => {
   });
 
   it('renders an interactive status badge and forwards updates', () => {
+    const onBackdatedComplete = vi.fn();
     const onStatusUpdate = vi.fn();
 
     let tree!: renderer.ReactTestRenderer;
@@ -162,6 +163,7 @@ describe('TaskEditViewTab', () => {
           isImageAttachment={() => false}
           textDirectionStyle={{}}
           resolvedDirection="ltr"
+          onBackdatedComplete={onBackdatedComplete}
           onStatusUpdate={onStatusUpdate}
         />
       );
@@ -175,6 +177,12 @@ describe('TaskEditViewTab', () => {
     });
 
     expect(onStatusUpdate).toHaveBeenCalledWith('done');
+
+    renderer.act(() => {
+      badge.props.onBackdatedComplete();
+    });
+
+    expect(onBackdatedComplete).toHaveBeenCalledTimes(1);
   });
 
   it('shows the projected recurrence date in the read-only preview', () => {

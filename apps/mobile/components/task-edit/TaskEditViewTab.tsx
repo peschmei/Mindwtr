@@ -49,6 +49,7 @@ type TaskEditViewTabProps = {
   onProjectPress?: (projectId: string) => void;
   onContextPress?: (context: string) => void;
   onTagPress?: (tag: string) => void;
+  onBackdatedComplete?: () => void;
   onStatusUpdate?: (status: TaskStatus) => void;
   showStatusField?: boolean;
 };
@@ -76,6 +77,7 @@ function TaskEditViewTabComponent({
   onProjectPress,
   onContextPress,
   onTagPress,
+  onBackdatedComplete,
   onStatusUpdate,
   showStatusField = true,
 }: TaskEditViewTabProps) {
@@ -192,7 +194,11 @@ function TaskEditViewTabComponent({
         <View style={[styles.viewRow, { backgroundColor: tc.inputBg, borderColor: tc.border }]}>
           <Text style={[styles.viewLabel, { color: tc.secondaryText }]}>{t('taskEdit.statusLabel')}</Text>
           {onStatusUpdate && mergedTask.status ? (
-            <TaskStatusBadge status={mergedTask.status as TaskStatus} onUpdate={onStatusUpdate} />
+            <TaskStatusBadge
+              status={mergedTask.status as TaskStatus}
+              onUpdate={onStatusUpdate}
+              onBackdatedComplete={onBackdatedComplete}
+            />
           ) : (
             <Text style={[styles.viewValue, { color: tc.text }]}>{statusLabel}</Text>
           )}

@@ -89,6 +89,10 @@ vi.mock('./task-edit/TaskEditFormTab', () => ({
   TaskEditFormTab: (props: any) => React.createElement('TaskEditFormTab', props),
 }));
 
+vi.mock('./completed-at-picker', () => ({
+  CompletedAtPicker: (props: any) => React.createElement('CompletedAtPicker', props),
+}));
+
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: (props: any) => React.createElement('SafeAreaView', props, props.children),
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
@@ -163,6 +167,56 @@ describe('TaskEditModal', () => {
         );
       });
     }).not.toThrow();
+  });
+
+  it('saves status and completion time together after a long-press in the preview', async () => {
+    const completedAt = '2026-07-14T18:30:00.000Z';
+    const onSave = vi.fn();
+    let tree!: renderer.ReactTestRenderer;
+
+    act(() => {
+      tree = renderer.create(
+        <TaskEditModal
+          visible
+          task={{
+            id: 't1',
+            title: 'Test task',
+            status: 'next',
+            tags: [],
+            contexts: [],
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          }}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />
+      );
+    });
+
+    const viewTab = tree.root.find((node) => (
+      node.props.mergedTask?.id === 't1' && typeof node.props.onBackdatedComplete === 'function'
+    ));
+    act(() => {
+      viewTab.props.onBackdatedComplete();
+    });
+
+    const picker = tree.root.findByType('CompletedAtPicker' as any);
+    act(() => {
+      picker.props.onConfirm(completedAt);
+    });
+
+    const header = tree.root.find((node) => (
+      typeof node.props.onDone === 'function' && typeof node.props.onDelete === 'function'
+    ));
+    await act(async () => {
+      header.props.onDone();
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledWith('t1', expect.objectContaining({
+      status: 'done',
+      completedAt,
+    }));
   });
 
   it('passes the project field to the mobile form tab', () => {

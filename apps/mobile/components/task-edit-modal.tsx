@@ -33,6 +33,7 @@ import { TaskEditHeader } from './task-edit/TaskEditHeader';
 import { TaskEditModalErrorBoundary } from './task-edit/TaskEditModalErrorBoundary';
 import { TaskEditOverlayStack } from './task-edit/TaskEditOverlayStack';
 import { TaskEditTabs } from './task-edit/TaskEditTabs';
+import { CompletedAtPicker } from './completed-at-picker';
 import {
     MAX_VISIBLE_SUGGESTIONS,
     getRecurrenceRuleValue,
@@ -422,6 +423,10 @@ function TaskEditModalInner({
     const [customMonthDay, setCustomMonthDay] = useState<number>(monthlyAnchorDate.getDate());
     const [waitingAssignmentModalVisible, setWaitingAssignmentModalVisible] = useState(false);
     const [waitingAssignmentInput, setWaitingAssignmentInput] = useState('');
+    const [completedAtPickerVisible, setCompletedAtPickerVisible] = useState(false);
+    useEffect(() => {
+        setCompletedAtPickerVisible(false);
+    }, [task?.id, visible]);
     const waitingAssignmentSuggestions = useMemo(
         () => getAssignedToSuggestions(tasks, waitingAssignmentInput, MAX_VISIBLE_SUGGESTIONS, people),
         [people, tasks, waitingAssignmentInput]
@@ -560,6 +565,13 @@ function TaskEditModalInner({
         }
         setEditedTask((prev) => ({ ...prev, status }));
     }, [editedTask.assignedTo, editedTask.status, setEditedTask, task?.assignedTo, task?.status]);
+    const requestBackdatedCompletion = useCallback(() => {
+        setCompletedAtPickerVisible(true);
+    }, []);
+    const confirmBackdatedCompletion = useCallback((completedAt: string) => {
+        setCompletedAtPickerVisible(false);
+        setEditedTask((prev) => ({ ...prev, status: 'done', completedAt }));
+    }, [setEditedTask]);
     const toggleQuickContextToken = useCallback((token: string) => {
         const next = new Set(parseTokenList(contextInputDraft, '@'));
         if (next.has(token)) {
@@ -723,6 +735,7 @@ function TaskEditModalInner({
         recurrenceRuleValue,
         recurrenceStrategyValue,
         recurrenceWeekdayButtons,
+        requestBackdatedCompletion,
         requestStatusChange,
         removeAttachment,
         selectedContextTokens,
@@ -813,6 +826,7 @@ function TaskEditModalInner({
         recurrenceRuleValue,
         recurrenceStrategyValue,
         recurrenceWeekdayButtons,
+        requestBackdatedCompletion,
         requestStatusChange,
         removeAttachment,
         selectedContextTokens,
@@ -972,6 +986,7 @@ function TaskEditModalInner({
                                     onProjectPress={onProjectNavigate ? handlePreviewProjectPress : undefined}
                                     onContextPress={onContextNavigate ? handlePreviewContextPress : undefined}
                                     onTagPress={onTagNavigate ? handlePreviewTagPress : undefined}
+                                    onBackdatedComplete={requestBackdatedCompletion}
                                     onStatusUpdate={handleViewStatusUpdate}
                                     showStatusField={showStatusField}
                                 />
@@ -1068,6 +1083,15 @@ function TaskEditModalInner({
             </KeyboardAccessoryHost>
             <ToastViewport />
         </Modal>
+        {visible && completedAtPickerVisible ? (
+            <CompletedAtPicker
+                initialValue={mergedTask.completedAt ?? (task.status === 'done' ? task.updatedAt : undefined)}
+                onCancel={() => setCompletedAtPickerVisible(false)}
+                onConfirm={confirmBackdatedCompletion}
+                t={t}
+                tc={tc}
+            />
+        ) : null}
         {visible ? (
             <ExpandedMarkdownEditor
                 isOpen={descriptionEditor.descriptionExpanded}

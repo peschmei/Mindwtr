@@ -406,8 +406,16 @@ function SwipeableTaskItemInner({
                     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
                     handleStatusChange(leftAction.action);
                 }}
+                onLongPress={leftAction.action === 'done' ? () => {
+                    swipeableRef.current?.close();
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+                    setCompletedAtPicker('complete');
+                } : undefined}
                 accessibilityLabel={`${leftAction.label} action`}
                 accessibilityRole="button"
+                accessibilityHint={leftAction.action === 'done'
+                    ? tFallback(t, 'task.completeBackdateHintMobile', 'Long-press to complete with a different time')
+                    : undefined}
             >
                 <LeftIcon size={20} color="#FFFFFF" />
                 <CompactText style={styles.swipeActionText} numberOfLines={1}>

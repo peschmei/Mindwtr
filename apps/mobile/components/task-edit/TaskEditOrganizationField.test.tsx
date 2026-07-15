@@ -46,6 +46,9 @@ const t = (key: string) => ({
     'taskEdit.sectionLabel': 'Section',
     'taskEdit.noSectionOption': 'No Section',
     'taskEdit.statusLabel': 'Status',
+    'status.done': 'Done',
+    'status.next': 'Next',
+    'task.completeBackdateHintMobile': 'Long-press to complete with a different time',
     'people.new': 'New Person',
     'common.clear': 'Clear',
 }[key] ?? key);
@@ -63,6 +66,8 @@ const baseProps = {
     priorityOptions: [],
     projectSections: [],
     projects: [],
+    requestBackdatedCompletion: vi.fn(),
+    requestStatusChange: vi.fn(),
     setEditedTask: vi.fn(),
     setShowAreaPicker: vi.fn(),
     setShowProjectPicker: vi.fn(),
@@ -76,6 +81,35 @@ const baseProps = {
 };
 
 describe('TaskEditOrganizationField', () => {
+    it('opens the completion-time picker when Done is long-pressed', () => {
+        const requestBackdatedCompletion = vi.fn();
+        const requestStatusChange = vi.fn();
+
+        let tree!: renderer.ReactTestRenderer;
+        act(() => {
+            tree = renderer.create(
+                <TaskEditOrganizationField
+                    {...(baseProps as any)}
+                    fieldId="status"
+                    editedTask={{ status: 'next' }}
+                    availableStatusOptions={['next', 'done']}
+                    requestBackdatedCompletion={requestBackdatedCompletion}
+                    requestStatusChange={requestStatusChange}
+                />
+            );
+        });
+
+        const doneButton = tree.root.findByProps({ accessibilityLabel: 'Status: Done' });
+        expect(doneButton.props.accessibilityHint).toBe('Long-press to complete with a different time');
+
+        act(() => {
+            doneButton.props.onLongPress();
+        });
+
+        expect(requestBackdatedCompletion).toHaveBeenCalledTimes(1);
+        expect(requestStatusChange).not.toHaveBeenCalled();
+    });
+
     it('renders an unset project as a compact picker row', () => {
         const setShowProjectPicker = vi.fn();
 

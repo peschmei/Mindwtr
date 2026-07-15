@@ -37,6 +37,7 @@ const { addTask, updateTask, restoreTask, showToast, getChecklistProgress, getTa
   },
 }));
 const hapticsMocks = vi.hoisted(() => ({
+  impactAsync: vi.fn().mockResolvedValue(undefined),
   notificationAsync: vi.fn().mockResolvedValue(undefined),
 }));
 const translate = vi.hoisted(() => {
@@ -210,11 +211,19 @@ vi.mock('react-native-gesture-handler', () => ({
 }));
 
 vi.mock('expo-haptics', () => ({
+  ImpactFeedbackStyle: {
+    Medium: 'medium',
+  },
   NotificationFeedbackType: {
     Success: 'success',
     Warning: 'warning',
   },
+  impactAsync: hapticsMocks.impactAsync,
   notificationAsync: hapticsMocks.notificationAsync,
+}));
+
+vi.mock('./completed-at-picker', () => ({
+  CompletedAtPicker: (props: any) => React.createElement('CompletedAtPicker', props),
 }));
 
 vi.mock('expo-linking', () => ({
@@ -1000,6 +1009,61 @@ it('uses the shared rounded star treatment for focused tasks', () => {
 
     expect(onStatusChange).toHaveBeenCalledWith('next');
     expect(hapticsMocks.notificationAsync).toHaveBeenCalledWith('success');
+  });
+
+  it('opens the completion-time picker when the revealed Done action is long-pressed', async () => {
+    const onStatusChange = vi.fn();
+    const completedAt = '2026-07-14T18:30:00.000Z';
+
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(
+        <SwipeableTaskItem
+          task={{
+            id: 'task-1',
+            title: 'Plan release',
+            status: 'next',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          } as any}
+          isDark={false}
+          tc={{
+            taskItemBg: '#111111',
+            border: '#222222',
+            text: '#ffffff',
+            secondaryText: '#999999',
+            tint: '#3b82f6',
+            warning: '#f59e0b',
+          } as any}
+          onPress={vi.fn()}
+          onStatusChange={onStatusChange}
+          onDelete={vi.fn()}
+        />
+      );
+    });
+
+    const doneAction = tree.root.find((node) => (
+      node.props.accessibilityLabel === 'Done action' && typeof node.props.onLongPress === 'function'
+    ));
+
+    renderer.act(() => {
+      doneAction.props.onLongPress();
+    });
+
+    expect(hapticsMocks.impactAsync).toHaveBeenCalledWith('medium');
+    expect(doneAction.props.accessibilityHint).toBe('Long-press to complete with a different time');
+
+    const picker = tree.root.findByType('CompletedAtPicker' as any);
+    await renderer.act(async () => {
+      picker.props.onConfirm(completedAt);
+      await Promise.resolve();
+    });
+
+    expect(updateTask).toHaveBeenCalledWith('task-1', {
+      status: 'done',
+      completedAt,
+    });
+    expect(onStatusChange).not.toHaveBeenCalled();
   });
 
   it('offers reference in the mobile status menu', () => {

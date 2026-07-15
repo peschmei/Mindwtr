@@ -9,7 +9,7 @@ import {
     Modal,
     Pressable
 } from 'react-native';
-import { TaskStatus } from '@mindwtr/core';
+import { tFallback, type TaskStatus } from '@mindwtr/core';
 import { useLanguage } from '../contexts/language-context';
 import { useStatusColors } from '../hooks/use-status-colors';
 import { resolveThemeColors } from '../hooks/use-theme-colors';
@@ -18,11 +18,12 @@ import { ThemeContext } from '../contexts/theme-context';
 interface TaskStatusBadgeProps {
     status: TaskStatus;
     onUpdate: (status: TaskStatus) => void;
+    onBackdatedComplete?: () => void;
 }
 
 const QUICK_STATUS_OPTIONS: TaskStatus[] = ['inbox', 'next', 'waiting', 'someday', 'done', 'reference'];
 
-export function TaskStatusBadge({ status, onUpdate }: TaskStatusBadgeProps) {
+export function TaskStatusBadge({ status, onUpdate, onBackdatedComplete }: TaskStatusBadgeProps) {
     const [modalVisible, setModalVisible] = useState(false);
     const statusColors = useStatusColors();
     const tc = resolveThemeColors(useContext(ThemeContext));
@@ -60,10 +61,16 @@ export function TaskStatusBadge({ status, onUpdate }: TaskStatusBadgeProps) {
         <>
             <TouchableOpacity
                 onPress={handlePress}
+                onLongPress={status === 'done' ? onBackdatedComplete : undefined}
                 style={[
                     styles.badge,
                     { backgroundColor: colors.bg, borderColor: colors.border, borderWidth: 1 }
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${tFallback(t, 'taskEdit.statusLabel', 'Status')}: ${getStatusLabel(status)}`}
+                accessibilityHint={status === 'done' && onBackdatedComplete
+                    ? tFallback(t, 'task.completeBackdateHintMobile', 'Long-press to complete with a different time')
+                    : undefined}
             >
                 <Text style={[
                     styles.text,

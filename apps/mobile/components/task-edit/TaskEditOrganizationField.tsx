@@ -41,6 +41,7 @@ export function TaskEditOrganizationField({
     priorityOptions,
     projectSections,
     projects,
+    requestBackdatedCompletion,
     requestStatusChange,
     setEditedTask,
     setShowAreaPicker,
@@ -142,9 +143,13 @@ export function TaskEditOrganizationField({
                                 key={status}
                                 style={[styles.statusChipCompact, ...getStatusChipStyle(editedTask.status === status)]}
                                 onPress={() => requestStatusChange(status)}
+                                onLongPress={status === 'done' ? requestBackdatedCompletion : undefined}
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: editedTask.status === status }}
                                 accessibilityLabel={`${t('taskEdit.statusLabel')}: ${getStatusLabel(status)}`}
+                                accessibilityHint={status === 'done'
+                                    ? translateWithFallback(t, 'task.completeBackdateHintMobile', 'Long-press to complete with a different time')
+                                    : undefined}
                             >
                                 <Text
                                     style={getStatusTextStyle(editedTask.status === status, true)}
