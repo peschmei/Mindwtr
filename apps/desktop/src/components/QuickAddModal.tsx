@@ -1101,14 +1101,17 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
         <div
             className={cn(
                 'fixed inset-0 flex items-start justify-center z-50',
-                standaloneWindow ? 'bg-transparent px-3 pt-4' : 'bg-black/50 pt-[20vh]',
+                standaloneWindow ? 'bg-popover' : 'bg-black/50 pt-[20vh]',
             )}
             role="presentation"
             onClick={handleClose}
         >
             <div
                 ref={modalRef}
-                className="w-full max-w-lg bg-popover text-popover-foreground rounded-xl border shadow-2xl overflow-visible flex flex-col"
+                className={cn(
+                    'w-full bg-popover text-popover-foreground overflow-visible flex flex-col',
+                    standaloneWindow ? 'max-w-none' : 'max-w-lg rounded-xl border shadow-2xl'
+                )}
                 role="dialog"
                 aria-modal="true"
                 onClick={(e) => e.stopPropagation()}

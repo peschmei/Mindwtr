@@ -145,8 +145,8 @@ describe('QuickAddModal', () => {
 
         expect(fetchData).toHaveBeenCalledTimes(1);
         const backdrop = document.querySelector('[role="presentation"]');
-        expect(backdrop).toHaveClass('bg-transparent');
-        expect(backdrop).not.toHaveClass('bg-background');
+        expect(backdrop).toHaveClass('bg-popover');
+        expect(backdrop).not.toHaveClass('bg-black/50');
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByPlaceholderText('Add Task')).toHaveValue('Fast capture');
 
