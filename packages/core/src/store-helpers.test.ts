@@ -545,6 +545,39 @@ describe('derived store state helpers', () => {
         });
     });
 
+    it('picks the project next action by manual order, not creation order', () => {
+        const createdFirstOrderedLast = createTask('created-first', 'project-1', 2, {
+            status: 'next',
+            createdAt: '2026-01-01T00:00:00.000Z',
+        });
+        const createdLastOrderedFirst = createTask('created-later', 'project-1', 1, {
+            status: 'next',
+            createdAt: '2026-02-01T00:00:00.000Z',
+        });
+        const unordered = [
+            createTask('older', 'project-2', 0, {
+                status: 'next',
+                orderNum: undefined,
+                createdAt: '2026-01-05T00:00:00.000Z',
+            }),
+            createTask('newer', 'project-2', 0, {
+                status: 'next',
+                orderNum: undefined,
+                createdAt: '2026-01-01T00:00:00.000Z',
+            }),
+        ];
+
+        const derived = computeTaskDerivedState([
+            createdFirstOrderedLast,
+            createdLastOrderedFirst,
+            ...unordered,
+        ]);
+
+        expect(derived.projectTaskSummaryById.get('project-1')?.nextAction?.id).toBe('created-later');
+        // Without a manual order the earliest-created next task still wins.
+        expect(derived.projectTaskSummaryById.get('project-2')?.nextAction?.id).toBe('newer');
+    });
+
     it('derives focused project count while ignoring tombstones', () => {
         const derived = computeProjectDerivedState([
             createProject('focused-a', { isFocused: true }),

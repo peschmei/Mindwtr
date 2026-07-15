@@ -4,7 +4,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, ChevronsLeft, CornerDownRight
 import { cn } from '../../../lib/utils';
 import { FocusStarIcon } from '../../FocusStarIcon';
 import { SortableProjectRow } from './SortableRows';
-import { tFallback, type Area, type Project, type Task } from '@mindwtr/core';
+import { compareTasksByProjectOrder, tFallback, type Area, type Project, type Task } from '@mindwtr/core';
 import { ProjectAreaDropZone } from './project-area-dnd';
 import {
     isProjectAreaCollapsed,
@@ -397,10 +397,10 @@ export function ProjectsSidebar({
                                             let nextAction = undefined;
                                             let nextCandidate = undefined;
                                             for (const task of projTasks) {
-                                                if (!nextCandidate && task.status === 'next') {
+                                                if (task.status === 'next' && (!nextCandidate || compareTasksByProjectOrder(task, nextCandidate) < 0)) {
                                                     nextCandidate = task;
                                                 }
-                                                if (!nextAction && task.status === 'inbox') {
+                                                if (task.status === 'inbox' && (!nextAction || compareTasksByProjectOrder(task, nextAction) < 0)) {
                                                     nextAction = task;
                                                 }
                                             }

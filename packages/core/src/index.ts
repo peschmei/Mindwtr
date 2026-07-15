@@ -386,6 +386,7 @@ export {
     getTaskUrgency,
     getWaitingPerson,
     groupCompletedTasksLast,
+    compareTasksByProjectOrder,
     isFocusSequentialCandidate,
     isTaskFutureStart,
     rescheduleTask,

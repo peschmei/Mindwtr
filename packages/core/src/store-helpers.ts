@@ -5,7 +5,7 @@ import {
     getUsedTaskTokensFromUsage,
 } from './task-token-usage';
 import { resolveRelativeStartUpdates } from './task-relative-start';
-import { rescheduleTask } from './task-utils';
+import { compareTasksByProjectOrder, rescheduleTask } from './task-utils';
 import { safeParseDate } from './date';
 import { filterNotDeleted } from './sync-helpers';
 import { nextRevision, normalizeRevision } from './sync-revision';
@@ -493,7 +493,9 @@ export const computeTaskDerivedState = (
             if (task.status !== 'done' && task.status !== 'reference' && task.status !== 'archived') {
                 const summary = projectTaskSummaryById.get(task.projectId) ?? { activeTaskCount: 0 };
                 summary.activeTaskCount += 1;
-                if (!summary.nextAction && task.status === 'next') summary.nextAction = task;
+                if (task.status === 'next' && (!summary.nextAction || compareTasksByProjectOrder(task, summary.nextAction) < 0)) {
+                    summary.nextAction = task;
+                }
                 projectTaskSummaryById.set(task.projectId, summary);
             }
         }

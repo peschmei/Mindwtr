@@ -264,6 +264,19 @@ export function getProjectDeadlineBoosts(
     return boosts;
 }
 
+// Orders tasks the way a project lists them: manual order first (tasks without
+// one sort last), creation time as the tie-break. This is the order project
+// views render, so anything surfacing "the project's next action" must use it
+// too or it will contradict what the user arranged (#873).
+export function compareTasksByProjectOrder<T extends SequentialTaskOrderFields>(a: T, b: T): number {
+    const aOrder = Number.isFinite(a.order) ? (a.order as number) : Number.isFinite(a.orderNum) ? (a.orderNum as number) : Number.POSITIVE_INFINITY;
+    const bOrder = Number.isFinite(b.order) ? (b.order as number) : Number.isFinite(b.orderNum) ? (b.orderNum as number) : Number.POSITIVE_INFINITY;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    const aCreated = safeParseDate(a.createdAt)?.getTime() ?? Number.POSITIVE_INFINITY;
+    const bCreated = safeParseDate(b.createdAt)?.getTime() ?? Number.POSITIVE_INFINITY;
+    return aCreated - bCreated;
+}
+
 function getSequentialTaskOrderKey<T extends SequentialTaskOrderFields>(task: T, hasOrder: boolean): number {
     const taskOrder = Number.isFinite(task.order)
         ? (task.order as number)
