@@ -204,6 +204,9 @@ describe('TaskItem', () => {
             const stored = useTaskStore.getState()._allTasks.find((candidate) => candidate.id === mockTask.id);
             expect(stored?.deletedAt).toBeTruthy();
         });
+        // The edit session must close with the task, or the stale
+        // editingTaskId keeps global keyboard shortcuts suppressed (#870).
+        expect(useUiStore.getState().editingTaskId).toBeNull();
     });
 
     it('does not show the edit-mode delete action for non-inbox tasks', async () => {

@@ -851,6 +851,15 @@ export const TaskItem = memo(function TaskItem({
     // undo toast instead of a confirmation prompt. Permanent purge (in Trash)
     // keeps its confirmation.
     const handleDeleteTask = useCallback(() => {
+        // Deleting unmounts this row, so close the edit session here or the
+        // stale editingTaskId keeps global keyboard shortcuts suppressed.
+        if (isEditing) {
+            resetEditState();
+            setIsEditing(false);
+        }
+        if (editingTaskId === task.id) {
+            setEditingTaskId(null);
+        }
         void deleteTask(task.id);
         const undo = registerUndoableAction(() => {
             void restoreTask(task.id);
@@ -865,7 +874,7 @@ export const TaskItem = memo(function TaskItem({
                 onClick: undo,
             }
         );
-    }, [deleteTask, restoreTask, showToast, t, task.id, undoLabel, undoNotificationsEnabled]);
+    }, [deleteTask, editingTaskId, isEditing, resetEditState, restoreTask, setEditingTaskId, showToast, t, task.id, undoLabel, undoNotificationsEnabled]);
     const handleTaskCompleted = useCallback((previousStatus: TaskStatus, wasFocusedToday: boolean) => {
         const undo = registerUndoableAction(() => {
             closeProjectNextActionPrompt();
