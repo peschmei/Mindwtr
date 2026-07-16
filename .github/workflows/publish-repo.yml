@@ -132,7 +132,7 @@ jobs:
           TAG="${RELEASE_TAG:-${GITHUB_REF_NAME}}"
           VERSION="${TAG#v}"
           case "$VERSION" in
-          *-*) PKG_VERSION="${VERSION/-/\~}" ;;
+            *-*) PKG_VERSION="${VERSION/-/\~}" ;;
             *)
               echo "Stable release ${VERSION}; package versions stay as built."
               exit 0
@@ -151,22 +151,31 @@ jobs:
             echo "Stamped $(basename "$deb") as Version ${PKG_VERSION}"
           done
           if (( ${#rpms[@]} > 0 )); then
-            sudo apt-get update
-            sudo apt-get install -y rpm rpmrebuild
-            for rpmfile in "${rpms[@]}"; do
-              outdir="$(mktemp -d)"
-              rpmrebuild --notest-install --directory="$outdir" \
-                --change-spec-preamble="sed -e 's/^Version:.*/Version: ${PKG_VERSION}/'" \
-                -p "$(readlink -f "$rpmfile")"
-              rebuilt="$(find "$outdir" -name '*.rpm' -type f | head -n 1)"
-              if [ -z "$rebuilt" ]; then
-                echo "rpmrebuild produced no package for $rpmfile" >&2
-                exit 1
-              fi
-              mv "$rebuilt" "$rpmfile"
-              rm -rf "$outdir"
-              echo "Stamped $(basename "$rpmfile") as Version ${PKG_VERSION}"
-            done
+            docker run --rm \
+              -e PKG_VERSION \
+              -v "$PWD:/work" \
+              -w /work \
+              fedora@sha256:99e203b80b1c3d8f7e161ec10a68fd02b081ef83a3963553e513c82846b97814 \
+              bash -lc '
+                set -euo pipefail
+                dnf -q install -y rpmrebuild >/dev/null
+                shopt -s nullglob
+                rpms=( /work/build_repo/rpm*/*.rpm )
+                for rpmfile in "${rpms[@]}"; do
+                  outdir="$(mktemp -d)"
+                  rpmrebuild --notest-install --directory="$outdir" \
+                    --change-spec-preamble="sed -e '\''s/^Version:.*/Version: ${PKG_VERSION}/'\''" \
+                    -p "$rpmfile"
+                  rebuilt="$(find "$outdir" -name "*.rpm" -type f | head -n 1)"
+                  if [ -z "$rebuilt" ]; then
+                    echo "rpmrebuild produced no package for $rpmfile" >&2
+                    exit 1
+                  fi
+                  mv "$rebuilt" "$rpmfile"
+                  rm -rf "$outdir"
+                  echo "Stamped $(basename "$rpmfile") as Version ${PKG_VERSION}"
+                done
+              '
           fi
 
       - name: Build DEB Repo
