@@ -8,7 +8,7 @@ import { useKeybindings } from './keybinding-context';
 import { useUiStore } from '../store/ui-store';
 import { AREA_FILTER_ALL } from '@mindwtr/core';
 
-const DummyList = ({ focusAddInput, openSelected, setStatusSelected }: { focusAddInput?: () => void; openSelected?: () => void; setStatusSelected?: (status: string) => void } = {}) => {
+const DummyList = ({ focusAddInput, openSelected, setStatusSelected }: { focusAddInput?: () => boolean; openSelected?: () => void; setStatusSelected?: (status: string) => void } = {}) => {
     const { registerTaskListScope } = useKeybindings();
     const [selectedIndex, setSelectedIndex] = useState(0);
     const ids = ['1', '2'];
@@ -181,7 +181,7 @@ describe('KeybindingProvider (vim)', () => {
     });
 
     it.each(['vim', 'emacs'] as const)('opens app-scoped quick add with a in %s style', (style) => {
-        const focusAddInput = vi.fn();
+        const focusAddInput = vi.fn(() => true);
         const quickAddListener = vi.fn();
         window.addEventListener('mindwtr:quick-add', quickAddListener);
         useTaskStore.setState((state) => ({
@@ -853,7 +853,7 @@ describe('KeybindingProvider (vim)', () => {
     });
 
     it('focuses the add-task input with Insert', () => {
-        const focusAddInput = vi.fn();
+        const focusAddInput = vi.fn(() => true);
         const quickAddListener = vi.fn();
         window.addEventListener('mindwtr:quick-add', quickAddListener);
 
@@ -870,6 +870,27 @@ describe('KeybindingProvider (vim)', () => {
 
         expect(focusAddInput).toHaveBeenCalledTimes(1);
         expect(quickAddListener).not.toHaveBeenCalled();
+        window.removeEventListener('mindwtr:quick-add', quickAddListener);
+    });
+
+    it('falls back to quick add on Insert when the registered list has no add input', () => {
+        const focusAddInput = vi.fn(() => false);
+        const quickAddListener = vi.fn();
+        window.addEventListener('mindwtr:quick-add', quickAddListener);
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="someday" onNavigate={vi.fn()}>
+                    <DummyList focusAddInput={focusAddInput} />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        fireEvent.keyDown(window, { key: 'Insert' });
+
+        expect(focusAddInput).toHaveBeenCalledTimes(1);
+        expect(quickAddListener).toHaveBeenCalledTimes(1);
         window.removeEventListener('mindwtr:quick-add', quickAddListener);
     });
 
@@ -972,7 +993,12 @@ describe('KeybindingProvider (standard)', () => {
             });
             return () => registerTaskListScope(null);
         }, [deleteSelected, editSelected, openSelected, registerTaskListScope, toggleDoneSelected, toggleSelectSelected]);
-        return <div data-task-id="1">Task 1</div>;
+        return (
+            <div data-task-id="1">
+                <button type="button" data-task-view-toggle>Task 1</button>
+                <button type="button" data-other-task-control>Other task control</button>
+            </div>
+        );
     };
 
     beforeEach(() => {
@@ -1018,6 +1044,58 @@ describe('KeybindingProvider (standard)', () => {
         expect(deleteSelected).toHaveBeenCalledTimes(1);
         expect(openSelected).toHaveBeenCalledTimes(1);
         expect(editSelected).toHaveBeenCalledTimes(1);
+    });
+
+    it('edits with Shift+Enter while the selected task title has focus', () => {
+        const openSelected = vi.fn();
+        const editSelected = vi.fn();
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <StandardScopeList
+                        toggleDoneSelected={vi.fn()}
+                        toggleSelectSelected={vi.fn()}
+                        deleteSelected={vi.fn()}
+                        openSelected={openSelected}
+                        editSelected={editSelected}
+                    />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        const title = document.querySelector('[data-task-view-toggle]') as HTMLButtonElement;
+        title.focus();
+        fireEvent.keyDown(title, { key: 'Enter', shiftKey: true });
+
+        expect(editSelected).toHaveBeenCalledTimes(1);
+        expect(openSelected).not.toHaveBeenCalled();
+    });
+
+    it('leaves Shift+Enter alone while another task control has focus', () => {
+        const openSelected = vi.fn();
+        const editSelected = vi.fn();
+
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <StandardScopeList
+                        toggleDoneSelected={vi.fn()}
+                        toggleSelectSelected={vi.fn()}
+                        deleteSelected={vi.fn()}
+                        openSelected={openSelected}
+                        editSelected={editSelected}
+                    />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        const control = document.querySelector('[data-other-task-control]') as HTMLButtonElement;
+        control.focus();
+        fireEvent.keyDown(control, { key: 'Enter', shiftKey: true });
+
+        expect(editSelected).not.toHaveBeenCalled();
+        expect(openSelected).not.toHaveBeenCalled();
     });
 
     it('navigates views with g chords in standard style', () => {

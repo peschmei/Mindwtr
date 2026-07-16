@@ -213,7 +213,6 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const [selectedWaitingPerson, setSelectedWaitingPerson] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const addInputRef = useRef<HTMLInputElement>(null);
-    const viewFilterInputRef = useRef<HTMLInputElement>(null);
     const listScrollRef = useRef<HTMLDivElement>(null);
     const [referenceViewState, setReferenceViewState] = usePersistedViewState(
         REFERENCE_VIEW_STATE_STORAGE_KEY,
@@ -689,14 +688,12 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         setHighlightTask,
         shouldVirtualize,
         showToast,
-        showViewFilterInput,
         statusFilter,
         t,
         tasksById,
         timeEstimatesEnabled,
         translateWithFallback,
         undoNotificationsEnabled,
-        viewFilterInputRef,
     });
     const bulkAreaOptions = [...areas]
         .sort((a, b) => a.name.localeCompare(b.name))

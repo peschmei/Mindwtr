@@ -42,7 +42,7 @@ type TaskListScope = {
     toggleSelectSelected: () => void;
     deleteSelected: () => void;
     setStatusSelected: (status: TaskStatus) => void;
-    focusAddInput: () => void;
+    focusAddInput: () => boolean;
 };
 
 type UseListSelectionOptions = {
@@ -69,14 +69,12 @@ type UseListSelectionOptions = {
     setHighlightTask: (taskId: string | null) => void;
     shouldVirtualize: boolean;
     showToast: ShowToast;
-    showViewFilterInput: boolean;
     statusFilter: TaskStatus | 'all';
     t: (key: string) => string;
     tasksById: Map<string, Task>;
     timeEstimatesEnabled: boolean;
     translateWithFallback: (key: string, fallback: string) => string;
     undoNotificationsEnabled: boolean;
-    viewFilterInputRef: RefObject<HTMLInputElement | null>;
 };
 
 type UseListSelectionResult = {
@@ -153,14 +151,12 @@ export function useListSelection({
     setHighlightTask,
     shouldVirtualize,
     showToast,
-    showViewFilterInput,
     statusFilter,
     t,
     tasksById,
     timeEstimatesEnabled,
     translateWithFallback,
     undoNotificationsEnabled,
-    viewFilterInputRef,
 }: UseListSelectionOptions): UseListSelectionResult {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [selectionMode, setSelectionMode] = useState(false);
@@ -488,13 +484,9 @@ export function useListSelection({
             deleteSelected,
             setStatusSelected,
             focusAddInput: () => {
-                if (addInputRef.current) {
-                    addInputRef.current.focus();
-                    return;
-                }
-                if (showViewFilterInput) {
-                    viewFilterInputRef.current?.focus();
-                }
+                if (!addInputRef.current) return false;
+                addInputRef.current.focus();
+                return true;
             },
         });
 
@@ -512,10 +504,8 @@ export function useListSelection({
         selectNext,
         selectPrev,
         setStatusSelected,
-        showViewFilterInput,
         toggleDoneSelected,
         toggleSelectSelected,
-        viewFilterInputRef,
     ]);
 
     const toggleMultiSelect = useCallback((taskId: string, options: RangeSelectionOptions = {}) => {

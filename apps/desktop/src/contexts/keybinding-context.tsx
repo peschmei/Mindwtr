@@ -36,7 +36,7 @@ export interface TaskListScope {
     toggleSelectSelected?: () => void;
     deleteSelected: () => void;
     setStatusSelected?: (status: TaskStatus) => void;
-    focusAddInput?: () => void;
+    focusAddInput?: () => boolean;
 }
 
 // Status chord: `s` then a letter sets the selected task's status (#860).
@@ -89,6 +89,11 @@ function hasInteractiveFocus(): boolean {
     return Boolean(active.closest(
         'button, a[href], input, select, textarea, [role="button"], [role="menuitem"], [role="menuitemcheckbox"], [role="option"], [role="link"], [contenteditable="true"]'
     ));
+}
+
+function hasTaskTitleFocus(): boolean {
+    const active = document.activeElement;
+    return active instanceof HTMLElement && active.matches('[data-task-view-toggle]');
 }
 
 function moveSidebarFocus(target: EventTarget | null, direction: 'next' | 'prev'): boolean {
@@ -815,13 +820,14 @@ export function KeybindingProvider({
                     break;
                 }
                 case 'Enter':
+                    if (e.shiftKey && (!hasInteractiveFocus() || hasTaskTitleFocus())) {
+                        e.preventDefault();
+                        scope?.editSelected();
+                        break;
+                    }
                     if (hasInteractiveFocus()) break;
                     e.preventDefault();
-                    if (e.shiftKey) {
-                        scope?.editSelected();
-                    } else {
-                        scope?.openSelected?.();
-                    }
+                    scope?.openSelected?.();
                     break;
                 case '.':
                     e.preventDefault();
@@ -998,9 +1004,7 @@ export function KeybindingProvider({
                 if (e.key === 'Insert') {
                     const scope = getActiveScope();
                     e.preventDefault();
-                    if (scope.focusAddInput) {
-                        scope.focusAddInput();
-                    } else {
+                    if (!scope.focusAddInput?.()) {
                         triggerQuickAdd();
                     }
                     return;
