@@ -44,6 +44,15 @@ type DailyReviewStepDefinition = {
     description: string;
 };
 
+type RenderTaskListOptions = {
+    showFocusToggle?: boolean;
+    hideStatusBadge?: boolean;
+    showFollowUpToday?: boolean;
+    header?: React.ReactElement;
+    empty?: React.ReactElement;
+    testID?: string;
+};
+
 interface DailyReviewModalProps {
     visible: boolean;
     onClose: () => void;
@@ -306,10 +315,35 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
         openContextsScreen(token);
     };
 
-    const renderTaskList = (list: Task[], options?: { showFocusToggle?: boolean; hideStatusBadge?: boolean; showFollowUpToday?: boolean }) => (
+    const renderTaskList = (list: Task[], options?: RenderTaskListOptions) => (
         <FlatList
+            testID={options?.testID}
             data={list}
             renderItem={({ item: task }) => {
+                const reviewDue = options?.showFollowUpToday && isDueForReview(task.reviewAt, today);
+                const footerContent = options?.showFollowUpToday ? (
+                    <TouchableOpacity
+                        style={[
+                            styles.followUpButton,
+                            { backgroundColor: tc.filterBg, opacity: reviewDue ? 0.7 : 1 },
+                        ]}
+                        onPress={(event) => {
+                            event.stopPropagation();
+                            handleFollowUpToday(task);
+                        }}
+                        disabled={reviewDue}
+                        hitSlop={6}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: Boolean(reviewDue) }}
+                        accessibilityLabel={`${followUpTodayLabel}: ${task.title}`}
+                    >
+                        <Clock size={13} color={reviewDue ? tc.secondaryText : tc.tint} strokeWidth={2.2} />
+                        <Text style={[styles.followUpButtonText, { color: reviewDue ? tc.secondaryText : tc.tint }]}>
+                            {reviewDue ? reviewDueLabel : followUpTodayLabel}
+                        </Text>
+                    </TouchableOpacity>
+                ) : undefined;
                 const taskRow = (
                     <SwipeableTaskItem
                         task={task}
@@ -320,34 +354,17 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                         onDelete={() => { void deleteTask(task.id); }}
                         showFocusToggle={options?.showFocusToggle}
                         hideStatusBadge={options?.hideStatusBadge}
+                        footerContent={footerContent}
                     />
                 );
-                if (!options?.showFollowUpToday) return taskRow;
-                const reviewDue = isDueForReview(task.reviewAt, today);
-                return (
-                    <View style={styles.waitingTaskActionItem}>
-                        {taskRow}
-                        <TouchableOpacity
-                            style={[
-                                styles.followUpButton,
-                                { borderColor: tc.border, backgroundColor: tc.cardBg, opacity: reviewDue ? 0.65 : 1 },
-                            ]}
-                            onPress={() => handleFollowUpToday(task)}
-                            disabled={reviewDue}
-                            hitSlop={6}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${followUpTodayLabel}: ${task.title}`}
-                        >
-                            <Clock size={14} color={tc.tint} strokeWidth={2.2} />
-                            <Text style={[styles.followUpButtonText, { color: tc.text }]}>
-                                {reviewDue ? reviewDueLabel : followUpTodayLabel}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                );
+                return taskRow;
             }}
             keyExtractor={(task) => task.id}
             style={styles.taskList}
+            contentContainerStyle={styles.taskListContent}
+            ListHeaderComponent={options?.header}
+            ListHeaderComponentStyle={options?.header ? styles.stepListHeader : undefined}
+            ListEmptyComponent={options?.empty}
             initialNumToRender={12}
             maxToRenderPerBatch={12}
             windowSize={5}
@@ -396,141 +413,144 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
                 const topTasks = [...overdueTasks, ...dueTodayTasks].slice(0, 8);
                 const totalToday = overdueTasks.length + dueTodayTasks.length;
                 const calendarEventCount = todayEvents.length + tomorrowEvents.length;
-                return (
-                    <View style={styles.stepContent}>
-                        <View style={[styles.infoBox, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                            <Text style={[styles.infoText, { color: tc.text }]}>
-                                <Text style={{ fontWeight: '700' }}>{totalToday}</Text> {t('common.tasks')}
-                            </Text>
-                            <Text style={[styles.guideText, { color: tc.secondaryText }]}>{t('dailyReview.todayDesc')}</Text>
-                        </View>
-                        <View style={styles.calendarSection}>
-                            <TouchableOpacity
-                                style={[styles.calendarToggleButton, { backgroundColor: tc.cardBg, borderColor: tc.border }]}
-                                onPress={() => setCalendarExpanded((expanded) => !expanded)}
-                                activeOpacity={0.75}
-                                accessibilityRole="button"
-                                accessibilityState={{ expanded: calendarExpanded }}
-                                accessibilityLabel={t('calendar.events')}
-                            >
-                                <View style={styles.calendarToggleTitle}>
-                                    <CalendarIcon size={16} color={tc.secondaryText} strokeWidth={2} />
-                                    <Text style={[styles.calendarToggleText, { color: tc.text }]}>
-                                        {t('calendar.events')}
-                                    </Text>
-                                    <View style={[styles.calendarCountBadge, { backgroundColor: tc.filterBg }]}>
-                                        <Text style={[styles.calendarCountText, { color: tc.secondaryText }]}>
-                                            {calendarEventCount}
-                                        </Text>
-                                    </View>
-                                </View>
-                                {calendarExpanded ? (
-                                    <ChevronUp size={18} color={tc.secondaryText} strokeWidth={2} />
-                                ) : (
-                                    <ChevronDown size={18} color={tc.secondaryText} strokeWidth={2} />
-                                )}
-                            </TouchableOpacity>
-                            {calendarExpanded && (
-                                <View style={styles.calendarGrid}>
-                                    <View style={[styles.calendarCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                                        <Text style={[styles.calendarCardTitle, { color: tc.secondaryText }]}>
-                                            {safeFormatDate(today, 'P')} · {t('calendar.events')}
-                                        </Text>
-                                        {renderExternalEventList(todayEvents)}
-                                    </View>
-                                    <View style={[styles.calendarCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                                        <Text style={[styles.calendarCardTitle, { color: tc.secondaryText }]}>
-                                            {safeFormatDate(tomorrow, 'P')} · {t('calendar.events')}
-                                        </Text>
-                                        {renderExternalEventList(tomorrowEvents)}
-                                    </View>
-                                </View>
-                            )}
-                        </View>
-                        {topTasks.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <Sparkles size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
-                                <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('agenda.noTasks')}</Text>
+                return renderTaskList(topTasks, {
+                    testID: 'daily-review-step-scroll-today',
+                    header: (
+                        <>
+                            <View style={[styles.infoBox, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                                <Text style={[styles.infoText, { color: tc.text }]}>
+                                    <Text style={{ fontWeight: '700' }}>{totalToday}</Text> {t('common.tasks')}
+                                </Text>
+                                <Text style={[styles.guideText, { color: tc.secondaryText }]}>{t('dailyReview.todayDesc')}</Text>
                             </View>
-                        ) : (
-                            renderTaskList(topTasks)
-                        )}
-                    </View>
-                );
+                            <View style={styles.calendarSection}>
+                                <TouchableOpacity
+                                    style={[styles.calendarToggleButton, { backgroundColor: tc.cardBg, borderColor: tc.border }]}
+                                    onPress={() => setCalendarExpanded((expanded) => !expanded)}
+                                    activeOpacity={0.75}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ expanded: calendarExpanded }}
+                                    accessibilityLabel={t('calendar.events')}
+                                >
+                                    <View style={styles.calendarToggleTitle}>
+                                        <CalendarIcon size={16} color={tc.secondaryText} strokeWidth={2} />
+                                        <Text style={[styles.calendarToggleText, { color: tc.text }]}>
+                                            {t('calendar.events')}
+                                        </Text>
+                                        <View style={[styles.calendarCountBadge, { backgroundColor: tc.filterBg }]}>
+                                            <Text style={[styles.calendarCountText, { color: tc.secondaryText }]}>
+                                                {calendarEventCount}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    {calendarExpanded ? (
+                                        <ChevronUp size={18} color={tc.secondaryText} strokeWidth={2} />
+                                    ) : (
+                                        <ChevronDown size={18} color={tc.secondaryText} strokeWidth={2} />
+                                    )}
+                                </TouchableOpacity>
+                                {calendarExpanded && (
+                                    <View style={styles.calendarGrid}>
+                                        <View style={[styles.calendarCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                                            <Text style={[styles.calendarCardTitle, { color: tc.secondaryText }]}>
+                                                {safeFormatDate(today, 'P')} · {t('calendar.events')}
+                                            </Text>
+                                            {renderExternalEventList(todayEvents)}
+                                        </View>
+                                        <View style={[styles.calendarCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                                            <Text style={[styles.calendarCardTitle, { color: tc.secondaryText }]}>
+                                                {safeFormatDate(tomorrow, 'P')} · {t('calendar.events')}
+                                            </Text>
+                                            {renderExternalEventList(tomorrowEvents)}
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        </>
+                    ),
+                    empty: (
+                        <View style={styles.emptyState}>
+                            <Sparkles size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
+                            <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('agenda.noTasks')}</Text>
+                        </View>
+                    ),
+                });
             }
             case 'focus':
-                return (
-                    <View style={styles.stepContent}>
+                return renderTaskList(focusCandidates.slice(0, 8), {
+                    testID: 'daily-review-step-scroll-focus',
+                    showFocusToggle: true,
+                    hideStatusBadge: true,
+                    header: (
                         <View style={[styles.infoBox, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
                             <Text style={[styles.infoText, { color: tc.text }]}>
                                 <Text style={{ fontWeight: '700' }}>{focusedTasks.length}</Text> {t('dailyReview.focusSelected')}
                             </Text>
                             <Text style={[styles.guideText, { color: tc.secondaryText }]}>{t('dailyReview.focusDesc')}</Text>
                         </View>
-                        {focusCandidates.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <Star size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
-                                <Text style={[styles.emptyText, { color: tc.secondaryText }]}>
-                                    {formatFocusTaskLimitText(t('agenda.focusHint'), focusTaskLimit)}
-                                </Text>
-                            </View>
-                        ) : (
-                            renderTaskList(focusCandidates.slice(0, 8), { showFocusToggle: true, hideStatusBadge: true })
-                        )}
-                    </View>
-                );
-            case 'inbox':
-                return (
-                    <View style={styles.stepContent}>
-                        <View style={[styles.infoBox, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                            <Text style={[styles.infoText, { color: tc.text }]}>
-                                <Text style={{ fontWeight: '700' }}>{inboxTasks.length}</Text> {t('common.tasks')}
+                    ),
+                    empty: (
+                        <View style={styles.emptyState}>
+                            <Star size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
+                            <Text style={[styles.emptyText, { color: tc.secondaryText }]}>
+                                {formatFocusTaskLimitText(t('agenda.focusHint'), focusTaskLimit)}
                             </Text>
-                            <Text style={[styles.guideText, { color: tc.secondaryText }]}>{t('dailyReview.inboxDesc')}</Text>
                         </View>
-                        {inboxTasks.length > 0 && (
-                            <TouchableOpacity
-                                style={[styles.processButton, { backgroundColor: filledButton.backgroundColor }]}
-                                onPress={() => setShowInboxProcessing(true)}
-                                hitSlop={8}
-                                accessibilityRole="button"
-                                accessibilityLabel={t('inbox.processButton')}
-                            >
-                                <Play size={14} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.5} fill={filledButton.textColor ?? tc.onTint} />
-                                <Text style={[styles.processButtonText, { color: filledButton.textColor ?? tc.onTint }]}>
-                                    {t('inbox.processButton')}
+                    ),
+                });
+            case 'inbox':
+                return renderTaskList(inboxTasks.slice(0, 8), {
+                    testID: 'daily-review-step-scroll-inbox',
+                    header: (
+                        <>
+                            <View style={[styles.infoBox, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                                <Text style={[styles.infoText, { color: tc.text }]}>
+                                    <Text style={{ fontWeight: '700' }}>{inboxTasks.length}</Text> {t('common.tasks')}
                                 </Text>
-                            </TouchableOpacity>
-                        )}
-                        {inboxTasks.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <CheckCircle2 size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
-                                <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('review.inboxEmpty')}</Text>
+                                <Text style={[styles.guideText, { color: tc.secondaryText }]}>{t('dailyReview.inboxDesc')}</Text>
                             </View>
-                        ) : (
-                            renderTaskList(inboxTasks.slice(0, 8))
-                        )}
-                    </View>
-                );
+                            {inboxTasks.length > 0 && (
+                                <TouchableOpacity
+                                    style={[styles.processButton, { backgroundColor: filledButton.backgroundColor }]}
+                                    onPress={() => setShowInboxProcessing(true)}
+                                    hitSlop={8}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('inbox.processButton')}
+                                >
+                                    <Play size={14} color={filledButton.textColor ?? tc.onTint} strokeWidth={2.5} fill={filledButton.textColor ?? tc.onTint} />
+                                    <Text style={[styles.processButtonText, { color: filledButton.textColor ?? tc.onTint }]}>
+                                        {t('inbox.processButton')}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        </>
+                    ),
+                    empty: (
+                        <View style={styles.emptyState}>
+                            <CheckCircle2 size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
+                            <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('review.inboxEmpty')}</Text>
+                        </View>
+                    ),
+                });
             case 'waiting':
-                return (
-                    <View style={styles.stepContent}>
+                return renderTaskList(waitingTasks.slice(0, 8), {
+                    testID: 'daily-review-step-scroll-waiting',
+                    showFollowUpToday: true,
+                    header: (
                         <View style={[styles.infoBox, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
                             <Text style={[styles.infoText, { color: tc.text }]}>
                                 <Text style={{ fontWeight: '700' }}>{waitingTasks.length}</Text> {t('common.tasks')}
                             </Text>
                             <Text style={[styles.guideText, { color: tc.secondaryText }]}>{t('dailyReview.waitingDesc')}</Text>
                         </View>
-                        {waitingTasks.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <CheckCircle2 size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
-                                <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('review.waitingEmpty')}</Text>
-                            </View>
-                        ) : (
-                            renderTaskList(waitingTasks.slice(0, 8), { showFollowUpToday: true })
-                        )}
-                    </View>
-                );
+                    ),
+                    empty: (
+                        <View style={styles.emptyState}>
+                            <CheckCircle2 size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
+                            <Text style={[styles.emptyText, { color: tc.secondaryText }]}>{t('review.waitingEmpty')}</Text>
+                        </View>
+                    ),
+                });
             case 'complete':
                 return (
                     <View style={styles.centerContent}>
@@ -579,6 +599,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
 
                 {displayedStep !== 'complete' && (
                     <View
+                        testID="daily-review-footer"
                         style={[
                             styles.footer,
                             {
@@ -833,22 +854,26 @@ const styles = StyleSheet.create({
     taskList: {
         flex: 1,
     },
-    waitingTaskActionItem: {
-        gap: 8,
+    taskListContent: {
+        paddingBottom: 12,
+    },
+    stepListHeader: {
+        gap: 14,
+        marginBottom: 14,
     },
     followUpButton: {
         alignSelf: 'flex-start',
-        minHeight: 36,
-        borderWidth: 1,
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        minHeight: 32,
+        borderRadius: 8,
+        paddingHorizontal: 9,
+        paddingVertical: 6,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+        marginTop: 4,
     },
     followUpButtonText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '700',
     },
     emptyState: {

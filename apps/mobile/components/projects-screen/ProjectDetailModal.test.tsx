@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Dimensions, Keyboard, KeyboardAvoidingView, Platform, TextInput } from 'react-native';
+import { Alert, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, TextInput } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, Section, Task } from '@mindwtr/core';
@@ -158,6 +158,16 @@ const setPlatform = (os: typeof Platform.OS) => {
     });
 };
 
+const findOptionButton = (root: ReturnType<typeof create>['root'], testID: string) => (
+    root.find((node) => node.props.testID === testID && node.props.accessibilityRole === 'button')
+);
+
+const findContainingModal = (node: any) => {
+    let current = node.parent;
+    while (current && current.type !== Modal) current = current.parent;
+    return current;
+};
+
 const createProjectDetailModalProps = (overrides: Partial<React.ComponentProps<typeof ProjectDetailModal>> = {}) => ({
     addProjectFileAttachment: vi.fn(),
     addSection: vi.fn(),
@@ -296,6 +306,31 @@ describe('ProjectDetailModal safe area handling', () => {
 
     it('preserves the existing page-sheet header spacing path', () => {
         expect(getProjectDetailModalSafeAreaEdges('pageSheet')).toEqual(['left', 'right', 'bottom']);
+    });
+});
+
+describe('ProjectDetailModal progressive disclosure', () => {
+    it('keeps tasks near the top with a compact collapsed project summary', () => {
+        let tree!: ReturnType<typeof create>;
+
+        act(() => {
+            tree = create(<ProjectDetailModal {...createProjectDetailModalProps({
+                selectedProject: { ...project('someday'), isSequential: false, supportNotes: '' },
+                selectedProjectAreaName: 'Personal',
+                selectedProjectSections: [
+                    section('section-1', 'Accommodation'),
+                    section('section-2', 'Itinerary'),
+                    section('section-3', 'Flights'),
+                ],
+                selectedProjectNotes: '',
+                showProjectMeta: false,
+            })} />);
+        });
+
+        const summary = tree.root.findByProps({ testID: 'project-details-summary' });
+        expect(summary.props.children).toBe('Someday · Parallel · Personal · 3 Sections');
+        expect(tree.root.findAllByProps({ testID: 'project-status-picker' })).toHaveLength(0);
+        expect(tree.root.findAllByProps({ testID: 'project-actions-section' })).toHaveLength(0);
     });
 });
 
@@ -478,7 +513,10 @@ describe('ProjectDetailModal task sorting', () => {
         expect(taskListPropsSpy.mock.calls.at(-1)?.[0].showFilterButton).toBe(false);
 
         act(() => {
-            tree.root.findByProps({ testID: 'project-task-sort-toggle' }).props.onPress();
+            tree.root.findByProps({ testID: 'project-task-view-options-button' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-view-sort-option' }).props.onPress();
         });
         act(() => {
             tree.root.findByProps({ testID: 'sort-option-due' }).props.onPress();
@@ -518,44 +556,58 @@ describe('ProjectDetailModal task sorting', () => {
             tree.root.findByProps({ testID: 'project-add-task-button' }).props.onPress();
         });
         act(() => {
-            tree.root.findByProps({ testID: 'project-task-sort-toggle' }).props.onPress();
+            tree.root.findByProps({ testID: 'project-task-view-options-button' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-view-sort-option' }).props.onPress();
         });
         act(() => {
             tree.root.findByProps({ testID: 'sort-option-due' }).props.onPress();
         });
         act(() => {
-            tree.root.findByProps({ testID: 'project-pinned-show-completed-toggle' }).props.onPress();
+            tree.root.findByProps({ testID: 'project-task-view-options-button' }).props.onPress();
         });
         act(() => {
-            tree.root.findByProps({ testID: 'project-task-reorder-toggle' }).props.onPress();
+            tree.root.findByProps({ testID: 'project-view-completed-option' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-task-view-options-button' }).props.onPress();
+        });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-view-reorder-option' }).props.onPress();
         });
 
         expect(onOpenProjectQuickAdd).toHaveBeenCalledWith(expect.objectContaining({ id: 'project-1' }));
         expect(onProjectTaskSortByChange).toHaveBeenCalledWith('due');
         expect(onToggleShowCompletedTasks).toHaveBeenCalledTimes(1);
-        expect(tree.root.findByProps({ testID: 'project-task-reorder-toggle' }).props.accessibilityState).toEqual({ selected: true });
+        expect(tree.root.findByProps({ testID: 'project-task-view-options-button' }).props.accessibilityState).toEqual({
+            expanded: false,
+            selected: true,
+        });
     });
 
-    it('uses compact visibility icons for the completed-task toggle', () => {
+    it('keeps completed-task visibility inside the compact view-options menu', () => {
         let tree!: ReturnType<typeof create>;
 
         act(() => {
             tree = create(<ProjectDetailModal {...createProjectDetailModalProps()} />);
         });
 
-        const hiddenToggle = tree.root.findByProps({ testID: 'project-pinned-show-completed-toggle' });
-        expect(hiddenToggle.props.accessibilityRole).toBe('switch');
-        expect(hiddenToggle.props.accessibilityLabel).toBe('Show completed');
-        expect(hiddenToggle.props.accessibilityState).toEqual({ checked: false });
+        act(() => {
+            tree.root.findByProps({ testID: 'project-task-view-options-button' }).props.onPress();
+        });
+
+        const hiddenToggle = findOptionButton(tree.root, 'project-view-completed-option');
+        expect(hiddenToggle.props.accessibilityRole).toBe('button');
+        expect(hiddenToggle.props.accessibilityState).toEqual({ selected: false });
         expect(hiddenToggle.findByProps({ name: 'eye-off-outline' }).props.name).toBe('eye-off-outline');
 
         act(() => {
             tree.update(<ProjectDetailModal {...createProjectDetailModalProps({ showCompletedTasks: true })} />);
         });
 
-        const visibleToggle = tree.root.findByProps({ testID: 'project-pinned-show-completed-toggle' });
-        expect(visibleToggle.props.accessibilityLabel).toBe('Hide completed');
-        expect(visibleToggle.props.accessibilityState).toEqual({ checked: true });
+        const visibleToggle = findOptionButton(tree.root, 'project-view-completed-option');
+        expect(visibleToggle.props.accessibilityState).toEqual({ selected: true });
         expect(visibleToggle.findByProps({ name: 'eye-outline' }).props.name).toBe('eye-outline');
     });
 
@@ -823,18 +875,23 @@ describe('ProjectDetailModal keyboard handling', () => {
 });
 
 describe('ProjectDetailModal lifecycle actions', () => {
-    it('groups Duplicate and Archive in a section separate from the Type setting', () => {
+    it('moves Duplicate and Archive out of the persistent details stack', () => {
         let tree!: ReturnType<typeof create>;
 
         act(() => {
             tree = create(<ProjectDetailModal {...createProjectDetailModalProps()} />);
         });
 
-        const actionsSection = tree.root.findByProps({ testID: 'project-actions-section' });
-        expect(actionsSection.findByProps({ testID: 'project-duplicate-button' })).toBeTruthy();
-        expect(actionsSection.findByProps({ testID: 'project-archive-button' })).toBeTruthy();
-        // The Type toggle must stay with the Status/Type card, not read as part of the actions.
-        expect(actionsSection.findAllByProps({ testID: 'project-type-toggle' })).toHaveLength(0);
+        expect(tree.root.findAllByProps({ testID: 'project-actions-section' })).toHaveLength(0);
+
+        act(() => {
+            tree.root.findByProps({ testID: 'project-actions-menu-button' }).props.onPress();
+        });
+
+        const duplicate = tree.root.findByProps({ testID: 'project-duplicate-button' });
+        expect(duplicate).toBeTruthy();
+        expect(tree.root.findByProps({ testID: 'project-archive-button' })).toBeTruthy();
+        expect(duplicate.findAllByProps({ testID: 'project-type-toggle' })).toHaveLength(0);
     });
 
     it('archives from the Archive action with a single tap and no native confirm', () => {
@@ -849,6 +906,9 @@ describe('ProjectDetailModal lifecycle actions', () => {
         });
 
         act(() => {
+            tree.root.findByProps({ testID: 'project-actions-menu-button' }).props.onPress();
+        });
+        act(() => {
             tree.root.findByProps({ testID: 'project-archive-button' }).props.onPress();
         });
 
@@ -856,20 +916,30 @@ describe('ProjectDetailModal lifecycle actions', () => {
         expect(alertSpy).not.toHaveBeenCalled();
     });
 
-    it('surfaces that completing a project files it in Archived', () => {
+    it('shows the archive explanation only inside the on-demand actions menu', () => {
         let tree!: ReturnType<typeof create>;
 
         act(() => {
             tree = create(<ProjectDetailModal {...createProjectDetailModalProps()} />);
         });
 
-        const helper = tree.root.findByProps({ testID: 'project-actions-helper' });
-        const helperText = String(helper.props.children).toLowerCase();
-        expect(helperText).toContain('complet');
-        expect(helperText).toContain('archived');
+        const hiddenArchiveAction = findOptionButton(tree.root, 'project-archive-button');
+        expect(findContainingModal(hiddenArchiveAction)?.props.visible).toBe(false);
+
+        act(() => {
+            tree.root.findByProps({ testID: 'project-actions-menu-button' }).props.onPress();
+        });
+
+        const archiveAction = findOptionButton(tree.root, 'project-archive-button');
+        expect(findContainingModal(archiveAction)?.props.visible).toBe(true);
+        const description = archiveAction.findAll((node) => (
+            typeof node.props.children === 'string'
+            && node.props.children.toLowerCase().includes('archived')
+        ));
+        expect(description.length).toBeGreaterThan(0);
     });
 
-    it('shows Reactivate instead of Archive in the actions section for archived projects', () => {
+    it('shows Reactivate instead of Archive in the actions menu for archived projects', () => {
         let tree!: ReturnType<typeof create>;
 
         act(() => {
@@ -878,9 +948,12 @@ describe('ProjectDetailModal lifecycle actions', () => {
             })} />);
         });
 
-        const actionsSection = tree.root.findByProps({ testID: 'project-actions-section' });
-        expect(actionsSection.findByProps({ testID: 'project-reactivate-button' })).toBeTruthy();
-        expect(actionsSection.findAllByProps({ testID: 'project-archive-button' })).toHaveLength(0);
+        act(() => {
+            tree.root.findByProps({ testID: 'project-actions-menu-button' }).props.onPress();
+        });
+
+        expect(tree.root.findByProps({ testID: 'project-reactivate-button' })).toBeTruthy();
+        expect(tree.root.findAllByProps({ testID: 'project-archive-button' })).toHaveLength(0);
     });
 });
 

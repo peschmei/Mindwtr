@@ -64,6 +64,8 @@ export interface SwipeableTaskItemProps {
     onContextPress?: (context: string) => void;
     onTagPress?: (tag: string) => void;
     projectDeadlineLabel?: string;
+    /** Optional compact content rendered inside the task card below its metadata. */
+    footerContent?: React.ReactNode;
     rowContext?: SwipeableTaskItemRowContext;
 }
 
@@ -171,6 +173,7 @@ function SwipeableTaskItemInner({
     onContextPress,
     onTagPress,
     projectDeadlineLabel,
+    footerContent,
     rowContext,
 }: SwipeableTaskItemInnerProps) {
     const swipeableRef = useRef<Swipeable>(null);
@@ -595,6 +598,7 @@ function SwipeableTaskItemInner({
             onProjectPress={onProjectPress}
             onTagPress={onTagPress}
             projectDeadlineLabel={projectDeadlineLabel}
+            footerContent={footerContent}
             recurrenceLabel={recurrenceLabel}
             onToggleChecklist={toggleChecklist}
             onToggleChecklistItem={toggleChecklistItem}

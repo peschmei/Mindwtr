@@ -333,13 +333,10 @@ export function useInboxProcessingController({
   const windowHeight = Dimensions.get('window').height;
   const taskDisplayMaxHeight = Math.max(220, Math.floor(windowHeight * 0.44));
   const descriptionMaxHeight = Math.max(120, Math.floor(windowHeight * 0.28));
-  const isDelegateConfirmationDisabled = executionChoice === 'delegate'
-    && delegateWho.trim().length === 0
-    && selectedAssignedTo.trim().length === 0;
   const isDecisionIncomplete = actionabilityChoice === null
     || (actionabilityChoice === 'actionable' && twoMinuteEnabled && twoMinuteChoice === null)
     || (actionabilityChoice === 'actionable' && (!twoMinuteEnabled || twoMinuteChoice === 'no') && executionChoice === null);
-  const isNextTaskDisabled = isDecisionIncomplete || isDelegateConfirmationDisabled;
+  const isNextTaskDisabled = isDecisionIncomplete;
 
   const chooseActionability = useCallback((choice: Exclude<ActionabilityChoice, null>) => {
     setActionabilityChoice(choice);
@@ -605,9 +602,8 @@ export function useInboxProcessingController({
   const handleConfirmWaitingMobile = useCallback(() => {
     if (currentTask) {
       const who = delegateWho.trim() || selectedAssignedTo.trim();
-      if (!who) return;
       const fields: Partial<Task> = {
-        assignedTo: who,
+        assignedTo: who || undefined,
         ...(showPriorityField ? { priority: selectedPriority ?? undefined } : {}),
         ...(showEnergyLevelField ? { energyLevel: selectedEnergyLevel ?? undefined } : {}),
         ...(showTimeEstimateField ? { timeEstimate: selectedTimeEstimate ?? undefined } : {}),

@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { GripVertical } from 'lucide-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
     type Attachment,
@@ -436,6 +435,101 @@ function ProjectDetailScrollFrame({
     );
 }
 
+function ProjectOptionsModal({
+    children,
+    closeLabel,
+    onClose,
+    title,
+    visible,
+    tc,
+}: {
+    children: React.ReactNode;
+    closeLabel: string;
+    onClose: () => void;
+    title: string;
+    visible: boolean;
+    tc: ThemeColors;
+}) {
+    return (
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+            onRequestClose={onClose}
+            accessibilityViewIsModal
+        >
+            <View style={styles.overlay}>
+                <View style={[styles.projectOptionsCard, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+                    <View style={styles.projectOptionsHeader}>
+                        <Text style={[styles.projectOptionsTitle, { color: tc.text }]} accessibilityRole="header">
+                            {title}
+                        </Text>
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={closeLabel}
+                            onPress={onClose}
+                            style={styles.sectionManagerCloseButton}
+                        >
+                            <Ionicons name="close" size={20} color={tc.secondaryText} />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={[styles.projectOptionsList, { borderColor: tc.border }]}>
+                        {children}
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+}
+
+function ProjectOptionRow({
+    description,
+    icon,
+    label,
+    onPress,
+    selected = false,
+    testID,
+    value,
+    tc,
+}: {
+    description?: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+    label: string;
+    onPress: () => void;
+    selected?: boolean;
+    testID: string;
+    value?: string;
+    tc: ThemeColors;
+}) {
+    return (
+        <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            onPress={onPress}
+            style={[styles.projectOptionsRow, { borderBottomColor: tc.border }]}
+            testID={testID}
+        >
+            <View style={[styles.projectOptionsIcon, { backgroundColor: selected ? `${tc.tint}20` : tc.filterBg }]}>
+                <Ionicons name={icon} size={19} color={selected ? tc.tint : tc.secondaryText} />
+            </View>
+            <View style={styles.projectOptionsCopy}>
+                <Text style={[styles.projectOptionsRowLabel, { color: tc.text }]}>{label}</Text>
+                {description ? (
+                    <Text style={[styles.projectOptionsDescription, { color: tc.secondaryText }]}>
+                        {description}
+                    </Text>
+                ) : null}
+            </View>
+            {value ? (
+                <Text style={[styles.projectOptionsValue, { color: tc.secondaryText }]} numberOfLines={1}>
+                    {value}
+                </Text>
+            ) : null}
+            {selected ? <Ionicons name="checkmark" size={18} color={tc.tint} /> : null}
+        </TouchableOpacity>
+    );
+}
+
 export function ProjectDetailModal({
     addProjectFileAttachment,
     addSection,
@@ -506,6 +600,8 @@ export function ProjectDetailModal({
     const [projectTaskFilterOpenSignal, setProjectTaskFilterOpenSignal] = React.useState(0);
     const [projectTaskFilterActiveCount, setProjectTaskFilterActiveCount] = React.useState(0);
     const [projectSortModalVisible, setProjectSortModalVisible] = React.useState(false);
+    const [projectViewOptionsVisible, setProjectViewOptionsVisible] = React.useState(false);
+    const [projectActionsVisible, setProjectActionsVisible] = React.useState(false);
     const [projectTaskBulkBarProps, setProjectTaskBulkBarProps] = React.useState<TaskListBulkBarProps | null>(null);
     const [sectionManagerVisible, setSectionManagerVisible] = React.useState(false);
     const projectDetailListRef = React.useRef<FlatList | null>(null);
@@ -566,6 +662,8 @@ export function ProjectDetailModal({
     const projectSectionsLabel = tFallback(t, 'projects.sectionsLabel', 'Sections');
     const addProjectTaskLabel = tFallback(t, 'nav.addTask', 'Add task');
     const projectOrderLabel = tFallback(t, 'projects.reorderTasks', 'Order');
+    const moreOptionsLabel = tFallback(t, 'taskEdit.moreOptions', 'More options');
+    const closeLabel = tFallback(t, 'common.close', 'Close');
     const hasProjectTaskOrderTargets = Boolean(
         selectedProjectSections.length > 1
         || (selectedProjectTasks ?? []).some((task) => (
@@ -625,7 +723,18 @@ export function ProjectDetailModal({
                     ? t('status.someday')
                     : tFallback(t, 'status.archived', 'Archived'))
         : '';
+    const projectTypeValueLabel = selectedProject?.isSequential
+        ? tFallback(t, 'projects.sequential', 'Sequential')
+        : tFallback(t, 'projects.parallel', 'Parallel');
+    const noAreaLabel = tFallback(t, 'projects.noArea', 'No Area');
+    const projectDetailsSummary = [
+        projectStatusLabel,
+        projectTypeValueLabel,
+        selectedProjectAreaName && selectedProjectAreaName !== noAreaLabel ? selectedProjectAreaName : '',
+        selectedProjectSections.length > 0 ? `${selectedProjectSections.length} ${projectSectionsLabel}` : '',
+    ].filter(Boolean).join(' · ');
     const sortIsActive = projectTaskSortBy !== 'default';
+    const projectViewOptionsActive = sortIsActive || showCompletedTasks || projectTaskReorderMode;
     const projectTaskPinnedToolbar = selectedProject ? (
         <View style={[styles.projectTaskPinnedToolbar, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
             <TouchableOpacity
@@ -644,7 +753,7 @@ export function ProjectDetailModal({
             >
                 <View style={styles.projectTaskPinnedControlIcon}>
                     <Ionicons
-                        name="options-outline"
+                        name="filter-outline"
                         size={20}
                         color={projectTaskFilterActiveCount > 0 ? tc.tint : tc.secondaryText}
                     />
@@ -658,81 +767,28 @@ export function ProjectDetailModal({
                 </View>
             </TouchableOpacity>
             <TouchableOpacity
-                accessibilityLabel={`${sortLabel}: ${t(`sort.${projectTaskSortBy}`)}`}
+                accessibilityLabel={moreOptionsLabel}
                 accessibilityRole="button"
-                accessibilityState={{ selected: sortIsActive }}
-                onPress={openProjectTaskSort}
+                accessibilityState={{ expanded: projectViewOptionsVisible, selected: projectViewOptionsActive }}
+                onPress={() => setProjectViewOptionsVisible(true)}
                 hitSlop={8}
                 style={[
                     styles.projectTaskPinnedControl,
                     {
-                        backgroundColor: sortIsActive ? `${tc.tint}20` : tc.filterBg,
-                        borderColor: sortIsActive ? tc.tint : tc.border,
+                        backgroundColor: projectViewOptionsActive ? `${tc.tint}20` : tc.filterBg,
+                        borderColor: projectViewOptionsActive ? tc.tint : tc.border,
                     },
                 ]}
-                testID="project-task-sort-toggle"
+                testID="project-task-view-options-button"
             >
                 <View style={styles.projectTaskPinnedControlIcon}>
                     <Ionicons
-                        name="swap-vertical-outline"
+                        name="ellipsis-horizontal"
                         size={20}
-                        color={sortIsActive ? tc.tint : tc.secondaryText}
+                        color={projectViewOptionsActive ? tc.tint : tc.secondaryText}
                     />
                 </View>
             </TouchableOpacity>
-            {selectedProject.status !== 'archived' ? (
-                <TouchableOpacity
-                    accessibilityLabel={showCompletedLabel}
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: showCompletedTasks }}
-                    onPress={onToggleShowCompletedTasks}
-                    hitSlop={8}
-                    style={[
-                        styles.projectTaskPinnedControl,
-                        {
-                            backgroundColor: showCompletedTasks ? tc.tint : tc.filterBg,
-                            borderColor: showCompletedTasks ? tc.tint : tc.border,
-                        },
-                    ]}
-                    testID="project-pinned-show-completed-toggle"
-                >
-                    <View style={styles.projectTaskPinnedControlIcon}>
-                        <Ionicons
-                            name={showCompletedTasks ? 'eye-outline' : 'eye-off-outline'}
-                            size={20}
-                            color={showCompletedTasks ? tc.onTint : tc.secondaryText}
-                        />
-                    </View>
-                </TouchableOpacity>
-            ) : null}
-            {taskListOptions.enableProjectReorder && hasProjectTaskOrderTargets && !sortIsActive ? (
-                <TouchableOpacity
-                    accessibilityLabel={projectTaskReorderMode ? doneButtonLabel : projectOrderLabel}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: projectTaskReorderMode }}
-                    onPress={toggleProjectTaskReorderMode}
-                    hitSlop={8}
-                    style={[
-                        styles.projectTaskPinnedControl,
-                        {
-                            backgroundColor: projectTaskReorderMode ? tc.tint : tc.filterBg,
-                            borderColor: projectTaskReorderMode ? tc.tint : tc.border,
-                        },
-                    ]}
-                    testID="project-task-reorder-toggle"
-                >
-                    <View style={styles.projectTaskPinnedControlIcon}>
-                        {projectTaskReorderMode ? (
-                            <Ionicons name="checkmark" size={20} color={tc.onTint} />
-                        ) : (
-                            // Grip dots mirror the drag handles shown in reorder mode;
-                            // the hamburger-style reorder-three read as a menu, and the
-                            // up-down arrows belong to the Sort control (#784).
-                            <GripVertical size={20} color={tc.secondaryText} />
-                        )}
-                    </View>
-                </TouchableOpacity>
-            ) : null}
             <View style={styles.projectTaskPinnedSpacer} />
             {taskListOptions.allowAdd ? (
                 <TouchableOpacity
@@ -817,6 +873,8 @@ export function ProjectDetailModal({
     React.useEffect(() => {
         setProjectTaskReorderMode(false);
         setSectionManagerVisible(false);
+        setProjectViewOptionsVisible(false);
+        setProjectActionsVisible(false);
     }, [overlayVisible, selectedProject?.id]);
 
     const scrollProjectInputIntoView = React.useCallback((targetInput?: number | string) => {
@@ -911,35 +969,33 @@ export function ProjectDetailModal({
     // normal mode; stays pinned above the self-scrolling reorder list in reorder mode.
     const projectDetailListHeader = selectedProject ? (
         <>
-                                <View style={[styles.detailsToggle, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                                    <TouchableOpacity
-                                        style={styles.detailsToggleButton}
-                                        onPress={() => onSetShowProjectMeta((prev) => !prev)}
-                                        accessibilityRole="button"
-                                        accessibilityState={{ expanded: showProjectMeta }}
-                                        testID="project-details-toggle"
-                                    >
+                                <TouchableOpacity
+                                    style={[styles.detailsToggle, { backgroundColor: tc.cardBg, borderColor: tc.border }]}
+                                    onPress={() => onSetShowProjectMeta((prev) => !prev)}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ expanded: showProjectMeta }}
+                                    testID="project-details-toggle"
+                                >
+                                    <View style={styles.detailsToggleHeading}>
+                                        <Ionicons
+                                            name={showProjectMeta ? 'chevron-down' : 'chevron-forward'}
+                                            size={16}
+                                            color={tc.secondaryText}
+                                        />
                                         <Text style={[styles.detailsToggleText, { color: tc.text }]}>
-                                            {showProjectMeta ? '▾' : '▸'} {t('taskEdit.details')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <View
-                                        style={[
-                                            styles.statusPicker,
-                                            {
-                                                backgroundColor: statusPalette[selectedProject.status]?.bg ?? tc.filterBg,
-                                                borderColor: statusPalette[selectedProject.status]?.border ?? tc.border,
-                                            },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[styles.statusPickerText, { color: statusPalette[selectedProject.status]?.text ?? tc.text }]}
-                                            numberOfLines={1}
-                                        >
-                                            {projectStatusLabel}
+                                            {t('taskEdit.details')}
                                         </Text>
                                     </View>
-                                </View>
+                                    {!showProjectMeta ? (
+                                        <Text
+                                            style={[styles.detailsSummaryText, { color: tc.secondaryText }]}
+                                            numberOfLines={1}
+                                            testID="project-details-summary"
+                                        >
+                                            {projectDetailsSummary}
+                                        </Text>
+                                    ) : null}
+                                </TouchableOpacity>
 
                                 {showProjectMeta && (
                                     <>
@@ -1033,57 +1089,6 @@ export function ProjectDetailModal({
                                             </View>
                                         </View>
 
-                                        <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]} testID="project-actions-section">
-                                            <Text style={[styles.reviewLabel, { color: tc.text }]}>{projectActionsLabel}</Text>
-                                            <Text
-                                                style={[styles.projectActionsHelper, { color: tc.secondaryText }]}
-                                                testID="project-actions-helper"
-                                            >
-                                                {projectActionsHelpText}
-                                            </Text>
-                                            <View style={styles.projectManageActions}>
-                                                <TouchableOpacity
-                                                    onPress={() => onDuplicateProject(selectedProject.id)}
-                                                    style={[styles.projectManageButton, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
-                                                    accessibilityRole="button"
-                                                    accessibilityLabel={t('projects.duplicate')}
-                                                    testID="project-duplicate-button"
-                                                >
-                                                    <Ionicons name="copy-outline" size={16} color={tc.tint} />
-                                                    <Text style={[styles.statusButtonText, { color: tc.tint }]}>
-                                                        {t('projects.duplicate')}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                                {selectedProject.status === 'archived' ? (
-                                                    <TouchableOpacity
-                                                        onPress={() => handleSetProjectStatus('active')}
-                                                        style={[styles.projectManageButton, styles.reactivateButton, { borderColor: tc.border }]}
-                                                        accessibilityRole="button"
-                                                        accessibilityLabel={t('projects.reactivate')}
-                                                        testID="project-reactivate-button"
-                                                    >
-                                                        <Ionicons name="refresh-outline" size={16} color="#3B82F6" />
-                                                        <Text style={[styles.statusButtonText, styles.reactivateText]}>
-                                                            {t('projects.reactivate')}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <TouchableOpacity
-                                                        onPress={handleArchiveSelectedProject}
-                                                        style={[styles.projectManageButton, styles.archiveButton, { borderColor: tc.border }]}
-                                                        accessibilityRole="button"
-                                                        accessibilityLabel={t('projects.archive')}
-                                                        testID="project-archive-button"
-                                                    >
-                                                        <Ionicons name="archive-outline" size={16} color={tc.text} />
-                                                        <Text style={[styles.statusButtonText, { color: tc.text }]}>
-                                                            {t('projects.archive')}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                )}
-                                            </View>
-                                        </View>
-
                                         {selectedProject.isSequential && (
                                             <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
                                                 <View style={styles.reviewLabelRow}>
@@ -1156,11 +1161,7 @@ export function ProjectDetailModal({
                                                     </TouchableOpacity>
                                                 ) : null}
                                             </View>
-                                            {selectedProjectSections.length === 0 ? (
-                                                <Text style={[styles.helperText, { color: tc.secondaryText }]}>
-                                                    {tFallback(t, 'common.none', 'None')}
-                                                </Text>
-                                            ) : (
+                                            {selectedProjectSections.length > 0 ? (
                                                 <View style={styles.projectSectionPillRow}>
                                                     {selectedProjectSections.map((section) => (
                                                         <View
@@ -1173,29 +1174,32 @@ export function ProjectDetailModal({
                                                         </View>
                                                     ))}
                                                 </View>
-                                            )}
+                                            ) : null}
                                         </View>
 
                                         <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                                            <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('projects.areaLabel')}</Text>
-                                            <TouchableOpacity
-                                                style={[styles.reviewButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
-                                                onPress={onOpenAreaPicker}
-                                            >
-                                                <Text style={{ color: tc.text }}>{selectedProjectAreaName}</Text>
-                                            </TouchableOpacity>
-                                        </View>
-
-                                        <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                                            <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('taskEdit.tagsLabel')}</Text>
-                                            <TouchableOpacity
-                                                style={[styles.reviewButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
-                                                onPress={onOpenTagPicker}
-                                            >
-                                                <Text style={{ color: tc.text }}>
-                                                    {selectedProject.tagIds?.length ? selectedProject.tagIds.join(', ') : t('common.none')}
-                                                </Text>
-                                            </TouchableOpacity>
+                                            <View style={styles.projectMetadataRow}>
+                                                <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('projects.areaLabel')}</Text>
+                                                <TouchableOpacity
+                                                    style={[styles.projectMetadataValueButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
+                                                    onPress={onOpenAreaPicker}
+                                                >
+                                                    <Text style={[styles.projectMetadataValueText, { color: tc.text }]} numberOfLines={1}>
+                                                        {selectedProjectAreaName}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                            <View style={[styles.projectMetadataRow, styles.projectMetadataRowDivider, { borderTopColor: tc.border }]}>
+                                                <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('taskEdit.tagsLabel')}</Text>
+                                                <TouchableOpacity
+                                                    style={[styles.projectMetadataValueButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
+                                                    onPress={onOpenTagPicker}
+                                                >
+                                                    <Text style={[styles.projectMetadataValueText, { color: tc.text }]} numberOfLines={1}>
+                                                        {selectedProject.tagIds?.length ? selectedProject.tagIds.join(', ') : t('common.none')}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
                                         </View>
 
                                         <View style={[styles.notesContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
@@ -1308,9 +1312,7 @@ export function ProjectDetailModal({
                                                     </TouchableOpacity>
                                                 </View>
                                             </View>
-                                            {((selectedProject.attachments || []) as Attachment[]).filter((attachment) => !attachment.deletedAt).length === 0 ? (
-                                                <Text style={[styles.helperText, { color: tc.secondaryText }]}>{t('common.none')}</Text>
-                                            ) : (
+                                            {((selectedProject.attachments || []) as Attachment[]).filter((attachment) => !attachment.deletedAt).length > 0 ? (
                                                 <View style={[styles.attachmentsList, { borderColor: tc.border, backgroundColor: tc.cardBg }]}>
                                                     {((selectedProject.attachments || []) as Attachment[])
                                                         .filter((attachment) => !attachment.deletedAt)
@@ -1355,83 +1357,92 @@ export function ProjectDetailModal({
                                                             );
                                                         })}
                                                 </View>
-                                            )}
+                                            ) : null}
                                         </View>
 
                                         <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                                            <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('taskEdit.dueDateLabel') || 'Due Date'}</Text>
-                                            <TouchableOpacity
-                                                style={[styles.reviewButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
-                                                onPress={() => onSetShowDueDatePicker(true)}
-                                            >
-                                                <Text style={{ color: tc.text }}>
-                                                    {formatProjectDate(selectedProject.dueDate, t('common.notSet'))}
-                                                </Text>
-                                            </TouchableOpacity>
-                                            {!!selectedProject.dueDate && (
-                                                <TouchableOpacity
-                                                    style={styles.clearReviewBtn}
-                                                    onPress={() => {
-                                                        updateProject(selectedProject.id, { dueDate: undefined });
-                                                        onSetSelectedProject({ ...selectedProject, dueDate: undefined });
-                                                    }}
-                                                >
-                                                    <Text style={[styles.clearReviewText, { color: tc.secondaryText }]}>{t('common.clear')}</Text>
-                                                </TouchableOpacity>
-                                            )}
-                                            {showDueDatePicker && (
+                                            <View style={styles.projectMetadataRow}>
+                                                <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('taskEdit.dueDateLabel') || 'Due Date'}</Text>
+                                                <View style={styles.projectMetadataControls}>
+                                                    <TouchableOpacity
+                                                        style={[styles.projectMetadataValueButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
+                                                        onPress={() => onSetShowDueDatePicker(true)}
+                                                    >
+                                                        <Text style={[styles.projectMetadataValueText, { color: tc.text }]} numberOfLines={1}>
+                                                            {formatProjectDate(selectedProject.dueDate, t('common.notSet'))}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                    {!!selectedProject.dueDate ? (
+                                                        <TouchableOpacity
+                                                            accessibilityRole="button"
+                                                            accessibilityLabel={`${t('common.clear')} ${t('taskEdit.dueDateLabel') || 'Due Date'}`}
+                                                            style={styles.projectMetadataClearButton}
+                                                            onPress={() => {
+                                                                updateProject(selectedProject.id, { dueDate: undefined });
+                                                                onSetSelectedProject({ ...selectedProject, dueDate: undefined });
+                                                            }}
+                                                        >
+                                                            <Ionicons name="close-circle-outline" size={19} color={tc.secondaryText} />
+                                                        </TouchableOpacity>
+                                                    ) : null}
+                                                </View>
+                                            </View>
+                                            {showDueDatePicker ? (
                                                 <DateTimePicker
                                                     value={safeParseDate(selectedProject.dueDate) ?? new Date()}
                                                     mode="date"
                                                     display="default"
-                                                        onChange={(_, date) => {
-                                                            onSetShowDueDatePicker(false);
-                                                            if (date) {
-                                                                const iso = date.toISOString().slice(0, 10);
-                                                                updateProject(selectedProject.id, { dueDate: iso });
-                                                                onSetSelectedProject({ ...selectedProject, dueDate: iso });
-                                                            }
-                                                        }}
-                                                />
-                                            )}
-                                        </View>
-
-                                        <View style={[styles.reviewContainer, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-                                            <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('projects.reviewAt') || 'Review Date'}</Text>
-                                            <TouchableOpacity
-                                                style={[styles.reviewButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
-                                                onPress={() => onSetShowReviewPicker(true)}
-                                            >
-                                                <Text style={{ color: tc.text }}>
-                                                    {formatProjectDate(selectedProject.reviewAt, t('common.notSet'))}
-                                                </Text>
-                                            </TouchableOpacity>
-                                            {!!selectedProject.reviewAt && (
-                                                <TouchableOpacity
-                                                    style={styles.clearReviewBtn}
-                                                    onPress={() => {
-                                                        updateProject(selectedProject.id, { reviewAt: undefined });
-                                                        onSetSelectedProject({ ...selectedProject, reviewAt: undefined });
+                                                    onChange={(_, date) => {
+                                                        onSetShowDueDatePicker(false);
+                                                        if (date) {
+                                                            const iso = date.toISOString().slice(0, 10);
+                                                            updateProject(selectedProject.id, { dueDate: iso });
+                                                            onSetSelectedProject({ ...selectedProject, dueDate: iso });
+                                                        }
                                                     }}
-                                                >
-                                                    <Text style={[styles.clearReviewText, { color: tc.secondaryText }]}>{t('common.clear')}</Text>
-                                                </TouchableOpacity>
-                                            )}
-                                            {showReviewPicker && (
+                                                />
+                                            ) : null}
+                                            <View style={[styles.projectMetadataRow, styles.projectMetadataRowDivider, { borderTopColor: tc.border }]}>
+                                                <Text style={[styles.reviewLabel, { color: tc.text }]}>{t('projects.reviewAt') || 'Review Date'}</Text>
+                                                <View style={styles.projectMetadataControls}>
+                                                    <TouchableOpacity
+                                                        style={[styles.projectMetadataValueButton, { backgroundColor: tc.inputBg, borderColor: tc.border }]}
+                                                        onPress={() => onSetShowReviewPicker(true)}
+                                                    >
+                                                        <Text style={[styles.projectMetadataValueText, { color: tc.text }]} numberOfLines={1}>
+                                                            {formatProjectDate(selectedProject.reviewAt, t('common.notSet'))}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                    {!!selectedProject.reviewAt ? (
+                                                        <TouchableOpacity
+                                                            accessibilityRole="button"
+                                                            accessibilityLabel={`${t('common.clear')} ${t('projects.reviewAt') || 'Review Date'}`}
+                                                            style={styles.projectMetadataClearButton}
+                                                            onPress={() => {
+                                                                updateProject(selectedProject.id, { reviewAt: undefined });
+                                                                onSetSelectedProject({ ...selectedProject, reviewAt: undefined });
+                                                            }}
+                                                        >
+                                                            <Ionicons name="close-circle-outline" size={19} color={tc.secondaryText} />
+                                                        </TouchableOpacity>
+                                                    ) : null}
+                                                </View>
+                                            </View>
+                                            {showReviewPicker ? (
                                                 <DateTimePicker
                                                     value={new Date(selectedProject.reviewAt || Date.now())}
                                                     mode="date"
                                                     display="default"
-                                                        onChange={(_, date) => {
-                                                            onSetShowReviewPicker(false);
-                                                            if (date) {
-                                                                const iso = date.toISOString();
-                                                                updateProject(selectedProject.id, { reviewAt: iso });
-                                                                onSetSelectedProject({ ...selectedProject, reviewAt: iso });
-                                                            }
-                                                        }}
+                                                    onChange={(_, date) => {
+                                                        onSetShowReviewPicker(false);
+                                                        if (date) {
+                                                            const iso = date.toISOString();
+                                                            updateProject(selectedProject.id, { reviewAt: iso });
+                                                            onSetSelectedProject({ ...selectedProject, reviewAt: iso });
+                                                        }
+                                                    }}
                                                 />
-                                            )}
+                                            ) : null}
                                         </View>
                                     </>
                                 )}
@@ -1482,6 +1493,17 @@ export function ProjectDetailModal({
                                         }}
                                         returnKeyType="done"
                                     />
+                                    <TouchableOpacity
+                                        accessibilityRole="button"
+                                        accessibilityLabel={projectActionsLabel}
+                                        accessibilityState={{ expanded: projectActionsVisible }}
+                                        onPress={() => setProjectActionsVisible(true)}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        style={[styles.projectHeaderActionButton, { backgroundColor: tc.filterBg, borderColor: tc.border }]}
+                                        testID="project-actions-menu-button"
+                                    >
+                                        <Ionicons name="ellipsis-horizontal" size={20} color={tc.secondaryText} />
+                                    </TouchableOpacity>
                                 </View>
                                 {projectTaskPinnedToolbar}
                                 {projectTaskSelectionBulkBar}
@@ -1531,6 +1553,87 @@ export function ProjectDetailModal({
                                     themeColors={tc}
                                     visible={projectSortModalVisible}
                                 />
+                                <ProjectOptionsModal
+                                    closeLabel={closeLabel}
+                                    onClose={() => setProjectViewOptionsVisible(false)}
+                                    title={moreOptionsLabel}
+                                    visible={projectViewOptionsVisible}
+                                    tc={tc}
+                                >
+                                    <ProjectOptionRow
+                                        icon="swap-vertical-outline"
+                                        label={sortLabel}
+                                        onPress={() => {
+                                            setProjectViewOptionsVisible(false);
+                                            openProjectTaskSort();
+                                        }}
+                                        selected={sortIsActive}
+                                        testID="project-view-sort-option"
+                                        value={t(`sort.${projectTaskSortBy}`)}
+                                        tc={tc}
+                                    />
+                                    {selectedProject.status !== 'archived' ? (
+                                        <ProjectOptionRow
+                                            icon={showCompletedTasks ? 'eye-outline' : 'eye-off-outline'}
+                                            label={showCompletedLabel}
+                                            onPress={() => {
+                                                setProjectViewOptionsVisible(false);
+                                                onToggleShowCompletedTasks();
+                                            }}
+                                            selected={showCompletedTasks}
+                                            testID="project-view-completed-option"
+                                            tc={tc}
+                                        />
+                                    ) : null}
+                                    {taskListOptions.enableProjectReorder && hasProjectTaskOrderTargets && !sortIsActive ? (
+                                        <ProjectOptionRow
+                                            icon={projectTaskReorderMode ? 'checkmark-circle-outline' : 'list-outline'}
+                                            label={projectTaskReorderMode ? doneButtonLabel : projectOrderLabel}
+                                            onPress={() => {
+                                                setProjectViewOptionsVisible(false);
+                                                toggleProjectTaskReorderMode();
+                                            }}
+                                            selected={projectTaskReorderMode}
+                                            testID="project-view-reorder-option"
+                                            tc={tc}
+                                        />
+                                    ) : null}
+                                </ProjectOptionsModal>
+                                <ProjectOptionsModal
+                                    closeLabel={closeLabel}
+                                    onClose={() => setProjectActionsVisible(false)}
+                                    title={projectActionsLabel}
+                                    visible={projectActionsVisible}
+                                    tc={tc}
+                                >
+                                    <ProjectOptionRow
+                                        icon="copy-outline"
+                                        label={t('projects.duplicate')}
+                                        onPress={() => {
+                                            setProjectActionsVisible(false);
+                                            onDuplicateProject(selectedProject.id);
+                                        }}
+                                        testID="project-duplicate-button"
+                                        tc={tc}
+                                    />
+                                    <ProjectOptionRow
+                                        description={selectedProject.status === 'archived' ? undefined : projectActionsHelpText}
+                                        icon={selectedProject.status === 'archived' ? 'refresh-outline' : 'archive-outline'}
+                                        label={selectedProject.status === 'archived' ? t('projects.reactivate') : t('projects.archive')}
+                                        onPress={() => {
+                                            setProjectActionsVisible(false);
+                                            if (selectedProject.status === 'archived') {
+                                                handleSetProjectStatus('active');
+                                            } else {
+                                                handleArchiveSelectedProject();
+                                            }
+                                        }}
+                                        testID={selectedProject.status === 'archived'
+                                            ? 'project-reactivate-button'
+                                            : 'project-archive-button'}
+                                        tc={tc}
+                                    />
+                                </ProjectOptionsModal>
                                 <ProjectSectionManagerModal
                                     addSection={addSection}
                                     canManage={canManageProjectSections}

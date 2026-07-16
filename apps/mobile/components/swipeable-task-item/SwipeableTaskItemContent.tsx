@@ -56,6 +56,7 @@ interface SwipeableTaskItemContentProps {
     onToggleFocus: () => void;
     projects: Project[];
     projectDeadlineLabel?: string;
+    footerContent?: ReactNode;
     recurrenceLabel?: string;
     sequenceCue?: ProjectSequenceTaskCue;
     areas: Area[];
@@ -99,6 +100,7 @@ export function SwipeableTaskItemContent({
     onToggleFocus,
     projects,
     projectDeadlineLabel,
+    footerContent,
     recurrenceLabel,
     sequenceCue,
     selectionMode,
@@ -481,6 +483,7 @@ export function SwipeableTaskItemContent({
                         {metaParts}
                     </View>
                 )}
+                {footerContent}
                 {!hideChecklistProgress && checklistProgress && (
                     <Pressable
                         onPress={onToggleChecklist}

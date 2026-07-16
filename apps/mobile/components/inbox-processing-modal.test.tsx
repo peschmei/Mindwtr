@@ -1594,7 +1594,7 @@ describe('InboxProcessingModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('does not allow delegation without an assignee name', () => {
+  it('allows delegation without an optional assignee name', () => {
     mockSettings.features = undefined;
     mockSettings.gtd.inboxProcessing = {};
     storeState.projects = [];
@@ -1626,14 +1626,20 @@ describe('InboxProcessingModal', () => {
       throw new Error('Next task button not found');
     }
 
-    expect(nextTaskButton.props.disabled).toBe(true);
+    expect(nextTaskButton.props.disabled).toBe(false);
 
     act(() => {
       nextTaskButton.props.onPress();
     });
 
-    expect(updateTask).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
+    expect(updateTask).toHaveBeenCalledWith(
+      'inbox-1',
+      expect.objectContaining({
+        status: 'waiting',
+        assignedTo: undefined,
+      })
+    );
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('shows a working state while AI clarify is running', async () => {
