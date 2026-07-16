@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { submitFeedbackSubmission } from '@mindwtr/core';
 import { useToast } from '@/contexts/toast-context';
 import { getDeviceLocale, resolveMobileAnalyticsVersion } from '@/lib/analytics-heartbeat';
-import { readRecentLogText } from '@/lib/app-log';
+import { collectFeedbackDiagnostics } from '@/lib/app-log';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { getPlayStoreUpdateInfoAsync } from '@/lib/play-store-updates';
 import { compareVersions, logSettingsError, logSettingsWarn } from '@/lib/settings-utils';
@@ -376,7 +376,7 @@ export function AboutSettingsScreen({
 
     const handleSubmitFeedback = async (input: FeedbackSubmitInput) => {
         const diagnosticsLogs = input.includeDiagnostics && input.category === 'bug'
-            ? await readRecentLogText()
+            ? await collectFeedbackDiagnostics()
             : null;
         await submitFeedbackSubmission(feedbackEndpointUrl, {
             category: input.category,

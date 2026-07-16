@@ -8,6 +8,8 @@ const storeState = {
   },
 };
 
+const breadcrumbState = vi.hoisted(() => ({ value: [] as string[] }));
+
 const legacyFileSystemMocks = vi.hoisted(() => {
   const files = new Map<string, string>();
   const directories = new Set<string>();
@@ -43,7 +45,7 @@ const legacyFileSystemMocks = vi.hoisted(() => {
 });
 
 vi.mock('@mindwtr/core', () => ({
-  getBreadcrumbs: () => [],
+  getBreadcrumbs: () => breadcrumbState.value,
   sanitizeForLog: (value: string) => value,
   sanitizeLogContext: (value?: Record<string, unknown>) => (
     value
@@ -82,7 +84,16 @@ vi.mock('expo-file-system', () => ({
 
 vi.mock('expo-file-system/legacy', () => legacyFileSystemMocks);
 
-import { clearLog, ensureLogFilePath, getLogPath, logInfo, setLogBackend, type LogBackend } from './app-log';
+import {
+  clearLog,
+  collectFeedbackDiagnostics,
+  ensureLogFilePath,
+  getLogPath,
+  logInfo,
+  readRecentLogText,
+  setLogBackend,
+  type LogBackend,
+} from './app-log';
 
 describe('app-log', () => {
   const backend: Required<LogBackend> = {
@@ -96,6 +107,7 @@ describe('app-log', () => {
     vi.stubGlobal('__DEV__', true);
     vi.clearAllMocks();
     legacyFileSystemMocks.reset();
+    breadcrumbState.value = [];
     storeState.settings = {
       diagnostics: {
         loggingEnabled: true,
@@ -133,6 +145,25 @@ describe('app-log', () => {
 
     await expect(logInfo('Forced', { scope: 'sync', force: true })).resolves.toBe('file://test.log');
     expect(backend.appendLogLine).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds a content-free feedback snapshot when debug logging is disabled', async () => {
+    setLogBackend(null);
+    vi.stubGlobal('__DEV__', false);
+    storeState.settings = {
+      diagnostics: {
+        loggingEnabled: false,
+      },
+    };
+    breadcrumbState.value = ['123:view:calendar'];
+
+    const diagnostics = await collectFeedbackDiagnostics();
+
+    expect(diagnostics).toContain('"scope":"feedback"');
+    expect(diagnostics).toContain('"message":"Feedback diagnostics snapshot"');
+    expect(diagnostics).toContain('"debugLoggingEnabled":"false"');
+    expect(diagnostics).toContain('123:view:calendar');
+    await expect(readRecentLogText()).resolves.toBeNull();
   });
 
   it('delegates log file helpers to the injected backend', async () => {

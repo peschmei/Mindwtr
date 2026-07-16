@@ -42,6 +42,7 @@ vi.mock('../../lib/sync-service', () => ({
 
 vi.mock('../../lib/app-log', () => ({
     clearLog: vi.fn().mockResolvedValue(undefined),
+    collectFeedbackDiagnostics: vi.fn().mockResolvedValue(null),
     getLogPath: vi.fn().mockResolvedValue('/tmp/mindwtr.log'),
 }));
 

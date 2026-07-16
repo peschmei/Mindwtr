@@ -9,6 +9,9 @@ import { unstable_settings as drawerLayoutSettings } from '../app/(drawer)/_layo
 import TabLayout from '../app/(drawer)/(tabs)/_layout';
 
 const mockRouterPush = vi.hoisted(() => vi.fn());
+const mockRestorableRoute = vi.hoisted(() => ({
+  current: null as null | { pathname: string; params?: Record<string, string> },
+}));
 const selectedAreaIdForNewTasksMock = vi.hoisted(() => ({ current: null as string | null | undefined }));
 const mockTaskSettings = vi.hoisted(() => ({
   appearance: {} as Record<string, unknown>,
@@ -28,7 +31,7 @@ const mockThemeTokens = vi.hoisted(() => ({
 }));
 
 vi.mock('expo-router', () => {
-  function RedirectMock(props: { href: string }) {
+  function RedirectMock(props: { href: unknown; withAnchor?: boolean }) {
     return React.createElement('Redirect', props);
   }
   function LinkMock({ children }: { children: React.ReactNode }) {
@@ -80,6 +83,10 @@ vi.mock('expo-router', () => {
     useRouter: () => ({ push: mockRouterPush }),
   };
 });
+
+vi.mock('@/lib/session-restore', () => ({
+  readRestorableRoute: vi.fn(async () => mockRestorableRoute.current),
+}));
 
 vi.mock('@react-navigation/native', () => ({
   CommonActions: {
@@ -356,6 +363,7 @@ const getMoreSheetMenu = (tree: ReturnType<typeof create>) => {
 describe('mobile tab quick capture', () => {
   beforeEach(() => {
     mockRouterPush.mockClear();
+    mockRestorableRoute.current = null;
     mockTaskSettings.appearance = {};
     mockTaskSettings.gtd.defaultCaptureMethod = 'text';
     mockTaskSettings.gtd.defaultAreaMode = undefined;
@@ -428,7 +436,7 @@ describe('mobile tab quick capture', () => {
     expect(getBottomTabTextLabels(tree)).toEqual(['Focus', 'Inbox', 'Review', 'Menu']);
   });
 
-  it('anchors restored stack screens above tabs so Android Back stays in the app', () => {
+  it('anchors restored stack screens above tabs so Back stays available', () => {
     expect(drawerLayoutSettings).toEqual({ anchor: '(tabs)' });
   });
 
@@ -460,6 +468,20 @@ describe('mobile tab quick capture', () => {
 
     const redirect = tree.root.find((node) => String(node.type) === 'Redirect');
     expect(redirect.props.href).toBe('/focus');
+    expect(redirect.props.withAnchor).toBe(true);
+  });
+
+  it('anchors a restored Calendar route so iOS Back survives a force-quit restart', async () => {
+    mockRestorableRoute.current = { pathname: '/calendar' };
+    let tree!: ReturnType<typeof create>;
+
+    await act(async () => {
+      tree = create(<Index />);
+    });
+
+    const redirect = tree.root.find((node) => String(node.type) === 'Redirect');
+    expect(redirect.props.href).toEqual({ pathname: '/calendar', params: {} });
+    expect(redirect.props.withAnchor).toBe(true);
   });
 
   it('increments the open request id without key-remounting the sheet', () => {

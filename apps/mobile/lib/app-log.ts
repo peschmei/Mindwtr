@@ -427,6 +427,26 @@ export async function readRecentLogText(maxChars = RECENT_LOG_MAX_CHARS): Promis
   }
 }
 
+export async function collectFeedbackDiagnostics(maxChars = RECENT_LOG_MAX_CHARS): Promise<string | null> {
+  const breadcrumbs = getBreadcrumbs();
+  // Feedback attachment is an explicit, one-time opt-in. Build the snapshot in
+  // memory so checking the box does not persist a log when detailed logging is
+  // disabled, while still explaining the recent app flow.
+  const snapshot = JSON.stringify({
+    ts: new Date().toISOString(),
+    level: 'info',
+    scope: 'feedback',
+    message: 'Feedback diagnostics snapshot',
+    context: sanitizeLogContext({
+      debugLoggingEnabled: isLoggingEnabled(),
+      breadcrumbCount: breadcrumbs.length,
+      breadcrumbs: breadcrumbs.length > 0 ? breadcrumbs.join(';') : 'none',
+    }),
+  });
+  const recentLogs = await readRecentLogText(maxChars);
+  return `${recentLogs ? `${recentLogs}\n` : ''}${snapshot}`.slice(-Math.max(1, maxChars));
+}
+
 export async function logError(
   error: unknown,
   context: { scope: string; url?: string; extra?: Record<string, unknown>; force?: boolean; message?: string }

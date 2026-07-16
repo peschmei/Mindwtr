@@ -45,7 +45,7 @@ import {
 import { reportError } from "../../lib/report-error";
 import { SyncService } from "../../lib/sync-service";
 import { isSupportedProxyUrl, normalizeProxyUrl, syncNativeProxyUrl } from "../../lib/tauri-http";
-import { clearLog, readRecentLogText } from "../../lib/app-log";
+import { clearLog, collectFeedbackDiagnostics } from "../../lib/app-log";
 import {
   markSettingsOpenTrace,
   wrapSettingsOpenImport,
@@ -586,7 +586,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
     useSettingsAboutPage({ t });
   const handleSubmitFeedback = useCallback(async (input: FeedbackSubmitInput) => {
     const diagnosticsLogs = input.includeDiagnostics && input.category === 'bug'
-      ? await readRecentLogText()
+      ? await collectFeedbackDiagnostics()
       : null;
     await submitFeedbackSubmission(FEEDBACK_ENDPOINT_URL, {
       category: input.category,
