@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { useState, type ComponentProps } from 'react';
 import type { Task } from '@mindwtr/core';
@@ -172,6 +173,51 @@ describe('TaskQuickActionMenu', () => {
         expect(props.onClose).not.toHaveBeenCalled();
     });
 
+    it('cancels a focused quick-date draft with one click', async () => {
+        const user = userEvent.setup();
+        const props = renderMenu({ task: { ...task, dueDate: '2026-04-12' } });
+        await user.click(screen.getByRole('menuitem', { name: 'Due Date…' }));
+
+        const panel = screen.getByRole('dialog', { name: 'Due Date' });
+        const input = within(panel).getByLabelText('Due Date');
+        await user.click(input);
+        await user.click(within(panel).getByRole('button', { name: 'Tomorrow' }));
+
+        const cancel = within(panel).getByRole('button', { name: 'Cancel' });
+        await user.pointer({ target: cancel, keys: '[MouseLeft>]' });
+
+        expect(document.activeElement).toBe(input);
+        expect(within(panel).getByRole('button', { name: 'Tomorrow' })).toBeInTheDocument();
+
+        await user.pointer({ target: cancel, keys: '[/MouseLeft]' });
+
+        expect(screen.queryByRole('dialog', { name: 'Due Date' })).not.toBeInTheDocument();
+        expect(props.onClose).not.toHaveBeenCalled();
+    });
+
+    it('saves a focused quick-date draft with one click', async () => {
+        const user = userEvent.setup();
+        const onUpdateTask = vi.fn(async () => ({ success: true as const }));
+        const props = renderMenu({ onUpdateTask });
+        await user.click(screen.getByRole('menuitem', { name: 'Due Date…' }));
+
+        const panel = screen.getByRole('dialog', { name: 'Due Date' });
+        const input = within(panel).getByLabelText('Due Date');
+        await user.click(input);
+        await user.click(within(panel).getByRole('button', { name: 'Tomorrow' }));
+
+        const save = within(panel).getByRole('button', { name: 'Save' });
+        await user.pointer({ target: save, keys: '[MouseLeft>]' });
+
+        expect(document.activeElement).toBe(input);
+        expect(within(panel).getByRole('button', { name: 'Tomorrow' })).toBeInTheDocument();
+
+        await user.pointer({ target: save, keys: '[/MouseLeft]' });
+
+        await waitFor(() => expect(onUpdateTask).toHaveBeenCalledTimes(1));
+        expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+
     it('saves a start date from the quick action panel', async () => {
         const onUpdateTask = vi.fn(async () => ({ success: true as const }));
         const props = renderMenu({ onUpdateTask });
@@ -193,7 +239,7 @@ describe('TaskQuickActionMenu', () => {
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('applies a due date from the mini calendar and closes the menu', async () => {
+    it('keeps a mini-calendar date in the draft until Save', async () => {
         const onUpdateTask = vi.fn(async () => ({ success: true as const }));
         const props = renderMenu({
             task: { ...task, dueDate: '2026-04-12' },
@@ -205,11 +251,18 @@ describe('TaskQuickActionMenu', () => {
         fireEvent.focus(within(panel).getByLabelText('Due Date'));
         fireEvent.click(within(panel).getByRole('button', { name: 'Due Date calendar' }));
 
-        fireEvent.pointerDown(screen.getByRole('button', { name: /April 19, 2026/i }));
+        const calendarDay = screen.getByRole('button', { name: /April 19, 2026/i });
+        fireEvent.pointerDown(calendarDay);
+        fireEvent.click(calendarDay);
 
-        await waitFor(() => {
-            expect(onUpdateTask).toHaveBeenCalledWith({ dueDate: '2026-04-19' });
-        });
+        expect(onUpdateTask).not.toHaveBeenCalled();
+        expect(props.onClose).not.toHaveBeenCalled();
+        expect(within(panel).getByLabelText('Due Date')).toHaveValue('04/19/2026');
+
+        fireEvent.click(within(panel).getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => expect(onUpdateTask).toHaveBeenCalledTimes(1));
+        expect(onUpdateTask).toHaveBeenCalledWith({ dueDate: '2026-04-19' });
         expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 

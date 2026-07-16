@@ -1,4 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import {
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type MouseEvent as ReactMouseEvent,
+    type ReactNode,
+    type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, Calendar, CalendarClock, ChevronRight, Copy, FolderPlus, MapPin, Pencil, Tag, Trash2 } from 'lucide-react';
 import {
@@ -68,6 +76,12 @@ const parseTokenInput = (value: string) => Array.from(new Set(
         .map((token) => token.trim())
         .filter(Boolean)
 ));
+
+const preserveFocusedDatePanelLayout = (event: ReactMouseEvent<HTMLDivElement>) => {
+    // Quick-date chips are focus-driven and sit above these actions. Keep them
+    // mounted through mouseup so the pressed button cannot move before click.
+    event.preventDefault();
+};
 
 const getDueDateDraft = (value?: string) => {
     if (!value) return { date: '', time: '' };
@@ -757,17 +771,16 @@ export function TaskQuickActionMenu({
                                     setStartDateDraft(value);
                                     if (!value) setStartTimeDraft('');
                                 }}
-                                onCalendarSelect={(value) => {
-                                    setStartDateDraft(value);
-                                    void handleStartDateSave(value, startTimeDraft);
-                                }}
                                 onClear={() => {
                                     setStartDateDraft('');
                                     setStartTimeDraft('');
                                 }}
                                 hasValue={Boolean(startDateDraft || startTimeDraft)}
                             />
-                            <div className="flex items-center justify-end gap-2">
+                            <div
+                                className="flex items-center justify-end gap-2"
+                                onMouseDown={preserveFocusedDatePanelLayout}
+                            >
                                 <Button
                                     variant="secondary"
                                     size="sm"
@@ -815,17 +828,16 @@ export function TaskQuickActionMenu({
                                     setDueDateDraft(value);
                                     if (!value) setDueTimeDraft('');
                                 }}
-                                onCalendarSelect={(value) => {
-                                    setDueDateDraft(value);
-                                    void handleDueDateSave(value, dueTimeDraft);
-                                }}
                                 onClear={() => {
                                     setDueDateDraft('');
                                     setDueTimeDraft('');
                                 }}
                                 hasValue={Boolean(dueDateDraft || dueTimeDraft)}
                             />
-                            <div className="flex items-center justify-end gap-2">
+                            <div
+                                className="flex items-center justify-end gap-2"
+                                onMouseDown={preserveFocusedDatePanelLayout}
+                            >
                                 <Button
                                     variant="secondary"
                                     size="sm"
@@ -873,17 +885,16 @@ export function TaskQuickActionMenu({
                                     setReviewDateDraft(value);
                                     if (!value) setReviewTimeDraft('');
                                 }}
-                                onCalendarSelect={(value) => {
-                                    setReviewDateDraft(value);
-                                    void handleReviewDateSave(value, reviewTimeDraft);
-                                }}
                                 onClear={() => {
                                     setReviewDateDraft('');
                                     setReviewTimeDraft('');
                                 }}
                                 hasValue={Boolean(reviewDateDraft || reviewTimeDraft)}
                             />
-                            <div className="flex items-center justify-end gap-2">
+                            <div
+                                className="flex items-center justify-end gap-2"
+                                onMouseDown={preserveFocusedDatePanelLayout}
+                            >
                                 <Button
                                     variant="secondary"
                                     size="sm"

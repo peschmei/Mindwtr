@@ -261,7 +261,6 @@ type DateFieldProps = {
     dateInputClassName: string;
     timeInput: ReactNode;
     onDateChange: (value: string) => void;
-    onCalendarSelect?: (value: string) => void;
     onClear: () => void;
     onDateOnly?: () => void;
     hasValue: boolean;
@@ -278,7 +277,6 @@ export function DateField({
     dateInputClassName,
     timeInput,
     onDateChange,
-    onCalendarSelect,
     onClear,
     onDateOnly,
     hasValue,
@@ -391,12 +389,10 @@ export function DateField({
         }
         onDateChange(parsed);
     };
-    const applyCalendarDate = (date: Date, closeAfterSelect: boolean) => {
+    const applyCalendarDate = (date: Date) => {
         const nextDateValue = safeFormatDate(date, 'yyyy-MM-dd');
         setDraftDateValue(formatDateInputDisplay(nextDateValue, dateInputOrder, calendarSystem));
         onDateChange(nextDateValue);
-        onCalendarSelect?.(nextDateValue);
-        if (!closeAfterSelect) return;
         setIsCalendarOpen(false);
     };
 
@@ -526,12 +522,8 @@ export function DateField({
                                     type="button"
                                     aria-label={fullDateFormatter.format(day)}
                                     aria-pressed={isSelected}
-                                    onPointerDown={(event) => {
-                                        event.preventDefault();
-                                        applyCalendarDate(day, true);
-                                    }}
-                                    onClick={() => applyCalendarDate(day, true)}
-                                    onDoubleClick={() => applyCalendarDate(day, true)}
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => applyCalendarDate(day)}
                                     className={[
                                         'h-8 rounded text-xs transition-colors',
                                         isSelected

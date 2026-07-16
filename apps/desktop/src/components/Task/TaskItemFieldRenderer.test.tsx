@@ -570,7 +570,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
         const dialog = getByRole('dialog', { name: 'Due Date calendar' });
 
-        fireEvent.pointerDown(within(dialog).getByRole('button', { name: /April 19, 2026/i }));
+        fireEvent.click(within(dialog).getByRole('button', { name: /April 19, 2026/i }));
 
         expect(setField).toHaveBeenCalledWith('dueDate', '2026-04-19');
         expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
@@ -624,7 +624,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         fireEvent.click(nextMonthButton);
 
         const updatedDialog = getByRole('dialog', { name: 'Due Date calendar' });
-        fireEvent.pointerDown(
+        fireEvent.click(
             within(updatedDialog).getByRole('button', { name: /May 19, 2026/i })
         );
         await new Promise((resolve) => window.setTimeout(resolve, 0));
