@@ -175,7 +175,7 @@ export function AreaSelector({
                 aria-haspopup="listbox"
                 aria-expanded={open}
             >
-                <span className="truncate">{selected?.name ?? placeholder}</span>
+                <span className={cn('truncate', !selected && 'text-muted-foreground/70')}>{selected?.name ?? placeholder}</span>
                 <ChevronDown className="h-3.5 w-3.5 opacity-70" />
             </button>
             {open && (

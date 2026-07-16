@@ -173,7 +173,7 @@ export function ProjectSelector({
                 aria-haspopup="listbox"
                 aria-expanded={open}
             >
-                <span className="truncate">{selected?.title ?? placeholder}</span>
+                <span className={cn('truncate', !selected && 'text-muted-foreground/70')}>{selected?.title ?? placeholder}</span>
                 <ChevronDown className="h-3.5 w-3.5 opacity-70" />
             </button>
             {open && (

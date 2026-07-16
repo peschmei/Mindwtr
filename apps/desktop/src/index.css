@@ -401,6 +401,17 @@
     overflow-y: hidden;
   }
 
+  /*
+   * Placeholders must read as hints, not entered values. Color alone is not
+   * enough: some themes (e.g. Nord) keep --muted-foreground close to
+   * --foreground, so the reduced opacity carries the distinction everywhere.
+   */
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.65;
+  }
+
   select {
     color-scheme: light;
   }
