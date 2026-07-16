@@ -4,6 +4,7 @@ import type { AppData, Task } from '@mindwtr/core';
 const {
   asyncStorageMock,
   localStorageMock,
+  logWarnMock,
   sqliteAdapterSaveTask,
   updateMobileWidgetFromDataMock,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
     setItem: vi.fn(),
     removeItem: vi.fn(),
   },
+  logWarnMock: vi.fn(),
   sqliteAdapterSaveTask: vi.fn(),
   updateMobileWidgetFromDataMock: vi.fn(),
 }));
@@ -36,6 +38,10 @@ vi.mock('react-native', async () => {
       ...actual.Platform,
       OS: 'android',
     },
+    NativeModules: {
+      ...actual.NativeModules,
+      OPSQLite: { install: vi.fn(() => true) },
+    },
   };
 });
 
@@ -50,7 +56,7 @@ vi.mock('./widget-service', () => ({
 
 vi.mock('./app-log', () => ({
   logError: vi.fn(),
-  logWarn: vi.fn(),
+  logWarn: logWarnMock,
   logInfo: vi.fn(),
 }));
 
@@ -72,6 +78,82 @@ describe('mobile storage adapter', () => {
       value: { localStorage: localStorageMock },
     });
   });
+
+  it('uses the JSON fallback without loading op-sqlite when the native module is absent', async () => {
+    const { NativeModules } = await import('react-native');
+    const nativeModules = NativeModules as typeof NativeModules & { OPSQLite?: unknown };
+    const installedModule = nativeModules.OPSQLite;
+    nativeModules.OPSQLite = null;
+    try {
+      const { mobileStorage } = await import('./storage-adapter');
+
+      await expect(mobileStorage.getData()).resolves.toEqual({
+        tasks: [],
+        projects: [],
+        sections: [],
+        areas: [],
+        people: [],
+        settings: {},
+      });
+      expect(logWarnMock).toHaveBeenCalledWith(
+        '[Storage] SQLite load failed, falling back to JSON backup',
+        expect.objectContaining({
+          scope: 'storage',
+          extra: expect.objectContaining({
+            error: 'Native SQLite module unavailable; rebuild or reinstall the app so op-sqlite is included',
+          }),
+        }),
+      );
+    } finally {
+      nativeModules.OPSQLite = installedModule;
+    }
+  }, 10_000);
+
+  it('coalesces a burst of calendar SQLite calls when the native module is unavailable', async () => {
+    const nativeModuleError = new Error('Base module not found. Did you do a pod install/clear the gradle cache?');
+    const initializeSqlite = vi.fn().mockRejectedValue(nativeModuleError);
+    const { getCalendarSyncEntry, __mobileStorageTestUtils } = await import('./storage-adapter');
+    __mobileStorageTestUtils.setSqliteInitializerForTests(initializeSqlite);
+    const calls = Array.from({ length: 8 }, (_, index) => (
+      getCalendarSyncEntry(`task-${index}`, 'android')
+    ));
+
+    const results = await Promise.allSettled(calls);
+
+    expect(results.every((result) => result.status === 'rejected')).toBe(true);
+    expect(results.map((result) => (
+      result.status === 'rejected' ? String(result.reason) : 'fulfilled'
+    ))).toEqual(Array(8).fill('Error: Base module not found. Did you do a pod install/clear the gradle cache?'));
+    expect(initializeSqlite).toHaveBeenCalledTimes(1);
+  }, 10_000);
+
+  it('allows one new SQLite initialization after the failure cooldown', async () => {
+    vi.useFakeTimers();
+    try {
+      const nativeModuleError = new Error('Base module not found. Did you do a pod install/clear the gradle cache?');
+      const getCalendarEntry = vi.fn().mockResolvedValue(undefined);
+      const initializeSqlite = vi.fn()
+        .mockRejectedValueOnce(nativeModuleError)
+        .mockResolvedValue({
+          adapter: { getCalendarSyncEntry: getCalendarEntry },
+          client: {},
+        });
+      const { getCalendarSyncEntry, __mobileStorageTestUtils } = await import('./storage-adapter');
+      __mobileStorageTestUtils.setSqliteInitializerForTests(initializeSqlite as never);
+
+      await expect(getCalendarSyncEntry('task-1', 'android')).rejects.toThrow('Base module not found');
+      await expect(getCalendarSyncEntry('task-2', 'android')).rejects.toThrow('Base module not found');
+      expect(initializeSqlite).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      await expect(getCalendarSyncEntry('task-3', 'android')).resolves.toBeUndefined();
+      expect(initializeSqlite).toHaveBeenCalledTimes(2);
+      expect(getCalendarEntry).toHaveBeenCalledWith('task-3', 'android');
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 10_000);
 
   it('refreshes the JSON startup backup after a successful incremental task save', async () => {
     const currentTask: Task = {

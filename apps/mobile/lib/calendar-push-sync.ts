@@ -26,6 +26,7 @@ import {
 
 import { logInfo, logWarn, logError } from './app-log';
 import {
+    ensureCalendarSyncStorageReady,
     getCalendarSyncEntry,
     upsertCalendarSyncEntry,
     deleteCalendarSyncEntry,
@@ -669,6 +670,24 @@ function createCalendarPushRunPorts(target: CalendarPushTarget): CalendarPushRun
     };
 }
 
+let calendarSyncStorageWarningShown = false;
+async function canUseCalendarSyncStorage(): Promise<boolean> {
+    try {
+        await ensureCalendarSyncStorageReady();
+        calendarSyncStorageWarningShown = false;
+        return true;
+    } catch (error) {
+        if (!calendarSyncStorageWarningShown) {
+            calendarSyncStorageWarningShown = true;
+            void logWarn('Calendar sync skipped because SQLite storage is unavailable', {
+                scope: 'calendar-push',
+                extra: { error: getCalendarErrorMessage(error) },
+            });
+        }
+        return false;
+    }
+}
+
 // MARK: - Full sync
 
 // Serialize all calendar writes so a full sync and the debounced partial sync
@@ -686,6 +705,7 @@ export const runFullCalendarSync = (): Promise<void> => enqueueCalendarSync(runF
 const runFullCalendarSyncUnsafe = async (): Promise<void> => {
     const enabled = await getCalendarPushEnabled();
     if (!enabled) return;
+    if (!await canUseCalendarSyncStorage()) return;
 
     const target = await resolveCalendarPushTarget();
     if (!target) return;
@@ -729,6 +749,7 @@ const runPartialCalendarSync = (taskIds: string[]): Promise<void> =>
 const runPartialCalendarSyncUnsafe = async (taskIds: string[]): Promise<void> => {
     const enabled = await getCalendarPushEnabled();
     if (!enabled) return;
+    if (!await canUseCalendarSyncStorage()) return;
 
     const target = await resolveCalendarPushTarget();
     if (!target) return;

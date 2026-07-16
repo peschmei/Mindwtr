@@ -39,6 +39,7 @@ interface SwipeableTaskItemContentProps {
     isDark: boolean;
     isHighlighted: boolean;
     isMultiSelected: boolean;
+    showFocusHighlight: boolean;
     language: string;
     localChecklist: Task['checklist'];
     interactionDisabled?: boolean;
@@ -81,6 +82,7 @@ export function SwipeableTaskItemContent({
     isDark,
     isHighlighted,
     isMultiSelected,
+    showFocusHighlight,
     interactionDisabled = false,
     language,
     localChecklist,
@@ -406,7 +408,7 @@ export function SwipeableTaskItemContent({
                     shadowRadius: 6,
                     elevation: 2,
                 },
-                canShowFocusToggle && task.isFocusedToday && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
+                showFocusHighlight && canShowFocusToggle && task.isFocusedToday && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
                 isHighlighted && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
                 selectionMode && { borderWidth: 2, borderColor: isMultiSelected ? tc.tint : tc.border },
             ]}

@@ -236,7 +236,7 @@ const getCaptureInnerStyleBySize = (tree: ReturnType<typeof create>) => {
   const view = tree.root.findAll((node) => {
     if (String(node.type) !== 'View') return false;
     const s = flattenStyle(node.props.style);
-    return s.width === 40 && s.height === 34;
+    return s.width === 48 && s.height === 38;
   })[0];
   if (!view) throw new Error('Capture button inner view not found');
   return flattenStyle(view.props.style);
@@ -486,7 +486,7 @@ describe('mobile tab quick capture', () => {
     expect(sheets[0]?.props.openRequestId).toBe(2);
   });
 
-  it('keeps the primary capture button compact in the bottom bar', () => {
+  it('keeps the primary capture button prominent and slightly lifted in the bottom bar', () => {
     let tree!: ReturnType<typeof create>;
 
     act(() => {
@@ -494,11 +494,14 @@ describe('mobile tab quick capture', () => {
     });
 
     expect(getCaptureButtonInnerStyle(tree)).toEqual(expect.objectContaining({
-      width: 40,
-      height: 34,
+      width: 48,
+      height: 38,
       borderRadius: 10,
     }));
-    expect(getCaptureIcon(tree).props.size).toBe(26);
+    expect(getCaptureIcon(tree).props.size).toBe(28);
+
+    const transform = flattenStyle(getAddTaskButton(tree).props.style).transform as { translateY: number }[];
+    expect(transform[0]?.translateY).toBe(-6);
   });
 
   it('boosts the capture FAB to the high-emphasis M3 primary role under Material', () => {

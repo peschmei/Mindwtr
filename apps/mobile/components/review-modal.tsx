@@ -222,8 +222,15 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
         </ScrollView>
     );
 
-    const renderTaskList = (taskList: Task[], footer?: React.ReactElement | null) => (
+    const renderTaskList = (
+        taskList: Task[],
+        footer?: React.ReactElement | null,
+        header?: React.ReactElement | null,
+        empty?: React.ReactElement | null,
+        testID?: string,
+    ) => (
         <FlatList
+            testID={testID}
             data={taskList}
             renderItem={({ item: task }) => (
                 <SwipeableTaskItem
@@ -237,7 +244,10 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
             )}
             keyExtractor={(task) => task.id}
             style={styles.taskList}
+            contentContainerStyle={styles.taskListContent}
+            ListHeaderComponent={header ?? null}
             ListFooterComponent={footer ?? null}
+            ListEmptyComponent={empty ?? null}
             initialNumToRender={12}
             maxToRenderPerBatch={12}
             windowSize={5}
@@ -415,8 +425,10 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
     const renderStepContent = () => {
         switch (currentStep) {
             case 'inbox':
-                return (
-                    <View style={styles.stepContent}>
+                return renderTaskList(
+                    inboxTasks,
+                    null,
+                    <>
                         <View style={styles.stepTitleRow}>
                             <Inbox size={22} color={tc.text} strokeWidth={2} />
                             <Text style={[styles.stepTitleInline, { color: tc.text }]}>
@@ -446,17 +458,14 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                                 </Text>
                             </TouchableOpacity>
                         )}
-                        {inboxTasks.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <CheckCircle2 size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
-                                <Text style={[styles.emptyText, { color: tc.secondaryText }]}>
-                                    {labels.inboxEmpty}
-                                </Text>
-                            </View>
-                        ) : (
-                            renderTaskList(inboxTasks)
-                        )}
-                    </View>
+                    </>,
+                    <View style={styles.emptyState}>
+                        <CheckCircle2 size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
+                        <Text style={[styles.emptyText, { color: tc.secondaryText }]}> 
+                            {labels.inboxEmpty}
+                        </Text>
+                    </View>,
+                    'review-step-scroll',
                 );
 
             case 'stale':

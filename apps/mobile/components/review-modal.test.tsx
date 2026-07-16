@@ -65,10 +65,16 @@ vi.mock('react-native', async () => {
     const actual = await vi.importActual<any>('react-native');
     return {
         ...actual,
-        FlatList: ({ data = [], renderItem, keyExtractor, ...props }: any) =>
-            React.createElement(
+        FlatList: ({ data = [], renderItem, keyExtractor, ...props }: any) => {
+            const renderComponent = (component: any) => {
+                if (!component) return null;
+                return React.isValidElement(component) ? component : React.createElement(component);
+            };
+            return React.createElement(
                 'FlatList',
                 props,
+                renderComponent(props.ListHeaderComponent),
+                data.length === 0 ? renderComponent(props.ListEmptyComponent) : null,
                 data.map((item: any, index: number) =>
                     React.createElement(
                         React.Fragment,
@@ -76,7 +82,9 @@ vi.mock('react-native', async () => {
                         renderItem?.({ item, index }),
                     ),
                 ),
-            ),
+                renderComponent(props.ListFooterComponent),
+            );
+        },
     };
 });
 
@@ -282,6 +290,21 @@ describe('ReviewModal', () => {
         });
 
         expect(hasText('Inbox')).toBe(true);
+    });
+
+    it('keeps the full Process Inbox step inside one vertical scroll surface', async () => {
+        let tree!: ReturnType<typeof create>;
+
+        await act(async () => {
+            tree = create(<ReviewModal visible onClose={vi.fn()} />);
+        });
+
+        const stepList = tree.root.findByProps({ testID: 'review-step-scroll' });
+        expect(stepList.props.ListHeaderComponent).toBeTruthy();
+        expect(stepList.props.scrollEnabled).not.toBe(false);
+        expect(stepList.props.contentContainerStyle).toEqual(
+            expect.objectContaining({ paddingBottom: 16 }),
+        );
     });
 
     it('does not let task chips navigate away mid-review', async () => {

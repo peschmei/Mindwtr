@@ -191,6 +191,9 @@ export const styles = StyleSheet.create({
     taskList: {
         flex: 1,
     },
+    taskListContent: {
+        paddingBottom: 16,
+    },
     scheduledSection: {
         marginTop: 12,
     },

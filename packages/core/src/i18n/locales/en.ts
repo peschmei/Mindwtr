@@ -600,7 +600,7 @@ export const en: Record<string, string> = {
         'projects.areaReorderFailed': 'Failed to reorder areas',
         'projects.moveProjectFailed': 'Failed to move project',
         'projects.taskOrder': 'Task order',
-        'projects.reorderTasks': 'Order',
+  'projects.reorderTasks': 'Reorder',
         'projects.taskReorderFailed': 'Failed to reorder tasks.',
         'projects.deletedAreaFilterResetAlert': 'The selected area was removed, so the filter was reset to All areas.',
         'projects.search': 'Search projects',

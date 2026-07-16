@@ -440,6 +440,48 @@ it('uses the shared rounded star treatment for focused tasks', () => {
   expect(star.props.strokeWidth).toBe(2);
 });
 
+it('can keep the focus star without adding a redundant focus outline', () => {
+  let tree!: renderer.ReactTestRenderer;
+  renderer.act(() => {
+    tree = renderer.create(
+      <SwipeableTaskItem
+        task={{
+          id: 'task-1',
+          title: 'File taxes',
+          status: 'next',
+          isFocusedToday: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        } as any}
+        isDark={true}
+        tc={{
+          taskItemBg: '#111111',
+          border: '#222222',
+          text: '#ffffff',
+          secondaryText: '#999999',
+          tint: '#3b82f6',
+          warning: '#f59e0b',
+        } as any}
+        onPress={vi.fn()}
+        onStatusChange={vi.fn()}
+        onDelete={vi.fn()}
+        showFocusToggle
+        showFocusHighlight={false}
+      />
+    );
+  });
+
+  const taskButton = tree.root.find((node) => (
+    node.props.accessibilityRole === 'button'
+    && typeof node.props.accessibilityLabel === 'string'
+    && node.props.accessibilityLabel.includes('File taxes')
+  ));
+  const style = flattenStyle(taskButton.props.style);
+  expect(style.borderColor).toBe('#222222');
+  expect(style.borderWidth).not.toBe(2);
+  expect(tree.root.find((node) => node.props.accessibilityLabel === 'Remove from focus')).toBeTruthy();
+});
+
   it('deletes immediately with an undo toast instead of a confirmation', async () => {
     const alertSpy = vi.spyOn(Alert, 'alert');
     const onDelete = vi.fn();

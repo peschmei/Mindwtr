@@ -29,6 +29,8 @@ import { COMPACT_NAV_TEXT_MAX_SCALE } from '@/constants/text-scale';
 type IconSymbolName = Parameters<typeof IconSymbol>[0]['name'];
 type Translate = (key: string) => string;
 
+const CAPTURE_BUTTON_LIFT = 4;
+
 type MoreDestination = {
   id: string;
   label: string;
@@ -451,14 +453,17 @@ function NativeTabBar({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={[
                 styles.nativeTabItem,
-                { paddingTop: iconLift, transform: [{ translateY: tabItemTopOffset }] },
+                {
+                  paddingTop: iconLift,
+                  transform: [{ translateY: tabItemTopOffset - CAPTURE_BUTTON_LIFT }],
+                },
               ]}
             >
               <View style={[styles.captureButtonInner, { backgroundColor: captureBg, borderRadius: captureRadius }]}>
                 {defaultAutoRecord ? (
-                  <Mic size={22} color={captureFg} strokeWidth={2.5} />
+                  <Mic size={24} color={captureFg} strokeWidth={2.5} />
                 ) : (
-                  <Plus size={26} color={captureFg} strokeWidth={3} />
+                  <Plus size={28} color={captureFg} strokeWidth={3} />
                 )}
               </View>
             </TouchableOpacity>
@@ -780,9 +785,9 @@ export default function TabLayout() {
             >
               <View style={[styles.captureButtonInner, { backgroundColor: captureBg, borderRadius: captureRadius }]}>
                 {defaultAutoRecord ? (
-                  <Mic size={22} color={captureFg} strokeWidth={2.5} />
+                  <Mic size={24} color={captureFg} strokeWidth={2.5} />
                 ) : (
-                  <Plus size={26} color={captureFg} strokeWidth={3} />
+                  <Plus size={28} color={captureFg} strokeWidth={3} />
                 )}
               </View>
             </TouchableOpacity>
@@ -928,10 +933,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    transform: [{ translateY: -CAPTURE_BUTTON_LIFT }],
   },
   captureButtonInner: {
-    width: 40,
-    height: 34,
+    width: 48,
+    height: 38,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',

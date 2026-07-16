@@ -1,5 +1,5 @@
 import { AppData, SqliteAdapter, searchAll, type SqliteClient, type CalendarSyncEntry, StorageAdapter, type Task } from '@mindwtr/core';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -17,6 +17,7 @@ const EMPTY_APP_DATA: AppData = { tasks: [], projects: [], sections: [], areas: 
 const SQLITE_STARTUP_TIMEOUT_MS = 3_500;
 const SQLITE_QUERY_TIMEOUT_MS = 2_500;
 const SQLITE_RETRY_COOLDOWN_MS = 60_000;
+const SQLITE_NATIVE_MODULE_UNAVAILABLE = 'Native SQLite module unavailable; rebuild or reinstall the app so op-sqlite is included';
 // Cap how long a read may block on in-flight writes so a stalled save (e.g. a
 // lost-promise native call) degrades to the existing fallback instead of hanging the UI.
 const SQLITE_WRITE_WAIT_TIMEOUT_MS = 3_000;
@@ -51,6 +52,7 @@ type SqliteState = {
 };
 
 let sqliteStatePromise: Promise<SqliteState> | null = null;
+let sqliteStateRetryAfter = 0;
 let sqliteOpenMode = 'unknown';
 let sqliteDbPath: string | null = null;
 let sqliteJournalDiagnostics: Record<string, string> | null = null;
@@ -237,8 +239,25 @@ const ensureSqliteDirectoryExists = (directoryUri: string): void => {
     }
 };
 
+const getSqliteUnavailableReason = (): string | null => {
+    if (Constants.appOwnership === 'expo') {
+        return 'SQLite disabled in Expo Go';
+    }
+    const hasInstalledProxy = Boolean(
+        (globalThis as typeof globalThis & { __OPSQLiteProxy?: object }).__OPSQLiteProxy
+    );
+    if (!hasInstalledProxy && NativeModules.OPSQLite == null) {
+        return SQLITE_NATIVE_MODULE_UNAVAILABLE;
+    }
+    return null;
+};
+
 const createSqliteClient = async (): Promise<SqliteClient> => {
     markStartupPhase('mobile.storage.sqlite_client.create:start');
+    const unavailableReason = getSqliteUnavailableReason();
+    if (unavailableReason) {
+        throw new Error(unavailableReason);
+    }
     // Use require to avoid async bundle loading in dev client.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { open } = require('@op-engineering/op-sqlite');
@@ -486,25 +505,40 @@ const initSqliteState = async (): Promise<SqliteState> => {
     return { adapter, client };
 };
 
+let initializeSqliteState = initSqliteState;
+
+const startSqliteStateInitialization = (): Promise<SqliteState> => {
+    const promise = initializeSqliteState().catch((error) => {
+        if (sqliteStatePromise === promise) {
+            sqliteStateRetryAfter = Date.now() + SQLITE_RETRY_COOLDOWN_MS;
+        }
+        throw error;
+    });
+    sqliteStatePromise = promise;
+    return promise;
+};
+
 const getSqliteState = async (): Promise<SqliteState> => {
-    if (!sqliteStatePromise) {
+    if (sqliteStatePromise && sqliteStateRetryAfter > 0 && Date.now() >= sqliteStateRetryAfter) {
+        markStartupPhase('mobile.storage.sqlite_state.retry_cooldown_elapsed');
+        sqliteStatePromise = null;
+        sqliteStateRetryAfter = 0;
+    }
+    let statePromise = sqliteStatePromise;
+    if (!statePromise) {
         markStartupPhase('mobile.storage.sqlite_state.cache_miss');
-        sqliteStatePromise = initSqliteState();
+        statePromise = startSqliteStateInitialization();
     } else {
         markStartupPhase('mobile.storage.sqlite_state.cache_hit');
     }
     try {
-        const state = await sqliteStatePromise;
+        const state = await statePromise;
+        sqliteStateRetryAfter = 0;
         markStartupPhase('mobile.storage.sqlite_state.ready');
         return state;
     } catch (error) {
-        markStartupPhase('mobile.storage.sqlite_state.retry_after_error');
-        sqliteStatePromise = null;
-        // Retry once on init failure to avoid a poisoned cache.
-        sqliteStatePromise = initSqliteState();
-        const state = await sqliteStatePromise;
-        markStartupPhase('mobile.storage.sqlite_state.ready_after_retry');
-        return state;
+        markStartupPhase('mobile.storage.sqlite_state.unavailable_during_cooldown');
+        throw error;
     }
 };
 
@@ -555,7 +589,8 @@ const createStorage = (): StorageAdapter => {
     }
 
     // Native platforms - use SQLite with AsyncStorage backup for widgets/rollback.
-    const shouldUseSqlite = Constants.appOwnership !== 'expo';
+    const sqliteUnavailableReason = getSqliteUnavailableReason();
+    const shouldUseSqlite = sqliteUnavailableReason == null;
 
     return {
         getData: async (): Promise<AppData> => {
@@ -596,7 +631,7 @@ const createStorage = (): StorageAdapter => {
             }
             try {
                 if (!shouldUseSqlite) {
-                    throw new Error('SQLite disabled in Expo Go');
+                    throw new Error(sqliteUnavailableReason ?? 'SQLite unavailable');
                 }
                 await measureStartupPhase(
                     'mobile.storage.get_data.await_sqlite_writes',
@@ -628,8 +663,8 @@ const createStorage = (): StorageAdapter => {
                 markStartupPhase('mobile.storage.get_data.end');
                 return data;
             } catch (e) {
-                if (__DEV__ && !shouldUseSqlite && String(e).includes('Expo Go')) {
-                    logStorageWarn('[Storage] SQLite disabled in Expo Go, falling back to JSON backup');
+                if (__DEV__ && sqliteUnavailableReason) {
+                    logStorageWarn(`[Storage] ${sqliteUnavailableReason}; falling back to JSON backup`);
                 } else {
                     logStorageWarn('[Storage] SQLite load failed, falling back to JSON backup', e);
                 }
@@ -647,7 +682,7 @@ const createStorage = (): StorageAdapter => {
                 const queuedWriteStartedAtMs = markQueuedWriteStarted();
                 try {
                     if (!shouldUseSqlite) {
-                        throw new Error('SQLite disabled in Expo Go');
+                        throw new Error(sqliteUnavailableReason ?? 'SQLite unavailable');
                     }
                     const { adapter } = await measureStartupPhase('mobile.storage.save_data.sqlite_get_state', async () => getSqliteState());
                     // Sample JS-thread congestion alongside the write: a setTimeout(0)
@@ -693,8 +728,8 @@ const createStorage = (): StorageAdapter => {
                     markStartupPhase('mobile.storage.save_data.end');
                 } catch (error) {
                     markPreferJsonBackup();
-                    if (__DEV__ && !shouldUseSqlite && String(error).includes('Expo Go')) {
-                        logStorageWarn('[Storage] SQLite disabled in Expo Go, keeping JSON backup');
+                    if (__DEV__ && sqliteUnavailableReason) {
+                        logStorageWarn(`[Storage] ${sqliteUnavailableReason}; keeping JSON backup`);
                     } else {
                         logStorageWarn('[Storage] SQLite save failed, keeping JSON backup', error);
                     }
@@ -717,7 +752,7 @@ const createStorage = (): StorageAdapter => {
                 const queuedWriteStartedAtMs = markQueuedWriteStarted();
                 try {
                     if (!shouldUseSqlite) {
-                        throw new Error('SQLite disabled in Expo Go');
+                        throw new Error(sqliteUnavailableReason ?? 'SQLite unavailable');
                     }
                     const { adapter } = await measureStartupPhase('mobile.storage.save_task.sqlite_get_state', async () => getSqliteState());
                     const writeStartedAt = Date.now();
@@ -838,6 +873,7 @@ export const __mobileStorageTestUtils = {
     reset: () => {
         saveQueue = Promise.resolve();
         sqliteStatePromise = null;
+        sqliteStateRetryAfter = 0;
         latestQueuedWriteStartedAtMs = 0;
         if (jsonBackupTimer) {
             clearTimeout(jsonBackupTimer);
@@ -845,15 +881,27 @@ export const __mobileStorageTestUtils = {
         }
         pendingJsonBackup = null;
         jsonBackupWriter = Promise.resolve();
+        initializeSqliteState = initSqliteState;
+        clearPreferJsonBackup();
+    },
+    setSqliteInitializerForTests: (initializer: () => Promise<SqliteState>) => {
+        sqliteStatePromise = null;
+        sqliteStateRetryAfter = 0;
+        initializeSqliteState = initializer;
         clearPreferJsonBackup();
     },
     setSqliteStateForTests: (state: { adapter: Pick<SqliteAdapter, 'saveTask'>; client: Partial<SqliteClient> }) => {
         sqliteStatePromise = Promise.resolve(state as SqliteState);
+        sqliteStateRetryAfter = 0;
         clearPreferJsonBackup();
     },
 };
 
 // MARK: - Calendar Sync SQLite helpers
+
+export const ensureCalendarSyncStorageReady = async (): Promise<void> => {
+    await getSqliteState();
+};
 
 export const getCalendarSyncEntry = async (taskId: string, platform: string) => {
     const { adapter } = await getSqliteState();

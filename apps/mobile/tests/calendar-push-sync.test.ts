@@ -36,6 +36,7 @@ const {
     mockUpsertCalendarSyncEntry,
     mockDeleteCalendarSyncEntry,
     mockGetAllCalendarSyncEntries,
+    mockEnsureCalendarSyncStorageReady,
     mockGetState,
     mockSubscribe,
     mockLogInfo,
@@ -70,6 +71,7 @@ const {
     mockUpsertCalendarSyncEntry: vi.fn(async () => {}),
     mockDeleteCalendarSyncEntry: vi.fn<(taskId: string, platform: string) => Promise<void>>(async () => {}),
     mockGetAllCalendarSyncEntries: vi.fn<(platform: string) => Promise<MockCalendarSyncEntry[]>>(async () => []),
+    mockEnsureCalendarSyncStorageReady: vi.fn(async () => {}),
     mockGetState: vi.fn<() => MockCalendarStoreState>(() => ({
         tasks: [],
         projects: [],
@@ -197,6 +199,7 @@ vi.mock('@mindwtr/core', async (importOriginal) => ({
 }));
 
 vi.mock('@/lib/storage-adapter', () => ({
+    ensureCalendarSyncStorageReady: mockEnsureCalendarSyncStorageReady,
     getCalendarSyncEntry: mockGetCalendarSyncEntry,
     upsertCalendarSyncEntry: mockUpsertCalendarSyncEntry,
     deleteCalendarSyncEntry: mockDeleteCalendarSyncEntry,
@@ -334,6 +337,7 @@ beforeEach(() => {
     // Default: no prior sync entries
     mockGetCalendarSyncEntry.mockResolvedValue(null);
     mockGetAllCalendarSyncEntries.mockResolvedValue([]);
+    mockEnsureCalendarSyncStorageReady.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -344,6 +348,31 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe('calendar sync storage readiness', () => {
+    it('skips the full calendar run before touching events when SQLite is unavailable', async () => {
+        mockGetItem.mockResolvedValueOnce('1');
+        setStoreTasks([makeTask()]);
+        mockEnsureCalendarSyncStorageReady.mockRejectedValue(
+            new Error('Native SQLite module unavailable; rebuild or reinstall the app so op-sqlite is included'),
+        );
+
+        await expect(runFullCalendarSync()).resolves.toBeUndefined();
+
+        expect(mockGetCalendarsAsync).not.toHaveBeenCalled();
+        expect(mockGetCalendarSyncEntry).not.toHaveBeenCalled();
+        expect(mockCreateEventAsync).not.toHaveBeenCalled();
+        expect(mockLogWarn).toHaveBeenCalledWith(
+            'Calendar sync skipped because SQLite storage is unavailable',
+            expect.objectContaining({
+                scope: 'calendar-push',
+                extra: expect.objectContaining({
+                    error: 'Native SQLite module unavailable; rebuild or reinstall the app so op-sqlite is included',
+                }),
+            }),
+        );
+    });
+});
 
 describe('ensureMindwtrCalendar', () => {
     it('returns the stored calendar ID when the calendar still exists', async () => {

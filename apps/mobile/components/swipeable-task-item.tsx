@@ -49,6 +49,8 @@ export interface SwipeableTaskItemProps {
     onToggleSelect?: () => void;
     isHighlighted?: boolean;
     showFocusToggle?: boolean;
+    /** Keep the focus star while allowing context-specific lists to avoid a redundant card outline. */
+    showFocusHighlight?: boolean;
     hideStatusBadge?: boolean;
     /** Render the status control as a compact icon button (no status-name label) for single-status lists */
     statusBadgeAsIcon?: boolean;
@@ -156,6 +158,7 @@ function SwipeableTaskItemInner({
     onToggleSelect,
     isHighlighted = false,
     showFocusToggle = false,
+    showFocusHighlight = true,
     hideStatusBadge = false,
     statusBadgeAsIcon = false,
     sequenceCue,
@@ -577,6 +580,7 @@ function SwipeableTaskItemInner({
             isDark={isDark}
             isHighlighted={isHighlighted}
             isMultiSelected={isMultiSelected}
+            showFocusHighlight={showFocusHighlight}
             interactionDisabled={interactionDisabled}
             language={language}
             localChecklist={localChecklist}

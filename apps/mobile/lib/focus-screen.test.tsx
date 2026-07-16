@@ -13,6 +13,16 @@ const asyncStorageMock = vi.hoisted(() => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
 }));
+const hapticsMock = vi.hoisted(() => ({
+  impactAsync: vi.fn().mockResolvedValue(undefined),
+  selectionAsync: vi.fn().mockResolvedValue(undefined),
+}));
+const dragMock = vi.hoisted(() => vi.fn());
+const backHandlerMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/hardware-back', () => ({
+  addHardwareBackPressListener: backHandlerMock,
+}));
 
 const makeTask = (id: string, overrides: Partial<Task> = {}): Task => ({
   id,
@@ -99,6 +109,11 @@ beforeEach(() => {
   asyncStorageMock.getItem.mockReturnValue(createImmediatePromise<string | null>(null));
   asyncStorageMock.setItem.mockReset();
   asyncStorageMock.setItem.mockResolvedValue(undefined);
+  hapticsMock.impactAsync.mockClear();
+  hapticsMock.selectionAsync.mockClear();
+  dragMock.mockClear();
+  backHandlerMock.mockReset();
+  backHandlerMock.mockReturnValue({ remove: vi.fn() });
 });
 
 afterEach(() => {
@@ -132,18 +147,25 @@ vi.mock('react-native-draggable-flatlist', async () => {
   const ReactModule = await import('react');
   return {
     __esModule: true,
+    ScaleDecorator: ({ children, ...props }: any) => ReactModule.createElement('ScaleDecorator', props, children),
     default: (props: any) => ReactModule.createElement(
       'DraggableFlatList',
       props,
-      (props.data ?? []).map((item: any) =>
+      (props.data ?? []).map((item: any, index: number) =>
         ReactModule.createElement(
           ReactModule.Fragment,
           { key: props.keyExtractor(item) },
-          props.renderItem({ item, drag: () => {}, isActive: false, getIndex: () => 0 }),
+          props.renderItem({ item, drag: dragMock, isActive: false, getIndex: () => index }),
         )),
     ),
   };
 });
+
+vi.mock('expo-haptics', () => ({
+  ImpactFeedbackStyle: { Light: 'light' },
+  impactAsync: hapticsMock.impactAsync,
+  selectionAsync: hapticsMock.selectionAsync,
+}));
 
 vi.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
@@ -174,6 +196,8 @@ vi.mock('../contexts/language-context', () => ({
         'energyLevel.high': 'High energy',
         'filters.label': 'Filters',
         'savedFilters.save': 'Save',
+        'projects.reorderTasks': 'Reorder',
+        'common.done': 'Done',
         'taskEdit.locationLabel': 'Location',
         'taskEdit.locationPlaceholder': 'e.g. Office',
       }[key] ?? key),
@@ -304,6 +328,10 @@ describe('FocusScreen', () => {
     expect(
       tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
     ).toEqual(['focused-next', 'another-next', 'plain-next']);
+
+    const focusedRow = tree.root.findAllByType(SwipeableTaskItem)
+      .find((node) => node.props.task.id === 'focused-next');
+    expect(focusedRow?.props.showFocusHighlight).toBe(false);
 
     expect(() =>
       tree.root.find((node) =>
@@ -591,6 +619,28 @@ describe('FocusScreen', () => {
     expect(style.height).toBe(44);
     expect(style.borderWidth).toBeUndefined();
     expect(style.backgroundColor).toBeUndefined();
+  });
+
+  it('uses a labeled, visually quiet entry point for reordering Today\'s Focus', () => {
+    storeState.tasks = [
+      makeTask('focus-a', { title: 'A', isFocusedToday: true, focusOrder: 0 }),
+      makeTask('focus-b', { title: 'B', isFocusedToday: true, focusOrder: 1 }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    const reorderButton = tree.root.findByProps({ testID: 'focus-reorder-toggle' });
+    const style = flattenStyle(reorderButton.props.style);
+
+    expect(textContent(reorderButton)).toContain('Reorder');
+    expect(style.minHeight).toBe(36);
+    expect(style.borderWidth).toBeUndefined();
+    expect(style.backgroundColor).toBeUndefined();
+    expect(reorderButton.props.accessibilityHint).toBeTruthy();
   });
 
   it('keeps Today\'s Focus visible when collapsing Next Actions', () => {
@@ -1579,12 +1629,19 @@ describe('FocusScreen', () => {
     ).toEqual(['focus-a', 'focus-b', 'focus-c']);
   });
 
-  it('commits a new Today\'s Focus order via reorderFocusedTasks after a drag', () => {
+  it('drags from the whole reorder row with context, lift haptics, and no handle divider', () => {
     storeState.tasks = [
-      makeTask('focus-a', { title: 'A', isFocusedToday: true, focusOrder: 0 }),
+      makeTask('focus-a', {
+        title: 'Client call',
+        projectId: 'project-a',
+        dueDate: '2026-04-17T14:00:00.000Z',
+        isFocusedToday: true,
+        focusOrder: 0,
+      }),
       makeTask('focus-b', { title: 'B', isFocusedToday: true, focusOrder: 1 }),
       makeTask('focus-c', { title: 'C', isFocusedToday: true, focusOrder: 2 }),
     ];
+    storeState.projects = [makeProject('project-a', { title: 'Launch' })];
 
     let tree!: ReturnType<typeof create>;
 
@@ -1599,7 +1656,19 @@ describe('FocusScreen', () => {
     const list = tree.root.findByProps({ testID: 'focus-reorder-list' });
     expect(list.props.data.map((task: Task) => task.id)).toEqual(['focus-a', 'focus-b', 'focus-c']);
 
+    const row = tree.root.findByProps({ testID: 'focus-reorder-row-focus-a' });
+    const handle = tree.root.findByProps({ testID: 'focus-reorder-handle-focus-a' });
+    const handleStyle = flattenStyle(handle.props.style);
+    expect(row.props.delayLongPress).toBe(180);
+    expect(row.props.onLongPress).toBe(dragMock);
+    expect(textContent(row)).toContain('Launch');
+    expect(handle.props.pointerEvents).toBe('none');
+    expect(handleStyle.borderLeftWidth).toBeUndefined();
+    expect(handleStyle.backgroundColor).toBeUndefined();
+
     act(() => {
+      list.props.onDragBegin(0);
+      list.props.onPlaceholderIndexChange(1);
       list.props.onDragEnd({
         data: [{ id: 'focus-c' }, { id: 'focus-a' }, { id: 'focus-b' }],
         from: 2,
@@ -1609,6 +1678,64 @@ describe('FocusScreen', () => {
 
     expect(storeState.reorderFocusedTasks).toHaveBeenCalledTimes(1);
     expect(storeState.reorderFocusedTasks).toHaveBeenCalledWith(['focus-c', 'focus-a', 'focus-b']);
+    expect(hapticsMock.impactAsync).toHaveBeenCalledTimes(2);
+    expect(hapticsMock.selectionAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes Move up and Move down accessibility actions in reorder mode', () => {
+    storeState.tasks = [
+      makeTask('focus-a', { title: 'A', isFocusedToday: true, focusOrder: 0 }),
+      makeTask('focus-b', { title: 'B', isFocusedToday: true, focusOrder: 1 }),
+      makeTask('focus-c', { title: 'C', isFocusedToday: true, focusOrder: 2 }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'focus-reorder-toggle' }).props.onPress();
+    });
+
+    const row = tree.root.findByProps({ testID: 'focus-reorder-row-focus-b' });
+    expect(row.props.accessibilityActions).toEqual([
+      { name: 'moveUp', label: 'Move up' },
+      { name: 'moveDown', label: 'Move down' },
+    ]);
+
+    act(() => {
+      row.props.onAccessibilityAction({ nativeEvent: { actionName: 'moveUp' } });
+    });
+
+    expect(storeState.reorderFocusedTasks).toHaveBeenCalledWith(['focus-b', 'focus-a', 'focus-c']);
+  });
+
+  it('uses Android Back as Done while the reorder screen is open', () => {
+    storeState.tasks = [
+      makeTask('focus-a', { title: 'A', isFocusedToday: true, focusOrder: 0 }),
+      makeTask('focus-b', { title: 'B', isFocusedToday: true, focusOrder: 1 }),
+    ];
+    let backHandler: (() => boolean) | undefined;
+    const remove = vi.fn();
+    backHandlerMock.mockImplementation((handler: () => boolean) => {
+      backHandler = handler;
+      return { remove };
+    });
+
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'focus-reorder-toggle' }).props.onPress();
+    });
+
+    expect(backHandler).toBeDefined();
+    act(() => {
+      expect(backHandler?.()).toBe(true);
+    });
+    expect(tree.root.findAllByProps({ testID: 'focus-reorder-list' })).toHaveLength(0);
   });
 
   it('hides the reorder toggle when a non-default Focus sort is active', () => {
