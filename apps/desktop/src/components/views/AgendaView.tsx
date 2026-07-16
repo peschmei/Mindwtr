@@ -706,9 +706,14 @@ export function AgendaView() {
         });
     }, [activeSavedFilter?.sortOrder, effectiveFocusSortBy, prioritiesEnabled, projects]);
 
-    // Default sort applies the manual drag order (focusOrder); any explicit or
-    // saved sort takes over and disables dragging.
-    const focusDragEnabled = effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY;
+    // Manual drag order (focusOrder) is a full-list concept, so dragging is only
+    // enabled when all three hold: the sort is the default (an explicit or saved
+    // sort takes over and disables dragging), no search query is active, and no
+    // filter criteria are active. Reordering a filtered/searched subset would
+    // write focusOrder indices 0..n over only the visible rows, leaving hidden
+    // focused tasks with stale positions that surprise-interleave once the filter
+    // clears. Clearing the filter is the correction path.
+    const focusDragEnabled = effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY && !hasTaskFilters;
     const focusedTasks = useMemo(() => {
         const focused = filteredActiveTasks.filter(t => t.isFocusedToday);
         return focusDragEnabled ? sortTasksByFocusOrder(focused) : sortBySavedPerspective(focused);

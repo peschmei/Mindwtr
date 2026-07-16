@@ -1765,4 +1765,36 @@ describe('FocusScreen', () => {
     expect(tree.root.findAllByProps({ testID: 'focus-reorder-toggle' })).toHaveLength(0);
   });
 
+  it('hides the reorder toggle when a filter narrows the Focus list', () => {
+    // Default sort, but a token filter narrows focusedTasks to a subset;
+    // reordering that subset would write focusOrder 0..n over only the visible
+    // rows, so the toggle must disappear until the filter clears.
+    storeState.tasks = [
+      makeTask('focus-a', { title: 'Work focus alpha', isFocusedToday: true, focusOrder: 0, contexts: ['@work'] }),
+      makeTask('focus-b', { title: 'Home focus beta', isFocusedToday: true, focusOrder: 1 }),
+    ];
+
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+
+    expect(tree.root.findAllByProps({ testID: 'focus-reorder-toggle' }).length).toBeGreaterThan(0);
+
+    act(() => {
+      findButtonByLabel(tree, 'Filters').props.onPress();
+    });
+    act(() => {
+      findButtonByText(tree, '@work').props.onPress();
+    });
+
+    // The @work task still renders as a non-empty Focus subset, but the toggle
+    // is gone because reordering a subset would corrupt the full focusOrder.
+    expect(
+      tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
+    ).toEqual(['focus-a']);
+    expect(tree.root.findAllByProps({ testID: 'focus-reorder-toggle' })).toHaveLength(0);
+  });
+
 });

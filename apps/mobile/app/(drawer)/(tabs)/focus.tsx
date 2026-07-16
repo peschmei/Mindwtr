@@ -985,7 +985,15 @@ export default function FocusScreen() {
       });
   }, [visibleProjects]);
 
-  const canReorderFocus = effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY && focusedTasks.length > 0;
+  // Manual focusOrder is a full-list concept. focusedTasks derives from
+  // filteredActiveTasks, so an active filter narrows it to a subset; reordering
+  // that subset writes focusOrder indices 0..n over only the visible rows and
+  // corrupts the positions of hidden focused tasks. Gate reorder on the default
+  // sort AND no active filter (the effect below also exits reorder mode if a
+  // filter engages mid-reorder). Clearing the filter is the correction path.
+  const canReorderFocus = effectiveFocusSortBy === DEFAULT_FOCUS_SORT_BY
+    && !hasFilters
+    && focusedTasks.length > 0;
 
   const enterFocusReorder = useCallback(() => {
     animateFocusReorderLayout();

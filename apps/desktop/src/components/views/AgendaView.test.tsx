@@ -1837,5 +1837,57 @@ describe('AgendaView', () => {
 
             expect(queryByRole('button', { name: 'Reorder' })).toBeNull();
         });
+
+        it('renders no drag affordance while a search query narrows the focus list', () => {
+            // Default sort, but a search query means focusedTasks is a subset;
+            // dragging must be gated so a reorder cannot write 0..n over the
+            // visible rows while hidden focused tasks keep their focusOrder.
+            const tasks = [focusTask('task-a', 'Focus A', 0), focusTask('task-b', 'Focus B', 1)];
+            useTaskStore.setState({
+                tasks,
+                _allTasks: tasks,
+                projects: [],
+                _allProjects: [],
+                areas: [],
+                _allAreas: [],
+                settings: {},
+                highlightTaskId: null,
+            });
+
+            const { getByRole, getByPlaceholderText, getByText, queryByRole, queryAllByRole } = renderAgenda();
+            expect(queryAllByRole('button', { name: 'Reorder' }).length).toBeGreaterThan(0);
+
+            fireEvent.click(getByRole('button', { name: /^Filters$/i }));
+            fireEvent.change(getByPlaceholderText('Search...'), { target: { value: 'Focus A' } });
+
+            // The matching row still renders, but without any drag handle.
+            expect(getByText('Focus A')).toBeInTheDocument();
+            expect(queryByRole('button', { name: 'Reorder' })).toBeNull();
+        });
+
+        it('renders no drag affordance while filter criteria narrow the focus list', () => {
+            const highEnergy: Task = { ...focusTask('task-a', 'Focus A', 0), energyLevel: 'high' };
+            const lowEnergy: Task = { ...focusTask('task-b', 'Focus B', 1), energyLevel: 'low' };
+            const tasks = [highEnergy, lowEnergy];
+            useTaskStore.setState({
+                tasks,
+                _allTasks: tasks,
+                projects: [],
+                _allProjects: [],
+                areas: [],
+                _allAreas: [],
+                settings: {},
+                highlightTaskId: null,
+            });
+
+            const { getByRole, getByText, queryByRole, queryAllByRole } = renderAgenda();
+            expect(queryAllByRole('button', { name: 'Reorder' }).length).toBeGreaterThan(0);
+
+            fireEvent.click(getByRole('button', { name: /^Filters$/i }));
+            fireEvent.click(getByRole('button', { name: 'High energy' }));
+
+            expect(getByText('Focus A')).toBeInTheDocument();
+            expect(queryByRole('button', { name: 'Reorder' })).toBeNull();
+        });
     });
 });
