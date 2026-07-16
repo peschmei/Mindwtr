@@ -26,7 +26,10 @@ tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = { version = "2", features = ["watch"] }
 tauri-plugin-global-shortcut = "2"
-tauri-plugin-http = "2"
+# Mindwtr uses header/token authentication, not cookie sessions. Keeping the
+# plugin's default `cookies` feature would create `.cookies` under the OS app
+# cache on every launch, which breaks Windows portable mode (#855).
+tauri-plugin-http = { version = "2", default-features = false, features = ["rustls-tls", "http2", "charset", "macos-system-configuration"] }
 tauri-plugin-shell = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-single-instance = "2"
