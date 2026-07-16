@@ -125,6 +125,73 @@ const FallbackTaskListWithoutEditTrigger = ({
     );
 };
 
+// A registered list scope that exposes focusSelected the way useListSelection
+// does: entering the list focuses the selected task's title toggle (#890).
+const ListWithFocusSelected = () => {
+    const { registerTaskListScope } = useKeybindings();
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const ids = ['1', '2'];
+
+    const selectNext = useCallback(() => {
+        setSelectedIndex((i) => Math.min(i + 1, ids.length - 1));
+    }, [ids.length]);
+    const selectPrev = useCallback(() => {
+        setSelectedIndex((i) => Math.max(i - 1, 0));
+    }, []);
+    const focusSelected = useCallback(() => {
+        const id = ids[selectedIndex];
+        const toggle = document.querySelector(
+            `[data-task-id="${id}"] [data-task-view-toggle]`,
+        ) as HTMLElement | null;
+        toggle?.focus();
+        return true;
+    }, [ids, selectedIndex]);
+
+    useEffect(() => {
+        registerTaskListScope({
+            kind: 'taskList',
+            selectNext,
+            selectPrev,
+            selectFirst: vi.fn(),
+            selectLast: vi.fn(),
+            editSelected: vi.fn(),
+            toggleDoneSelected: vi.fn(),
+            deleteSelected: vi.fn(),
+            focusSelected,
+        });
+        return () => registerTaskListScope(null);
+    }, [registerTaskListScope, selectNext, selectPrev, focusSelected]);
+
+    return (
+        <div data-main-content tabIndex={-1}>
+            {ids.map((id, index) => (
+                <div key={id} data-task-id={id} className={index === selectedIndex ? 'ring-2' : ''}>
+                    <button type="button" data-task-view-toggle aria-expanded={false}>
+                        Task {id}
+                    </button>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// A view without a registered scope (like the Focus/Agenda view), where
+// selection falls back to querying visible task cards (#890).
+const FallbackFocusList = () => (
+    <div data-main-content tabIndex={-1}>
+        <div data-task-id="1" ref={setVisibleRect}>
+            <button type="button" data-task-view-toggle aria-expanded={false}>
+                Task 1
+            </button>
+        </div>
+        <div data-task-id="2" ref={setVisibleRect}>
+            <button type="button" data-task-view-toggle aria-expanded={false}>
+                Task 2
+            </button>
+        </div>
+    </div>
+);
+
 describe('KeybindingProvider (vim)', () => {
     beforeEach(() => {
         useUiStore.setState({ editingTaskId: null });
@@ -668,6 +735,43 @@ describe('KeybindingProvider (vim)', () => {
         fireEvent.keyDown(window, { key: 'g' });
         fireEvent.keyDown(window, { key: 'e' });
         expect(onEditTask1).toHaveBeenCalledTimes(1);
+    });
+
+    it('ArrowRight focuses the selected task title, not the list container (#890)', () => {
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="inbox" onNavigate={vi.fn()}>
+                    <ListWithFocusSelected />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        fireEvent.keyDown(window, { key: 'ArrowRight' });
+
+        const toggles = document.querySelectorAll('[data-task-view-toggle]');
+        expect(document.activeElement).toBe(toggles[0]);
+        expect(document.activeElement).not.toBe(document.querySelector('[data-main-content]'));
+    });
+
+    it('Focus view: ArrowRight selects the first task and the next ArrowDown moves exactly one row (#890)', () => {
+        render(
+            <LanguageProvider>
+                <KeybindingProvider currentView="agenda" onNavigate={vi.fn()}>
+                    <FallbackFocusList />
+                </KeybindingProvider>
+            </LanguageProvider>
+        );
+
+        const toggles = document.querySelectorAll('[data-task-view-toggle]');
+
+        // Entering the list highlights/focuses the FIRST task — not the
+        // container, and not off-by-one to the second row.
+        fireEvent.keyDown(window, { key: 'ArrowRight' });
+        expect(document.activeElement).toBe(toggles[0]);
+
+        // The first ArrowDown then moves exactly one row.
+        fireEvent.keyDown(window, { key: 'ArrowDown' });
+        expect(document.activeElement).toBe(toggles[1]);
     });
 
     it('falls back to clickable task row when explicit edit trigger is absent', () => {

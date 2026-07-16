@@ -37,6 +37,12 @@ export interface TaskListScope {
     deleteSelected: () => void;
     setStatusSelected?: (status: TaskStatus) => void;
     focusAddInput?: () => boolean;
+    // Move DOM focus onto the currently selected task's title and render its
+    // highlight, so entering the list from the sidebar (ArrowRight / `l`)
+    // selects a task instead of focusing the scroll container (#890). Returns
+    // false when there is no task to select so the caller can fall back to
+    // focusing the main-content container.
+    focusSelected?: () => boolean;
 }
 
 // Status chord: `s` then a letter sets the selected task's status (#860).
@@ -551,6 +557,11 @@ export function KeybindingProvider({
         toggleDoneSelected: fallbackToggleDoneSelected,
         deleteSelected: fallbackDeleteSelected,
         setStatusSelected: fallbackSetStatusSelected,
+        // Entering the list from the sidebar activates the current selection
+        // (previously selected task, else the first) and focuses its title —
+        // the same path j/k navigation uses — so the row renders selected and
+        // the next Arrow moves exactly one row (#890).
+        focusSelected: () => pickFallbackTaskElement() !== null,
     }), [
         fallbackDeleteSelected,
         fallbackEditSelected,
@@ -562,11 +573,21 @@ export function KeybindingProvider({
         fallbackSelectPrev,
         fallbackSetStatusSelected,
         fallbackToggleDoneSelected,
+        pickFallbackTaskElement,
     ]);
 
     const getActiveScope = useCallback((): TaskListScope => {
         return scopeRef.current ?? fallbackTaskListScope;
     }, [fallbackTaskListScope]);
+
+    // Entering the list from the sidebar (ArrowRight / `l`) should focus the
+    // selected task, not the scroll container — focusing the container painted
+    // its focus ring around the whole list and left no task visibly selected
+    // (#890). Fall back to the container only when there is no task to select.
+    const focusActiveSelection = useCallback((): boolean => {
+        if (getActiveScope().focusSelected?.()) return true;
+        return focusMainContent();
+    }, [getActiveScope]);
 
     useEffect(() => {
         fallbackSelectedTaskIdRef.current = null;
@@ -686,7 +707,7 @@ export function KeybindingProvider({
                     }
                     break;
                 case 'l':
-                    if (focusMainContent()) {
+                    if (focusActiveSelection()) {
                         e.preventDefault();
                     }
                     break;
@@ -791,7 +812,7 @@ export function KeybindingProvider({
                     }
                     break;
                 case 'l':
-                    if (focusMainContent()) {
+                    if (focusActiveSelection()) {
                         e.preventDefault();
                     }
                     break;
@@ -1034,7 +1055,7 @@ export function KeybindingProvider({
                     }
                 }
                 if (style !== 'emacs' && e.key === 'ArrowRight') {
-                    if (focusMainContent()) {
+                    if (focusActiveSelection()) {
                         e.preventDefault();
                         return;
                     }
@@ -1096,6 +1117,7 @@ export function KeybindingProvider({
         toggleDensity,
         currentView,
         getActiveScope,
+        focusActiveSelection,
         applyAreaFilterShortcut,
     ]);
 

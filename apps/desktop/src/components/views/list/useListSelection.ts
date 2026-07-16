@@ -43,6 +43,7 @@ type TaskListScope = {
     deleteSelected: () => void;
     setStatusSelected: (status: TaskStatus) => void;
     focusAddInput: () => boolean;
+    focusSelected: () => boolean;
 };
 
 type UseListSelectionOptions = {
@@ -344,6 +345,26 @@ export function useListSelection({
         toggle?.click();
     }, [filteredTasks, selectedIndex]);
 
+    // Entering the list from the sidebar (ArrowRight / `l`) must land DOM focus
+    // on the selected task's title so its highlight shows and the container
+    // does not paint a focus ring around the whole list (#890). The row is
+    // already highlighted via `selectedIndex`; here we move focus and scroll it
+    // into view. Returns false only when there is nothing to select.
+    const focusSelected = useCallback((): boolean => {
+        if (filteredTasks.length === 0) return false;
+        const index = selectedIndex >= 0 && selectedIndex < filteredTasks.length
+            ? selectedIndex
+            : 0;
+        if (index !== selectedIndex) setSelectedIndex(index);
+        requestSelectionScroll();
+        const task = filteredTasks[index];
+        const toggle = document.querySelector(
+            `[data-task-id="${task.id}"] [data-task-view-toggle]`,
+        ) as HTMLElement | null;
+        if (toggle && typeof toggle.focus === 'function') toggle.focus();
+        return true;
+    }, [filteredTasks, requestSelectionScroll, selectedIndex]);
+
     const toggleDoneSelected = useCallback(() => {
         const task = filteredTasks[selectedIndex];
         if (!task) return;
@@ -488,6 +509,7 @@ export function useListSelection({
                 addInputRef.current.focus();
                 return true;
             },
+            focusSelected,
         });
 
         return () => registerTaskListScope(null);
@@ -495,6 +517,7 @@ export function useListSelection({
         addInputRef,
         deleteSelected,
         editSelected,
+        focusSelected,
         isProcessing,
         openQuickActionsSelected,
         openSelected,

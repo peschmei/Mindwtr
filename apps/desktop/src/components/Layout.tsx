@@ -792,7 +792,10 @@ export function Layout({ children, currentView, onViewChange, onOpenSyncSettings
             {/* Main Content */}
             <main
                 id="main-content"
-                className="flex-1 overflow-auto"
+                // tabIndex=-1 makes this a programmatic focus target for the
+                // "enter list" fallback; it is never keyboard-tabbable, so it
+                // must not paint a focus ring around the whole list (#890).
+                className="flex-1 overflow-auto focus:outline-none"
                 data-main-content
                 tabIndex={-1}
                 role="main"
