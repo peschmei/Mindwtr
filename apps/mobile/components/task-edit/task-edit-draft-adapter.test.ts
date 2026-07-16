@@ -1,60 +1,171 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '@mindwtr/core';
 
-import { applyTaskDraftDateFieldUpdates } from './task-edit-draft-adapter';
+import {
+    applyTaskEditUpdate,
+    buildTaskEditUpdatePatch,
+    createTaskEditDraft,
+    isTaskEditDraftDirty,
+    projectTaskEditDraft,
+} from './task-edit-draft-adapter';
 
 const baseTask: Task = {
     id: 'task-1',
     title: 'Plan launch',
     status: 'next',
-    tags: [],
-    contexts: [],
+    tags: ['#launch'],
+    contexts: ['@office'],
     startTime: '2026-07-14T09:00:00.000Z',
     dueDate: '2026-07-18',
     reviewAt: '2026-07-16',
     relativeStartOffset: { amount: -4, unit: 'day' },
+    projectId: 'project-1',
+    sectionId: 'section-1',
+    checklist: [{ id: 'check-1', title: 'Invite reviewers', isCompleted: false }],
+    attachments: [{
+        id: 'attachment-1',
+        kind: 'link',
+        uri: 'https://example.com/brief',
+        title: 'Brief',
+        createdAt: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-07-01T00:00:00.000Z',
+    }],
     createdAt: '2026-07-01T00:00:00.000Z',
     updatedAt: '2026-07-14T00:00:00.000Z',
 };
 
-describe('applyTaskDraftDateFieldUpdates', () => {
-    it('leaves non-date edits on the zero-churn legacy path', () => {
-        const next = { ...baseTask, title: 'Plan launch v2' };
+describe('mobile task edit draft', () => {
+    it('owns one fresh TaskDraft while projecting the Task shape existing fields consume', () => {
+        const state = createTaskEditDraft(baseTask);
 
-        expect(applyTaskDraftDateFieldUpdates(baseTask, next, baseTask)).toBe(next);
+        expect(state.draft).toMatchObject({
+            title: 'Plan launch',
+            projectId: 'project-1',
+            sectionId: 'section-1',
+            contexts: '@office',
+        });
+        expect(projectTaskEditDraft(state, baseTask)).toMatchObject({
+            id: 'task-1',
+            title: 'Plan launch',
+            contexts: ['@office'],
+            tags: ['#launch'],
+            checklist: baseTask.checklist,
+            attachments: baseTask.attachments,
+        });
+        expect(isTaskEditDraftDirty(state, baseTask)).toBe(false);
     });
 
-    it('applies an atomic date batch through TaskDraft without changing its legacy shape', () => {
-        const next: Partial<Task> = {
+    it('routes a legacy field update through TaskDraft cascades', () => {
+        const focusedTask: Task = {
             ...baseTask,
-            dueDate: '2026-07-20',
-            startTime: '2026-07-17',
-            relativeStartOffset: { amount: -3, unit: 'day' },
+            status: 'done',
+            isFocusedToday: true,
+            completedAt: '2026-07-14T12:00:00.000Z',
         };
+        const state = createTaskEditDraft(focusedTask);
 
-        expect(applyTaskDraftDateFieldUpdates(baseTask, next, baseTask)).toEqual(next);
-    });
+        const next = applyTaskEditUpdate(state, focusedTask, (current) => ({
+            ...current,
+            status: 'inbox',
+        }));
 
-    it('maps TaskDraft empty date values back to explicit legacy clears', () => {
-        const next: Partial<Task> = {
-            ...baseTask,
-            startTime: undefined,
-            dueDate: undefined,
-            reviewAt: undefined,
-            relativeStartOffset: undefined,
-        };
-
-        expect(applyTaskDraftDateFieldUpdates(baseTask, next, baseTask)).toMatchObject({
-            startTime: undefined,
-            dueDate: undefined,
-            reviewAt: undefined,
-            relativeStartOffset: undefined,
+        expect(next).not.toBe(state);
+        expect(next.draft.status).toBe('inbox');
+        expect(next.draft.focusedToday).toBe(false);
+        expect(next.draft.completedAt).toBe('');
+        expect(projectTaskEditDraft(next, focusedTask)).toMatchObject({
+            status: 'inbox',
+            isFocusedToday: false,
+            completedAt: undefined,
+        });
+        expect(focusedTask).toMatchObject({
+            status: 'done',
+            isFocusedToday: true,
         });
     });
 
-    it('falls back unchanged before an editor base task exists', () => {
-        const next: Partial<Task> = { dueDate: '2026-07-20' };
+    it('preserves accumulated draft edits across sequential partial updates', () => {
+        const described = applyTaskEditUpdate(createTaskEditDraft(baseTask), baseTask, {
+            description: 'Revised brief',
+        });
 
-        expect(applyTaskDraftDateFieldUpdates({}, next, null)).toBe(next);
+        const located = applyTaskEditUpdate(described, baseTask, {
+            location: 'Studio',
+        });
+
+        expect(projectTaskEditDraft(located, baseTask)).toMatchObject({
+            description: 'Revised brief',
+            location: 'Studio',
+        });
+    });
+
+    it('serializes recurrence and Container changes through the shared TaskDraft patch', () => {
+        const recurringTask: Task = {
+            ...baseTask,
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'strict',
+                completedOccurrences: 2,
+            },
+        };
+        const state = applyTaskEditUpdate(createTaskEditDraft(recurringTask), recurringTask, (current) => ({
+            ...current,
+            projectId: undefined,
+            sectionId: undefined,
+            areaId: 'area-1',
+            location: '  Studio  ',
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'fluid',
+                byDay: ['MO', 'WE'],
+                rrule: 'FREQ=WEEKLY;BYDAY=MO,WE;COUNT=5',
+            },
+        }));
+
+        const patch = buildTaskEditUpdatePatch(state, recurringTask, {
+            title: '  Plan launch v2  ',
+            description: 'Revised brief',
+        });
+
+        expect(patch).toMatchObject({
+            title: 'Plan launch v2',
+            description: 'Revised brief',
+            projectId: undefined,
+            sectionId: undefined,
+            areaId: 'area-1',
+            location: 'Studio',
+            recurrence: {
+                rule: 'weekly',
+                strategy: 'fluid',
+                byDay: ['MO', 'WE'],
+                count: 5,
+                completedOccurrences: 2,
+                rrule: 'FREQ=WEEKLY;BYDAY=MO,WE;COUNT=5',
+            },
+        });
+        expect(patch).not.toHaveProperty('startTime');
+        expect(patch).not.toHaveProperty('dueDate');
+        expect(patch).not.toHaveProperty('attachments');
+        expect(patch).not.toHaveProperty('checklist');
+    });
+
+    it('keeps checklist and attachment buffers independent from scalar draft fields', () => {
+        const removedAt = '2026-07-15T00:00:00.000Z';
+        const state = applyTaskEditUpdate(createTaskEditDraft(baseTask), baseTask, (current) => ({
+            ...current,
+            checklist: [],
+            attachments: current.attachments?.map((attachment) => ({
+                ...attachment,
+                deletedAt: removedAt,
+            })),
+        }));
+
+        expect(isTaskEditDraftDirty(state, baseTask)).toBe(true);
+        expect(state.draft.description).toBe('');
+        expect(buildTaskEditUpdatePatch(state, baseTask)).toMatchObject({
+            checklist: [],
+            attachments: [{ id: 'attachment-1', deletedAt: removedAt }],
+        });
+        expect(buildTaskEditUpdatePatch(state, baseTask)).not.toHaveProperty('description');
     });
 });

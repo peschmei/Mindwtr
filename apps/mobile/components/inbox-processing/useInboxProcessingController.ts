@@ -8,22 +8,30 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
+  advanceProcessInboxSession,
   addBreadcrumb,
+  createProcessInboxSession,
   DEFAULT_PROJECT_COLOR,
   collectTaskTokenUsage,
   createAIProvider,
   filterProjectsBySelectedArea,
+  getProcessInboxCurrentCandidate,
+  getProcessInboxRemainingCandidates,
   hasTimeComponent,
   isTaskInActiveProject,
   normalizeClockTimeInput,
   resolveAreaFilter,
   safeFormatDate,
   safeParseDate,
+  selectProcessInboxCandidates,
+  skipCurrentProcessInboxTask,
+  startProcessInboxSession,
   tFallback,
   resolveAutoTextDirection,
   taskMatchesAreaFilter,
   useTaskStore,
   type AIProviderId,
+  type ProcessInboxSession,
   type Task,
   type TaskEditorFieldId,
   type TaskPriority,
@@ -73,13 +81,14 @@ export function useInboxProcessingController({
   const tc = useThemeColors();
   const insets = useSafeAreaInsets();
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [processingSession, setProcessingSession] = useState<ProcessInboxSession>(
+    () => createProcessInboxSession(),
+  );
   const [actionabilityChoice, setActionabilityChoice] = useState<ActionabilityChoice>(null);
   const [twoMinuteChoice, setTwoMinuteChoice] = useState<TwoMinuteChoice>(null);
   const [executionChoice, setExecutionChoice] = useState<ExecutionChoice>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [newContext, setNewContext] = useState('');
-  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
   const [delegateWho, setDelegateWho] = useState('');
   const [delegateFollowUpDate, setDelegateFollowUpDate] = useState<Date | null>(null);
   const [delegateFollowUpDateOnly, setDelegateFollowUpDateOnly] = useState(false);
@@ -183,24 +192,22 @@ export function useInboxProcessingController({
     [settings?.filters?.areaId, areas],
   );
   const inboxTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      if (task.deletedAt) return false;
-      if (task.status !== 'inbox') return false;
-      if (!isTaskInActiveProject(task, projectById)) return false;
-      return taskMatchesAreaFilter(task, resolvedAreaFilter, projectById, areaById);
-    });
+    return selectProcessInboxCandidates(tasks, (task) => (
+      isTaskInActiveProject(task, projectById)
+      && taskMatchesAreaFilter(task, resolvedAreaFilter, projectById, areaById)
+    ));
   }, [areaById, projectById, resolvedAreaFilter, tasks]);
 
   const processingQueue = useMemo(
-    () => inboxTasks.filter((task) => !skippedIds.has(task.id)),
-    [inboxTasks, skippedIds],
+    () => getProcessInboxRemainingCandidates(processingSession, inboxTasks),
+    [inboxTasks, processingSession],
   );
   const currentTask = useMemo(
-    () => processingQueue[currentIndex] || null,
-    [processingQueue, currentIndex],
+    () => getProcessInboxCurrentCandidate(processingSession, inboxTasks),
+    [inboxTasks, processingSession],
   );
   const totalCount = inboxTasks.length;
-  const processedCount = totalCount - processingQueue.length + currentIndex;
+  const processedCount = totalCount - processingQueue.length;
   const formatProgressLabel = useCallback((current: number, total: number) => {
     const taskLabel = t('common.tasks');
     if (total <= 0) return `0/0 ${taskLabel}`;
@@ -417,9 +424,20 @@ export function useInboxProcessingController({
     setProcessingDescription(task?.description ?? '');
   }, [resetTitleFocus]);
 
+  const activateProcessingSession = useCallback((
+    nextSession: ProcessInboxSession,
+    scrollToTop: boolean = true,
+  ) => {
+    const nextTask = getProcessInboxCurrentCandidate(nextSession, inboxTasks);
+    if (!nextTask) return false;
+    setProcessingSession(nextSession);
+    if (scrollToTop) scrollProcessingToTop(false);
+    primeTaskState(nextTask);
+    return true;
+  }, [inboxTasks, primeTaskState, scrollProcessingToTop]);
+
   const resetProcessingState = useCallback(() => {
-    setCurrentIndex(0);
-    setSkippedIds(new Set());
+    setProcessingSession(createProcessInboxSession());
     setAiModal(null);
     primeTaskState(null);
   }, [primeTaskState]);
@@ -445,9 +463,8 @@ export function useInboxProcessingController({
       handleClose();
       return;
     }
-    setCurrentIndex(0);
-    primeTaskState(inboxTasks[0]);
-  }, [handleClose, inboxTasks, primeTaskState, visible]);
+    activateProcessingSession(startProcessInboxSession(inboxTasks), false);
+  }, [activateProcessingSession, handleClose, inboxTasks, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -463,13 +480,11 @@ export function useInboxProcessingController({
       handleClose();
       return;
     }
-    if (currentIndex < 0 || currentIndex >= processingQueue.length) {
-      const nextIndex = Math.max(0, processingQueue.length - 1);
-      const nextTask = processingQueue[nextIndex];
-      setCurrentIndex(nextIndex);
-      primeTaskState(nextTask);
+    if (!currentTask) {
+      const nextSession = advanceProcessInboxSession(processingSession, inboxTasks);
+      if (!activateProcessingSession(nextSession)) handleClose();
     }
-  }, [currentIndex, handleClose, primeTaskState, processingQueue, visible]);
+  }, [activateProcessingSession, currentTask, handleClose, inboxTasks, processingQueue.length, processingSession, visible]);
 
   useEffect(() => {
     if (!visible || !currentTask) return;
@@ -477,19 +492,11 @@ export function useInboxProcessingController({
   }, [currentTask, scrollProcessingToTop, visible]);
 
   const moveToNext = useCallback(() => {
-    if (processingQueue.length === 0) {
+    const nextSession = advanceProcessInboxSession(processingSession, inboxTasks);
+    if (!activateProcessingSession(nextSession)) {
       handleClose();
-      return;
     }
-    const nextTask = processingQueue[currentIndex + 1];
-    if (!nextTask) {
-      handleClose();
-      return;
-    }
-    scrollProcessingToTop(false);
-    setCurrentIndex(currentIndex);
-    primeTaskState(nextTask);
-  }, [currentIndex, handleClose, primeTaskState, processingQueue, scrollProcessingToTop]);
+  }, [activateProcessingSession, handleClose, inboxTasks, processingSession]);
 
   const applyProcessingEdits = useCallback((updates?: Partial<Task>, titleOverride?: string, fallbackTitle?: string) => {
     if (!currentTask) return false;
@@ -946,17 +953,16 @@ export function useInboxProcessingController({
       ...(showTimeEstimateField ? { timeEstimate: selectedTimeEstimate ?? undefined } : {}),
       ...buildScheduleUpdates(),
     });
-    setSkippedIds((prev) => {
-      const next = new Set(prev);
-      next.add(currentTask.id);
-      return next;
-    });
-    moveToNext();
+    const nextSession = skipCurrentProcessInboxTask(processingSession, inboxTasks);
+    if (!activateProcessingSession(nextSession)) handleClose();
   }, [
+    activateProcessingSession,
     applyProcessingEdits,
     buildScheduleUpdates,
     currentTask,
-    moveToNext,
+    handleClose,
+    inboxTasks,
+    processingSession,
     selectedAreaId,
     selectedAssignedTo,
     selectedContexts,

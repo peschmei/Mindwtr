@@ -4,8 +4,7 @@ import { router } from 'expo-router';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, GripVertical } from 'lucide-react-native';
 import DraggableFlatList, { type DragEndParams, type RenderItemParams } from 'react-native-draggable-flatlist';
 import {
-  applyCapturedProject,
-  buildCaptureTaskProps,
+  executeCaptureTransaction,
   canStarNewCapture,
   useTaskStore,
   Task,
@@ -1386,40 +1385,27 @@ function TaskListComponent({
       return;
     }
 
-    // Capture policy lives in core buildCaptureTaskProps; this list supplies
-    // the current project as the surface default.
-    const assembly = buildCaptureTaskProps({
+    const result = await executeCaptureTransaction({
       parsed,
       rawInput: newTaskTitle,
       projects,
       initialProps: { projectId: projectId ?? undefined, status: defaultStatus },
       selectedAreaId: quickAddNewTaskAreaId,
       starNewTask: quickAddFocus && canQuickAddFocus,
+    }, { addProject, addTask }, {
+      transformProps: (props) => {
+        const taskProps = { ...props };
+        if (copilotContext) {
+          taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), copilotContext]));
+        }
+        if (copilotTags.length) {
+          taskProps.tags = Array.from(new Set([...(taskProps.tags ?? []), ...copilotTags]));
+        }
+        return taskProps;
+      },
     });
-    if (!assembly.ok) return;
-    let taskProps = assembly.props;
-    if (assembly.projectToCreate) {
-      const created = await addProject(
-        assembly.projectToCreate.title,
-        assembly.projectToCreate.color,
-        assembly.projectToCreate.initialProps,
-      );
-      if (!created) return;
-      taskProps = applyCapturedProject(taskProps, created.id);
-    }
-    if (copilotContext) {
-      taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), copilotContext]));
-    }
-    if (copilotTags.length) {
-      taskProps.tags = Array.from(new Set([...(taskProps.tags ?? []), ...copilotTags]));
-    }
-
-    const result = await addTask(assembly.title, taskProps);
-    const resultObject = result && typeof result === 'object'
-      ? result as { success?: boolean; id?: string }
-      : null;
-    if (resultObject?.success === false) return;
-    const createdTaskId = typeof resultObject?.id === 'string' ? resultObject.id : undefined;
+    if (!result.success) return;
+    const createdTaskId = result.createdTaskId;
     newTaskTitleRef.current = '';
     inputSelectionRef.current = { start: 0, end: 0 };
     setNewTaskTitle('');

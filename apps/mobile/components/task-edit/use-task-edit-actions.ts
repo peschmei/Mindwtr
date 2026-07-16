@@ -1,19 +1,12 @@
 import React, { useCallback } from 'react';
 import { Alert, Share } from 'react-native';
 import {
-    type RecurrenceRule,
     Task,
     TaskStatus,
     TimeEstimate,
     createAIProvider,
     generateUUID,
     type AIProviderId,
-    type RecurrenceByDay,
-    type RecurrenceStrategy,
-    type RecurrenceWeekday,
-    buildRRuleString,
-    getRecurrenceCompletedOccurrencesValue,
-    parseRRuleString,
     getUsedTaskTokens,
     tFallback,
     type StoreActionResult,
@@ -21,11 +14,17 @@ import {
 
 import type { AIResponseAction } from '../ai-response-modal';
 import { buildAIConfig, isAIKeyRequired, loadAIKey } from '../../lib/ai-config';
-import { areTaskFieldValuesEqual } from './task-edit-modal.helpers';
-import { getEditedTaskValue, logTaskError, logTaskWarn } from './task-edit-modal.utils';
+import { logTaskError, logTaskWarn } from './task-edit-modal.utils';
 import { parseTokenList } from './task-edit-token-utils';
-import { buildRecurrenceValue } from './recurrence-utils';
 import { openProjectScreen, openTaskScreen } from '../../lib/task-meta-navigation';
+import { setTaskDraftField } from '@mindwtr/core/task-draft';
+import {
+    applyTaskEditUpdate,
+    buildTaskEditUpdatePatch,
+    isTaskEditDraftDirty,
+    type TaskEditDraft,
+} from './task-edit-draft-adapter';
+import type { SetEditedTask } from './use-task-edit-state';
 
 type AIResponseModalState = {
     title: string;
@@ -47,7 +46,6 @@ type TaskEditActionsParams = {
     baseTaskRef: React.MutableRefObject<Task | null>;
     closeAIModal: () => void;
     contextInputDraft: string;
-    customWeekdays: RecurrenceWeekday[];
     deleteTask: (taskId: string) => Promise<unknown>;
     descriptionDebounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
     descriptionDraft: string;
@@ -55,6 +53,7 @@ type TaskEditActionsParams = {
     duplicateTask: (taskId: string, includeDoneSubtasks?: boolean) => Promise<StoreActionResult>;
     promoteTaskToProject?: (taskId: string, options?: { title?: string; color?: string; areaId?: string }) => Promise<StoreActionResult>;
     editedTask: Partial<Task>;
+    taskEditDraft: TaskEditDraft | null;
     formatDate: (dateStr?: string) => string;
     formatDueDate: (dateStr?: string) => string;
     formatTimeEstimateLabel: (estimate: TimeEstimate) => string;
@@ -65,14 +64,11 @@ type TaskEditActionsParams = {
     onSave: (taskId: string, updates: Partial<Task>) => void;
     prioritiesEnabled: boolean;
     projectContext?: Record<string, unknown> | null;
-    recurrenceRRuleValue: string;
-    recurrenceRuleValue: RecurrenceRule | '';
-    recurrenceStrategyValue: RecurrenceStrategy;
     resetTaskChecklist: (taskId: string) => Promise<unknown>;
     restoreTask: (taskId: string) => Promise<unknown>;
     sections: Array<{ id: string; projectId?: string; deletedAt?: string | null }>;
     setAiModal: React.Dispatch<React.SetStateAction<AIResponseModalState>>;
-    setEditedTask: React.Dispatch<React.SetStateAction<Partial<Task>>>;
+    setEditedTask: SetEditedTask;
     setIsAIWorking: React.Dispatch<React.SetStateAction<boolean>>;
     setTitleImmediate: (text: string) => void;
     settings: Record<string, any>;
@@ -91,7 +87,6 @@ export function useTaskEditActions({
     baseTaskRef,
     closeAIModal,
     contextInputDraft,
-    customWeekdays,
     deleteTask,
     descriptionDebounceRef,
     descriptionDraft,
@@ -99,6 +94,7 @@ export function useTaskEditActions({
     duplicateTask,
     promoteTaskToProject,
     editedTask,
+    taskEditDraft,
     formatDate,
     formatDueDate,
     formatTimeEstimateLabel,
@@ -109,9 +105,6 @@ export function useTaskEditActions({
     onSave,
     prioritiesEnabled,
     projectContext,
-    recurrenceRuleValue,
-    recurrenceRRuleValue,
-    recurrenceStrategyValue,
     resetTaskChecklist,
     restoreTask,
     sections,
@@ -169,109 +162,43 @@ export function useTaskEditActions({
             descriptionDebounceRef.current = null;
         }
 
-        const rawTitle = String(titleDraftRef.current ?? '');
-        const fallbackTitle = editedTask.title ?? task.title ?? rawTitle;
-        const cleanedTitle = rawTitle.trim() ? rawTitle.trim() : fallbackTitle;
-        const baseDescription = descriptionDraftRef.current;
-        const updates: Partial<Task> = {
-            ...editedTask,
-            title: cleanedTitle,
-            description: baseDescription,
-            contexts: editedTask.contexts,
-            tags: editedTask.tags,
-        };
-        updates.location = String(updates.location ?? '').trim() || undefined;
-
-        const recurrenceRule = recurrenceRuleValue || undefined;
-        if (recurrenceRule) {
-            const completedOccurrences = getRecurrenceCompletedOccurrencesValue(editedTask.recurrence)
-                ?? getRecurrenceCompletedOccurrencesValue(task.recurrence);
-            if (recurrenceRule === 'weekly' && customWeekdays.length > 0) {
-                const parsed = parseRRuleString(recurrenceRRuleValue);
-                const rrule = buildRRuleString('weekly', customWeekdays, parsed.interval, {
-                    count: parsed.count,
-                    until: parsed.until,
-                });
-                updates.recurrence = buildRecurrenceValue('weekly', recurrenceStrategyValue, {
-                    byDay: customWeekdays,
-                    count: parsed.count,
-                    until: parsed.until,
-                    completedOccurrences,
-                    rrule,
-                });
-            } else if (recurrenceRRuleValue) {
-                const parsed = parseRRuleString(recurrenceRRuleValue);
-                updates.recurrence = buildRecurrenceValue(recurrenceRule, recurrenceStrategyValue, {
-                    byDay: parsed.byDay,
-                    byMonthDay: parsed.byMonthDay,
-                    count: parsed.count,
-                    until: parsed.until,
-                    completedOccurrences,
-                    rrule: recurrenceRRuleValue,
-                });
-            } else {
-                updates.recurrence = buildRecurrenceValue(recurrenceRule, recurrenceStrategyValue, {
-                    completedOccurrences,
-                });
-            }
-        } else {
-            updates.recurrence = undefined;
-        }
-        updates.showFutureRecurrence = updates.recurrence && editedTask.showFutureRecurrence === true
-            ? true
-            : undefined;
-
         const baseTask = baseTaskRef.current ?? task;
-        const nextProjectId = getEditedTaskValue(updates, baseTask, 'projectId');
-        if (nextProjectId) {
-            updates.areaId = undefined;
-        } else {
-            updates.sectionId = undefined;
-        }
-        if (nextProjectId) {
-            const nextSectionId = getEditedTaskValue(updates, baseTask, 'sectionId');
-            if (nextSectionId) {
-                const isValid = sections.some((section) =>
-                    section.id === nextSectionId && section.projectId === nextProjectId && !section.deletedAt
-                );
-                if (!isValid) {
-                    updates.sectionId = undefined;
-                }
+        if (!taskEditDraft) return;
+        let saveDraft = taskEditDraft;
+        const nextProjectId = saveDraft.draft.projectId;
+        const nextSectionId = saveDraft.draft.sectionId;
+        if (nextProjectId && nextSectionId) {
+            const isValid = sections.some((section) =>
+                section.id === nextSectionId && section.projectId === nextProjectId && !section.deletedAt
+            );
+            if (!isValid) {
+                saveDraft = {
+                    ...saveDraft,
+                    draft: setTaskDraftField(saveDraft.draft, 'sectionId', ''),
+                };
             }
         }
 
-        const trimmedUpdates: Partial<Task> = { ...updates };
-        (Object.keys(trimmedUpdates) as (keyof Task)[]).forEach((key) => {
-            const nextValue = trimmedUpdates[key];
-            const baseValue = baseTask[key];
-            if (Array.isArray(nextValue) || typeof nextValue === 'object') {
-                const nextSerialized = nextValue == null ? null : JSON.stringify(nextValue);
-                const baseSerialized = baseValue == null ? null : JSON.stringify(baseValue);
-                if (nextSerialized === baseSerialized) delete trimmedUpdates[key];
-            } else if ((nextValue ?? null) === (baseValue ?? null)) {
-                delete trimmedUpdates[key];
-            }
+        const updates = buildTaskEditUpdatePatch(saveDraft, baseTask, {
+            title: String(titleDraftRef.current ?? ''),
+            description: descriptionDraftRef.current,
         });
-        if (Object.keys(trimmedUpdates).length === 0) {
+        if (!updates || Object.keys(updates).length === 0) {
             onClose();
             return;
         }
 
-        onSave(task.id, trimmedUpdates);
+        onSave(task.id, updates);
         onClose();
     }, [
         baseTaskRef,
-        customWeekdays,
         descriptionDebounceRef,
         descriptionDraftRef,
-        editedTask,
         onClose,
         onSave,
-        recurrenceRuleValue,
-        recurrenceRRuleValue,
-        recurrenceStrategyValue,
         sections,
         task,
+        taskEditDraft,
         titleDebounceRef,
         titleDraftRef,
     ]);
@@ -345,7 +272,7 @@ export function useTaskEditActions({
     }, [descriptionDebounceRef, onClose, titleDebounceRef]);
 
     const hasPendingChanges = useCallback((): boolean => {
-        if (!task) return false;
+        if (!task || !taskEditDraft) return false;
 
         const baseTask = baseTaskRef.current ?? task;
         const pendingContexts = isContextInputFocused
@@ -354,25 +281,14 @@ export function useTaskEditActions({
         const pendingTags = isTagInputFocused
             ? parseTokenList(tagInputDraft, '#')
             : (editedTask.tags ?? baseTask.tags ?? []);
-        const currentSnapshot: Task = {
-            ...baseTask,
-            ...editedTask,
+        const pendingDraft = applyTaskEditUpdate(taskEditDraft, baseTask, (current) => ({
+            ...current,
             title: String(titleDraftRef.current ?? editedTask.title ?? baseTask.title ?? ''),
             description: String(descriptionDraftRef.current ?? editedTask.description ?? baseTask.description ?? ''),
             contexts: pendingContexts,
             tags: pendingTags,
-        };
-        const keys = new Set<keyof Task>([
-            ...(Object.keys(baseTask) as (keyof Task)[]),
-            ...(Object.keys(currentSnapshot) as (keyof Task)[]),
-        ]);
-
-        for (const key of keys) {
-            if (!areTaskFieldValuesEqual(currentSnapshot[key], baseTask[key])) {
-                return true;
-            }
-        }
-        return false;
+        }));
+        return isTaskEditDraftDirty(pendingDraft, baseTask);
     }, [
         baseTaskRef,
         contextInputDraft,
@@ -382,6 +298,7 @@ export function useTaskEditActions({
         isTagInputFocused,
         tagInputDraft,
         task,
+        taskEditDraft,
         titleDraftRef,
     ]);
 

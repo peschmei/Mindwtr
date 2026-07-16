@@ -75,11 +75,11 @@ const {
 });
 
 vi.mock('@mindwtr/core', async () => {
-  // Capture assembly is real: it is the pure policy under test-adjacent code.
+  // The shared capture transaction is real; only its store actions are substituted.
   const actual = await vi.importActual<typeof import('@mindwtr/core')>('@mindwtr/core');
   return {
-  buildCaptureTaskProps: actual.buildCaptureTaskProps,
-  applyCapturedProject: actual.applyCapturedProject,
+  executeCaptureTransaction: actual.executeCaptureTransaction,
+  prepareCaptureTask: actual.prepareCaptureTask,
   DEFAULT_PROJECT_COLOR: actual.DEFAULT_PROJECT_COLOR,
   getDefaultTaskAreaMode: (settings: any) => {
     const mode = settings?.gtd?.defaultAreaMode;

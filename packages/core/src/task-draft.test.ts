@@ -65,6 +65,42 @@ describe('task-draft', () => {
         });
     });
 
+    it('owns completion and reminder-handoff fields with the status cascade', () => {
+        const completed: Task = {
+            ...baseTask,
+            status: 'done',
+            completedAt: '2026-01-02T12:00:00.000Z',
+            suppressMindwtrReminders: true,
+        };
+        const draft = createTaskDraft(completed);
+
+        expect(draft).toMatchObject({
+            completedAt: '2026-01-02T12:00:00.000Z',
+            suppressMindwtrReminders: true,
+        });
+        const reopened = setTaskDraftField(draft, 'status', 'next');
+        expect(reopened.completedAt).toBe('');
+        expect(taskDraftToUpdatePatch(reopened, completed)).toMatchObject({
+            status: 'next',
+            completedAt: undefined,
+            suppressMindwtrReminders: true,
+        });
+    });
+
+    it('enforces direction-specific status invariants at the field write seam', () => {
+        const inboxDraft = createTaskDraft({ ...baseTask, status: 'inbox' });
+        const focusedInbox = setTaskDraftField(inboxDraft, 'focusedToday', true);
+        expect(focusedInbox).toMatchObject({ focusedToday: true, status: 'next' });
+
+        const activeDraft = createTaskDraft(baseTask);
+        const completedActive = setTaskDraftField(
+            activeDraft,
+            'completedAt',
+            '2026-01-02T12:00:00.000Z',
+        );
+        expect(completedActive.completedAt).toBe('');
+    });
+
     it('detects a change in any field and ignores token whitespace', () => {
         const draft = createTaskDraft(baseTask);
         expect(isTaskDraftDirty({ ...draft, title: 'Write report v2' }, baseTask)).toBe(true);
@@ -90,6 +126,10 @@ describe('task-draft', () => {
         expect(areDraftAttachmentsDirty([], withAttachment)).toBe(true);
         expect(areDraftAttachmentsDirty(
             [{ ...same![0], uri: 'https://b' }],
+            withAttachment,
+        )).toBe(true);
+        expect(areDraftAttachmentsDirty(
+            [{ ...same![0], deletedAt: '2026-01-02T00:00:00.000Z' }],
             withAttachment,
         )).toBe(true);
     });
@@ -127,6 +167,20 @@ describe('task-draft', () => {
             count: 5,
             completedOccurrences: 3,
             rrule: 'FREQ=WEEKLY;BYDAY=MO;COUNT=5',
+        });
+    });
+
+    it('preserves completed occurrences when recurrence has no rrule', () => {
+        const recurringTask: Task = {
+            ...baseTask,
+            recurrence: { rule: 'daily', strategy: 'strict', completedOccurrences: 4 },
+        };
+        const draft = createTaskDraft(recurringTask);
+
+        expect(taskDraftToUpdatePatch(draft, recurringTask)?.recurrence).toMatchObject({
+            rule: 'daily',
+            strategy: 'strict',
+            completedOccurrences: 4,
         });
     });
 

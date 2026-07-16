@@ -10,8 +10,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
 import {
-  applyCapturedProject,
-  buildCaptureTaskProps,
+  executeCaptureTransaction,
+  prepareCaptureTask,
   filterCaptureAreas,
   filterCaptureProjects,
   hasExactCaptureAreaMatch,
@@ -33,6 +33,8 @@ import {
   shallow,
   splitQuickAddBulkLines,
   tFallback,
+  type CaptureAssemblyInput,
+  type CaptureTransactionOptions,
   type Task,
   type TaskPriority,
   useTaskStore,
@@ -79,12 +81,6 @@ const resolveInitialContextTokens = (contexts?: string[]): string[] => (
     )
   )
 );
-
-const getCreatedTaskId = (result: unknown): string | null => {
-  if (!result || typeof result !== 'object') return null;
-  const maybeId = (result as { id?: unknown }).id;
-  return typeof maybeId === 'string' && maybeId.trim() ? maybeId : null;
-};
 
 export function QuickCaptureSheet({
   visible,
@@ -416,53 +412,68 @@ export function QuickCaptureSheet({
     setShowPriorityPicker(false);
   }, [prioritiesEnabled]);
 
-  const buildTaskPropsForInput = useCallback(async (inputValue: string, fallbackTitle: string, extraProps?: Partial<Task>) => {
+  const buildCaptureRequestForInput = useCallback((
+    inputValue: string,
+    fallbackTitle: string,
+    extraProps?: Partial<Task>,
+    currentProjects = projects,
+  ): { input: CaptureAssemblyInput; options: CaptureTransactionOptions } => {
     const trimmed = inputValue.trim();
     const parsed = trimmed
-      ? parseQuickAdd(trimmed, projects, new Date(), areas, {
+      ? parseQuickAdd(trimmed, currentProjects, new Date(), areas, {
         defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
         preserveText: settings.quickAddAutoClean !== true,
       })
       : { title: '', props: {}, projectTitle: undefined, detectedDate: undefined, invalidDateCommands: undefined };
 
-    // Capture policy lives in core buildCaptureTaskProps; this sheet only adds
-    // its picker state (project/area/context/priority/date pickers) on top.
-    const assembly = buildCaptureTaskProps({
+    const input: CaptureAssemblyInput = {
       parsed,
       rawInput: trimmed,
       fallbackTitle,
-      projects,
+      projects: currentProjects,
       initialProps,
       extraProps,
       selectedAreaId,
       starNewTask: focusNewTask && canFocusNewTask,
       suppressDetectedDate: Boolean(dueDate),
-    });
-    if (!assembly.ok) {
-      return { title: '', props: { status: 'inbox' as const, ...initialProps, ...extraProps }, invalidDateCommands: parsed.invalidDateCommands };
-    }
-    let taskProps = assembly.props;
-    if (assembly.projectToCreate) {
-      const created = await addProject(
-        assembly.projectToCreate.title,
-        assembly.projectToCreate.color,
-        assembly.projectToCreate.initialProps,
-      );
-      if (created) taskProps = applyCapturedProject(taskProps, created.id);
-    }
-    if (projectId) taskProps = applyCapturedProject(taskProps, projectId);
-    if (contextTags.length > 0) {
-      taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), ...contextTags]));
-    }
-    if (prioritiesEnabled && priority) taskProps.priority = priority;
-    if (dueDate) {
-      const dateOnly = safeFormatDate(dueDate, 'yyyy-MM-dd');
-      if (dateOnly) taskProps.dueDate = dueDateHasTime ? dueDate.toISOString() : dateOnly;
-    }
-    if (startTime) taskProps.startTime = startTime.toISOString();
+    };
+    const options: CaptureTransactionOptions = {
+      transformProps: (props) => {
+        const taskProps = { ...props };
+        if (projectId) taskProps.projectId = projectId;
+        if (contextTags.length > 0) {
+          taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), ...contextTags]));
+        }
+        if (prioritiesEnabled && priority) taskProps.priority = priority;
+        if (dueDate) {
+          const dateOnly = safeFormatDate(dueDate, 'yyyy-MM-dd');
+          if (dateOnly) taskProps.dueDate = dueDateHasTime ? dueDate.toISOString() : dateOnly;
+        }
+        if (startTime) taskProps.startTime = startTime.toISOString();
+        return taskProps;
+      },
+    };
+    return { input, options };
+  }, [areas, canFocusNewTask, contextTags, dueDate, dueDateHasTime, focusNewTask, initialProps, prioritiesEnabled, priority, projectId, projects, selectedAreaId, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, startTime]);
 
-    return { title: assembly.title, props: taskProps, invalidDateCommands: assembly.invalidDateCommands };
-  }, [addProject, areas, canFocusNewTask, contextTags, dueDate, dueDateHasTime, focusNewTask, initialProps, prioritiesEnabled, priority, projectId, projects, selectedAreaId, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, startTime]);
+  const buildTaskPropsForInput = useCallback(async (inputValue: string, fallbackTitle: string, extraProps?: Partial<Task>) => {
+    const request = buildCaptureRequestForInput(inputValue, fallbackTitle, extraProps);
+    const prepared = await prepareCaptureTask(request.input, { addProject }, request.options);
+    if (!prepared.success) {
+      return {
+        title: '',
+        props: { status: 'inbox' as const, ...initialProps, ...extraProps },
+        invalidDateCommands: prepared.reason === 'invalid-date-command'
+          ? prepared.invalidDateCommands
+          : undefined,
+      };
+    }
+    return {
+      title: prepared.title,
+      props: prepared.props,
+      invalidDateCommands: prepared.invalidDateCommands,
+    };
+  }, [addProject, buildCaptureRequestForInput, initialProps]);
 
   const buildTaskProps = useCallback((fallbackTitle: string, extraProps?: Partial<Task>) => (
     buildTaskPropsForInput(value, fallbackTitle, extraProps)
@@ -547,44 +558,49 @@ export function QuickCaptureSheet({
   }, [t]);
 
   const createTaskFromInput = useCallback(async (inputValue: string) => {
-    const { title, props, invalidDateCommands } = await buildTaskPropsForInput(inputValue, inputValue.trim());
-    if (invalidDateCommands && invalidDateCommands.length > 0) {
+    const request = buildCaptureRequestForInput(inputValue, inputValue.trim());
+    const result = await executeCaptureTransaction(
+      request.input,
+      { addProject, addTask },
+      request.options,
+    );
+    if (!result.success && result.reason === 'invalid-date-command') {
       showToast({
         title: t('common.notice'),
-        message: `${t('quickAdd.invalidDateCommand')}: ${invalidDateCommands.join(', ')}`,
+        message: `${t('quickAdd.invalidDateCommand')}: ${result.invalidDateCommands.join(', ')}`,
         tone: 'warning',
         durationMs: 4200,
       });
       return null;
     }
-    if (!title.trim()) return null;
-
-    const addTaskResult = await addTask(title, props);
-    if (addTaskResult && typeof addTaskResult === 'object' && addTaskResult.success === false) return null;
+    if (!result.success) return null;
     return {
-      createdTaskId: getCreatedTaskId(addTaskResult),
-      props,
+      createdTaskId: result.createdTaskId ?? null,
+      props: result.props,
     };
-  }, [addTask, buildTaskPropsForInput, showToast, t]);
+  }, [addProject, addTask, buildCaptureRequestForInput, showToast, t]);
 
   const createBulkTasks = useCallback(async (lines: string[]) => {
     if (isSavingRef.current) return;
     isSavingRef.current = true;
     try {
       const taskInputs: Array<{ title: string; initialProps: Partial<Task> }> = [];
+      let currentProjects = projects;
       for (const line of lines) {
-        const { title, props, invalidDateCommands } = await buildTaskPropsForInput(line, line.trim());
-        if (invalidDateCommands && invalidDateCommands.length > 0) {
+        const request = buildCaptureRequestForInput(line, line.trim(), undefined, currentProjects);
+        const prepared = await prepareCaptureTask(request.input, { addProject }, request.options);
+        if (!prepared.success && prepared.reason === 'invalid-date-command') {
           showToast({
             title: t('common.notice'),
-            message: `${t('quickAdd.invalidDateCommand')}: ${invalidDateCommands.join(', ')}`,
+            message: `${t('quickAdd.invalidDateCommand')}: ${prepared.invalidDateCommands.join(', ')}`,
             tone: 'warning',
             durationMs: 4200,
           });
           return;
         }
-        if (!title.trim()) return;
-        taskInputs.push({ title, initialProps: props });
+        if (!prepared.success) return;
+        taskInputs.push({ title: prepared.title, initialProps: prepared.props });
+        if (prepared.createdProject) currentProjects = [...currentProjects, prepared.createdProject];
       }
       const result = await addTasks(taskInputs);
       if (result && typeof result === 'object' && result.success === false) return;
@@ -592,7 +608,7 @@ export function QuickCaptureSheet({
     } finally {
       isSavingRef.current = false;
     }
-  }, [addTasks, buildTaskPropsForInput, finalizeClose, showToast, t]);
+  }, [addProject, addTasks, buildCaptureRequestForInput, finalizeClose, projects, showToast, t]);
 
   const confirmBulkQuickAdd = useCallback((lines: string[]) => {
     Alert.alert(

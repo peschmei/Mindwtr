@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent } from 'react';
 import {
-    applyCapturedProject,
-    buildCaptureTaskProps,
+    executeCaptureTransaction,
     canStarNewCapture,
     shallow,
     useTaskStore,
@@ -83,12 +82,6 @@ type ParsedQuickAddTask = {
     input: string;
     parsed: QuickAddResult;
 };
-
-function getCreatedTaskId(result: unknown): string | null {
-    if (!result || typeof result !== 'object') return null;
-    const maybeId = (result as { id?: unknown }).id;
-    return typeof maybeId === 'string' && maybeId.trim() ? maybeId : null;
-}
 
 function getClipboardImageFiles(data: DataTransfer | null): File[] {
     if (!data) return [];
@@ -927,9 +920,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             parsed.props.attachments,
             extraAttachments,
         );
-        // Capture policy lives in core buildCaptureTaskProps; this surface only
-        // supplies its state and performs the async project creation.
-        const assembly = buildCaptureTaskProps({
+        const transaction = await executeCaptureTransaction({
             parsed,
             rawInput: input,
             fallbackTitle: extraAttachments?.[0]?.title || tFallback(t, 'quickAdd.pastedImageTitle', 'Screenshot'),
@@ -938,26 +929,20 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             extraProps: mergedAttachments ? { attachments: mergedAttachments } : undefined,
             selectedAreaId,
             starNewTask: focusNewTask && canFocusNewTask,
-        });
-        if (!assembly.ok) return { success: false, currentProjects, currentAreas };
-        let taskProps = assembly.props;
-        let nextProjects = currentProjects;
-        if (assembly.projectToCreate) {
-            const created = await addProject(
-                assembly.projectToCreate.title,
-                assembly.projectToCreate.color,
-                assembly.projectToCreate.initialProps,
-            );
-            if (!created) return { success: false, currentProjects, currentAreas };
-            taskProps = applyCapturedProject(taskProps, created.id);
-            nextProjects = [...currentProjects, created];
+        }, { addProject, addTask });
+        const createdProject = 'createdProject' in transaction
+            ? transaction.createdProject
+            : undefined;
+        const nextProjects = createdProject
+            ? [...currentProjects, createdProject]
+            : currentProjects;
+        if (!transaction.success) {
+            return { success: false, currentProjects: nextProjects, currentAreas };
         }
-        const addTaskResult = await addTask(assembly.title, taskProps);
-        if (!addTaskResult.success) return { success: false, currentProjects: nextProjects, currentAreas };
         return {
             success: true,
-            createdTaskId: getCreatedTaskId(addTaskResult),
-            props: taskProps,
+            createdTaskId: transaction.createdTaskId,
+            props: transaction.props,
             currentAreas,
             currentProjects: nextProjects,
         };

@@ -14,11 +14,9 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  applyCapturedProject,
-  buildCaptureTaskProps,
+  executeCaptureTransaction,
+  prepareCaptureTask,
   createAIProvider,
-  DEFAULT_PROJECT_COLOR,
-  getQuickAddProjectInitialProps,
   getPersonOptionNames,
   getUsedTaskTokens,
   isSelectableProjectForTaskAssignment,
@@ -30,6 +28,8 @@ import {
   tFallback,
   type AIProviderId,
   type Attachment,
+  type CaptureAssemblyInput,
+  type CaptureTransactionOptions,
   type Project,
   type Task,
   type TimeEstimate,
@@ -78,12 +78,6 @@ export const sanitizeCaptureReturnToParam = (value: string | string[] | undefine
   return decoded;
 };
 
-const getCreatedTaskId = (result: unknown): string | null => {
-  if (!result || typeof result !== 'object') return null;
-  const maybeId = (result as { id?: unknown }).id;
-  return typeof maybeId === 'string' && maybeId.trim() ? maybeId : null;
-};
-
 const parseInitialPropsJson = (value: string | string[] | undefined): Record<string, unknown> => {
   const decoded = decodeSearchParam(value);
   if (!decoded) return {};
@@ -118,7 +112,7 @@ const MAX_INITIAL_ATTACHMENTS = 6;
 // Share-intent file captures arrive as attachment records in the route's
 // initialProps (the share handler already copied the bytes into the managed
 // attachments dir). Route params are attacker-reachable via deep links, so
-// only structurally valid file records survive here; buildTaskInputFromInput
+// only structurally valid file records survive here; capture request assembly
 // additionally drops any uri outside the managed attachments dir.
 const sanitizeInitialAttachments = (value: unknown): Attachment[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -407,9 +401,12 @@ export default function CaptureScreen() {
     return `${preview}${suffix}`;
   };
 
-  const buildTaskInputFromInput = async (inputValue: string): Promise<{ title: string; initialProps: Partial<Task> } | null> => {
+  const buildCaptureRequestFromInput = async (
+    inputValue: string,
+    currentProjects = projects,
+  ): Promise<{ input: CaptureAssemblyInput; options: CaptureTransactionOptions } | null> => {
     if (!inputValue.trim()) return null;
-    const parsed = parseQuickAdd(inputValue, projects, new Date(), areas, quickAddParseOptions);
+    const parsed = parseQuickAdd(inputValue, currentProjects, new Date(), areas, quickAddParseOptions);
     if (parsed.invalidDateCommands && parsed.invalidDateCommands.length > 0) {
       showToast({
         title: t('common.notice'),
@@ -435,7 +432,7 @@ export default function CaptureScreen() {
     let fallbackProjectTitleToCreate: string | undefined;
     if (!parsed.props.projectId && !parsed.projectTitle && initialProjectTitle) {
       const ref = initialProjectTitle.toLowerCase();
-      const match = projects.find((project) => (
+      const match = currentProjects.find((project) => (
         project.id === initialProjectTitle || project.title.toLowerCase() === ref
       ));
       if (!match) {
@@ -445,60 +442,56 @@ export default function CaptureScreen() {
       }
     }
 
-    // Capture policy lives in core buildCaptureTaskProps; this modal adds its
-    // description field and copilot suggestions on top.
-    const assembly = buildCaptureTaskProps({
+    const input: CaptureAssemblyInput = {
       parsed: fallbackProjectTitleToCreate
         ? { ...parsed, projectTitle: fallbackProjectTitleToCreate }
         : parsed,
       rawInput: inputValue,
-      projects,
+      projects: currentProjects,
       initialProps: surfaceProps,
       selectedAreaId: defaultNewTaskAreaId,
       starNewTask: false,
-    });
-    if (!assembly.ok) return null;
-    let taskProps = assembly.props;
-    if (assembly.projectToCreate) {
-      const created = await addProject(
-        assembly.projectToCreate.title,
-        assembly.projectToCreate.color,
-        assembly.projectToCreate.initialProps,
-      );
-      if (!created) return null;
-      taskProps = applyCapturedProject(taskProps, created.id);
-    }
-
-    const description = descriptionValue.trim();
-    const parsedDescription = typeof taskProps.description === 'string' ? taskProps.description.trim() : '';
-    if (description) {
-      taskProps.description = parsedDescription && parsedDescription !== description
-        ? `${description}\n${parsedDescription}`
-        : description;
-    }
-    if (copilotContext) {
-      taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), copilotContext]));
-    }
-    if (timeEstimatesEnabled && copilotEstimate && !taskProps.timeEstimate) {
-      taskProps.timeEstimate = copilotEstimate;
-    }
-    if (copilotTags.length) {
-      taskProps.tags = Array.from(new Set([...(taskProps.tags ?? []), ...copilotTags]));
-    }
-    return { title: assembly.title, initialProps: taskProps };
+    };
+    const options: CaptureTransactionOptions = {
+      transformProps: (props) => {
+        const taskProps = { ...props };
+        const description = descriptionValue.trim();
+        const parsedDescription = typeof taskProps.description === 'string' ? taskProps.description.trim() : '';
+        if (description) {
+          taskProps.description = parsedDescription && parsedDescription !== description
+            ? `${description}\n${parsedDescription}`
+            : description;
+        }
+        if (copilotContext) {
+          taskProps.contexts = Array.from(new Set([...(taskProps.contexts ?? []), copilotContext]));
+        }
+        if (timeEstimatesEnabled && copilotEstimate && !taskProps.timeEstimate) {
+          taskProps.timeEstimate = copilotEstimate;
+        }
+        if (copilotTags.length) {
+          taskProps.tags = Array.from(new Set([...(taskProps.tags ?? []), ...copilotTags]));
+        }
+        return taskProps;
+      },
+    };
+    return { input, options };
   };
 
   const createTaskFromInput = async (
     inputValue: string,
     { openAfterSave = false }: { openAfterSave?: boolean } = {},
   ): Promise<boolean> => {
-    const taskInput = await buildTaskInputFromInput(inputValue);
-    if (!taskInput) return false;
-    const addTaskResult = await addTask(taskInput.title, taskInput.initialProps);
-    if (addTaskResult && typeof addTaskResult === 'object' && addTaskResult.success === false) return false;
-    const createdTaskId = getCreatedTaskId(addTaskResult);
+    const request = await buildCaptureRequestFromInput(inputValue);
+    if (!request) return false;
+    const result = await executeCaptureTransaction(
+      request.input,
+      { addProject, addTask },
+      request.options,
+    );
+    if (!result.success) return false;
+    const createdTaskId = result.createdTaskId;
     if (openAfterSave && createdTaskId) {
-      openTaskScreen(createdTaskId, taskInput.initialProps.projectId, 'task');
+      openTaskScreen(createdTaskId, result.props.projectId, 'task');
       return false;
     }
     return true;
@@ -506,10 +499,14 @@ export default function CaptureScreen() {
 
   const createBulkTasks = async (lines: string[]) => {
     const taskInputs: Array<{ title: string; initialProps: Partial<Task> }> = [];
+    let currentProjects = projects;
     for (const line of lines) {
-      const taskInput = await buildTaskInputFromInput(line);
-      if (!taskInput) return;
-      taskInputs.push(taskInput);
+      const request = await buildCaptureRequestFromInput(line, currentProjects);
+      if (!request) return;
+      const prepared = await prepareCaptureTask(request.input, { addProject }, request.options);
+      if (!prepared.success) return;
+      taskInputs.push({ title: prepared.title, initialProps: prepared.props });
+      if (prepared.createdProject) currentProjects = [...currentProjects, prepared.createdProject];
     }
     // Shared files belong to one task, not one copy per line: the attachment
     // records share ids, so duplicating them across tasks would alias files.

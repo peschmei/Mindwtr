@@ -1,5 +1,6 @@
 import type { Area, Project, Task } from './types';
 import type { QuickAddResult } from './quick-add';
+import type { StoreActionResult } from './store-types';
 import { getQuickAddProjectInitialProps } from './quick-add';
 import { isSelectableProjectForTaskAssignment } from './project-utils';
 import { DEFAULT_AREA_COLOR, DEFAULT_PROJECT_COLOR } from './color-constants';
@@ -49,6 +50,52 @@ export type CaptureAssembly =
         projectToCreate?: CaptureProjectToCreate;
         invalidDateCommands?: string[];
     };
+
+export type CaptureTransactionActions = {
+    addProject: (
+        title: string,
+        color: string,
+        initialProps?: Partial<Project>,
+    ) => Promise<Project | null>;
+    addTask: (title: string, initialProps?: Partial<Task>) => Promise<StoreActionResult>;
+};
+
+export type CaptureTransactionOptions = {
+    /**
+     * Surface-only enrichment applied after shared assembly and before writes.
+     * This keeps parsing/picker concerns at the edge while the transaction owns
+     * Container normalization and the project/task write sequence.
+     */
+    transformProps?: (props: Partial<Task>) => Partial<Task>;
+};
+
+export type CapturePreparationFailure =
+    | { success: false; reason: 'empty-title' }
+    | { success: false; reason: 'invalid-date-command'; invalidDateCommands: string[] }
+    | { success: false; reason: 'project-create-failed'; error: string };
+
+export type PreparedCaptureTask = {
+    success: true;
+    title: string;
+    props: Partial<Task>;
+    invalidDateCommands?: string[];
+    createdProject?: Project;
+};
+
+export type CaptureTransactionResult =
+    | CapturePreparationFailure
+    | {
+        success: false;
+        reason: 'task-create-failed';
+        error: string;
+        title: string;
+        props: Partial<Task>;
+        createdProject?: Project;
+    }
+    | (PreparedCaptureTask & {
+        taskResult: StoreActionResult;
+        createdTaskId?: string;
+    });
 
 const findSelectableProjectByTitle = (
     projects: readonly Project[],
@@ -235,4 +282,125 @@ export function buildCaptureTaskProps(input: CaptureAssemblyInput): CaptureAssem
 /** Attach the created project to the capture, keeping Container exclusivity. */
 export function applyCapturedProject(props: Partial<Task>, projectId: string): Partial<Task> {
     return { ...props, projectId, areaId: undefined };
+}
+
+const captureErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && error.message.trim()) return error.message;
+    if (typeof error === 'string' && error.trim()) return error;
+    return fallback;
+};
+
+/**
+ * Prepare the durable task write, including the optional project write.
+ * Batch and audio capture adapters may use this phase before their specialized
+ * task write; ordinary interactive capture should use executeCaptureTransaction.
+ */
+export async function prepareCaptureTask(
+    input: CaptureAssemblyInput,
+    actions: Pick<CaptureTransactionActions, 'addProject'>,
+    options: CaptureTransactionOptions = {},
+): Promise<CapturePreparationFailure | PreparedCaptureTask> {
+    const invalidDateCommands = input.parsed.invalidDateCommands;
+    if (invalidDateCommands?.length) {
+        return {
+            success: false,
+            reason: 'invalid-date-command',
+            invalidDateCommands: [...invalidDateCommands],
+        };
+    }
+
+    const assembly = buildCaptureTaskProps(input);
+    if (!assembly.ok) return { success: false, reason: assembly.reason };
+
+    let props = options.transformProps
+        ? options.transformProps({ ...assembly.props })
+        : assembly.props;
+
+    // A surface picker is more explicit than a parsed +Project token. Avoid
+    // creating an orphan parsed project when enrichment supplied a project id.
+    if (props.projectId) {
+        props = applyCapturedProject(props, props.projectId);
+    }
+
+    let createdProject: Project | undefined;
+    if (!props.projectId && assembly.projectToCreate) {
+        try {
+            const created = await actions.addProject(
+                assembly.projectToCreate.title,
+                assembly.projectToCreate.color,
+                assembly.projectToCreate.initialProps,
+            );
+            if (!created) {
+                return {
+                    success: false,
+                    reason: 'project-create-failed',
+                    error: 'Failed to create project',
+                };
+            }
+            createdProject = created;
+            props = applyCapturedProject(props, created.id);
+        } catch (error) {
+            return {
+                success: false,
+                reason: 'project-create-failed',
+                error: captureErrorMessage(error, 'Failed to create project'),
+            };
+        }
+    }
+
+    return {
+        success: true,
+        title: assembly.title,
+        props,
+        invalidDateCommands: assembly.invalidDateCommands,
+        ...(createdProject ? { createdProject } : {}),
+    };
+}
+
+/**
+ * Commit one interactive capture as a single explicit outcome. Project
+ * resolution/creation, Container assignment, and the final task write are
+ * sequenced here so every UI surface handles the same failure contract.
+ */
+export async function executeCaptureTransaction(
+    input: CaptureAssemblyInput,
+    actions: CaptureTransactionActions,
+    options: CaptureTransactionOptions = {},
+): Promise<CaptureTransactionResult> {
+    const prepared = await prepareCaptureTask(input, actions, options);
+    if (!prepared.success) return prepared;
+
+    let taskResult: StoreActionResult;
+    try {
+        taskResult = await actions.addTask(prepared.title, prepared.props);
+    } catch (error) {
+        return {
+            success: false,
+            reason: 'task-create-failed',
+            error: captureErrorMessage(error, 'Failed to create task'),
+            title: prepared.title,
+            props: prepared.props,
+            ...(prepared.createdProject ? { createdProject: prepared.createdProject } : {}),
+        };
+    }
+
+    if (!taskResult.success) {
+        return {
+            success: false,
+            reason: 'task-create-failed',
+            error: taskResult.error || 'Failed to create task',
+            title: prepared.title,
+            props: prepared.props,
+            ...(prepared.createdProject ? { createdProject: prepared.createdProject } : {}),
+        };
+    }
+
+    const createdTaskId = typeof taskResult.id === 'string' && taskResult.id.trim()
+        ? taskResult.id
+        : undefined;
+    return {
+        ...prepared,
+        taskResult,
+        ...(createdTaskId ? { createdTaskId } : {}),
+    };
 }

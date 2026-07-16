@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import {
+    advanceProcessInboxSession,
     addBreadcrumb,
     DEFAULT_PROJECT_COLOR,
+    enterProcessInboxStep,
     getPersonOptionNames,
-    isTaskInActiveProject,
+    goBackProcessInboxStep,
     parseQuickAddDateCommands,
     resolveProcessInboxWorkflowEvent,
+    skipCurrentProcessInboxTask,
+    startProcessInboxSession,
     tFallback,
     useTaskStore,
     type AppData,
@@ -73,12 +77,11 @@ export function useInboxProcessingController({
     const {
         processingMode,
         setProcessingMode,
+        processingSession,
+        setProcessingSession,
         processingTask,
-        setProcessingTask,
         processingStep,
-        setProcessingStep,
         stepHistory,
-        setStepHistory,
         quickActionability,
         setQuickActionability,
         quickTwoMinuteChoice,
@@ -127,8 +130,6 @@ export function useInboxProcessingController({
         setSelectedProjectId,
         selectedAreaId,
         setSelectedAreaId,
-        skippedIds,
-        setSkippedIds,
         twoMinuteEnabled,
         twoMinuteFirst,
         projectFirst,
@@ -148,11 +149,11 @@ export function useInboxProcessingController({
         showScheduleFields,
         showOrganizationStep,
         areaById,
-        matchesAreaFilter,
         filteredProjects,
         hasExactProjectMatch,
         activeAreas,
         inboxCount,
+        eligibleInboxTasks,
         remainingInboxCount,
         resetProcessingSession,
         hydrateProcessingTask,
@@ -195,39 +196,28 @@ export function useInboxProcessingController({
     }, [isProcessing, resetProcessingSession]);
 
     const startProcessing = useCallback(() => {
-        const inboxTasks = tasks.filter((task) => (
-            task.status === 'inbox'
-            && !task.deletedAt
-            && isTaskInActiveProject(task, projectMap)
-            && matchesAreaFilter(task)
-        ));
-        if (inboxTasks.length === 0) return;
-        hydrateProcessingTask(inboxTasks[0]);
+        if (eligibleInboxTasks.length === 0) return;
+        const session = startProcessInboxSession(eligibleInboxTasks, { entryStep: 'refine' });
+        hydrateProcessingTask(eligibleInboxTasks[0], session);
         addBreadcrumb('inbox:start');
         setIsProcessing(true);
-    }, [tasks, hydrateProcessingTask, setIsProcessing, projectMap, matchesAreaFilter]);
+    }, [eligibleInboxTasks, hydrateProcessingTask, setIsProcessing]);
 
     const closeProcessing = useCallback(() => {
         setIsProcessing(false);
     }, [setIsProcessing]);
 
-    const processNext = useCallback(() => {
-        const currentTaskId = processingTask?.id;
-        const inboxTasks = tasks.filter((task) =>
-            task.status === 'inbox'
-            && !task.deletedAt
-            && task.id !== currentTaskId
-            && !skippedIds.has(task.id)
-            && isTaskInActiveProject(task, projectMap)
-            && matchesAreaFilter(task)
-        );
-        if (inboxTasks.length > 0) {
-            hydrateProcessingTask(inboxTasks[0]);
+    const applySessionTransition = useCallback((nextSession: typeof processingSession) => {
+        const nextTask = nextSession.currentTaskId
+            ? eligibleInboxTasks.find((task) => task.id === nextSession.currentTaskId)
+            : undefined;
+        if (nextTask) {
+            hydrateProcessingTask(nextTask, nextSession);
             return;
         }
         addBreadcrumb('inbox:done');
+        setProcessingSession(nextSession);
         setIsProcessing(false);
-        setProcessingTask(null);
         setSelectedContexts([]);
         setContextsDraft('');
         setSelectedTags([]);
@@ -237,12 +227,11 @@ export function useInboxProcessingController({
         setSelectedPriority(undefined);
         setSelectedTimeEstimate(undefined);
     }, [
+        eligibleInboxTasks,
         hydrateProcessingTask,
-        matchesAreaFilter,
-        processingTask?.id,
-        projectMap,
         setContextsDraft,
         setIsProcessing,
+        setProcessingSession,
         setSelectedAssignedTo,
         setSelectedContexts,
         setSelectedEnergyLevel,
@@ -250,20 +239,33 @@ export function useInboxProcessingController({
         setSelectedTags,
         setSelectedTimeEstimate,
         setTagsDraft,
-        skippedIds,
-        tasks,
     ]);
 
+    useEffect(() => {
+        if (!isProcessing || processingTask) return;
+        applySessionTransition(advanceProcessInboxSession(
+            processingSession,
+            eligibleInboxTasks,
+            { entryStep: 'refine' },
+        ));
+    }, [applySessionTransition, eligibleInboxTasks, isProcessing, processingSession, processingTask]);
+
+    const processNext = useCallback(() => {
+        applySessionTransition(advanceProcessInboxSession(
+            processingSession,
+            eligibleInboxTasks,
+            { entryStep: 'refine' },
+        ));
+    }, [applySessionTransition, eligibleInboxTasks, processingSession]);
+
     const handleSkip = useCallback(() => {
-        if (processingTask) {
-            setSkippedIds((prev) => {
-                const next = new Set(prev);
-                next.add(processingTask.id);
-                return next;
-            });
-        }
-        processNext();
-    }, [processNext, processingTask]);
+        if (!processingTask) return;
+        applySessionTransition(skipCurrentProcessInboxTask(
+            processingSession,
+            eligibleInboxTasks,
+            { entryStep: 'refine' },
+        ));
+    }, [applySessionTransition, eligibleInboxTasks, processingSession, processingTask]);
 
     const buildScheduleUpdates = useCallback(
         () => (scheduleEnabled
@@ -329,19 +331,12 @@ export function useInboxProcessingController({
     }, [applyProcessingEdits, deleteTask, processingTask]);
 
     const goToStep = useCallback((nextStep: ProcessingStep) => {
-        setStepHistory((prev) => [...prev, processingStep]);
-        setProcessingStep(nextStep);
-    }, [processingStep]);
+        setProcessingSession((current) => enterProcessInboxStep(current, nextStep));
+    }, [setProcessingSession]);
 
     const goBack = useCallback(() => {
-        setStepHistory((prev) => {
-            if (prev.length === 0) return prev;
-            const next = [...prev];
-            const last = next.pop();
-            if (last) setProcessingStep(last);
-            return next;
-        });
-    }, []);
+        setProcessingSession((current) => goBackProcessInboxStep(current));
+    }, [setProcessingSession]);
 
     const buildReferenceFields = useCallback((): ProcessInboxWorkflowFields => {
         const fields: ProcessInboxWorkflowFields = {};

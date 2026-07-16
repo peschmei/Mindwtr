@@ -144,8 +144,7 @@ vi.mock('@mindwtr/core', async () => {
       template.includes('{{count}}') ? template.replace('{{count}}', String(limit)) : `Max ${limit} focus items.`
     ),
     canStarNewCapture: ({ focusedCount, focusTaskLimit }: { focusedCount: number; focusTaskLimit: number }) => focusedCount < focusTaskLimit,
-    buildCaptureTaskProps: actual.buildCaptureTaskProps,
-    applyCapturedProject: actual.applyCapturedProject,
+    executeCaptureTransaction: actual.executeCaptureTransaction,
     countActiveFilterCriteria: actual.countActiveFilterCriteria,
     criteriaFromSelections: actual.criteriaFromSelections,
     getDefaultTaskAreaMode: (settings: any) => {

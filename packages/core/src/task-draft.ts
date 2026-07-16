@@ -40,6 +40,7 @@ export type TaskDraft = {
     projectId: string;
     sectionId: string;
     areaId: string;
+    completedAt: string;
     status: TaskStatus;
     focusedToday: boolean;
     contexts: string;
@@ -57,6 +58,7 @@ export type TaskDraft = {
     assignedTo: string;
     reviewAt: string;
     repeatReminderMinutes: number | undefined;
+    suppressMindwtrReminders: boolean;
 };
 
 export type TaskDraftField = keyof TaskDraft;
@@ -125,17 +127,32 @@ const TASK_DRAFT_FIELDS: { [K in TaskDraftField]: FieldSpec<K> } = {
     projectId: { fromTask: (task) => task.projectId || '' },
     sectionId: { fromTask: (task) => task.sectionId || '' },
     areaId: { fromTask: (task) => task.areaId || '' },
+    completedAt: {
+        fromTask: (task) => task.completedAt || '',
+        onSet: (draft) => draft.status === 'done' || !draft.completedAt
+            ? draft
+            : { ...draft, completedAt: '' },
+    },
     status: {
         fromTask: (task) => task.status,
-        // Draft mirror of the core star↔status rule: a draft sent back to
-        // Inbox drops its focus star (core enforces the same on save).
-        onSet: (draft) => (
-            draft.status === 'inbox' && draft.focusedToday
-                ? { ...draft, focusedToday: false }
-                : draft
-        ),
+        // Moving a draft to Inbox drops its star; leaving Done drops its
+        // completion timestamp. The reverse star→Next transition belongs to
+        // focusedToday below, so direction is explicit at the write seam.
+        onSet: (draft) => {
+            const focusedToday = draft.status === 'inbox' ? false : draft.focusedToday;
+            const completedAt = draft.status === 'done' ? draft.completedAt : '';
+            return focusedToday === draft.focusedToday && completedAt === draft.completedAt
+                ? draft
+                : { ...draft, focusedToday, completedAt };
+        },
     },
-    focusedToday: { fromTask: (task) => task.isFocusedToday === true },
+    focusedToday: {
+        fromTask: (task) => task.isFocusedToday === true,
+        // Starring is a clarifying action: an Inbox draft becomes Next.
+        onSet: (draft) => draft.focusedToday && draft.status === 'inbox'
+            ? { ...draft, status: 'next' }
+            : draft,
+    },
     contexts: {
         fromTask: (task) => task.contexts?.join(', ') || '',
         isDirty: (value, task) => trimmedDiffers(value, task.contexts?.join(', ') || ''),
@@ -162,6 +179,10 @@ const TASK_DRAFT_FIELDS: { [K in TaskDraftField]: FieldSpec<K> } = {
     repeatReminderMinutes: {
         fromTask: (task) => task.repeatReminderMinutes,
         isDirty: (value, task) => (value ?? undefined) !== (task.repeatReminderMinutes ?? undefined),
+    },
+    suppressMindwtrReminders: {
+        fromTask: (task) => task.suppressMindwtrReminders === true,
+        isDirty: (value, task) => value !== (task.suppressMindwtrReminders === true),
     },
 };
 
@@ -201,7 +222,9 @@ export function isTaskDraftDirty(draft: TaskDraft, task: Task): boolean {
 
 const attachmentFingerprint = (attachments: Attachment[] | undefined) =>
     (attachments ?? [])
-        .map((attachment) => `${attachment.id}\0${attachment.uri ?? ''}\0${attachment.title ?? ''}`)
+        .map((attachment) => (
+            `${attachment.id}\0${attachment.uri ?? ''}\0${attachment.title ?? ''}\0${attachment.deletedAt ?? ''}`
+        ))
         .join('\n');
 
 /** Attachments are draft-buffered outside the field table (their records are
@@ -264,6 +287,7 @@ export function taskDraftToUpdatePatch(
     return {
         title: cleanedTitle,
         status: options.statusOverride ?? draft.status,
+        completedAt: draft.status === 'done' ? (draft.completedAt || undefined) : undefined,
         isFocusedToday: draft.focusedToday,
         dueDate: draft.dueDate || undefined,
         startTime: draft.startTime || undefined,
@@ -276,7 +300,7 @@ export function taskDraftToUpdatePatch(
         contexts: splitTokens(draft.contexts),
         tags: splitTokens(draft.tags),
         description: draft.description || undefined,
-        location: draft.location || undefined,
+        location: draft.location.trim() || undefined,
         recurrence: recurrenceValue,
         showFutureRecurrence: recurrenceValue && draft.showFutureRecurrence ? true : undefined,
         timeEstimate: draft.timeEstimate || undefined,
@@ -286,6 +310,7 @@ export function taskDraftToUpdatePatch(
         assignedTo: draft.assignedTo.trim() || undefined,
         reviewAt: draft.reviewAt || undefined,
         repeatReminderMinutes: draft.repeatReminderMinutes || undefined,
+        suppressMindwtrReminders: draft.suppressMindwtrReminders ? true : undefined,
         ...attachmentsPatch,
     };
 }

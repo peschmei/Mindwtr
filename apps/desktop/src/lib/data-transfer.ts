@@ -2,8 +2,8 @@ import {
     addBreadcrumb,
     createBackupFileName,
     flushPendingSave,
-    ensureFreshLocalSyncSnapshot,
     prepareRestoredBackupDataForSync,
+    runDataTransferTransaction,
     serializeBackupData,
     validateBackupJson,
     type AppData,
@@ -58,11 +58,6 @@ type DesktopTransferResult = {
     snapshotName: string | null;
 };
 
-type TransferWriteGuard = {
-    localSnapshotChangeAt: number;
-    operation: string;
-};
-
 const countActiveRecords = (data: AppData) => ({
     tasks: data.tasks.filter((task) => !task.deletedAt).length,
     projects: data.projects.filter((project) => !project.deletedAt).length,
@@ -83,24 +78,6 @@ const toCountExtra = (data: AppData): Record<string, string> => {
 const getStorage = () => (isTauriRuntime() ? tauriStorage : webStorage);
 
 const getLocalChangeAt = (): number => useTaskStore.getState().lastDataChangeAt;
-
-const assertNoConcurrentTransferWrite = ({ localSnapshotChangeAt, operation }: TransferWriteGuard): void => {
-    ensureFreshLocalSyncSnapshot({
-        localSnapshotChangeAt,
-        getCurrentChangeAt: getLocalChangeAt,
-        requestFollowUp: () => undefined,
-        onStale: ({ localSnapshotChangeAt: snapshotChangeAt, currentChangeAt }) => {
-            void logInfo('Data transfer aborted after local data changed', {
-                scope: 'transfer',
-                extra: {
-                    operation,
-                    snapshotChangeAt: String(snapshotChangeAt),
-                    currentChangeAt: String(currentChangeAt),
-                },
-            });
-        },
-    });
-};
 
 const basename = (value: string): string => {
     const parts = String(value || '').split(/[\\/]/u);
@@ -195,19 +172,37 @@ const downloadTextFile = async (fileName: string, text: string): Promise<void> =
     }
 };
 
-const persistTransferredData = async (data: AppData, guard?: TransferWriteGuard): Promise<void> => {
-    if (guard) {
-        assertNoConcurrentTransferWrite(guard);
-    }
-    await getStorage().saveData(data);
-    await useTaskStore.getState().fetchData({ silent: true });
-};
+const runDesktopDataTransfer = async <TResult>(
+    operation: string,
+    apply: (currentData: AppData) => { data: AppData; result: TResult }
+): Promise<DesktopTransferResult & { result: TResult }> => {
+    const transaction = await runDataTransferTransaction({
+        operation,
+        flushPendingSave,
+        getCurrentChangeAt: getLocalChangeAt,
+        readCurrentData: () => getStorage().getData(),
+        createRecoverySnapshot: async () => (
+            isTauriRuntime() ? SyncService.createDataSnapshot() : null
+        ),
+        apply,
+        persistData: (data) => getStorage().saveData(data),
+        refreshData: () => useTaskStore.getState().fetchData({ silent: true }),
+        onStale: ({ operation: staleOperation, localSnapshotChangeAt, currentChangeAt }) => {
+            void logInfo('Data transfer aborted after local data changed', {
+                scope: 'transfer',
+                extra: {
+                    operation: staleOperation,
+                    snapshotChangeAt: String(localSnapshotChangeAt),
+                    currentChangeAt: String(currentChangeAt),
+                },
+            });
+        },
+    });
 
-const readCurrentDataForTransfer = async (): Promise<{ currentData: AppData; localSnapshotChangeAt: number }> => {
-    await flushPendingSave();
-    const localSnapshotChangeAt = getLocalChangeAt();
-    const currentData = await getStorage().getData();
-    return { currentData, localSnapshotChangeAt };
+    return {
+        snapshotName: transaction.snapshot,
+        result: transaction.result,
+    };
 };
 
 export const exportDesktopBackup = async (data: AppData): Promise<void> => {
@@ -317,12 +312,11 @@ export const restoreDesktopBackup = async (data: AppData): Promise<DesktopTransf
         },
     });
     try {
-        await flushPendingSave();
-        const localSnapshotChangeAt = getLocalChangeAt();
-        const snapshotName = isTauriRuntime() ? await SyncService.createDataSnapshot() : null;
-        await persistTransferredData(prepareRestoredBackupDataForSync(data), {
-            localSnapshotChangeAt,
-            operation: 'restoreBackup',
+        const { snapshotName } = await runDesktopDataTransfer('restoreBackup', () => {
+            return {
+                data: prepareRestoredBackupDataForSync(data),
+                result: undefined,
+            };
         });
         void logInfo('Backup restore complete', {
             scope: 'transfer',
@@ -351,12 +345,9 @@ export const importDesktopTodoistData = async (
         },
     });
     try {
-        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
-        const snapshotName = isTauriRuntime() ? await SyncService.createDataSnapshot() : null;
-        const result = applyTodoistImport(currentData, parsedProjects);
-        await persistTransferredData(result.data, {
-            localSnapshotChangeAt,
-            operation: 'importTodoist',
+        const { result, snapshotName } = await runDesktopDataTransfer('importTodoist', (currentData) => {
+            const result = applyTodoistImport(currentData, parsedProjects);
+            return { data: result.data, result };
         });
         void logInfo('Todoist import complete', {
             scope: 'transfer',
@@ -391,12 +382,9 @@ export const importDesktopTickTickData = async (
         },
     });
     try {
-        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
-        const snapshotName = isTauriRuntime() ? await SyncService.createDataSnapshot() : null;
-        const result = applyTickTickImport(currentData, parsedData);
-        await persistTransferredData(result.data, {
-            localSnapshotChangeAt,
-            operation: 'importTickTick',
+        const { result, snapshotName } = await runDesktopDataTransfer('importTickTick', (currentData) => {
+            const result = applyTickTickImport(currentData, parsedData);
+            return { data: result.data, result };
         });
         void logInfo('TickTick import complete', {
             scope: 'transfer',
@@ -431,12 +419,9 @@ export const importDesktopDgtData = async (
         },
     });
     try {
-        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
-        const snapshotName = isTauriRuntime() ? await SyncService.createDataSnapshot() : null;
-        const result = applyDgtImport(currentData, parsedData);
-        await persistTransferredData(result.data, {
-            localSnapshotChangeAt,
-            operation: 'importDgt',
+        const { result, snapshotName } = await runDesktopDataTransfer('importDgt', (currentData) => {
+            const result = applyDgtImport(currentData, parsedData);
+            return { data: result.data, result };
         });
         void logInfo('DGT import complete', {
             scope: 'transfer',
@@ -471,12 +456,9 @@ export const importDesktopOmniFocusData = async (
         },
     });
     try {
-        const { currentData, localSnapshotChangeAt } = await readCurrentDataForTransfer();
-        const snapshotName = isTauriRuntime() ? await SyncService.createDataSnapshot() : null;
-        const result = applyOmniFocusImport(currentData, parsedData);
-        await persistTransferredData(result.data, {
-            localSnapshotChangeAt,
-            operation: 'importOmniFocus',
+        const { result, snapshotName } = await runDesktopDataTransfer('importOmniFocus', (currentData) => {
+            const result = applyOmniFocusImport(currentData, parsedData);
+            return { data: result.data, result };
         });
         void logInfo('OmniFocus import complete', {
             scope: 'transfer',

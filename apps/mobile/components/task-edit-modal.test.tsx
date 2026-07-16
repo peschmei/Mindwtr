@@ -219,7 +219,7 @@ describe('TaskEditModal', () => {
     }));
   });
 
-  it('drops a backdated completion time when the status is changed away from done before saving', async () => {
+  it('does not persist a backdated completion that is reverted before saving', async () => {
     const completedAt = '2026-07-14T18:30:00.000Z';
     const onSave = vi.fn();
     let tree!: renderer.ReactTestRenderer;
@@ -267,9 +267,7 @@ describe('TaskEditModal', () => {
       await Promise.resolve();
     });
 
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0][1]).not.toHaveProperty('completedAt');
-    expect(onSave.mock.calls[0][1]).not.toHaveProperty('status');
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('passes the project field to the mobile form tab', () => {

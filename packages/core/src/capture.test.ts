@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Area, Project } from './types';
 import {
     applyCapturedProject,
     buildCaptureTaskProps,
+    executeCaptureTransaction,
     filterCaptureAreas,
     filterCaptureProjects,
     hasExactCaptureAreaMatch,
@@ -153,6 +154,136 @@ describe('applyCapturedProject', () => {
     it('attaches the created project and clears the direct area', () => {
         expect(applyCapturedProject({ status: 'inbox', areaId: 'area-1' }, 'p-new'))
             .toEqual({ status: 'inbox', areaId: undefined, projectId: 'p-new' });
+    });
+});
+
+describe('executeCaptureTransaction', () => {
+    it('creates a missing project, enforces Container exclusivity, then writes the task', async () => {
+        const createdProject = makeProject({ id: 'p-new', title: 'Launch' });
+        const addProject = vi.fn(async () => createdProject);
+        const addTask = vi.fn(async () => ({ success: true, id: 'task-1' }));
+
+        const result = await executeCaptureTransaction({
+            parsed: { ...parsedBase, projectTitle: 'Launch' },
+            rawInput: 'Write brief +Launch',
+            projects: [],
+            selectedAreaId: 'area-1',
+        }, { addProject, addTask });
+
+        expect(addProject).toHaveBeenCalledWith('Launch', '#94a3b8', { areaId: 'area-1' });
+        expect(addTask).toHaveBeenCalledWith('Write brief', {
+            status: 'inbox',
+            areaId: undefined,
+            projectId: 'p-new',
+        });
+        expect(result).toMatchObject({
+            success: true,
+            createdProject,
+            createdTaskId: 'task-1',
+            props: { projectId: 'p-new', areaId: undefined },
+        });
+    });
+
+    it('lets an explicit surface project win without creating an orphan project', async () => {
+        const addProject = vi.fn();
+        const addTask = vi.fn(async () => ({ success: true, id: 'task-1' }));
+
+        const result = await executeCaptureTransaction({
+            parsed: { ...parsedBase, projectTitle: 'Typed project' },
+            rawInput: 'Write brief +Typed project',
+            projects: [],
+            selectedAreaId: 'area-1',
+        }, { addProject, addTask }, {
+            transformProps: (props) => ({ ...props, projectId: 'picked-project', areaId: 'area-1' }),
+        });
+
+        expect(addProject).not.toHaveBeenCalled();
+        expect(addTask).toHaveBeenCalledWith('Write brief', expect.objectContaining({
+            projectId: 'picked-project',
+            areaId: undefined,
+        }));
+        expect(result).toMatchObject({ success: true, props: { projectId: 'picked-project', areaId: undefined } });
+    });
+
+    it('returns an explicit project failure and never writes the task', async () => {
+        const addTask = vi.fn();
+        const result = await executeCaptureTransaction({
+            parsed: { ...parsedBase, projectTitle: 'Launch' },
+            rawInput: 'Write brief +Launch',
+            projects: [],
+        }, {
+            addProject: vi.fn(async () => null),
+            addTask,
+        });
+
+        expect(result).toEqual({
+            success: false,
+            reason: 'project-create-failed',
+            error: 'Failed to create project',
+        });
+        expect(addTask).not.toHaveBeenCalled();
+    });
+
+    it('returns the task-store failure with the prepared capture outcome', async () => {
+        const createdProject = makeProject({ id: 'p-new', title: 'Launch' });
+        const result = await executeCaptureTransaction({
+            parsed: { ...parsedBase, projectTitle: 'Launch' },
+            rawInput: 'Write brief +Launch',
+            projects: [],
+        }, {
+            addProject: vi.fn(async () => createdProject),
+            addTask: vi.fn(async () => ({ success: false, error: 'Disk full' })),
+        });
+
+        expect(result).toMatchObject({
+            success: false,
+            reason: 'task-create-failed',
+            error: 'Disk full',
+            createdProject,
+            title: 'Write brief',
+            props: { projectId: 'p-new' },
+        });
+    });
+
+    it('rejects invalid date commands and empty captures before either write', async () => {
+        const actions = { addProject: vi.fn(), addTask: vi.fn() };
+        const invalid = await executeCaptureTransaction({
+            parsed: { ...parsedBase, invalidDateCommands: ['/due:nope'] },
+            rawInput: 'Write brief /due:nope',
+            projects: [],
+        }, actions);
+        const empty = await executeCaptureTransaction({
+            parsed: { ...parsedBase, title: '' },
+            rawInput: ' ',
+            projects: [],
+        }, actions);
+
+        expect(invalid).toEqual({
+            success: false,
+            reason: 'invalid-date-command',
+            invalidDateCommands: ['/due:nope'],
+        });
+        expect(empty).toEqual({ success: false, reason: 'empty-title' });
+        expect(actions.addProject).not.toHaveBeenCalled();
+        expect(actions.addTask).not.toHaveBeenCalled();
+    });
+
+    it('converts thrown store errors into the same explicit failure contract', async () => {
+        const result = await executeCaptureTransaction({
+            parsed: parsedBase,
+            rawInput: 'Write brief',
+            projects: [],
+        }, {
+            addProject: vi.fn(),
+            addTask: vi.fn(async () => { throw new Error('Storage unavailable'); }),
+        });
+
+        expect(result).toMatchObject({
+            success: false,
+            reason: 'task-create-failed',
+            error: 'Storage unavailable',
+            title: 'Write brief',
+        });
     });
 });
 

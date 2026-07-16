@@ -37,11 +37,11 @@ vi.mock('expo-router', () => ({
 }));
 
 vi.mock('@mindwtr/core', async () => {
-  // Capture assembly runs real: it is the pure policy under test.
+  // The shared capture transaction runs real; only its store actions are substituted.
   const actual = await vi.importActual<typeof import('@mindwtr/core')>('@mindwtr/core');
   return {
-  buildCaptureTaskProps: actual.buildCaptureTaskProps,
-  applyCapturedProject: actual.applyCapturedProject,
+  executeCaptureTransaction: actual.executeCaptureTransaction,
+  prepareCaptureTask: actual.prepareCaptureTask,
   getPersonOptionNames: actual.getPersonOptionNames,
   createAIProvider: vi.fn(),
   DEFAULT_PROJECT_COLOR: '#94a3b8',

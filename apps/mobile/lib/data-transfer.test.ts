@@ -122,6 +122,9 @@ const parsedProjects: ParsedTodoistProject[] = [{
   }],
 }];
 
+const SNAPSHOT_FILE_NAME_PATTERN =
+  /^data\.\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.snapshot\.json$/u;
+
 describe('mobile data transfer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -136,7 +139,7 @@ describe('mobile data transfer', () => {
     storageMocks.saveData.mockResolvedValue(undefined);
   });
 
-  it('aborts Todoist import when local data changes before the full snapshot write', async () => {
+  it('aborts Todoist import without creating a snapshot when local data changes', async () => {
     storageMocks.getData.mockImplementation(async () => {
       storeStateRef.current = {
         ...storeStateRef.current,
@@ -151,6 +154,9 @@ describe('mobile data transfer', () => {
 
     expect(storageMocks.saveData).not.toHaveBeenCalled();
     expect(storeStateRef.current.fetchData).not.toHaveBeenCalled();
+    expect(coreMocks.flushPendingSave).toHaveBeenCalledOnce();
+    expect(storageMocks.getData).toHaveBeenCalledOnce();
+    expect(fileSystemMocks.fileWrites).toHaveLength(0);
     expect(logMocks.logInfo).toHaveBeenCalledWith(
       'Data transfer aborted after local data changed',
       expect.objectContaining({
@@ -162,5 +168,19 @@ describe('mobile data transfer', () => {
         }),
       })
     );
+  });
+
+  it('creates a recovery snapshot before persisting and refreshing a Todoist import', async () => {
+    const transfer = await importTodoistData(parsedProjects);
+
+    expect(transfer.snapshotName).toMatch(SNAPSHOT_FILE_NAME_PATTERN);
+    expect(transfer.result.importedTaskCount).toBe(1);
+    expect(coreMocks.flushPendingSave).toHaveBeenCalledOnce();
+    expect(storageMocks.getData).toHaveBeenCalledOnce();
+    expect(fileSystemMocks.fileWrites).toHaveLength(1);
+    expect(storageMocks.saveData).toHaveBeenCalledWith(expect.objectContaining({
+      tasks: [expect.objectContaining({ title: 'Imported task' })],
+    }));
+    expect(storeStateRef.current.fetchData).toHaveBeenCalledWith({ silent: true });
   });
 });

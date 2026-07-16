@@ -1,17 +1,18 @@
 import React from 'react';
-import { getRecurrenceCompletedOccurrencesValue, getRecurrenceCountValue, getRecurrenceUntilValue, type RecurrenceWeekday, type Task } from '@mindwtr/core';
+import { type RecurrenceWeekday, type Task } from '@mindwtr/core';
+import { getRecurrenceByDayValue } from './recurrence-utils';
 import {
-    getRecurrenceByDayValue,
-    getRecurrenceRRuleValue,
-    getRecurrenceRuleValue,
-    getRecurrenceStrategyValue,
-} from './recurrence-utils';
-import { applyTaskDraftDateFieldUpdates } from './task-edit-draft-adapter';
+    applyTaskEditUpdate,
+    createTaskEditDraft,
+    projectTaskEditDraft,
+    type TaskEditDraft,
+    type TaskEditUpdate,
+} from './task-edit-draft-adapter';
 
 export type TaskEditTab = 'task' | 'view';
 
 export type SetEditedTask = (
-    value: React.SetStateAction<Partial<Task>>,
+    value: TaskEditUpdate,
     markDirty?: boolean,
 ) => void;
 
@@ -41,18 +42,23 @@ export function useTaskEditState({
         return tasks.find((item) => item.id === task.id) ?? task;
     }, [task, tasks]);
 
-    const [editedTask, setEditedTaskState] = React.useState<Partial<Task>>({});
+    const [taskEditDraft, setTaskEditDraftState] = React.useState<TaskEditDraft | null>(null);
     const isDirtyRef = React.useRef(false);
     const baseTaskRef = React.useRef<Task | null>(null);
+    const editedTask = React.useMemo<Partial<Task>>(() => {
+        if (!taskEditDraft || !baseTaskRef.current) return {};
+        return projectTaskEditDraft(taskEditDraft, baseTaskRef.current);
+    }, [taskEditDraft]);
     const setEditedTask = React.useCallback<SetEditedTask>(
         (value, markDirty = true) => {
             if (markDirty) {
                 isDirtyRef.current = true;
             }
-            setEditedTaskState((current) => {
-                const next = typeof value === 'function' ? value(current) : value;
-                return applyTaskDraftDateFieldUpdates(current, next, baseTaskRef.current);
-            });
+            setTaskEditDraftState((current) => (
+                current && baseTaskRef.current
+                    ? applyTaskEditUpdate(current, baseTaskRef.current, value)
+                    : current
+            ));
         },
         []
     );
@@ -81,7 +87,7 @@ export function useTaskEditState({
 
     React.useEffect(() => {
         if (!visible) {
-            setEditedTaskState({});
+            setTaskEditDraftState(null);
             baseTaskRef.current = null;
             isDirtyRef.current = false;
             setShowDescriptionPreview(false);
@@ -103,54 +109,34 @@ export function useTaskEditState({
         }
 
         if (liveTask) {
-            const recurrenceRule = getRecurrenceRuleValue(liveTask.recurrence);
-            const recurrenceStrategy = getRecurrenceStrategyValue(liveTask.recurrence);
             const byDay = getRecurrenceByDayValue(liveTask.recurrence);
-            const rrule = getRecurrenceRRuleValue(liveTask.recurrence);
-            const count = getRecurrenceCountValue(liveTask.recurrence);
-            const until = getRecurrenceUntilValue(liveTask.recurrence);
-            const completedOccurrences = getRecurrenceCompletedOccurrencesValue(liveTask.recurrence);
-            const normalizedTask: Task = {
-                ...liveTask,
-                recurrence: recurrenceRule
-                    ? {
-                        rule: recurrenceRule,
-                        strategy: recurrenceStrategy,
-                        ...(rrule ? { rrule } : {}),
-                        ...(byDay.length ? { byDay } : {}),
-                        ...(count ? { count } : {}),
-                        ...(until ? { until } : {}),
-                        ...(typeof completedOccurrences === 'number' ? { completedOccurrences } : {}),
-                    }
-                    : undefined,
-            };
-            const taskChanged = baseTaskRef.current?.id !== normalizedTask.id;
-            const updatedChanged = baseTaskRef.current?.updatedAt !== normalizedTask.updatedAt;
+            const taskChanged = baseTaskRef.current?.id !== liveTask.id;
+            const updatedChanged = baseTaskRef.current?.updatedAt !== liveTask.updatedAt;
             if (taskChanged || (!isDirtyRef.current && updatedChanged)) {
                 setCustomWeekdays(byDay);
-                setEditedTaskState(normalizedTask);
-                baseTaskRef.current = normalizedTask;
+                setTaskEditDraftState(createTaskEditDraft(liveTask));
+                baseTaskRef.current = liveTask;
                 isDirtyRef.current = false;
                 setShowDescriptionPreview(false);
-                const nextTitle = String(normalizedTask.title ?? '');
+                const nextTitle = String(liveTask.title ?? '');
                 if (titleDebounceRef.current) {
                     clearTimeout(titleDebounceRef.current);
                     titleDebounceRef.current = null;
                 }
                 titleDraftRef.current = nextTitle;
                 setTitleDraft(nextTitle);
-                const nextDescription = String(normalizedTask.description ?? '');
+                const nextDescription = String(liveTask.description ?? '');
                 descriptionDraftRef.current = nextDescription;
                 setDescriptionDraft(nextDescription);
-                setContextInputDraft((normalizedTask.contexts ?? []).join(', '));
-                setTagInputDraft((normalizedTask.tags ?? []).join(', '));
+                setContextInputDraft((liveTask.contexts ?? []).join(', '));
+                setTagInputDraft((liveTask.tags ?? []).join(', '));
                 setIsContextInputFocused(false);
                 setIsTagInputFocused(false);
-                setEditTab(resolveInitialTaskEditTab(defaultTab, normalizedTask));
+                setEditTab(resolveInitialTaskEditTab(defaultTab, liveTask));
                 resetCopilotStateRef.current();
             }
         } else {
-            setEditedTaskState({});
+            setTaskEditDraftState(null);
             baseTaskRef.current = null;
             isDirtyRef.current = false;
             setShowDescriptionPreview(false);
@@ -240,7 +226,6 @@ export function useTaskEditState({
         setDescriptionDraft,
         setEditTab,
         setEditedTask,
-        setEditedTaskState,
         setIsAIWorking,
         setIsContextInputFocused,
         setIsTagInputFocused,
@@ -259,6 +244,7 @@ export function useTaskEditState({
         showProjectPicker,
         showSectionPicker,
         tagInputDraft,
+        taskEditDraft,
         titleDebounceRef,
         titleDraft,
         titleDraftRef,

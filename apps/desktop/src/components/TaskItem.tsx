@@ -1140,9 +1140,6 @@ export const TaskItem = memo(function TaskItem({
                 return true;
             }
             setField('focusedToday', true);
-            // Draft mirror of the core star↔status rule: starring clarifies
-            // an inbox draft to Next.
-            if (draft.status === 'inbox') setField('status', 'next');
             return true;
         }
 
@@ -1263,9 +1260,6 @@ export const TaskItem = memo(function TaskItem({
                             return;
                         }
                         setField('focusedToday', true);
-                        // Draft mirror of the core star↔status rule: starring
-                        // clarifies an inbox draft to Next.
-                        if (draft.status === 'inbox') setField('status', 'next');
                     },
                 };
             })() : undefined}

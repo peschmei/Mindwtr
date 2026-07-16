@@ -1,12 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
+    createProcessInboxSession,
     getFrequentTaskTokens,
     getRecentTaskTokens,
     filterProjectsBySelectedArea,
     isTaskInActiveProject,
     normalizeClockTimeInput,
+    openProcessInboxTask,
+    selectProcessInboxCandidates,
     type AppData,
     type Area,
+    type ProcessInboxSession,
     type Project,
     type Task,
     type TaskEnergyLevel,
@@ -48,9 +52,9 @@ export function useInboxProcessingState({
     settings,
 }: UseInboxProcessingStateParams) {
     const [processingMode, setProcessingMode] = useState<ProcessingMode>('guided');
-    const [processingTask, setProcessingTask] = useState<Task | null>(null);
-    const [processingStep, setProcessingStep] = useState<ProcessingStep>('actionable');
-    const [stepHistory, setStepHistory] = useState<ProcessingStep[]>([]);
+    const [processingSession, setProcessingSession] = useState<ProcessInboxSession<ProcessingStep>>(
+        () => createProcessInboxSession('actionable'),
+    );
     const [quickActionability, setQuickActionability] = useState<QuickActionabilityChoice>('actionable');
     const [quickTwoMinuteChoice, setQuickTwoMinuteChoice] = useState<QuickTwoMinuteChoice>('no');
     const [quickExecutionChoice, setQuickExecutionChoice] = useState<QuickExecutionChoice>('defer');
@@ -84,7 +88,6 @@ export function useInboxProcessingState({
     const [reviewDate, setReviewDate] = useState('');
     const [reviewTime, setReviewTime] = useState('');
     const [reviewTimeDraft, setReviewTimeDraft] = useState('');
-    const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
 
     const inboxProcessing = settings?.gtd?.inboxProcessing ?? {};
     const defaultScheduleTime = normalizeClockTimeInput(settings?.gtd?.defaultScheduleTime) || '';
@@ -145,6 +148,9 @@ export function useInboxProcessingState({
         (task: Task) => taskMatchesAreaFilter(task, resolvedAreaFilter, projectMap, areaById),
         [resolvedAreaFilter, projectMap, areaById],
     );
+    const processingStep = processingSession.currentStep ?? 'actionable';
+    const stepHistory = processingSession.stepHistory;
+    const skippedIds = processingSession.skippedTaskIds;
 
     const filteredProjects = useMemo(() => {
         const areaFilteredProjects = filterProjectsBySelectedArea(projects, selectedAreaId || undefined);
@@ -164,31 +170,27 @@ export function useInboxProcessingState({
         [areas],
     );
 
-    const inboxCount = useMemo(() => (
-        tasks.filter((task) => {
-            if (task.status !== 'inbox' || task.deletedAt) return false;
-            if (!isTaskInActiveProject(task, projectMap)) return false;
-            if (!matchesAreaFilter(task)) return false;
-            return true;
-        }).length
-    ), [tasks, projectMap, matchesAreaFilter]);
+    const eligibleInboxTasks = useMemo(
+        () => selectProcessInboxCandidates(tasks, (task) => (
+            isTaskInActiveProject(task, projectMap)
+            && matchesAreaFilter(task)
+        )),
+        [matchesAreaFilter, projectMap, tasks],
+    );
+    const processingTask = useMemo(
+        () => eligibleInboxTasks.find((task) => task.id === processingSession.currentTaskId) ?? null,
+        [eligibleInboxTasks, processingSession.currentTaskId],
+    );
+    const inboxCount = eligibleInboxTasks.length;
 
     const remainingInboxCount = useMemo(
-        () => tasks.filter((task) => (
-            task.status === 'inbox'
-            && !task.deletedAt
-            && !skippedIds.has(task.id)
-            && isTaskInActiveProject(task, projectMap)
-            && matchesAreaFilter(task)
-        )).length,
-        [tasks, skippedIds, projectMap, matchesAreaFilter],
+        () => eligibleInboxTasks.filter((task) => !skippedIds.has(task.id)).length,
+        [eligibleInboxTasks, skippedIds],
     );
 
     const resetProcessingSession = useCallback(() => {
         setProcessingMode(defaultProcessingMode);
-        setProcessingTask(null);
-        setProcessingStep('actionable');
-        setStepHistory([]);
+        setProcessingSession(createProcessInboxSession('actionable'));
         setQuickActionability('actionable');
         setQuickTwoMinuteChoice('no');
         setQuickExecutionChoice('defer');
@@ -222,13 +224,13 @@ export function useInboxProcessingState({
         setReviewDate('');
         setReviewTime('');
         setReviewTimeDraft('');
-        setSkippedIds(new Set());
     }, [defaultProcessingMode]);
 
-    const hydrateProcessingTask = useCallback((task: Task) => {
-        setProcessingTask(task);
-        setProcessingStep('refine');
-        setStepHistory([]);
+    const hydrateProcessingTask = useCallback((
+        task: Task,
+        session?: ProcessInboxSession<ProcessingStep>,
+    ) => {
+        setProcessingSession((current) => openProcessInboxTask(session ?? current, task.id, 'refine'));
         setQuickActionability('actionable');
         setQuickTwoMinuteChoice('no');
         setQuickExecutionChoice('defer');
@@ -444,12 +446,11 @@ export function useInboxProcessingState({
     return {
         processingMode,
         setProcessingMode,
+        processingSession,
+        setProcessingSession,
         processingTask,
-        setProcessingTask,
         processingStep,
-        setProcessingStep,
         stepHistory,
-        setStepHistory,
         quickActionability,
         setQuickActionability,
         quickTwoMinuteChoice,
@@ -499,7 +500,6 @@ export function useInboxProcessingState({
         selectedAreaId,
         setSelectedAreaId,
         skippedIds,
-        setSkippedIds,
         defaultProcessingMode,
         twoMinuteEnabled,
         twoMinuteFirst,
@@ -523,11 +523,11 @@ export function useInboxProcessingState({
         showOrganizationStep,
         areaById,
         projectMap,
-        matchesAreaFilter,
         filteredProjects,
         hasExactProjectMatch,
         activeAreas,
         inboxCount,
+        eligibleInboxTasks,
         remainingInboxCount,
         resetProcessingSession,
         hydrateProcessingTask,

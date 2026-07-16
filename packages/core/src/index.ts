@@ -157,6 +157,8 @@ export type {
     ProcessInboxWorkflowEvent,
     ProcessInboxWorkflowFields,
 } from './process-inbox-workflow';
+export * from './process-inbox-session';
+export * from './data-transfer-transaction';
 
 export {
     buildFeedbackSubmissionPayload,

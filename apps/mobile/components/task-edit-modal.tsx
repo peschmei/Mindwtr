@@ -41,7 +41,7 @@ import {
 } from './task-edit/recurrence-utils';
 import { getAssignedToSuggestions } from './task-metadata-suggestions';
 import { useTaskEditCopilot } from './task-edit/use-task-edit-copilot';
-import { getEditedTaskValue, logTaskError } from './task-edit/task-edit-modal.utils';
+import { getEditedTaskValue } from './task-edit/task-edit-modal.utils';
 import {
     parseTokenList,
     replaceTrailingToken,
@@ -59,17 +59,6 @@ import { useTaskTokenSuggestions } from './task-edit/use-task-token-suggestions'
 
 
 const EMPTY_COPILOT_TAGS: string[] = [];
-
-// A backdated completedAt in the draft only makes sense while the draft status
-// stays done; picking another status must drop it or it would be written onto
-// a live task at save time.
-const applyDraftStatus = (prev: Partial<Task>, status: TaskStatus): Partial<Task> => {
-    if (status !== 'done' && prev.completedAt !== undefined) {
-        const { completedAt: _dropped, ...rest } = prev;
-        return { ...rest, status };
-    }
-    return { ...prev, status };
-};
 
 interface TaskEditModalProps {
     visible: boolean;
@@ -197,6 +186,7 @@ function TaskEditModalInner({
         showProjectPicker,
         showSectionPicker,
         tagInputDraft,
+        taskEditDraft,
         titleDebounceRef,
         titleDraft,
         titleDraftRef,
@@ -564,7 +554,7 @@ function TaskEditModalInner({
     }, []);
     const confirmWaitingAssignment = useCallback(() => {
         const assignedTo = waitingAssignmentInput.trim() || undefined;
-        setEditedTask((prev) => ({ ...applyDraftStatus(prev, 'waiting'), assignedTo }));
+        setEditedTask((prev) => ({ ...prev, status: 'waiting', assignedTo }));
         setWaitingAssignmentModalVisible(false);
     }, [setEditedTask, waitingAssignmentInput]);
     const requestStatusChange = useCallback((status: TaskStatus) => {
@@ -574,7 +564,7 @@ function TaskEditModalInner({
             setWaitingAssignmentModalVisible(true);
             return;
         }
-        setEditedTask((prev) => applyDraftStatus(prev, status));
+        setEditedTask((prev) => ({ ...prev, status }));
     }, [editedTask.assignedTo, editedTask.status, setEditedTask, task?.assignedTo, task?.status]);
     const requestBackdatedCompletion = useCallback(() => {
         setCompletedAtPickerVisible(true);
@@ -627,7 +617,6 @@ function TaskEditModalInner({
         baseTaskRef,
         closeAIModal,
         contextInputDraft,
-        customWeekdays,
         deleteTask,
         descriptionDebounceRef,
         descriptionDraft,
@@ -635,6 +624,7 @@ function TaskEditModalInner({
         duplicateTask,
         promoteTaskToProject,
         editedTask,
+        taskEditDraft,
         formatDate,
         formatDueDate,
         formatTimeEstimateLabel,
@@ -645,9 +635,6 @@ function TaskEditModalInner({
         onSave,
         prioritiesEnabled,
         projectContext,
-        recurrenceRuleValue,
-        recurrenceRRuleValue,
-        recurrenceStrategyValue,
         resetTaskChecklist,
         restoreTask,
         sections,

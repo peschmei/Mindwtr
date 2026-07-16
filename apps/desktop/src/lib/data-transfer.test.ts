@@ -115,6 +115,8 @@ describe('desktop data transfer', () => {
 
         expect(storageMocks.saveData).not.toHaveBeenCalled();
         expect(storeStateRef.current.fetchData).not.toHaveBeenCalled();
+        expect(coreMocks.flushPendingSave).toHaveBeenCalledOnce();
+        expect(storageMocks.getData).toHaveBeenCalledOnce();
         expect(logMocks.logInfo).toHaveBeenCalledWith(
             'Data transfer aborted after local data changed',
             expect.objectContaining({
@@ -126,5 +128,18 @@ describe('desktop data transfer', () => {
                 }),
             })
         );
+    });
+
+    it('persists and refreshes after a guarded Todoist import', async () => {
+        const transfer = await importDesktopTodoistData(parsedProjects);
+
+        expect(transfer.snapshotName).toBeNull();
+        expect(transfer.result.importedTaskCount).toBe(1);
+        expect(coreMocks.flushPendingSave).toHaveBeenCalledOnce();
+        expect(storageMocks.getData).toHaveBeenCalledOnce();
+        expect(storageMocks.saveData).toHaveBeenCalledWith(expect.objectContaining({
+            tasks: [expect.objectContaining({ title: 'Imported task' })],
+        }));
+        expect(storeStateRef.current.fetchData).toHaveBeenCalledWith({ silent: true });
     });
 });
