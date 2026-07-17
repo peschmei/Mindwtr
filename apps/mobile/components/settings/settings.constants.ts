@@ -41,6 +41,91 @@ export const SETTINGS_SCREEN_SET: Record<SettingsScreen, true> = {
     about: true,
 };
 
+// Root settings-menu rows the search field filters (see settings.tsx). Each id
+// maps to the i18n keys of the settings its sub-screen(s) render, so the search
+// keywords come from the *translated* setting labels and can't drift when new
+// settings are added. Keep in step with the sub-screens under components/settings.
+export type SettingsMenuRowId =
+    | 'general'
+    | 'gtd'
+    | 'manage'
+    | 'notifications'
+    | 'sync'
+    | 'data'
+    | 'advanced'
+    | 'about';
+
+// Every key here must be a REAL i18n key that the row's sub-screen actually
+// renders — verified against packages/core/src/i18n/locales/en.ts and the
+// screen source. Mobile namespaces mobile-only labels under settings.mobile.*,
+// settings.gtdMobile.*, settings.syncMobile.*, settings.calendarMobile.*, and
+// some settings live on non-"settings" screens (areas.manage, contexts.title,
+// tags.title). settings.search.test.ts asserts every key resolves, so a wrong
+// or invented key fails CI rather than silently contributing nothing.
+export const SETTINGS_MENU_KEYWORD_KEYS: Record<SettingsMenuRowId, readonly string[]> = {
+    general: [
+        'settings.appearance', 'settings.theme', 'settings.language', 'settings.weekStart',
+        'settings.dateFormat', 'settings.timeFormat', 'settings.calendarSystem',
+        'settings.mobile.showTaskAge', 'settings.mobile.appLock', 'settings.privacy',
+    ],
+    gtd: [
+        'settings.features', 'settings.featurePomodoro', 'settings.gtdMobile.pomodoroSettings',
+        'settings.timeEstimatePresets', 'settings.autoArchive', 'settings.taskEditorLayout',
+        'settings.captureDefault', 'settings.inboxProcessing', 'settings.gtdMobile.defaultScheduleTime',
+        'settings.focusTaskLimit', 'settings.defaultProjectFlowMode', 'settings.defaultArea',
+        'settings.weeklyReviewConfig', 'settings.dailyReviewConfig',
+    ],
+    // manage-settings-screen renders areas/contexts/tags via non-settings keys.
+    // People has no dedicated title key in en.ts, so it is intentionally omitted.
+    manage: ['settings.manage', 'areas.manage', 'contexts.title', 'tags.title', 'settings.unassignedAreaColor'],
+    notifications: [
+        'settings.notifications', 'settings.dailyDigest', 'settings.weeklyReview',
+        'settings.dueDateNotifications', 'settings.startDateNotifications', 'settings.persistentCaptureLabel',
+    ],
+    // Sync screen (mode === 'sync'): backends + recovery snapshots.
+    sync: [
+        'settings.sync', 'settings.syncBackend', 'settings.syncBackendWebdav',
+        'settings.cloudProviderDropbox', 'settings.syncHistory', 'settings.recoverySnapshots',
+    ],
+    // Data screen (mode === 'data'): backup/export/restore, per-source imports, diagnostics.
+    data: [
+        'settings.data', 'settings.backup', 'settings.exportBackup', 'settings.syncMobile.restoreBackup',
+        'settings.syncMobile.importFromTodoist', 'settings.syncMobile.importFromTicktick',
+        'settings.syncMobile.importFromDgtGtd', 'settings.syncMobile.importFromOmnifocus',
+        'settings.diagnostics', 'settings.debugLogging',
+    ],
+    // Advanced is a two-level menu; index the real AI + Calendar leaf settings.
+    advanced: [
+        'settings.advanced', 'settings.ai', 'settings.aiProvider', 'settings.aiModel', 'settings.aiApiKey',
+        'settings.aiProviderOpenAI', 'settings.aiProviderAnthropic', 'settings.aiProviderGemini',
+        'settings.calendar', 'settings.calendarMobile.icsSubscriptions',
+    ],
+    about: ['settings.about', 'settings.changelog', 'settings.checkForUpdates', 'settings.documentation'],
+};
+
+// Build the searchable haystack for a menu row: its title, description, and the
+// translated labels of the settings its sub-screen renders. `t` returns the key
+// itself when a translation is missing, so those non-labels are dropped.
+export function buildSettingsMenuSearchText(
+    id: SettingsMenuRowId,
+    title: string,
+    description: string | undefined,
+    t: (key: string) => string,
+): string {
+    const keywordLabels = (SETTINGS_MENU_KEYWORD_KEYS[id] ?? [])
+        .map((key) => ({ key, value: t(key) }))
+        // `t` returns the key when a translation is missing; drop those non-labels.
+        .filter(({ key, value }) => value && value !== key)
+        .map(({ value }) => value);
+    return [title, description ?? '', ...keywordLabels].join(' ').toLowerCase();
+}
+
+export function settingsMenuMatchesQuery(searchText: string, query: string): boolean {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return true;
+    return searchText.includes(trimmed);
+}
+
 export const LANGUAGES: { id: Language; native: string }[] = [
     { id: 'en', native: 'English' },
     { id: 'vi', native: 'Tiếng Việt' },

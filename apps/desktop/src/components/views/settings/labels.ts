@@ -65,6 +65,10 @@ export const labelFallback = {
         defaultProjectFlowModeDesc: 'Applies only when creating new projects. Existing projects keep their current flow.',
         projectFlowParallel: 'Parallel',
         projectFlowSequential: 'Sequential',
+        timeEstimatePresets: 'Time estimate presets',
+        timeEstimatePresetsDesc: 'Choose which time estimates appear in the task editor.',
+        timeEstimatePresetsDisabled: 'Enable Time Estimates to customize presets.',
+        enableTimeEstimates: 'Enable Time Estimates',
         language: 'Language',
         weekStart: 'Week starts on',
         weekStartSunday: 'Sunday',
@@ -624,6 +628,10 @@ export const labelFallback = {
         defaultProjectFlowModeDesc: '仅在创建新项目时应用。现有项目保留当前流程。',
         projectFlowParallel: '并行',
         projectFlowSequential: '顺序',
+        timeEstimatePresets: '时间预估选项',
+        timeEstimatePresetsDesc: '选择在任务编辑器中显示哪些时间预估。',
+        timeEstimatePresetsDisabled: '启用时间估算后才能编辑预设。',
+        enableTimeEstimates: '启用时间估算',
         language: '语言',
         weekStart: '每周开始于',
         weekStartSunday: '周日',
@@ -1270,3 +1278,47 @@ export const labelKeyOverrides: Partial<Record<keyof SettingsLabels, string>> = 
     taskEditorFieldChecklist: 'taskEdit.checklist',
     taskEditorFieldTextDirection: 'taskEdit.textDirectionLabel',
 } as const;
+
+// Search index source of truth: for each settings page, the label keys of the
+// settings that page actually renders. The sidebar search derives its keywords
+// from the *translated* values of these keys, so searchable terms stay
+// localized and cannot drift when new settings are added to a page. Keep this
+// in step with the pages under ./settings and the nav items in SettingsView.
+export const SETTINGS_PAGE_LABEL_KEYS: Record<string, ReadonlyArray<keyof SettingsLabels>> = {
+    main: [
+        'general', 'appearance', 'density', 'textSize', 'showTaskAge', 'language',
+        'weekStart', 'dateFormat', 'calendarSystem', 'timeFormat', 'keybindings',
+        'windowDecorations', 'closeBehavior', 'showTray', 'launchAtStartup',
+        'undoNotifications',
+    ],
+    gtd: [
+        'gtd', 'features', 'featurePomodoro', 'autoArchive', 'defaultScheduleTime',
+        'focusTaskLimit', 'defaultProjectFlowMode', 'projectFlowParallel',
+        'projectFlowSequential', 'timeEstimatePresets', 'captureDefault',
+        'defaultArea', 'quickAddAutoClean', 'markdownEditorAssist',
+        'weeklyReviewConfig', 'inboxProcessing', 'taskEditorLayout',
+        'taskEditorPresentation',
+    ],
+    manage: ['manage'],
+    notifications: ['notifications'],
+    sync: ['sync', 'backgroundSync'],
+    data: ['dataTransfer', 'restoreBackup', 'importTodoist', 'importTickTick', 'importDgt', 'importOmniFocus'],
+    integrations: ['integrations', 'obsidianVault', 'calendarChooseLocalFile'],
+    ai: ['ai'],
+    advanced: ['advanced', 'localApiServer'],
+    about: ['about'],
+};
+
+// Combine the label-derived keywords for a page with a hand-curated synonym
+// list. Synonyms supplement the localized labels (e.g. "dark mode", "autostart")
+// but are never the primary index. Duplicates and empty values are dropped.
+export function buildNavKeywords(
+    t: SettingsLabels,
+    labelKeys: ReadonlyArray<keyof SettingsLabels> = [],
+    synonyms: ReadonlyArray<string> = [],
+): string[] {
+    const fromLabels = labelKeys
+        .map((key) => t[key])
+        .filter((value): value is string => Boolean(value && value.trim()));
+    return Array.from(new Set([...fromLabels, ...synonyms]));
+}
