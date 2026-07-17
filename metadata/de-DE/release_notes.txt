@@ -1,5 +1,5 @@
-- Ordne Today's Focus von Hand und synchronisiere die Reihenfolge zwischen Geraeten.
-- Stelle mehrere Aufgaben und Projekte im Papierkorb wieder her oder loesche sie dauerhaft.
-- Beende den Wochenrueckblick mit einer klaren Zusammenfassung zu Inbox, Projekten und Waiting For.
-- Startdaten klaeren Inbox-Aufgaben zu Next, und Wiederholungen halten ihre Intervalle ein.
-- Einstiegshilfen, Quick-Add-Hinweise, Themes und Textlayouts sind klarer.
+- Ordne Today's Focus von Hand und synchronisiere die Reihenfolge.
+- Schliesse Kontexte und Tags ein oder aus; Tags unterstuetzen Beliebig/Alle.
+- Durchsuche und stelle archivierte Projekte wieder her; verschiebe erledigte oder archivierte Eintraege gesammelt.
+- Steuere natuerliche Datumsangaben und Erinnerungen pro Aufgabe.
+- Sicherere mobile Sync-Zugangsdaten sowie zuverlaessigere Erfassung, Hinweise, Tastaturen, Wiederholungen und grosse Bibliotheken.

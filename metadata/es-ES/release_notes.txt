@@ -1,5 +1,5 @@
-- Ordena Today's Focus a mano y sincroniza el orden entre dispositivos.
-- Restaura o elimina de forma permanente varias tareas y proyectos desde la Papelera.
-- Termina la revision semanal con un resumen claro de Inbox, proyectos y Waiting For.
-- Las fechas de inicio aclaran tareas de Inbox a Next, y las repeticiones respetan sus intervalos.
-- La primera configuracion, las ayudas de captura, los temas y el texto son mas claros.
+- Ordena Today's Focus a mano y sincroniza el orden.
+- Incluye o excluye contextos y etiquetas, con coincidencia Cualquiera/Todas.
+- Explora y restaura proyectos archivados; mueve en bloque elementos completados o archivados.
+- Controla fechas en lenguaje natural y recordatorios por tarea.
+- Credenciales de sincronizacion movil mas seguras y mejoras de captura, avisos, teclado, repeticiones y bibliotecas grandes.

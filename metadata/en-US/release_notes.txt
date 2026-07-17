@@ -1,5 +1,5 @@
-- Arrange Today's Focus by hand and sync the order across devices.
-- Restore or permanently delete several tasks and projects at once from Trash.
-- Finish Weekly Review with a clear Inbox, project, and Waiting For status summary.
-- Start dates now clarify Inbox tasks to Next, and recurring schedules respect their intervals.
-- First-run guidance, quick-add prompts, themes, and text layout are clearer across the app.
+- Arrange Today's Focus by hand and sync its order.
+- Include or exclude contexts and tags, with Any/All matching.
+- Browse and restore archived projects; move completed or archived items in bulk.
+- Control natural-language dates and per-task reminders.
+- Mobile sync credentials are safer, with more reliable capture, notifications, keyboards, recurrence, and large-library storage.

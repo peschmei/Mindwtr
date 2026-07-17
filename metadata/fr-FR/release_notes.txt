@@ -1,5 +1,5 @@
-- Classez Today's Focus a la main et synchronisez cet ordre entre vos appareils.
-- Restaurez ou supprimez definitivement plusieurs taches et projets depuis la Corbeille.
-- Terminez la revue hebdomadaire avec un resume clair de l'Inbox, des projets et de Waiting For.
-- Les dates de debut clarifient les taches Inbox vers Next, et les repetitions respectent leurs intervalles.
-- Le premier demarrage, les aides de capture, les themes et le texte sont plus clairs.
+- Classez Today's Focus a la main et synchronisez son ordre.
+- Incluez ou excluez contextes et etiquettes, avec correspondance Au moins un/Tous.
+- Parcourez et restaurez les projets archives; deplacez en lot les elements termines ou archives.
+- Controlez les dates en langage naturel et les rappels par tache.
+- Identifiants de sync mobile mieux proteges; capture, notifications, claviers, repetitions et grandes bibliotheques plus fiables.
