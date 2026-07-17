@@ -283,6 +283,7 @@ export default function CaptureScreen() {
   const personOptions = React.useMemo(() => {
     return getPersonOptionNames(people, tasks);
   }, [people, tasks]);
+  const naturalLanguageDates = isNaturalLanguageDatesEnabled(settings);
   const quickAddParseOptions = React.useMemo(
     () => ({
       knownContexts: contextOptions,
@@ -290,9 +291,9 @@ export default function CaptureScreen() {
       knownPeople: personOptions,
       defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
       preserveText: settings.quickAddAutoClean !== true,
-      naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
+      naturalLanguageDates,
     }),
-    [contextOptions, tagOptions, personOptions, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, settings.gtd?.naturalLanguageDates]
+    [contextOptions, tagOptions, personOptions, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, naturalLanguageDates]
   );
 
   useEffect(() => {

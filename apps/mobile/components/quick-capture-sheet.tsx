@@ -413,6 +413,7 @@ export function QuickCaptureSheet({
     setShowPriorityPicker(false);
   }, [prioritiesEnabled]);
 
+  const naturalLanguageDates = isNaturalLanguageDatesEnabled(settings);
   const buildCaptureRequestForInput = useCallback((
     inputValue: string,
     fallbackTitle: string,
@@ -424,7 +425,7 @@ export function QuickCaptureSheet({
       ? parseQuickAdd(trimmed, currentProjects, new Date(), areas, {
         defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
         preserveText: settings.quickAddAutoClean !== true,
-        naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
+        naturalLanguageDates,
       })
       : { title: '', props: {}, projectTitle: undefined, detectedDate: undefined, invalidDateCommands: undefined };
 
@@ -456,7 +457,7 @@ export function QuickCaptureSheet({
       },
     };
     return { input, options };
-  }, [areas, canFocusNewTask, contextTags, dueDate, dueDateHasTime, focusNewTask, initialProps, prioritiesEnabled, priority, projectId, projects, selectedAreaId, settings.gtd?.defaultScheduleTime, settings.gtd?.naturalLanguageDates, settings.quickAddAutoClean, startTime]);
+  }, [areas, canFocusNewTask, contextTags, dueDate, dueDateHasTime, focusNewTask, initialProps, naturalLanguageDates, prioritiesEnabled, priority, projectId, projects, selectedAreaId, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, startTime]);
 
   const buildTaskPropsForInput = useCallback(async (inputValue: string, fallbackTitle: string, extraProps?: Partial<Task>) => {
     const request = buildCaptureRequestForInput(inputValue, fallbackTitle, extraProps);
