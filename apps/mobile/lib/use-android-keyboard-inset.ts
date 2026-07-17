@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, Platform } from 'react-native';
+import { Dimensions, Keyboard, Platform } from 'react-native';
 
 import { getAndroidKeyboardFrame } from './android-keyboard-frame';
 
@@ -13,6 +13,54 @@ import { getAndroidKeyboardFrame } from './android-keyboard-frame';
  * it) and whenever the keyboard is closed, so callers can apply the value as
  * `paddingBottom` unconditionally.
  */
+/**
+ * Cross-platform keyboard inset for overlays that render OUTSIDE a
+ * KeyboardAvoidingView — absolute-fill picker layers in transparent modals sit
+ * under the keyboard on iOS exactly like they do on Android, because nothing
+ * above them resizes (#891). iOS listens to the keyboardWill* events so the
+ * padding lands together with the keyboard animation, and derives the inset
+ * from the keyboard frame's top edge (`screenY`), which correctly reads 0 when
+ * a frame-change slides the keyboard offscreen. Android keeps the existing
+ * keyboardDid* + defensive frame math (will* events never fire there).
+ */
+export function useKeyboardInset(active = true): number {
+  const [inset, setInset] = useState(0);
+
+  useEffect(() => {
+    if (!active) {
+      setInset(0);
+      return;
+    }
+    if (typeof Keyboard?.addListener !== 'function') return;
+    const applyFrame = (event: { endCoordinates?: { screenY?: number; height?: number } }) => {
+      if (Platform.OS === 'android') {
+        setInset(getAndroidKeyboardFrame(event).inset);
+        return;
+      }
+      const screenY = event.endCoordinates?.screenY;
+      if (typeof screenY === 'number') {
+        setInset(Math.max(0, Dimensions.get('window').height - screenY));
+        return;
+      }
+      setInset(Math.max(0, event.endCoordinates?.height ?? 0));
+    };
+    const reset = () => setInset(0);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const changeEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidChangeFrame';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const subscriptions = [
+      Keyboard.addListener(showEvent, applyFrame),
+      Keyboard.addListener(changeEvent, applyFrame),
+      Keyboard.addListener(hideEvent, reset),
+    ];
+    return () => {
+      subscriptions.forEach((subscription) => subscription.remove());
+    };
+  }, [active]);
+
+  return inset;
+}
+
 export function useAndroidKeyboardInset(active = true): number {
   const [inset, setInset] = useState(0);
 

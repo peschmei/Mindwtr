@@ -47,7 +47,7 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useThemeTokens } from '@/hooks/use-theme-tokens';
 import { useToast } from '@/contexts/toast-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAndroidKeyboardInset } from '../lib/use-android-keyboard-inset';
+import { useAndroidKeyboardInset, useKeyboardInset } from '../lib/use-android-keyboard-inset';
 import { logError, logWarn } from '../lib/app-log';
 import { openTaskScreen } from '@/lib/task-meta-navigation';
 import {
@@ -173,6 +173,9 @@ export function QuickCaptureSheet({
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [androidKeyboardAvoidingEnabled, setAndroidKeyboardAvoidingEnabled] = useState(true);
   const androidKeyboardInset = useAndroidKeyboardInset(visible);
+  // The picker overlays render outside the KeyboardAvoidingView, so iOS needs
+  // the measured inset too — only the sheet body is keyboard-avoided (#891).
+  const overlayKeyboardInset = useKeyboardInset(visible);
   const [addAnother, setAddAnother] = useState(false);
   const [focusNewTask, setFocusNewTask] = useState(false);
   const projectsRef = useRef(projects);
@@ -1038,7 +1041,7 @@ export function QuickCaptureSheet({
         value={value}
         visible={visible}
       >
-        <QuickCaptureSheetPickers {...pickerProps} pickerLayer="overlay" overlayKeyboardInset={androidKeyboardInset} />
+        <QuickCaptureSheetPickers {...pickerProps} pickerLayer="overlay" overlayKeyboardInset={overlayKeyboardInset} />
       </QuickCaptureSheetBody>
       <QuickCaptureSheetPickers {...pickerProps} pickerLayer="date" />
     </>
