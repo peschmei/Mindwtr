@@ -1029,6 +1029,8 @@ export const itOverrides: Record<string, string> = {
         'settings.gtdMobile.captureDefaults': 'Predefiniti di acquisizione',
         'settings.quickAddAutoClean': 'Ripulisci testo di aggiunta rapida',
         'settings.quickAddAutoCleanDesc': 'Rimuove dal titolo date, tag e contesti riconosciuti dopo averli applicati. Disattivato mantiene il testo esattamente come digitato.',
+        'settings.naturalLanguageDates': 'Rileva date in linguaggio naturale',
+        'settings.naturalLanguageDatesDesc': 'Riconosce frasi come "la prossima settimana" o "domani" nell’aggiunta rapida e le applica come data. Disattivato mantiene la frase come testo letterale del titolo; la sintassi esplicita come /due: continua a funzionare.',
         'settings.markdownEditorAssist': 'Aiuto alla digitazione nell’editor',
         'settings.markdownEditorAssistDesc': 'Abbina automaticamente parentesi, continua gli elenchi, collega gli URL incollati e suggerisce riferimenti durante la modifica delle descrizioni. Disattivato li rende semplici campi di testo senza inserimenti.',
         'settings.defaultArea': 'Area predefinita per nuove attività',

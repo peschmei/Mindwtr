@@ -29,6 +29,21 @@ export interface QuickAddParseOptions {
     // (dates, tags, contexts, ...) is still detected and applied, but never
     // stripped out of the title. Default strips recognized tokens. See #742.
     preserveText?: boolean;
+    // When false, skip detection of BARE natural-language dates ("next week")
+    // in the title entirely — the phrase stays as literal title text, never
+    // applied as a date. Explicit syntax (/due:, /start:, /review:, including
+    // natural-language values like "/due:next week") always keeps parsing
+    // regardless of this option. Default true = current detection behavior.
+    // See #742 (2026-07-16 comment).
+    naturalLanguageDates?: boolean;
+}
+
+// Single source of truth for the default-on semantics: only an explicit
+// `false` disables bare natural-language date detection; unset keeps it on.
+export function isNaturalLanguageDatesEnabled(
+    settings?: { gtd?: { naturalLanguageDates?: boolean } } | null,
+): boolean {
+    return settings?.gtd?.naturalLanguageDates !== false;
 }
 
 export function getQuickAddProjectInitialProps(
@@ -774,7 +789,7 @@ export function parseQuickAdd(
     // Preserve mode keeps the original text and never strips a recognized
     // trailing date; explicit metadata in props is still applied (copy-out).
     const title = preserveText ? input.trim() : cleanedTitle;
-    const detectedDate = preserveText || dueDate || hadExplicitDueCommand
+    const detectedDate = preserveText || dueDate || hadExplicitDueCommand || options.naturalLanguageDates === false
         ? undefined
         : detectTrailingDate(cleanedTitle, now);
 

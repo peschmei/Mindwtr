@@ -1117,6 +1117,8 @@ export const frOverrides: Record<string, string> = {
         'settings.captureSaveAudioDesc': 'Conservez le fichier audio joint après la transcription.',
         'settings.quickAddAutoClean': 'Nettoyer le texte de l’ajout rapide',
         'settings.quickAddAutoCleanDesc': 'Supprime du titre les dates, étiquettes et contextes reconnus après les avoir appliqués. Désactivé conserve exactement le texte saisi.',
+        'settings.naturalLanguageDates': 'Détecter les dates en langage naturel',
+        'settings.naturalLanguageDatesDesc': 'Reconnaît des expressions comme « la semaine prochaine » ou « demain » dans l’ajout rapide et les applique comme date. Désactivé conserve l’expression comme texte littéral du titre ; la syntaxe explicite comme /due: continue de fonctionner.',
         'settings.markdownEditorAssist': 'Aide à la saisie dans l’éditeur',
         'settings.markdownEditorAssistDesc': 'Associe automatiquement les parenthèses, poursuit les listes, lie les URL collées et suggère des références lors de la modification des descriptions. Désactivé en fait des champs texte simples sans insertion.',
         'settings.defaultArea': 'Zone par défaut pour les nouvelles tâches',

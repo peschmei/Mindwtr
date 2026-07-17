@@ -411,6 +411,42 @@ describe('GtdSettingsScreen task editor layout', () => {
     expect(tree.root.findByType(Modal).props.visible).toBe(false);
   });
 
+  it('saves the natural-language dates toggle from capture settings (#742)', () => {
+    storeState.settings = {
+      gtd: {
+        taskEditor: {},
+      },
+      features: {
+        priorities: true,
+        timeEstimates: true,
+      },
+    };
+    storeState.areas = [];
+
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<GtdSettingsScreen onNavigate={vi.fn()} screen="gtd-capture" />);
+    });
+
+    const naturalLanguageDatesRow = tree.root.findAllByType(Text).find((text) => (
+      text.props.children === 'settings.naturalLanguageDates'
+    ));
+    expect(naturalLanguageDatesRow).toBeTruthy();
+
+    const naturalLanguageDatesSwitch = tree.root.findAllByType(Switch).find((node) => node.props.value === true);
+    expect(naturalLanguageDatesSwitch).toBeTruthy();
+
+    renderer.act(() => {
+      naturalLanguageDatesSwitch?.props.onValueChange(false);
+    });
+
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      gtd: expect.objectContaining({
+        naturalLanguageDates: false,
+      }),
+    }));
+  });
+
   it('routes GTD feature areas to sub-screens from the hub', () => {
     storeState.settings = {
       features: {

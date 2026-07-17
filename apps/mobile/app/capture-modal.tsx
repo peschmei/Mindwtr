@@ -19,6 +19,7 @@ import {
   createAIProvider,
   getPersonOptionNames,
   getUsedTaskTokens,
+  isNaturalLanguageDatesEnabled,
   isSelectableProjectForTaskAssignment,
   parseQuickAdd,
   normalizeClockTimeInput,
@@ -289,8 +290,9 @@ export default function CaptureScreen() {
       knownPeople: personOptions,
       defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
       preserveText: settings.quickAddAutoClean !== true,
+      naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
     }),
-    [contextOptions, tagOptions, personOptions, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean]
+    [contextOptions, tagOptions, personOptions, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, settings.gtd?.naturalLanguageDates]
   );
 
   useEffect(() => {

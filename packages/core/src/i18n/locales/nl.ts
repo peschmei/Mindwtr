@@ -476,6 +476,8 @@ export const nlOverrides: Record<string, string> = {
         'settings.dueDateNotificationsDesc': 'Meld mij wanneer de deadline/-tijd van een taak aanbreekt.',
         'settings.quickAddAutoClean': 'Tekst voor snel toevoegen opschonen',
         'settings.quickAddAutoCleanDesc': 'Verwijdert herkende datums, tags en contexten uit de titel nadat ze zijn toegepast. Uit laat je tekst precies zoals getypt.',
+        'settings.naturalLanguageDates': 'Datums in natuurlijke taal herkennen',
+        'settings.naturalLanguageDatesDesc': 'Herkent zinnen als "volgende week" of "morgen" bij snel toevoegen en past ze toe als datum. Uit laat de zin als letterlijke titeltekst staan; expliciete syntax zoals /due: blijft werken.',
         'settings.markdownEditorAssist': 'Typhulp in editor',
         'settings.markdownEditorAssistDesc': 'Koppelt haakjes automatisch, zet lijsten voort, linkt geplakte URL’s en stelt verwijzingen voor tijdens het bewerken van beschrijvingen. Uit maakt er gewone tekstvelden van zonder invoegingen.',
         'settings.defaultArea': 'Standaardgebied voor nieuwe taken',

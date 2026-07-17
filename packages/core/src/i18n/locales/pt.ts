@@ -959,6 +959,8 @@ export const ptOverrides: Record<string, string> = {
         'settings.gtdMobile.captureDefaults': 'Padrões de captura',
         'settings.quickAddAutoClean': 'Limpar texto da adição rápida',
         'settings.quickAddAutoCleanDesc': 'Remove do título datas, tags e contextos reconhecidos depois de aplicá-los. Desativado mantém o texto exatamente como digitado.',
+        'settings.naturalLanguageDates': 'Detectar datas em linguagem natural',
+        'settings.naturalLanguageDatesDesc': 'Reconhece frases como "próxima semana" ou "amanhã" na adição rápida e as aplica como data. Desativado mantém a frase como texto literal do título; a sintaxe explícita como /due: continua funcionando.',
         'settings.markdownEditorAssist': 'Ajuda de digitação no editor',
         'settings.markdownEditorAssistDesc': 'Emparelha colchetes automaticamente, continua listas, vincula URLs coladas e sugere referências ao editar descrições. Desativado os torna campos de texto simples sem inserções.',
         'settings.defaultArea': 'Área padrão para novas tarefas',

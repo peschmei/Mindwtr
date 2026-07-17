@@ -902,6 +902,8 @@ export const koOverrides: Record<string, string> = {
         'settings.appleRemindersImport.skippedCount': '이미 가져왔거나 완료되었거나 제목이 없는 미리 알림 {{taskCount}}개를 건너뛰었습니다.',
         'settings.quickAddAutoClean': '빠른 추가 텍스트 정리',
         'settings.quickAddAutoCleanDesc': '적용 후 인식된 날짜, 태그, 컨텍스트를 제목에서 제거합니다. 끄면 입력한 텍스트가 그대로 유지됩니다.',
+        'settings.naturalLanguageDates': '자연어 날짜 감지',
+        'settings.naturalLanguageDatesDesc': '빠른 추가에서 "다음 주"나 "내일" 같은 문구를 인식해 날짜로 적용합니다. 끄면 해당 문구가 제목에 그대로 유지되며, /due: 같은 명시적 구문은 계속 작동합니다.',
         'settings.markdownEditorAssist': '편집기 입력 도우미',
         'settings.markdownEditorAssistDesc': '설명을 편집할 때 괄호를 자동으로 짝지어 주고, 목록을 이어 쓰며, 붙여 넣은 웹 주소를 링크하고, 참조를 제안합니다. 끄면 아무것도 삽입하지 않는 일반 텍스트 필드가 됩니다.',
         'settings.defaultArea': '새 작업의 기본 영역',

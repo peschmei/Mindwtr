@@ -1138,6 +1138,8 @@ export const en: Record<string, string> = {
         'settings.captureSaveAudioDesc': 'Keep the audio file attached after transcription.',
         'settings.quickAddAutoClean': 'Clean up quick add text',
         'settings.quickAddAutoCleanDesc': 'Remove recognized dates, tags, and contexts from the title after applying them. Off keeps your text exactly as typed.',
+        'settings.naturalLanguageDates': 'Detect natural-language dates',
+        'settings.naturalLanguageDatesDesc': 'Recognize phrases like "next week" or "tomorrow" in quick add and apply them as a date. Off keeps the phrase as literal title text; explicit syntax like /due: still works.',
         'settings.markdownEditorAssist': 'Editor typing help',
         'settings.markdownEditorAssistDesc': 'Auto-pair brackets, continue lists, link pasted URLs, and suggest references while editing descriptions. Off makes them plain-text fields with nothing inserted.',
         'settings.defaultArea': 'Default area for new tasks',

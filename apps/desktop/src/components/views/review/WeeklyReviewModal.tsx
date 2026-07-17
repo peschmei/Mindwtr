@@ -8,6 +8,7 @@ import {
     getUsedTaskTokens,
     getWeeklyReviewSummary,
     isDueForReview,
+    isNaturalLanguageDatesEnabled,
     isTaskInActiveProject,
     normalizeClockTimeInput,
     parseProjectNextActionInput,
@@ -538,6 +539,7 @@ export function WeeklyReviewGuideModal({ onClose }: WeeklyReviewGuideModalProps)
                 knownPeople: getPersonOptionNames(state.people, state.tasks),
                 defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
                 preserveText: settings.quickAddAutoClean !== true,
+                naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
             },
         });
         if (invalidDateCommands && invalidDateCommands.length > 0) {

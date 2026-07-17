@@ -10,6 +10,7 @@ import {
     findSelectableProjectByTitleAndArea,
     getQuickAddProjectInitialProps,
     getPersonOptionNames,
+    isNaturalLanguageDatesEnabled,
     parseQuickAdd,
     normalizeClockTimeInput,
     normalizeFocusTaskLimit,
@@ -223,8 +224,9 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             knownPeople: personOptionNames,
             defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
             preserveText: settings.quickAddAutoClean !== true,
+            naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
         }),
-        [allContexts, allTags, personOptionNames, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean],
+        [allContexts, allTags, personOptionNames, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, settings.gtd?.naturalLanguageDates],
     );
     const parsedInput = useMemo(
         () => parseQuickAdd(value, projects, new Date(), areas, quickAddParseOptions),

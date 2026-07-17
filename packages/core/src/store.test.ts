@@ -1122,6 +1122,16 @@ describe('TaskStore', () => {
         expect(useTaskStore.getState().settings.syncPreferencesUpdatedAt?.gtd).toBe('2026-03-21T12:00:00.000Z');
     });
 
+    it('stamps the GTD sync time when naturalLanguageDates changes (#742)', async () => {
+        vi.setSystemTime(new Date('2026-07-16T12:00:00.000Z'));
+        useTaskStore.setState({ settings: { deviceId: 'device-a' } });
+
+        await useTaskStore.getState().updateSettings({ gtd: { naturalLanguageDates: false } });
+
+        expect(useTaskStore.getState().settings.gtd?.naturalLanguageDates).toBe(false);
+        expect(useTaskStore.getState().settings.syncPreferencesUpdatedAt?.gtd).toBe('2026-07-16T12:00:00.000Z');
+    });
+
     it('prefers the renamed tag when deduplicating normalized tag collisions', async () => {
         const { addProject, addTask, renameTag } = useTaskStore.getState();
 

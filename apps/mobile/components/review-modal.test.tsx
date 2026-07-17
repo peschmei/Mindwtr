@@ -92,6 +92,8 @@ vi.mock('@mindwtr/core', () => ({
     useTaskStore: Object.assign(() => storeState, { getState: () => storeState }),
     shallow: vi.fn((a, b) => a === b),
     normalizeClockTimeInput: vi.fn(() => null),
+    isNaturalLanguageDatesEnabled: vi.fn((settings?: { gtd?: { naturalLanguageDates?: boolean } } | null) =>
+        settings?.gtd?.naturalLanguageDates !== false),
     parseProjectNextActionInput: vi.fn((input: string, context: { projectId: string }) => ({
         title: input,
         props: { projectId: context.projectId, status: 'next' },

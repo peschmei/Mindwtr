@@ -1051,6 +1051,8 @@ export const zhHans: Record<string, string> = {
         'settings.captureSaveAudioDesc': '转录完成后保留语音文件。',
         'settings.quickAddAutoClean': '整理快速添加文本',
         'settings.quickAddAutoCleanDesc': '应用后从标题中移除识别到的日期、标签和情境。关闭则完全保留你输入的文本。',
+        'settings.naturalLanguageDates': '识别自然语言日期',
+        'settings.naturalLanguageDatesDesc': '在快速添加中识别"下周""明天"等短语并作为日期应用。关闭后该短语将保留为标题原文；/due: 等显式语法仍然有效。',
         'settings.markdownEditorAssist': '编辑器输入辅助',
         'settings.markdownEditorAssistDesc': '编辑描述时自动配对括号、续写列表、链接粘贴的网址，并建议引用。关闭后这些字段将作为纯文本，不自动插入内容。',
         'settings.defaultArea': '新任务默认领域',

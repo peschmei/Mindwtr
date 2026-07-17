@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { getProjectNextActionPromptData, normalizeClockTimeInput, parseProjectNextActionInput, shallow, tFallback, useTaskStore } from '@mindwtr/core';
+import { getProjectNextActionPromptData, isNaturalLanguageDatesEnabled, normalizeClockTimeInput, parseProjectNextActionInput, shallow, tFallback, useTaskStore } from '@mindwtr/core';
 import type { Task } from '@mindwtr/core';
 
 import { useLanguage } from '../contexts/language-context';
@@ -168,6 +168,7 @@ export function ProjectNextActionPromptProvider({ children }: { children: React.
             parseOptions: {
                 defaultScheduleTime: normalizeClockTimeInput(state.settings.gtd?.defaultScheduleTime) || undefined,
                 preserveText: state.settings.quickAddAutoClean !== true,
+                naturalLanguageDates: isNaturalLanguageDatesEnabled(state.settings),
             },
         });
         void Promise.resolve(addTask(title, props))

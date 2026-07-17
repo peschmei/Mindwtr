@@ -10,6 +10,7 @@ import {
     getTaskMetadataFilterVisibility,
     getWaitingPerson,
     hasActiveFilterCriteria,
+    isNaturalLanguageDatesEnabled,
     isTaskInActiveProject,
     parseQuickAdd,
     normalizeClockTimeInput,
@@ -298,8 +299,9 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
             knownPeople: personOptionNames,
             defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
             preserveText: settings.quickAddAutoClean !== true,
+            naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
         }),
-        [allContexts, allTags, personOptionNames, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean],
+        [allContexts, allTags, personOptionNames, settings.gtd?.defaultScheduleTime, settings.quickAddAutoClean, settings.gtd?.naturalLanguageDates],
     );
 
     const {

@@ -19,6 +19,7 @@ import {
     resolveFocusStarAction,
     parseQuickAddDateCommands,
     parseProjectNextActionInput,
+    isNaturalLanguageDatesEnabled,
     getPersonOptionNames,
     useTaskStore,
     areDraftAttachmentsDirty,
@@ -818,6 +819,7 @@ export const TaskItem = memo(function TaskItem({
                 knownPeople: getPersonOptionNames(state.people, state.tasks),
                 defaultScheduleTime: normalizeClockTimeInput(state.settings.gtd?.defaultScheduleTime) || undefined,
                 preserveText: state.settings.quickAddAutoClean !== true,
+                naturalLanguageDates: isNaturalLanguageDatesEnabled(state.settings),
             },
         });
         void addTask(title, props)

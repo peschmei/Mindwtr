@@ -162,6 +162,8 @@ vi.mock('@mindwtr/core', async () => {
     })),
     getUsedTaskTokens: vi.fn(() => []),
     hasActiveFilterCriteria: vi.fn(() => false),
+    isNaturalLanguageDatesEnabled: (settings?: { gtd?: { naturalLanguageDates?: boolean } } | null) =>
+      settings?.gtd?.naturalLanguageDates !== false,
     isSelectableProjectForTaskAssignment: (item: Project) => item.status === 'active' && !item.deletedAt,
     isTaskInActiveProject: vi.fn(() => true),
     matchesTask: vi.fn(() => true),

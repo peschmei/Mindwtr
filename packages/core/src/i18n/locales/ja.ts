@@ -897,6 +897,8 @@ export const jaOverrides: Record<string, string> = {
         'settings.captureSaveAudioDesc': '文字起こし後は音声ファイルを添付したままにしておきます。',
         'settings.quickAddAutoClean': 'クイック追加テキストを整理',
         'settings.quickAddAutoCleanDesc': '適用後、認識した日付、タグ、コンテキストをタイトルから削除します。オフにすると入力したテキストをそのまま保持します。',
+        'settings.naturalLanguageDates': '自然言語の日付を検出',
+        'settings.naturalLanguageDatesDesc': 'クイック追加で「来週」や「明日」のような表現を認識し、日付として適用します。オフにすると、その表現はタイトルにそのまま残ります。/due: のような明示的な構文は引き続き機能します。',
         'settings.markdownEditorAssist': 'エディター入力補助',
         'settings.markdownEditorAssistDesc': '説明の編集中に括弧を自動補完し、リストを継続し、貼り付けたウェブアドレスをリンクし、参照を提案します。オフにすると何も挿入しないプレーンテキスト欄になります。',
         'settings.defaultArea': '新規タスクの既定エリア',

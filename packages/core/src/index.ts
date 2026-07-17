@@ -648,6 +648,7 @@ export type {
 
 export {
     getQuickAddProjectInitialProps,
+    isNaturalLanguageDatesEnabled,
     parseProjectNextActionInput,
     parseQuickAdd,
     parseQuickAddDateCommands,

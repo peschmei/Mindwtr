@@ -320,6 +320,12 @@ export interface GtdSettings {
     defaultProjectFlowMode?: DefaultProjectFlowMode;
     defaultScheduleTime?: string; // HH:mm, used to prefill manual scheduling fields.
     saveAudioAttachments?: boolean;
+    // Quick-add: when false, bare natural-language phrases in the title ("next
+    // week") are neither applied as a date nor stripped — they stay literal
+    // text. Explicit syntax (/due:, /start:, /review:, including natural-
+    // language values like "/due:next week") always keeps working. Default
+    // (unset) preserves current detection behavior. See #742 (2026-07-16).
+    naturalLanguageDates?: boolean;
     inboxProcessing?: {
         defaultMode?: InboxProcessingMode;
         twoMinuteEnabled?: boolean;

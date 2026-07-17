@@ -610,6 +610,7 @@ export const mergeSettingsForSync = (
             focusTaskLimit: localSettings.gtd?.focusTaskLimit,
             focusGroupBy: localSettings.gtd?.focusGroupBy,
             defaultProjectFlowMode: localSettings.gtd?.defaultProjectFlowMode,
+            naturalLanguageDates: localSettings.gtd?.naturalLanguageDates,
         },
         {
             defaultScheduleTime: incomingSettings.gtd?.defaultScheduleTime,
@@ -618,6 +619,7 @@ export const mergeSettingsForSync = (
             focusTaskLimit: incomingSettings.gtd?.focusTaskLimit,
             focusGroupBy: incomingSettings.gtd?.focusGroupBy,
             defaultProjectFlowMode: incomingSettings.gtd?.defaultProjectFlowMode,
+            naturalLanguageDates: incomingSettings.gtd?.naturalLanguageDates,
         },
         (value) => {
             const nextGtd = { ...(merged.gtd ?? {}) };
@@ -650,6 +652,11 @@ export const mergeSettingsForSync = (
                 delete nextGtd.defaultProjectFlowMode;
             } else {
                 nextGtd.defaultProjectFlowMode = value.defaultProjectFlowMode;
+            }
+            if (value.naturalLanguageDates === undefined) {
+                delete nextGtd.naturalLanguageDates;
+            } else {
+                nextGtd.naturalLanguageDates = value.naturalLanguageDates;
             }
             if (Object.keys(nextGtd).length === 0) {
                 if (merged.gtd) {

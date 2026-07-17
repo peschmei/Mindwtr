@@ -93,6 +93,8 @@ vi.mock('@mindwtr/core', () => {
         normalizeClockTimeInput: (value?: string | null) =>
             typeof value === 'string' && value.trim() ? value.trim() : null,
         parseProjectNextActionInput: parseNextActionInput,
+        isNaturalLanguageDatesEnabled: (settings?: { gtd?: { naturalLanguageDates?: boolean } } | null) =>
+            settings?.gtd?.naturalLanguageDates !== false,
     };
 });
 

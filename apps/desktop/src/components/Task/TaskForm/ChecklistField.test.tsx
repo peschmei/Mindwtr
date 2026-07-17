@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { createEvent, fireEvent, render, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import type { Task } from '@mindwtr/core';
+import { useTaskStore, type Task } from '@mindwtr/core';
 import { ChecklistField, reorderChecklistItems } from './ChecklistField';
+
+const initialTaskState = useTaskStore.getState();
 
 const initialChecklist: NonNullable<Task['checklist']> = [
     { id: '1', title: 'Item 1', isCompleted: false },
@@ -33,6 +35,10 @@ function ChecklistHarness({
 }
 
 describe('ChecklistField', () => {
+    afterEach(() => {
+        useTaskStore.setState(initialTaskState, true);
+    });
+
     it('reorders checklist items without changing completion state', () => {
         const reordered = reorderChecklistItems(
             [
@@ -88,6 +94,18 @@ describe('ChecklistField', () => {
         expect(pairEvent.defaultPrevented).toBe(true);
         await waitFor(() => {
             expect((getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('[Item 1]');
+        });
+    });
+
+    it('types a literal "(" with no auto-close when typing help is disabled (#742)', async () => {
+        useTaskStore.setState({ settings: { ...initialTaskState.settings, markdownEditorAssist: false } });
+        const { getAllByRole } = render(<ChecklistHarness initial={[{ id: '1', title: '', isCompleted: false }]} />);
+
+        const input = getAllByRole('textbox')[0] as HTMLInputElement;
+        fireEvent.change(input, { target: { value: '(' } });
+
+        await waitFor(() => {
+            expect((getAllByRole('textbox')[0] as HTMLInputElement).value).toBe('(');
         });
     });
 

@@ -6,6 +6,7 @@ import {
     getWeeklyReviewSummary,
     isTaskInActiveProject,
     isDueForReview,
+    isNaturalLanguageDatesEnabled,
     normalizeClockTimeInput,
     parseProjectNextActionInput,
     partitionByReviewDate,
@@ -179,6 +180,7 @@ export function useReviewModalController({
                 parseOptions: {
                     defaultScheduleTime: normalizeClockTimeInput(settings?.gtd?.defaultScheduleTime) || undefined,
                     preserveText: settings?.quickAddAutoClean !== true,
+                    naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
                 },
             });
             const result = await addTask(title, props);

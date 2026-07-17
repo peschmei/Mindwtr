@@ -102,6 +102,7 @@ export function GtdSettingsScreen({
     const saveAudioAttachments = settings.gtd?.saveAudioAttachments !== false;
     const quickAddAutoClean = settings.quickAddAutoClean === true;
     const markdownEditorAssist = settings.markdownEditorAssist !== false;
+    const naturalLanguageDates = settings.gtd?.naturalLanguageDates !== false;
     const inboxProcessing = settings.gtd?.inboxProcessing ?? {};
     const inboxTwoMinuteEnabled = inboxProcessing.twoMinuteEnabled !== false;
     const inboxProjectFirst = inboxProcessing.projectFirst === true;
@@ -375,6 +376,8 @@ export function GtdSettingsScreen({
     const quickAddAutoCleanDesc = t('settings.quickAddAutoCleanDesc');
     const markdownEditorAssistLabel = t('settings.markdownEditorAssist');
     const markdownEditorAssistDesc = t('settings.markdownEditorAssistDesc');
+    const naturalLanguageDatesLabel = t('settings.naturalLanguageDates');
+    const naturalLanguageDatesDesc = t('settings.naturalLanguageDatesDesc');
     const reviewSettingsTitle = tFallback(t, 'settings.reviewSettings', tr('settings.gtdMobile.reviewSteps'));
     const inboxSettingsTitle = tFallback(t, 'settings.inboxProcessing', tr('settings.inboxProcessing'));
     const projectFlowModeOptions: Array<{ id: DefaultProjectFlowMode; label: string }> = [
@@ -803,6 +806,24 @@ export function GtdSettingsScreen({
                                 value={quickAddAutoClean}
                                 onValueChange={(value) => {
                                     updateSettings({ quickAddAutoClean: value }).catch(logSettingsError);
+                                }}
+                                trackColor={{ false: '#767577', true: '#3B82F6' }}
+                            />
+                        </View>
+                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
+                            <View style={styles.settingInfo}>
+                                <Text style={[styles.settingLabel, { color: tc.text }]}>{naturalLanguageDatesLabel}</Text>
+                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{naturalLanguageDatesDesc}</Text>
+                            </View>
+                            <Switch
+                                value={naturalLanguageDates}
+                                onValueChange={(value) => {
+                                    updateSettings({
+                                        gtd: {
+                                            ...(settings.gtd ?? {}),
+                                            naturalLanguageDates: value,
+                                        },
+                                    }).catch(logSettingsError);
                                 }}
                                 trackColor={{ false: '#767577', true: '#3B82F6' }}
                             />

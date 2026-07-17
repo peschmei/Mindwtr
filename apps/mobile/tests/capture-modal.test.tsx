@@ -50,6 +50,8 @@ vi.mock('@mindwtr/core', async () => {
     return areaId ? { areaId } : undefined;
   },
   getUsedTaskTokens: vi.fn(() => []),
+  isNaturalLanguageDatesEnabled: (settings?: { gtd?: { naturalLanguageDates?: boolean } } | null) =>
+    settings?.gtd?.naturalLanguageDates !== false,
   isSelectableProjectForTaskAssignment: vi.fn((project: any) => (
     !project.deletedAt && project.status !== 'archived' && project.status !== 'completed'
   )),

@@ -894,6 +894,8 @@ export const plOverrides: Record<string, string> = {
         'settings.captureSaveAudioDesc': 'Zachowaj plik audio jako załącznik po transkrypcji.',
         'settings.quickAddAutoClean': 'Wyczyść tekst szybkiego dodawania',
         'settings.quickAddAutoCleanDesc': 'Usuwa rozpoznane daty, tagi i konteksty z tytułu po ich zastosowaniu. Wyłączone pozostawia tekst dokładnie tak, jak wpisano.',
+        'settings.naturalLanguageDates': 'Wykrywaj daty w języku naturalnym',
+        'settings.naturalLanguageDatesDesc': 'Rozpoznaje frazy takie jak "w przyszłym tygodniu" lub "jutro" w szybkim dodawaniu i stosuje je jako datę. Wyłączone pozostawia frazę jako dosłowny tekst tytułu; jawna składnia, np. /due:, nadal działa.',
         'settings.markdownEditorAssist': 'Pomoc pisania w edytorze',
         'settings.markdownEditorAssistDesc': 'Automatycznie dobiera nawiasy, kontynuuje listy, linkuje wklejone URL-e i sugeruje odwołania podczas edycji opisów. Wyłączone zmienia je w zwykłe pola tekstowe bez wstawiania.',
         'settings.defaultArea': 'Domyślny obszar dla nowych zadań',

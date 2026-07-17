@@ -935,6 +935,8 @@ export const deOverrides: Record<string, string> = {
         'settings.captureSaveAudioDesc': 'Audio-Datei nach der Transkription beibehalten.',
         'settings.quickAddAutoClean': 'Schnell-hinzufügen-Text bereinigen',
         'settings.quickAddAutoCleanDesc': 'Erkannte Daten, Tags und Kontexte nach dem Anwenden aus dem Titel entfernen. Aus lässt den Text genau wie eingegeben.',
+        'settings.naturalLanguageDates': 'Daten in natürlicher Sprache erkennen',
+        'settings.naturalLanguageDatesDesc': 'Erkennt Formulierungen wie „nächste Woche“ oder „morgen“ bei der Schnelleingabe und wendet sie als Datum an. Aus lässt die Formulierung als reinen Titeltext stehen; explizite Syntax wie /due: funktioniert weiterhin.',
         'settings.markdownEditorAssist': 'Schreibhilfe im Editor',
         'settings.markdownEditorAssistDesc': 'Klammern automatisch paaren, Listen fortsetzen, eingefügte URLs verlinken und beim Bearbeiten von Beschreibungen Referenzen vorschlagen. Aus macht daraus reine Textfelder ohne Einfügungen.',
         'settings.defaultArea': 'Standardbereich für neue Aufgaben',

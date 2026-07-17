@@ -1304,12 +1304,15 @@ export const createSettingsActions = ({
             const defaultProjectFlowModeUpdate = updates.gtd
                 ? Object.prototype.hasOwnProperty.call(updates.gtd, 'defaultProjectFlowMode')
                 : false;
+            const naturalLanguageDatesUpdate = updates.gtd
+                ? Object.prototype.hasOwnProperty.call(updates.gtd, 'naturalLanguageDates')
+                : false;
 
             if ('language' in updates || 'weekStart' in updates || 'dateFormat' in updates || 'timeFormat' in updates) {
                 markSyncUpdated('language');
             }
 
-            if (defaultScheduleTimeUpdate || defaultAreaIdUpdate || defaultAreaModeUpdate || focusTaskLimitUpdate || focusGroupByUpdate || defaultProjectFlowModeUpdate) {
+            if (defaultScheduleTimeUpdate || defaultAreaIdUpdate || defaultAreaModeUpdate || focusTaskLimitUpdate || focusGroupByUpdate || defaultProjectFlowModeUpdate || naturalLanguageDatesUpdate) {
                 markSyncUpdated('gtd');
             }
 

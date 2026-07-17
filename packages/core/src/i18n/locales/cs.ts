@@ -1097,6 +1097,8 @@ export const csOverrides: Record<string, string> = {
         'settings.captureSaveAudioDesc': 'Po přepisu ponechat zvukový soubor jako přílohu.',
         'settings.quickAddAutoClean': 'Vyčistit text rychlého přidání',
         'settings.quickAddAutoCleanDesc': 'Po použití odebrat rozpoznaná data, štítky a kontexty z názvu. Vypnuto ponechá text přesně tak, jak jste ho zadali.',
+        'settings.naturalLanguageDates': 'Rozpoznávat data v přirozeném jazyce',
+        'settings.naturalLanguageDatesDesc': 'Rozpozná fráze jako „příští týden“ nebo „zítra“ při rychlém přidání a použije je jako datum. Vypnuto ponechá frázi jako doslovný text názvu; explicitní syntaxe jako /due: nadále funguje.',
         'settings.markdownEditorAssist': 'Pomoc při psaní v editoru',
         'settings.markdownEditorAssistDesc': 'Automaticky páruje závorky, pokračuje v seznamech, propojuje vložené URL a při úpravě popisů navrhuje reference. Vypnuto z nich udělá prostá textová pole bez vkládání.',
         'settings.defaultArea': 'Výchozí oblast pro nové úkoly',

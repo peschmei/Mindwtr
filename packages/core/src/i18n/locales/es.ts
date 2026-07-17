@@ -834,6 +834,8 @@ export const esOverrides: Record<string, string> = {
         'settings.captureSaveAudio': 'Guardar audio attachments',
         'settings.quickAddAutoClean': 'Limpiar texto de añadido rápido',
         'settings.quickAddAutoCleanDesc': 'Elimina del título las fechas, etiquetas y contextos reconocidos después de aplicarlos. Desactivado conserva el texto exactamente como lo escribiste.',
+        'settings.naturalLanguageDates': 'Detectar fechas en lenguaje natural',
+        'settings.naturalLanguageDatesDesc': 'Reconoce frases como "la próxima semana" o "mañana" en el añadido rápido y las aplica como fecha. Desactivado conserva la frase como texto literal del título; la sintaxis explícita como /due: sigue funcionando.',
         'settings.markdownEditorAssist': 'Ayuda de escritura en el editor',
         'settings.markdownEditorAssistDesc': 'Empareja corchetes, continúa listas, enlaza URL pegadas y sugiere referencias al editar descripciones. Desactivado los deja como campos de texto sin inserciones.',
         'settings.defaultArea': 'Área predeterminada para nuevas tareas',

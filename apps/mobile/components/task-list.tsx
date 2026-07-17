@@ -15,6 +15,7 @@ import {
   sortTasksBy,
   splitCompletedTasks,
   sortDoneTasksForListView,
+  isNaturalLanguageDatesEnabled,
   parseQuickAdd,
   formatFocusTaskLimitText,
   getDefaultTaskAreaMode,
@@ -1374,6 +1375,7 @@ function TaskListComponent({
     const parsed = parseQuickAdd(newTaskTitle, projects, new Date(), areas, {
       defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
       preserveText: settings.quickAddAutoClean !== true,
+      naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
     });
     if (parsed.invalidDateCommands && parsed.invalidDateCommands.length > 0) {
       showToast({

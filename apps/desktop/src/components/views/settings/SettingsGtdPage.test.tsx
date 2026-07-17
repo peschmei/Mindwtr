@@ -131,4 +131,32 @@ describe('SettingsGtdPage', () => {
             });
         });
     });
+
+    it('saves the natural-language dates toggle (#742)', async () => {
+        const updateSettings = vi.fn().mockResolvedValue(undefined);
+        const showSaved = vi.fn();
+
+        const { getByRole } = render(
+            <SettingsGtdPage
+                t={labelFallback.en}
+                language="en"
+                settings={{ gtd: {} }}
+                updateSettings={updateSettings}
+                showSaved={showSaved}
+                autoArchiveDays={7}
+                areas={[]}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /default capture method/i }));
+        fireEvent.click(getByRole('switch', { name: /detect natural-language dates/i }));
+
+        await waitFor(() => {
+            expect(updateSettings).toHaveBeenCalledWith({
+                gtd: {
+                    naturalLanguageDates: false,
+                },
+            });
+        });
+    });
 });

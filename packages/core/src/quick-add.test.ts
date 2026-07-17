@@ -326,6 +326,92 @@ describe('quick-add', () => {
         expect(result.title).toBe('Call mom tomorrow');
     });
 
+    // #742 (2026-07-16 comment): naturalLanguageDates governs BARE phrase
+    // detection only. Matrix: {toggle on, toggle off} x {preserveText on,
+    // off} x {bare NL phrase, explicit /due:NL-value, @context + #tag, plain
+    // title}.
+    describe('naturalLanguageDates toggle', () => {
+        const now = new Date('2026-07-16T10:00:00Z');
+
+        it('toggle on, preserveText off: bare phrase is detected (default behavior unchanged)', () => {
+            const result = parseQuickAdd('Register for the race next week', undefined, now);
+
+            expect(result.title).toBe('Register for the race next week');
+            expect(result.props.dueDate).toBeUndefined();
+            expect(result.detectedDate).toBeDefined();
+            expect(result.detectedDate?.titleWithoutDate).toBe('Register for the race');
+        });
+
+        it('toggle off, preserveText off: bare phrase stays literal, no detected date', () => {
+            const result = parseQuickAdd('Register for the race next week', undefined, now, undefined, {
+                naturalLanguageDates: false,
+            });
+
+            expect(result.title).toBe('Register for the race next week');
+            expect(result.props.dueDate).toBeUndefined();
+            expect(result.detectedDate).toBeUndefined();
+        });
+
+        it('toggle off, preserveText on: bare phrase stays literal, no detected date', () => {
+            const result = parseQuickAdd('Register for the race next week', undefined, now, undefined, {
+                naturalLanguageDates: false,
+                preserveText: true,
+            });
+
+            expect(result.title).toBe('Register for the race next week');
+            expect(result.props.dueDate).toBeUndefined();
+            expect(result.detectedDate).toBeUndefined();
+        });
+
+        it('toggle on, preserveText on: preserveText already suppresses detection (pre-existing #742 behavior), title kept as-typed', () => {
+            const result = parseQuickAdd('Register for the race next week', undefined, now, undefined, {
+                preserveText: true,
+            });
+
+            expect(result.title).toBe('Register for the race next week');
+            expect(result.detectedDate).toBeUndefined();
+        });
+
+        it('toggle off: explicit /due:<natural language> still parses', () => {
+            const result = parseQuickAdd('Register for the race /due:next week', undefined, now, undefined, {
+                naturalLanguageDates: false,
+            });
+
+            expect(result.title).toBe('Register for the race');
+            expect(result.props.dueDate).toBeDefined();
+            expect(result.invalidDateCommands).toBeUndefined();
+        });
+
+        it('toggle off: explicit @context and #tag tokens still parse and strip', () => {
+            const result = parseQuickAdd('Call mom @phone #family', undefined, now, undefined, {
+                naturalLanguageDates: false,
+            });
+
+            expect(result.title).toBe('Call mom');
+            expect(result.props.contexts).toEqual(['@phone']);
+            expect(result.props.tags).toEqual(['#family']);
+        });
+
+        it('toggle off: a plain title with no dates or tokens is unaffected', () => {
+            const result = parseQuickAdd('Buy milk', undefined, now, undefined, {
+                naturalLanguageDates: false,
+            });
+
+            expect(result.title).toBe('Buy milk');
+            expect(result.props.dueDate).toBeUndefined();
+            expect(result.detectedDate).toBeUndefined();
+        });
+
+        it('unset naturalLanguageDates keeps current (on) behavior byte-for-byte', () => {
+            const withUnset = parseQuickAdd('Register for the race next week', undefined, now);
+            const withExplicitTrue = parseQuickAdd('Register for the race next week', undefined, now, undefined, {
+                naturalLanguageDates: true,
+            });
+
+            expect(withUnset).toEqual(withExplicitTrue);
+        });
+    });
+
     it('matches project by title when provided', () => {
         const now = new Date('2025-01-01T10:00:00Z');
         const projects = [
