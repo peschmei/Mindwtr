@@ -1,4 +1,5 @@
 import { sendDesktopImmediateNotification } from './notification-service';
+import { isTauriRuntime } from './runtime';
 
 type AudioContextLike = {
     currentTime: number;
@@ -50,7 +51,22 @@ export async function playPomodoroCompletionSound(): Promise<void> {
     }
 }
 
+export async function requestPomodoroWindowAttention(): Promise<void> {
+    if (!isTauriRuntime()) return;
+    try {
+        const { getCurrentWindow, UserAttentionType } = await import('@tauri-apps/api/window');
+        const currentWindow = getCurrentWindow();
+        if (await currentWindow.isFocused()) return;
+        // Critical keeps the taskbar entry flashing/highlighted until the user
+        // focuses the window, unlike a toast that disappears or gets buried.
+        await currentWindow.requestUserAttention(UserAttentionType.Critical);
+    } catch {
+        // Best-effort attention cue; the sound and notification still fire.
+    }
+}
+
 export async function sendDesktopPomodoroCompletionAlert(title: string, body: string): Promise<void> {
     void playPomodoroCompletionSound();
+    void requestPomodoroWindowAttention();
     await sendDesktopImmediateNotification(title, body);
 }

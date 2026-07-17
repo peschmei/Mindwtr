@@ -1,6 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { playPomodoroCompletionSound } from './pomodoro-alert';
+import { playPomodoroCompletionSound, requestPomodoroWindowAttention } from './pomodoro-alert';
+
+const attentionMocks = vi.hoisted(() => ({
+    isTauriRuntime: vi.fn<() => boolean>(),
+    isFocused: vi.fn<() => Promise<boolean>>(),
+    requestUserAttention: vi.fn<(type: number) => Promise<void>>(),
+}));
+
+vi.mock('./runtime', () => ({
+    isTauriRuntime: attentionMocks.isTauriRuntime,
+}));
+
+vi.mock('@tauri-apps/api/window', () => ({
+    getCurrentWindow: () => ({
+        isFocused: attentionMocks.isFocused,
+        requestUserAttention: attentionMocks.requestUserAttention,
+    }),
+    UserAttentionType: { Critical: 1, Informational: 2 },
+}));
 
 describe('pomodoro-alert', () => {
     const originalAudioContext = globalThis.AudioContext;
@@ -62,5 +80,33 @@ describe('pomodoro-alert', () => {
         (globalThis as typeof globalThis & { webkitAudioContext?: unknown }).webkitAudioContext = undefined;
 
         await expect(playPomodoroCompletionSound()).resolves.toBeUndefined();
+    });
+
+    it('flashes the window attention cue when the window is unfocused', async () => {
+        attentionMocks.isTauriRuntime.mockReturnValue(true);
+        attentionMocks.isFocused.mockResolvedValue(false);
+        attentionMocks.requestUserAttention.mockResolvedValue(undefined);
+
+        await requestPomodoroWindowAttention();
+
+        expect(attentionMocks.requestUserAttention).toHaveBeenCalledWith(1);
+    });
+
+    it('skips the attention cue when the window is focused', async () => {
+        attentionMocks.isTauriRuntime.mockReturnValue(true);
+        attentionMocks.isFocused.mockResolvedValue(true);
+
+        await requestPomodoroWindowAttention();
+
+        expect(attentionMocks.requestUserAttention).not.toHaveBeenCalled();
+    });
+
+    it('skips the attention cue outside the Tauri runtime', async () => {
+        attentionMocks.isTauriRuntime.mockReturnValue(false);
+
+        await requestPomodoroWindowAttention();
+
+        expect(attentionMocks.isFocused).not.toHaveBeenCalled();
+        expect(attentionMocks.requestUserAttention).not.toHaveBeenCalled();
     });
 });
