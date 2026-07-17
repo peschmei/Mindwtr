@@ -306,6 +306,8 @@ export const en: Record<string, string> = {
         'taskEdit.repeatReminderEveryMinutes': 'Every {count} min',
         'taskEdit.repeatReminderMinutesShort': '{count} min',
         'taskEdit.repeatReminderHint': 'Re-notify at this interval until you complete or snooze it, up to a limit (fewer repeats at shorter intervals).',
+        'taskEdit.suppressMindwtrReminders': 'Skip reminders',
+        'taskEdit.suppressMindwtrRemindersHint': 'Skip start and due reminders for this task. It still appears in Focus and your lists.',
         'taskEdit.pushCountHint': 'Pushed',
         'taskEdit.unblocksLabel': 'Unblocks',
         'taskStatus.changeStatus': 'Change Status',

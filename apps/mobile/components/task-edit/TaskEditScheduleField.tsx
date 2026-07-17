@@ -268,10 +268,10 @@ export function TaskEditScheduleField({
                 }))}
             >
                 <Text style={[styles.modalLabel, { color: tc.text }]}>
-                    {tFallback(t, 'taskEdit.suppressMindwtrReminders', 'Use calendar reminder')}
+                    {tFallback(t, 'taskEdit.suppressMindwtrReminders', 'Skip reminders')}
                 </Text>
                 <Text style={{ marginTop: 4, color: tc.secondaryText, fontSize: 12, lineHeight: 16 }}>
-                    {tFallback(t, 'taskEdit.suppressMindwtrRemindersHint', 'Skip Mindwtr start/due reminders for this task when your device calendar already reminds you.')}
+                    {tFallback(t, 'taskEdit.suppressMindwtrRemindersHint', 'Skip start and due reminders for this task. It still appears in Focus and your lists.')}
                 </Text>
             </TouchableOpacity>
         );

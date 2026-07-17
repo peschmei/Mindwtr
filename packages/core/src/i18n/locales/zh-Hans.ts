@@ -256,6 +256,8 @@ export const zhHans: Record<string, string> = {
         'taskEdit.repeatReminderEveryMinutes': '每 {count} 分钟',
         'taskEdit.repeatReminderMinutesShort': '{count} 分钟',
         'taskEdit.repeatReminderHint': '按此间隔重复提醒，直到你完成任务或选择稍后提醒，并有次数上限（间隔越短，重复次数越少）。',
+        'taskEdit.suppressMindwtrReminders': '跳过提醒',
+        'taskEdit.suppressMindwtrRemindersHint': '不发送此任务的开始和截止提醒。它仍会显示在专注和列表中。',
         'taskEdit.pushCountHint': '推迟次数',
         'taskEdit.unblocksLabel': '解除阻塞',
         'taskStatus.changeStatus': '更改状态',

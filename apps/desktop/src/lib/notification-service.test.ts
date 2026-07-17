@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '@mindwtr/core';
 
+import { getNextScheduledAt } from '@mindwtr/core';
+
 import {
     buildDesktopTaskNotificationBody,
     resolveDesktopTaskReminderKind,
@@ -113,5 +115,49 @@ describe('resolveDueRepeatToFire', () => {
     it('returns null when due-date notifications are disabled', () => {
         const now = new Date('2026-06-17T09:20:05.000Z');
         expect(resolveDueRepeatToFire(repeatTask, now, undefined, { includeDueDate: false })).toBeNull();
+    });
+
+    it('never fires repeat reminders for a task that suppresses Mindwtr reminders (#885)', () => {
+        const suppressed = { ...repeatTask, suppressMindwtrReminders: true };
+        const now = new Date('2026-06-17T09:20:05.000Z');
+        expect(resolveDueRepeatToFire(suppressed, now, undefined, opts)).toBeNull();
+    });
+});
+
+// The desktop poll loop schedules task reminders via core's getNextScheduledAt with all
+// three sources enabled. These guard that the loop's inputs honor the per-task opt-out
+// (#885): start/due reminders drop, but review reminders still fire (mobile parity).
+describe('desktop next-reminder scheduling honors suppressMindwtrReminders', () => {
+    const allOn = { includeStartTime: true, includeDueDate: true, includeReviewAt: true };
+    const now = new Date('2026-06-17T08:00:00.000Z');
+
+    it('schedules the next start/due reminder for a task that does not suppress reminders', () => {
+        const task: Task = {
+            ...baseTask,
+            startTime: '2026-06-17T09:00:00.000Z',
+            dueDate: '2026-06-17T17:00:00.000Z',
+        };
+        expect(getNextScheduledAt(task, now, allOn)).toEqual(new Date('2026-06-17T09:00:00.000Z'));
+    });
+
+    it('drops start and due reminders when the task suppresses Mindwtr reminders', () => {
+        const task: Task = {
+            ...baseTask,
+            startTime: '2026-06-17T09:00:00.000Z',
+            dueDate: '2026-06-17T17:00:00.000Z',
+            suppressMindwtrReminders: true,
+        };
+        expect(getNextScheduledAt(task, now, allOn)).toBeNull();
+    });
+
+    it('still fires review reminders even when start/due reminders are suppressed', () => {
+        const task: Task = {
+            ...baseTask,
+            startTime: '2026-06-17T09:00:00.000Z',
+            dueDate: '2026-06-17T17:00:00.000Z',
+            reviewAt: '2026-06-17T10:00:00.000Z',
+            suppressMindwtrReminders: true,
+        };
+        expect(getNextScheduledAt(task, now, allOn)).toEqual(new Date('2026-06-17T10:00:00.000Z'));
     });
 });

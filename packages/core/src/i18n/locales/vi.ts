@@ -287,6 +287,8 @@ export const viOverrides: Record<string, string> = {
         'taskEdit.repeatReminderEveryMinutes': 'Mỗi {count} phút',
         'taskEdit.repeatReminderMinutesShort': '{count} phút',
         'taskEdit.repeatReminderHint': 'Thông báo lại theo khoảng thời gian này cho đến khi bạn hoàn thành hoặc hoãn, tối đa một giới hạn.',
+        'taskEdit.suppressMindwtrReminders': 'Bỏ qua nhắc nhở',
+        'taskEdit.suppressMindwtrRemindersHint': 'Bỏ qua nhắc nhở bắt đầu và đến hạn cho nhiệm vụ này. Nó vẫn xuất hiện trong Tập trung và các danh sách của bạn.',
         'taskEdit.pushCountHint': 'Đã đẩy',
         'taskEdit.unblocksLabel': 'Mở khóa',
         'taskEdit.dateOnly': 'Chỉ ngày',

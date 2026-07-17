@@ -681,6 +681,7 @@ export function TaskItemFieldRenderer({
         dueDate: editDueDate,
         reviewAt: editReviewAt,
         repeatReminderMinutes: editRepeatReminderMinutes,
+        suppressMindwtrReminders: editSuppressMindwtrReminders,
         status: editStatus,
         priority: editPriority,
         energyLevel: editEnergyLevel,
@@ -701,6 +702,7 @@ export function TaskItemFieldRenderer({
     const setEditDueDate = (value: string) => setField('dueDate', value);
     const setEditReviewAt = (value: string) => setField('reviewAt', value);
     const setEditRepeatReminderMinutes = (value: number | undefined) => setField('repeatReminderMinutes', value);
+    const setEditSuppressMindwtrReminders = (value: boolean) => setField('suppressMindwtrReminders', value);
     const setEditStatus = (value: TaskStatus) => setField('status', value);
     const setEditPriority = (value: TaskPriority | '') => setField('priority', value);
     const setEditEnergyLevel = (value: NonNullable<TaskEnergyLevel> | '') => setField('energyLevel', value);
@@ -1490,7 +1492,25 @@ export function TaskItemFieldRenderer({
                             hasValue: Boolean(editDueDate),
                             warning: dateIssueLabel,
                         })}
-                        {hasTime && !task.suppressMindwtrReminders && (() => {
+                        {hasTime && (
+                            <label className="mt-1 flex items-start gap-2 rounded border border-border/70 bg-muted/30 px-2 py-1.5 text-xs text-muted-foreground">
+                                <input
+                                    type="checkbox"
+                                    checked={editSuppressMindwtrReminders}
+                                    onChange={(event) => setEditSuppressMindwtrReminders(event.target.checked)}
+                                    className="mt-0.5 shrink-0 accent-primary"
+                                />
+                                <span className="min-w-0">
+                                    <span className="block font-medium text-foreground">
+                                        {tFallback(t, 'taskEdit.suppressMindwtrReminders', 'Skip reminders')}
+                                    </span>
+                                    <span className="block leading-snug">
+                                        {tFallback(t, 'taskEdit.suppressMindwtrRemindersHint', 'Skip start and due reminders for this task. It still appears in Focus and your lists.')}
+                                    </span>
+                                </span>
+                            </label>
+                        )}
+                        {hasTime && !editSuppressMindwtrReminders && (() => {
                             const label = tFallback(t, 'taskEdit.repeatReminderLabel', 'Repeat reminder');
                             const current = editRepeatReminderMinutes ?? 0;
                             const formatValue = (minutes: number) => (

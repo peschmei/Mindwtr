@@ -219,7 +219,7 @@ function TaskEditViewTabComponent({
       {!isReference ? renderViewRow(t('taskEdit.dueDateLabel'), mergedTask.dueDate ? formatDueDate(mergedTask.dueDate) : undefined) : null}
       {!isReference && hasReminderHandoffSchedule && mergedTask.suppressMindwtrReminders === true
         ? renderViewRow(
-            tFallback(t, 'taskEdit.suppressMindwtrReminders', 'Use calendar reminder'),
+            tFallback(t, 'taskEdit.suppressMindwtrReminders', 'Skip reminders'),
             tFallback(t, 'taskEdit.suppressMindwtrRemindersViewValue', 'Mindwtr reminders off')
           )
         : null}

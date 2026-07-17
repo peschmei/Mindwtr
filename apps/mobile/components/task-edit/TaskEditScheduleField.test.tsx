@@ -54,8 +54,8 @@ const t = (key: string) => ({
     'common.done': 'Done',
     'taskEdit.dueDateLabel': 'Due Date',
     'taskEdit.startDateLabel': 'Start Date',
-    'taskEdit.suppressMindwtrReminders': 'Use calendar reminder',
-    'taskEdit.suppressMindwtrRemindersHint': 'Skip Mindwtr start/due reminders for this task when your device calendar already reminds you.',
+    'taskEdit.suppressMindwtrReminders': 'Skip reminders',
+    'taskEdit.suppressMindwtrRemindersHint': 'Skip start and due reminders for this task. It still appears in Focus and your lists.',
     'taskEdit.repeatReminderLabel': 'Repeat reminder',
     'taskEdit.repeatReminderOff': 'Off',
     'taskEdit.repeatReminderEveryMinutes': 'Every {count} min',
@@ -406,6 +406,11 @@ describe('TaskEditScheduleField', () => {
             dueDate: '2026-04-28T09:20:00',
             suppressMindwtrReminders: true,
         });
+
+        // Toggling off must clear the field (undefined, not false) so the draft
+        // serializer never persists a redundant `false` (#836/#885).
+        const toggledOff = update({ dueDate: '2026-04-28T09:20:00', suppressMindwtrReminders: true });
+        expect(toggledOff.suppressMindwtrReminders).toBeUndefined();
     });
 
     it('collapses repeat reminder options until the compact row is pressed', () => {

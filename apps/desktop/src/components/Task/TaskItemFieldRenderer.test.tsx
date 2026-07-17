@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
-import { createTaskDraft, setTaskDraftField, type Task, type TaskDraft } from '@mindwtr/core';
+import { createTaskDraft, setTaskDraftField, taskDraftToUpdatePatch, type Task, type TaskDraft } from '@mindwtr/core';
 
 import {
     TaskItemFieldRenderer,
@@ -1262,5 +1262,49 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         } finally {
             selectionSpy.mockRestore();
         }
+    });
+});
+
+describe('TaskItemFieldRenderer skip-reminders toggle', () => {
+    afterEach(cleanup);
+
+    const timedTask: Task = { ...baseTask, dueDate: '2026-04-19T11:45' };
+
+    it('reflects the persisted suppressMindwtrReminders state and toggles it (#885)', () => {
+        const { getByRole } = render(
+            <DraftFieldHarness fieldId="dueDate" initialDraft={{ dueDate: '2026-04-19T11:45' }} />
+        );
+
+        const toggle = getByRole('checkbox') as HTMLInputElement;
+        // Off by default: the field is absent on a fresh task.
+        expect(toggle.checked).toBe(false);
+
+        fireEvent.click(toggle);
+        // Round-trip: the draft update re-renders the checkbox as checked.
+        expect((getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
+    });
+
+    it('only appears once the due date carries a time (nothing to suppress otherwise)', () => {
+        const { queryByRole, rerender } = render(
+            <TaskItemFieldRenderer fieldId="dueDate" {...createProps({ draft: { dueDate: '2026-04-19' } })} />
+        );
+        expect(queryByRole('checkbox')).toBeNull();
+
+        rerender(
+            <TaskItemFieldRenderer fieldId="dueDate" {...createProps({ draft: { dueDate: '2026-04-19T11:45' } })} />
+        );
+        expect(queryByRole('checkbox')).not.toBeNull();
+    });
+
+    it('serializes on -> true and off -> undefined in the saved patch (#835/#836)', () => {
+        const on = setTaskDraftField(createTaskDraft(timedTask), 'suppressMindwtrReminders', true);
+        expect(taskDraftToUpdatePatch(on, timedTask)).toMatchObject({ suppressMindwtrReminders: true });
+
+        const suppressed: Task = { ...timedTask, suppressMindwtrReminders: true };
+        const off = setTaskDraftField(createTaskDraft(suppressed), 'suppressMindwtrReminders', false);
+        const offPatch = taskDraftToUpdatePatch(off, suppressed);
+        expect(offPatch).not.toBeNull();
+        expect(offPatch?.suppressMindwtrReminders).toBeUndefined();
+        expect('suppressMindwtrReminders' in (offPatch ?? {})).toBe(true);
     });
 });
