@@ -775,8 +775,12 @@ function TaskListComponent({
     if (projectId && enableProjectReorder && sortBy === 'default') {
       return sortProjectTasksByOrder(filteredTasks);
     }
+    // Done is a log: default order is completion date descending, matching desktop.
+    if (statusFilter === 'done' && sortBy === 'default') {
+      return sortDoneTasksForListView(filteredTasks);
+    }
     return sortTasksBy(filteredTasks, sortBy);
-  }, [enableProjectReorder, filteredTasks, projectId, sortBy]);
+  }, [enableProjectReorder, filteredTasks, projectId, sortBy, statusFilter]);
   const { activeTasks: orderedActiveTasks, completedTasks: orderedCompletedTasks } = useMemo(() => {
     if (!shouldGroupCompletedTasks) {
       return { activeTasks: orderedTasks, completedTasks: [] as Task[] };
