@@ -74,6 +74,7 @@ export const SETTINGS_MENU_KEYWORD_KEYS: Record<SettingsMenuRowId, readonly stri
         'settings.captureDefault', 'settings.inboxProcessing', 'settings.gtdMobile.defaultScheduleTime',
         'settings.focusTaskLimit', 'settings.defaultProjectFlowMode', 'settings.defaultArea',
         'settings.weeklyReviewConfig', 'settings.dailyReviewConfig',
+        'settings.naturalLanguageDates',
     ],
     // manage-settings-screen renders areas/contexts/tags via non-settings keys.
     // People has no dedicated title key in en.ts, so it is intentionally omitted.

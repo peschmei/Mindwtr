@@ -1299,7 +1299,7 @@ export const SETTINGS_PAGE_LABEL_KEYS: Record<string, ReadonlyArray<keyof Settin
         'gtd', 'features', 'featurePomodoro', 'autoArchive', 'defaultScheduleTime',
         'focusTaskLimit', 'defaultProjectFlowMode', 'projectFlowParallel',
         'projectFlowSequential', 'timeEstimatePresets', 'captureDefault',
-        'defaultArea', 'quickAddAutoClean', 'markdownEditorAssist',
+        'defaultArea', 'quickAddAutoClean', 'naturalLanguageDates', 'markdownEditorAssist',
         'weeklyReviewConfig', 'inboxProcessing', 'taskEditorLayout',
         'taskEditorPresentation',
     ],
