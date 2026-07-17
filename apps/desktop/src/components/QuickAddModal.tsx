@@ -549,6 +549,25 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
     const startRecording = useCallback(async () => {
         if (recordingBusy || isRecording) return;
         setRecordingError(null);
+        // Voice capture is speech-to-text: if no model/key is configured, transcription
+        // can never run, so guard before showing the recording indicator. Keep the dialog
+        // open and point the user at Settings instead of silently aborting (#886).
+        const speech = settings.ai?.speechToText;
+        const speechProvider = speech?.provider ?? 'gemini';
+        const speechApiProvider = speechProvider === 'openai' || speechProvider === 'gemini' ? speechProvider : null;
+        const speechConfigured = speech?.enabled
+            ? speechApiProvider
+                ? Boolean(await loadAIKey(speechApiProvider).catch(() => ''))
+                : Boolean(speech?.offlineModelPath)
+            : false;
+        if (!speechConfigured) {
+            showToast(
+                tFallback(t, 'quickAdd.speechNotConfigured', 'Enable a speech-to-text model in Settings to use voice input.'),
+                'info',
+                5000,
+            );
+            return;
+        }
         try {
             const preferredBackend = getPreferredDesktopAudioCaptureBackend({
                 isTauriRuntime: isTauriRuntime(),
@@ -626,7 +645,7 @@ export function QuickAddModal({ standaloneWindow = false }: QuickAddModalProps) 
             const message = error instanceof Error ? error.message : String(error);
             setRecordingError(`${t('quickAdd.audioErrorBody')} (${message})`);
         }
-    }, [isRecording, recordingBusy, t]);
+    }, [isRecording, recordingBusy, settings.ai?.speechToText, showToast, t]);
 
     const stopRecording = useCallback(async ({ saveTask }: { saveTask: boolean }) => {
         if (recordingBusy) return;

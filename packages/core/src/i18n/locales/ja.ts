@@ -947,6 +947,7 @@ export const jaOverrides: Record<string, string> = {
         'common.days': '日',
         'common.cancel': 'キャンセル',
         'common.save': '保存',
+        'quickAdd.speechNotConfigured': '音声入力を使うには、設定で音声認識モデルを有効にしてください。',
         'common.delete': '消去',
         'common.rename': '名前を変更',
         'common.name': '名前',

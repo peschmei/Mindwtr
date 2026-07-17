@@ -1091,6 +1091,7 @@ export const itOverrides: Record<string, string> = {
         'common.cancel': 'Annulla',
         'common.discard': 'Scarta',
         'common.save': 'Salva',
+        'quickAdd.speechNotConfigured': 'Attiva un modello di riconoscimento vocale nelle Impostazioni per usare l’input vocale.',
         'common.delete': 'Elimina',
         'common.rename': 'Rinomina',
         'common.name': 'Nome',

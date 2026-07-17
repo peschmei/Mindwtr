@@ -1,6 +1,6 @@
 import React from 'react';
 import type { RefObject } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, Switch, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { AtSign, CalendarDays, ChevronDown, ChevronUp, Clock, FileText, Flag, Folder, Mic, SlidersHorizontal, Square, X } from 'lucide-react-native';
 import { tFallback } from '@mindwtr/core';
@@ -13,6 +13,29 @@ import { styles } from './quick-capture-sheet.styles';
 // Quick capture favors speed: show only the most-reached date presets inline.
 // Rarer choices (+3 days, next month) and clearing live behind the Custom picker / tapping the active chip.
 const QUICK_CAPTURE_DATE_PRESETS = ['today', 'tomorrow', 'next_week'] as const;
+
+// iOS keeps the keyboard up while the sheet grows (padding behavior), so an expanded
+// "More" panel can push the title input above the top of the visible area with no way
+// back (#887). Wrap the growing middle section in a ScrollView on iOS so both the title
+// input and the More fields stay reachable. Android dismisses the keyboard before
+// expanding (see useAndroidQuickCaptureExpand) and drives its own measured layout, so it
+// keeps the plain flow untouched to avoid regressing that phase machine.
+function SheetScrollArea({ children }: { children: React.ReactNode }) {
+  if (Platform.OS !== 'ios') {
+    return <>{children}</>;
+  }
+  return (
+    <ScrollView
+      style={styles.scrollArea}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator
+      testID="quick-capture-scroll"
+    >
+      {children}
+    </ScrollView>
+  );
+}
 
 interface QuickCaptureSheetBodyProps {
   addAnother: boolean;
@@ -227,6 +250,7 @@ export function QuickCaptureSheetBody({
               </TouchableOpacity>
             </View>
 
+            <SheetScrollArea>
             <View style={styles.inputRow}>
               <CompactTextInput
                 ref={inputRef}
@@ -489,6 +513,7 @@ export function QuickCaptureSheetBody({
                 />
               </>
             )}
+            </SheetScrollArea>
 
             <View style={[styles.footerRow, !optionsExpanded && styles.footerRowCompact]}>
               <View style={styles.toggleRow}>

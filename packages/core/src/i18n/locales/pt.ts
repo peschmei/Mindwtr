@@ -1011,6 +1011,7 @@ export const ptOverrides: Record<string, string> = {
         'common.days': 'dias',
         'common.cancel': 'Cancelar',
         'common.save': 'Salvar',
+        'quickAdd.speechNotConfigured': 'Ative um modelo de fala para texto nas Configurações para usar a entrada de voz.',
         'common.delete': 'Excluir',
         'common.rename': 'Renomear',
         'common.name': 'Nome',

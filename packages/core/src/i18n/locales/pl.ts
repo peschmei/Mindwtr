@@ -944,6 +944,7 @@ export const plOverrides: Record<string, string> = {
         'common.days': 'dni',
         'common.cancel': 'Anuluj',
         'common.save': 'Zapisz',
+        'quickAdd.speechNotConfigured': 'Aby korzystać z wprowadzania głosowego, włącz w Ustawieniach model zamiany mowy na tekst.',
         'common.delete': 'Usuń',
         'common.rename': 'Zmień nazwę',
         'common.name': 'Nazwa',

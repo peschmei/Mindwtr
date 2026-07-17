@@ -286,4 +286,55 @@ describe('useQuickCaptureAudio', () => {
     expect(storeMocks.updateTask).toHaveBeenCalledWith('task-1', { description: 'Buy milk' });
     expect(handleClose).toHaveBeenCalledOnce();
   });
+
+  it('shows a notice and never starts the recorder when speech-to-text is unconfigured', async () => {
+    // Reporter scenario (#886): STT was never enabled/configured. The voice button must
+    // surface a translated notice pointing at Settings and keep the sheet open, instead of
+    // showing a recording indicator and then silently aborting.
+    const unconfiguredSettings = {
+      ai: {
+        speechToText: {
+          enabled: false,
+          provider: 'whisper',
+          model: 'whisper-tiny.en',
+          offlineModelPath: '',
+        },
+      },
+      gtd: { saveAudioAttachments: true },
+    } as const;
+    storeMocks.state.settings = unconfiguredSettings;
+
+    function UnconfiguredHarness() {
+      latest = useQuickCaptureAudio({
+        addTask,
+        buildTaskProps,
+        handleClose,
+        onError,
+        onWarn,
+        settings: unconfiguredSettings,
+        t: (key: string) => key,
+        updateSpeechSettings,
+        visible: true,
+      });
+      return null;
+    }
+
+    await act(async () => {
+      create(<UnconfiguredHarness />);
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await latest?.startRecording();
+      await flushPromises();
+    });
+
+    expect(toastMock.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'quickAdd.speechNotConfigured' })
+    );
+    expect(audioMocks.requestRecordingPermissionsAsync).not.toHaveBeenCalled();
+    expect(audioMocks.audioRecorder.prepareToRecordAsync).not.toHaveBeenCalled();
+    expect(latest?.recording).toBeNull();
+    expect(handleClose).not.toHaveBeenCalled();
+  });
 });

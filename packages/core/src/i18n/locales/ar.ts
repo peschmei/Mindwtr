@@ -991,6 +991,7 @@ export const arOverrides: Record<string, string> = {
         'common.days': 'أيام',
         'common.cancel': 'يلغي',
         'common.save': 'يحفظ',
+        'quickAdd.speechNotConfigured': 'فعّل نموذج تحويل الكلام إلى نص في الإعدادات لاستخدام الإدخال الصوتي.',
         'common.delete': 'يمسح',
         'common.rename': 'إعادة تسمية',
         'common.name': 'الاسم',

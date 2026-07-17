@@ -883,6 +883,7 @@ export const esOverrides: Record<string, string> = {
         'common.days': 'días',
         'common.cancel': 'Cancelar',
         'common.save': 'Guardar',
+        'quickAdd.speechNotConfigured': 'Activa un modelo de voz a texto en Ajustes para usar la entrada de voz.',
         'common.delete': 'Eliminar',
         'common.rename': 'Renombrar',
         'common.name': 'Nombre',

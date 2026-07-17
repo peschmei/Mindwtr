@@ -269,6 +269,7 @@ export const nlOverrides: Record<string, string> = {
         'common.loading': 'Laden...',
         'common.cancel': 'Annuleren',
         'common.save': 'Opslaan',
+        'quickAdd.speechNotConfigured': 'Schakel een spraak-naar-tekstmodel in bij Instellingen om spraakinvoer te gebruiken.',
         'common.delete': 'Verwijderen',
         'common.rename': 'Hernoemen',
         'common.name': 'Naam',

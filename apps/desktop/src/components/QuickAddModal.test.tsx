@@ -638,4 +638,36 @@ describe('QuickAddModal', () => {
         expect(addTask).toHaveBeenNthCalledWith(1, 'First imported task', expect.objectContaining({ status: 'inbox' }));
         expect(addTask).toHaveBeenNthCalledWith(2, 'Second imported task', expect.objectContaining({ status: 'inbox' }));
     });
+
+    it('shows a settings notice and keeps the dialog open when speech-to-text is unconfigured', async () => {
+        // #886: voice capture with no STT model/key configured must surface a translated
+        // notice pointing at Settings instead of showing a recording indicator and then
+        // silently aborting.
+        renderQuickAddModal();
+
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent('mindwtr:quick-add', {
+                detail: { initialValue: 'Voice note' },
+            }));
+            await Promise.resolve();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Audio' }));
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Start recording' }));
+            await Promise.resolve();
+        });
+
+        await waitFor(() => {
+            expect(useUiStore.getState().toasts.some((toast) => (
+                toast.message === 'Enable a speech-to-text model in Settings to use voice input.'
+            ))).toBe(true);
+        });
+
+        // Dialog stays open and the recorder never engages.
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Start recording' })).toBeInTheDocument();
+        expect(tauriMocks.invoke).not.toHaveBeenCalledWith('start_audio_recording');
+    });
 });

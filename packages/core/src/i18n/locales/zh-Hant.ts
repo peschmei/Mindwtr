@@ -1127,6 +1127,7 @@ export const zhHant: Record<string, string> = {
         'common.cancel': '取消',
         'common.discard': '放棄',
         'common.save': '保存',
+        'quickAdd.speechNotConfigured': '請在設定中啟用語音轉文字模型後再使用語音輸入。',
         'common.delete': '刪除',
         'common.rename': '重命名',
         'common.name': '名稱',

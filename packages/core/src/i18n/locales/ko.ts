@@ -952,6 +952,7 @@ export const koOverrides: Record<string, string> = {
         'common.days': '일',
         'common.cancel': '취소',
         'common.save': '구하다',
+        'quickAdd.speechNotConfigured': '음성 입력을 사용하려면 설정에서 음성 인식 모델을 활성화하세요.',
         'common.delete': '삭제',
         'common.rename': '이름 바꾸기',
         'common.name': '이름',

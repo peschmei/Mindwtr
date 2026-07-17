@@ -1226,6 +1226,7 @@ export const en: Record<string, string> = {
         'common.cancel': 'Cancel',
         'common.discard': 'Discard',
         'common.save': 'Save',
+        'quickAdd.speechNotConfigured': 'Enable a speech-to-text model in Settings to use voice input.',
         'common.delete': 'Delete',
         'common.rename': 'Rename',
         'common.name': 'Name',

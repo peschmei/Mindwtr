@@ -947,6 +947,7 @@ export const ruOverrides: Record<string, string> = {
         'common.days': 'дней',
         'common.cancel': 'Отмена',
         'common.save': 'Сохранять',
+        'quickAdd.speechNotConfigured': 'Чтобы использовать голосовой ввод, включите модель распознавания речи в настройках.',
         'common.delete': 'Удалить',
         'common.rename': 'Переименовать',
         'common.name': 'Название',

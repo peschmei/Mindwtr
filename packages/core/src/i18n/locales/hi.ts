@@ -946,6 +946,7 @@ export const hiOverrides: Record<string, string> = {
         'common.days': 'दिन',
         'common.cancel': 'रद्द करना',
         'common.save': 'बचाना',
+        'quickAdd.speechNotConfigured': 'वॉइस इनपुट का उपयोग करने के लिए सेटिंग में स्पीच-टू-टेक्स्ट मॉडल सक्षम करें।',
         'common.delete': 'मिटाना',
         'common.rename': 'नाम बदलें',
         'common.name': 'नाम',

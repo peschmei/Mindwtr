@@ -1173,6 +1173,7 @@ export const csOverrides: Record<string, string> = {
         'common.cancel': 'Zrušit',
         'common.discard': 'Zahodit',
         'common.save': 'Uložit',
+        'quickAdd.speechNotConfigured': 'Chcete-li používat hlasový vstup, povolte v Nastavení model převodu řeči na text.',
         'common.delete': 'Smazat',
         'common.rename': 'Přejmenovat',
         'common.name': 'Název',

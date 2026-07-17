@@ -1127,6 +1127,7 @@ export const zhHans: Record<string, string> = {
         'common.cancel': '取消',
         'common.discard': '放弃',
         'common.save': '保存',
+        'quickAdd.speechNotConfigured': '请在设置中启用语音转文字模型后再使用语音输入。',
         'common.delete': '删除',
         'common.rename': '重命名',
         'common.name': '名称',

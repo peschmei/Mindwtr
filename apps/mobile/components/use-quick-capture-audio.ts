@@ -265,6 +265,33 @@ export function useQuickCaptureAudio({
 
   const startRecording = useCallback(async () => {
     if (recording || recordingBusy) return;
+    // Voice capture is speech-to-text: if no model/key is configured, transcription can
+    // never run. Guard before touching the recorder so the indicator never appears; keep
+    // the sheet open and point the user at Settings instead of silently aborting (#886).
+    const guardSettings = selectQuickCaptureSettings(settings, useTaskStore.getState().settings);
+    const guardRuntime = resolveSpeechToTextRuntimeSettings(guardSettings.ai?.speechToText);
+    const guardApiKey = guardRuntime.provider === 'whisper'
+      ? ''
+      : await loadAIKey(guardRuntime.provider).catch(() => '');
+    const guardWhisper = guardRuntime.provider === 'whisper'
+      ? await resolveWhisperModelAsync(guardRuntime.model, guardRuntime.modelPath).catch(() => null)
+      : null;
+    const speechConfigured = isQuickCaptureSpeechReady({
+      speechEnabled: guardRuntime.enabled,
+      provider: guardRuntime.provider,
+      apiKey: guardApiKey,
+      whisperModelReady: guardRuntime.provider === 'whisper' ? Boolean(guardWhisper?.exists) : false,
+      whisperModelPath: guardRuntime.modelPath,
+    });
+    if (!speechConfigured) {
+      showToast({
+        title: t('common.notice'),
+        message: t('quickAdd.speechNotConfigured'),
+        tone: 'warning',
+        durationMs: 4200,
+      });
+      return;
+    }
     setRecordingBusy(true);
     setRecordingReady(false);
     try {
@@ -365,6 +392,7 @@ export function useQuickCaptureAudio({
     recordingBusy,
     resolveWhisperModelAsync,
     settings,
+    showToast,
     stripFileScheme,
     t,
   ]);

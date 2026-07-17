@@ -989,6 +989,7 @@ export const deOverrides: Record<string, string> = {
         'common.days': 'Tage',
         'common.cancel': 'Abbrechen',
         'common.save': 'Speichern',
+        'quickAdd.speechNotConfigured': 'Aktiviere in den Einstellungen ein Sprache-zu-Text-Modell, um die Spracheingabe zu verwenden.',
         'common.delete': 'Löschen',
         'common.rename': 'Umbenennen',
         'common.name': 'Bezeichnung',

@@ -43,6 +43,15 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     minHeight: 44,
   },
+  scrollArea: {
+    // Shrink within the maxHeight sheet so overflowing content scrolls instead of
+    // pushing the title input off the top of the screen (#887).
+    flexShrink: 1,
+    flexGrow: 0,
+  },
+  scrollContent: {
+    flexGrow: 0,
+  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',

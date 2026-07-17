@@ -1210,6 +1210,7 @@ export const viOverrides: Record<string, string> = {
         'common.cancel': 'Hủy',
         'common.discard': 'Bỏ',
         'common.save': 'Lưu',
+        'quickAdd.speechNotConfigured': 'Bật mô hình chuyển giọng nói thành văn bản trong Cài đặt để dùng nhập bằng giọng nói.',
         'common.delete': 'Xóa',
         'common.rename': 'Đổi tên',
         'common.name': 'Tên',

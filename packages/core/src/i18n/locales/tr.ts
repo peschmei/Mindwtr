@@ -959,6 +959,7 @@ export const trOverrides: Record<string, string> = {
         'common.days': 'gün',
         'common.cancel': 'İptal etmek',
         'common.save': 'Kaydetmek',
+        'quickAdd.speechNotConfigured': 'Sesli girişi kullanmak için Ayarlar’da konuşmadan metne modelini etkinleştirin.',
         'common.delete': 'Silmek',
         'common.rename': 'Yeniden adlandır',
         'common.name': 'Ad',

@@ -1196,6 +1196,7 @@ export const frOverrides: Record<string, string> = {
         'common.cancel': 'Annuler',
         'common.discard': 'Abandonner',
         'common.save': 'Enregistrer',
+        'quickAdd.speechNotConfigured': 'Activez un modèle de reconnaissance vocale dans les Réglages pour utiliser la saisie vocale.',
         'common.delete': 'Supprimer',
         'common.rename': 'Renommer',
         'common.name': 'Nom',
