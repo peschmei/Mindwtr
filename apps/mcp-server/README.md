@@ -2,7 +2,7 @@
 
 MCP server for Mindwtr. Connect MCP clients (Claude Desktop, etc.) to either your local Mindwtr SQLite database or a self-hosted Mindwtr Cloud endpoint.
 
-This is a **stdio** server (no hosted HTTP endpoint). MCP clients launch it as a subprocess and talk over JSON-RPC on stdin/stdout.
+By default this is a **stdio** server: MCP clients launch it as a subprocess and talk over JSON-RPC on stdin/stdout. It also has an opt-in **HTTP transport** (see [Remote access (HTTP)](#remote-access-http)) for self-hosters who want to expose it at a URL instead.
 
 ---
 
@@ -99,6 +99,25 @@ Cloud mode uses the self-hosted Cloud API. Reads come from the current `/v1/data
 This does not make Mindwtr Cloud itself a hosted MCP server. It is still the same stdio helper, backed by a Cloud URL that you operate.
 
 For private HTTP test deployments, local/private HTTP URLs are allowed by the shared Cloud client rules. Use `--cloud-allow-insecure-http=true` only for a self-hosted endpoint you intentionally trust.
+
+### Remote access (HTTP)
+
+By default `mindwtr-mcp` only speaks stdio. Pass `--http` to also (instead of stdio) serve a stateless streamable-HTTP MCP endpoint, so you can point a remote MCP client at a URL — the motivating case is [Gemini Spark](https://gemini.google.com) "custom apps", which take an MCP server URL. HTTP mode works with either backend (local SQLite or self-hosted Cloud).
+
+```bash
+mindwtr-mcp --http --http-token "$(openssl rand -hex 32)" --db "/path/to/mindwtr.db"
+```
+
+Flags (all have `MINDWTR_MCP_HTTP*` env var equivalents):
+
+- `--http` / `MINDWTR_MCP_HTTP` — enable HTTP mode. Also implied by setting `--http-host`, `--http-port`, or `--http-token`.
+- `--http-token <token>` / `MINDWTR_MCP_HTTP_TOKEN` — **required** whenever HTTP mode is on, at least 16 characters. Generate one with `openssl rand -hex 32`. The server refuses to start without it — there is no way to expose HTTP mode unauthenticated, even on loopback.
+- `--http-host <host>` / `MINDWTR_MCP_HTTP_HOST` — bind address, default `127.0.0.1`.
+- `--http-port <port>` / `MINDWTR_MCP_HTTP_PORT` — bind port, default `8722`.
+
+The MCP endpoint is `POST /mcp` and requires `Authorization: Bearer <token>` on every request; `GET /healthz` returns `200 ok` without auth for reverse-proxy health checks. Requests without a valid token get `401`; bodies over 1 MiB get `413`. When HTTP mode is on, the server does not also connect a stdio transport — it stays alive as long as the HTTP server is listening, not stdin.
+
+There is no built-in TLS termination or rate limiting. If you're exposing this beyond localhost, put a reverse proxy (e.g. Caddy, nginx) in front for TLS and put the resulting `https://` URL (plus your token) into the remote MCP client.
 
 ### Run directly from the repo
 

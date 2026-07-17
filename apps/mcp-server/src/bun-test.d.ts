@@ -13,7 +13,7 @@ declare module 'bun:test' {
     toHaveLength(expected: number): void;
     toBeTruthy(): void;
     toBeUndefined(): void;
-    toThrow(expected?: string | RegExp | Error): void;
+    toThrow(expected?: string | RegExp | Error | (new (...args: any[]) => Error)): void;
     toHaveBeenCalledWith(...args: unknown[]): void;
   }
 
@@ -29,6 +29,8 @@ declare module 'bun:test' {
 
   export const describe: (name: string, callback: TestCallback) => void;
   export const test: (name: string, callback: TestCallback) => void;
+  export const beforeAll: (callback: TestCallback) => void;
+  export const afterAll: (callback: TestCallback) => void;
   export const afterEach: (callback: TestCallback) => void;
   export const expect: Expect;
   export const spyOn: (object: object, method: string) => Spy;
