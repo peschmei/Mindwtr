@@ -72,6 +72,7 @@ import {
 import { SwipeableTaskItem } from '@/components/swipeable-task-item';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFilledButtonColors } from '@/hooks/use-filled-button-colors';
+import { useAndroidKeyboardInset } from '@/lib/use-android-keyboard-inset';
 import { CompactText } from '@/components/compact-text';
 import { useTheme } from '../../../contexts/theme-context';
 import { useLanguage } from '../../../contexts/language-context';
@@ -319,6 +320,7 @@ export default function FocusScreen() {
   const [focusReorderPosition, setFocusReorderPosition] = useState<number | null>(null);
   const [showFocusReorderHint, setShowFocusReorderHint] = useState(true);
   const [saveFilterDialogVisible, setSaveFilterDialogVisible] = useState(false);
+  const saveFilterKeyboardInset = useAndroidKeyboardInset(filtersVisible && saveFilterDialogVisible);
   const [saveFilterName, setSaveFilterName] = useState('');
   const [expandedSections, setExpandedSections] = useState(DEFAULT_EXPANDED_SECTIONS);
   const [focusViewStateHydrated, setFocusViewStateHydrated] = useState(false);
@@ -2028,8 +2030,67 @@ export default function FocusScreen() {
         animationType="fade"
         transparent
         visible={filtersVisible}
-        onRequestClose={() => setFiltersVisible(false)}
+        onRequestClose={() => {
+          if (saveFilterDialogVisible) {
+            setSaveFilterDialogVisible(false);
+            return;
+          }
+          setFiltersVisible(false);
+        }}
       >
+        {saveFilterDialogVisible ? (
+          <View style={saveFilterKeyboardInset > 0
+            ? [styles.dialogRoot, { paddingBottom: saveFilterKeyboardInset }]
+            : styles.dialogRoot}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={resolveText('common.cancel', 'Cancel')}
+              onPress={() => setSaveFilterDialogVisible(false)}
+              style={styles.sheetBackdrop}
+            />
+            <View style={[styles.dialog, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
+              <Text style={[styles.dialogTitle, { color: tc.text }]}>
+                {resolveText('savedFilters.saveTitle', 'Save filter')}
+              </Text>
+              <TextInput
+                autoFocus
+                value={saveFilterName}
+                onChangeText={setSaveFilterName}
+                placeholder={resolveText('savedFilters.namePlaceholder', 'Filter name')}
+                placeholderTextColor={tc.secondaryText}
+                style={[styles.dialogInput, { borderColor: tc.border, color: tc.text, backgroundColor: tc.bg }]}
+                returnKeyType="done"
+                onSubmitEditing={saveCurrentFilter}
+              />
+              <View style={styles.dialogActions}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => setSaveFilterDialogVisible(false)}
+                  style={styles.dialogButton}
+                >
+                  <Text style={[styles.dialogButtonText, { color: tc.secondaryText }]}>
+                    {resolveText('common.cancel', 'Cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={saveCurrentFilter}
+                  disabled={!saveFilterName.trim()}
+                  style={[
+                    styles.dialogButton,
+                    styles.dialogPrimaryButton,
+                    { backgroundColor: saveFilterName.trim() ? filledButton.backgroundColor : tc.filterBg },
+                  ]}
+                >
+                  <Text style={[styles.dialogButtonText, { color: saveFilterName.trim() ? (filledButton.textColor ?? tc.onTint) : tc.secondaryText }]}>
+                    {resolveText('common.save', 'Save')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : (
         <View style={styles.sheetRoot}>
           <Pressable
             accessibilityRole="button"
@@ -2234,61 +2295,7 @@ export default function FocusScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
-      <Modal
-        animationType="fade"
-        transparent
-        visible={saveFilterDialogVisible}
-        onRequestClose={() => setSaveFilterDialogVisible(false)}
-      >
-        <View style={styles.dialogRoot}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={resolveText('common.cancel', 'Cancel')}
-            onPress={() => setSaveFilterDialogVisible(false)}
-            style={styles.sheetBackdrop}
-          />
-          <View style={[styles.dialog, { backgroundColor: tc.cardBg, borderColor: tc.border }]}>
-            <Text style={[styles.dialogTitle, { color: tc.text }]}>
-              {resolveText('savedFilters.saveTitle', 'Save filter')}
-            </Text>
-            <TextInput
-              autoFocus
-              value={saveFilterName}
-              onChangeText={setSaveFilterName}
-              placeholder={resolveText('savedFilters.namePlaceholder', 'Filter name')}
-              placeholderTextColor={tc.secondaryText}
-              style={[styles.dialogInput, { borderColor: tc.border, color: tc.text, backgroundColor: tc.bg }]}
-              returnKeyType="done"
-              onSubmitEditing={saveCurrentFilter}
-            />
-            <View style={styles.dialogActions}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={() => setSaveFilterDialogVisible(false)}
-                style={styles.dialogButton}
-              >
-                <Text style={[styles.dialogButtonText, { color: tc.secondaryText }]}>
-                  {resolveText('common.cancel', 'Cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={saveCurrentFilter}
-                disabled={!saveFilterName.trim()}
-                style={[
-                  styles.dialogButton,
-                  styles.dialogPrimaryButton,
-                  { backgroundColor: saveFilterName.trim() ? filledButton.backgroundColor : tc.filterBg },
-                ]}
-              >
-                <Text style={[styles.dialogButtonText, { color: saveFilterName.trim() ? (filledButton.textColor ?? tc.onTint) : tc.secondaryText }]}>
-                  {resolveText('common.save', 'Save')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        )}
       </Modal>
       {deferPickerTask && Platform.OS === 'ios' ? (
         <Modal

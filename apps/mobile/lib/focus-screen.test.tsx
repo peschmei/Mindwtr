@@ -1,8 +1,8 @@
 import React from 'react';
-import { Alert, SectionList, Text, TextInput, View } from 'react-native';
-import { act, create } from 'react-test-renderer';
+import { Alert, Modal, SectionList, Text, TextInput, View } from 'react-native';
+import { act, create, type ReactTestInstance } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppSettings, Project, Task } from '@mindwtr/core';
+import type { AppData, AppSettings, Project, StorageAdapter, Task } from '@mindwtr/core';
 
 import FocusScreen from '../app/(drawer)/(tabs)/focus';
 import { SwipeableTaskItem } from '@/components/swipeable-task-item';
@@ -277,8 +277,12 @@ function textContent(node: any): string {
     .join('');
 }
 
-function findButtonByText(tree: ReturnType<typeof create>, text: string, options: { last?: boolean } = {}) {
-  const matches = tree.root.findAll((node) =>
+function findButtonByText(
+  tree: ReturnType<typeof create>,
+  text: string,
+  options: { last?: boolean; root?: ReactTestInstance } = {},
+) {
+  const matches = (options.root ?? tree.root).findAll((node) =>
     node.props.accessibilityRole === 'button'
     && typeof node.props.onPress === 'function'
     && textContent(node).includes(text)
@@ -1566,6 +1570,146 @@ describe('FocusScreen', () => {
         },
       })],
     });
+  });
+
+  it('saves multiple contexts and a tag through one native modal and restores them after relaunch', async () => {
+    storeState.tasks = [
+      makeTask('matching-task', {
+        title: 'Matching task',
+        contexts: ['@desk', '@phone'],
+        tags: ['#urgent'],
+      }),
+      makeTask('missing-context', {
+        title: 'Missing context',
+        contexts: ['@desk'],
+        tags: ['#urgent'],
+      }),
+      makeTask('missing-tag', {
+        title: 'Missing tag',
+        contexts: ['@desk', '@phone'],
+      }),
+    ];
+    const actualCore = await vi.importActual<typeof import('@mindwtr/core')>('@mindwtr/core');
+    const cloneDocument = (data: AppData): AppData => JSON.parse(JSON.stringify(data)) as AppData;
+    let persistedDocument: AppData = {
+      tasks: storeState.tasks,
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: { appearance: {}, features: {}, deviceId: 'focus-filter-test-device' },
+    };
+    const storage: StorageAdapter = {
+      getData: vi.fn(async () => cloneDocument(persistedDocument)),
+      saveData: vi.fn(async (data) => {
+        persistedDocument = cloneDocument(data);
+      }),
+    };
+    actualCore.resetForTests();
+    actualCore.setStorageAdapter(storage);
+    actualCore.useTaskStore.setState({ lastDataChangeAt: 0 });
+    await actualCore.useTaskStore.getState().fetchData({ silent: true });
+    storeState.settings = actualCore.useTaskStore.getState().settings;
+    storeState.updateSettings.mockImplementationOnce(async (updates: Partial<AppSettings>) => {
+      await actualCore.useTaskStore.getState().updateSettings(updates);
+      storeState.settings = actualCore.useTaskStore.getState().settings;
+    });
+
+    let tree!: ReturnType<typeof create>;
+    const visibleModals = () => tree.root.findAllByType(Modal).filter((modal) => modal.props.visible);
+    const visibleModal = () => {
+      const modals = visibleModals();
+      expect(modals).toHaveLength(1);
+      return modals[0];
+    };
+    const buttonInVisibleModal = (text: string) => (
+      findButtonByText(tree, text, { root: visibleModal() })
+    );
+
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+    act(() => {
+      findButtonByLabel(tree, 'Filters').props.onPress();
+    });
+    act(() => {
+      buttonInVisibleModal('@desk').props.onPress();
+    });
+    act(() => {
+      buttonInVisibleModal('@phone').props.onPress();
+    });
+    act(() => {
+      buttonInVisibleModal('#urgent').props.onPress();
+    });
+    act(() => {
+      buttonInVisibleModal('Save').props.onPress();
+    });
+
+    // iOS can only present one native Modal at a time. The save-name prompt
+    // must replace the filter sheet instead of being presented on top of it.
+    const nameDialog = visibleModal();
+    const nameInput = nameDialog.findByType(TextInput);
+    act(() => {
+      nameInput.props.onChangeText('Desk phone urgent');
+    });
+    await act(async () => {
+      buttonInVisibleModal('Save').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(visibleModals()).toHaveLength(0);
+    expect(storeState.updateSettings).toHaveBeenCalledWith({
+      savedFilters: [expect.objectContaining({
+        name: 'Desk phone urgent',
+        view: 'focus',
+        criteria: {
+          contexts: ['@desk', '@phone'],
+          tags: ['#urgent'],
+          contextMatchMode: 'all',
+        },
+      })],
+    });
+    await actualCore.flushPendingSave();
+    expect(storage.saveData).toHaveBeenCalled();
+
+    act(() => {
+      tree.unmount();
+    });
+    actualCore.useTaskStore.setState({
+      tasks: [],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+      _allTasks: [],
+      _allProjects: [],
+      _allSections: [],
+      _allAreas: [],
+      _allPeople: [],
+      lastDataChangeAt: 0,
+    });
+    await actualCore.useTaskStore.getState().fetchData({ silent: true });
+    storeState.settings = JSON.parse(
+      JSON.stringify(actualCore.useTaskStore.getState().settings),
+    ) as AppSettings;
+    act(() => {
+      tree = create(<FocusScreen />);
+    });
+    act(() => {
+      findButtonByText(tree, 'Desk phone urgent').props.onPress();
+    });
+
+    expect(
+      tree.root.findAllByType(SwipeableTaskItem).map((node) => node.props.task.id),
+    ).toEqual(['matching-task']);
+
+    act(() => {
+      tree.update(<View testID="navigated-away" />);
+    });
+    expect(tree.root.findAllByType(Modal)).toHaveLength(0);
+    actualCore.resetForTests();
+    actualCore.setStorageAdapter(actualCore.noopStorage);
   });
 
   it('hides the Focus location filter when active tasks do not use locations', () => {
