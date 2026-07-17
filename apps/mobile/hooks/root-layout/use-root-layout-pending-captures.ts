@@ -16,8 +16,8 @@ export function useRootLayoutPendingCaptures({ dataReady }: { dataReady: boolean
         if (runningRef.current) return;
         runningRef.current = true;
         try {
-            const { addTask, projects } = useTaskStore.getState();
-            await ingestPendingCaptures({ addTask, projects });
+            const { addTask, addProject, projects, areas, settings } = useTaskStore.getState();
+            await ingestPendingCaptures({ addTask, addProject, projects, areas, settings });
         } catch (error) {
             void logError(error, { scope: 'shortcuts', extra: { message: 'Pending capture ingest failed' } });
         } finally {

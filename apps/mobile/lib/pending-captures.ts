@@ -1,4 +1,15 @@
-import { isSelectableProjectForTaskAssignment, type Project, type Task } from '@mindwtr/core';
+import {
+    isNaturalLanguageDatesEnabled,
+    isSelectableProjectForTaskAssignment,
+    normalizeClockTimeInput,
+    parseQuickAdd,
+    prepareCaptureTask,
+    type Area,
+    type AppData,
+    type CaptureAssemblyInput,
+    type Project,
+    type Task,
+} from '@mindwtr/core';
 
 import { logError, logWarn } from './app-log';
 import { normalizeShortcutTags } from './capture-deeplink';
@@ -15,6 +26,7 @@ export type PendingCapture = {
     note?: string;
     tags: string[];
     project?: string;
+    createdAt?: string;
 };
 
 const trimOrUndefined = (value: unknown): string | undefined => {
@@ -39,6 +51,7 @@ export function parsePendingCapture(raw: string): PendingCapture | null {
 
     const note = trimOrUndefined(record.note);
     const project = trimOrUndefined(record.project);
+    const createdAt = trimOrUndefined(record.createdAt);
     const tagsRaw = trimOrUndefined(record.tags);
     const tags = tagsRaw ? tagsRaw.split(',').map((tag) => tag.trim()).filter(Boolean) : [];
 
@@ -48,7 +61,23 @@ export function parsePendingCapture(raw: string): PendingCapture | null {
         ...(note ? { note } : {}),
         tags,
         ...(project ? { project } : {}),
+        ...(createdAt ? { createdAt } : {}),
     };
+}
+
+// The structured `project` field (an id or a title) is the Shortcut's own
+// project picker, distinct from a parsed `+Project` token in the title. It
+// never creates projects and silently drops unknown ones — the task still
+// lands in the Inbox where processing catches it. (A parsed `+Project` token
+// DOES create an unknown project, same as the in-app quick add — see
+// ingestPendingCaptures.)
+function resolveStructuredProjectId(capture: PendingCapture, projects: readonly Project[]): string | undefined {
+    if (!capture.project) return undefined;
+    const ref = capture.project.toLowerCase();
+    const match = projects.find((project) => (
+        project.id === capture.project || project.title.toLowerCase() === ref
+    ));
+    return match && isSelectableProjectForTaskAssignment(match) ? match.id : undefined;
 }
 
 export function buildPendingCaptureTaskProps(capture: PendingCapture, projects: Project[]): Partial<Task> {
@@ -58,32 +87,79 @@ export function buildPendingCaptureTaskProps(capture: PendingCapture, projects: 
     const tags = normalizeShortcutTags(capture.tags);
     if (tags.length > 0) props.tags = tags;
 
-    // The project field is contextual (an id or a title). Background captures
-    // never create projects and silently drop unknown ones — the task still
-    // lands in the Inbox where processing catches it.
-    if (capture.project) {
-        const ref = capture.project.toLowerCase();
-        const match = projects.find((project) => (
-            project.id === capture.project || project.title.toLowerCase() === ref
-        ));
-        if (match && isSelectableProjectForTaskAssignment(match)) {
-            props.projectId = match.id;
-        }
-    }
+    const projectId = resolveStructuredProjectId(capture, projects);
+    if (projectId) props.projectId = projectId;
 
     return props;
 }
 
 type IngestDeps = {
     addTask: (title: string, initialProps?: Partial<Task>) => Promise<unknown>;
+    addProject: (title: string, color: string, initialProps?: Partial<Project>) => Promise<Project | null>;
     projects: Project[];
+    areas: Area[];
+    settings: AppData['settings'];
 };
 
 const isFailedResult = (result: unknown): boolean => (
     typeof result === 'object' && result !== null && (result as { success?: unknown }).success === false
 );
 
-export async function ingestPendingCaptures({ addTask, projects }: IngestDeps): Promise<number> {
+// Parse a capture's title with the same quick-add grammar and options as the
+// in-app capture sheet (quick-capture-sheet.tsx ~line 428), so a background
+// Shortcut capture like `/due:friday @errands #personal +Project` behaves
+// identically to typing it into the capture box (#895). The structured
+// `project`/`tags` fields from the Shortcut still win over parsed tokens —
+// same precedence as a surface's own picker beating a typed `+Project`.
+async function assembleCaptureTask(
+    capture: PendingCapture,
+    { addProject, projects, areas, settings }: Omit<IngestDeps, 'addTask'>,
+): Promise<{ title: string; props: Partial<Task> } | null> {
+    // Relative dates (`/due:friday`, "tomorrow") resolve against the moment
+    // the Shortcut ran, not the later drain — a capture queued Monday night
+    // means that Monday's "tomorrow" even if the app first opens on Wednesday.
+    const capturedAt = capture.createdAt ? new Date(capture.createdAt) : null;
+    const now = capturedAt && !Number.isNaN(capturedAt.getTime()) ? capturedAt : new Date();
+    const parsed = parseQuickAdd(capture.title, projects, now, areas, {
+        defaultScheduleTime: normalizeClockTimeInput(settings.gtd?.defaultScheduleTime) || undefined,
+        preserveText: settings.quickAddAutoClean !== true,
+        naturalLanguageDates: isNaturalLanguageDatesEnabled(settings),
+    });
+
+    const input: CaptureAssemblyInput = {
+        parsed,
+        rawInput: capture.title,
+        fallbackTitle: capture.title,
+        projects,
+        initialProps: {
+            status: 'inbox',
+            ...(capture.note ? { description: capture.note } : {}),
+        },
+        suppressDetectedDate: false,
+    };
+
+    const prepared = await prepareCaptureTask(input, { addProject }, {
+        transformProps: (props) => {
+            const taskProps = { ...props };
+            const structuredProjectId = resolveStructuredProjectId(capture, projects);
+            if (structuredProjectId) taskProps.projectId = structuredProjectId;
+
+            const structuredTags = normalizeShortcutTags(capture.tags);
+            if (structuredTags.length > 0) {
+                taskProps.tags = Array.from(new Set([...(taskProps.tags ?? []), ...structuredTags]));
+            }
+            return taskProps;
+        },
+    });
+
+    // Never drop a capture: any parse/prepare failure (invalid date command,
+    // empty title, project-create failure) falls back to the legacy verbatim
+    // behavior. Background has no UI to surface parse errors.
+    if (!prepared.success) return null;
+    return { title: prepared.title, props: prepared.props };
+}
+
+export async function ingestPendingCaptures({ addTask, addProject, projects, areas, settings }: IngestDeps): Promise<number> {
     if (!documentDirectory) return 0;
     const dir = `${documentDirectory}${PENDING_CAPTURES_DIRECTORY}`;
 
@@ -117,7 +193,10 @@ export async function ingestPendingCaptures({ addTask, projects }: IngestDeps): 
             continue;
         }
 
-        const result = await addTask(capture.title, buildPendingCaptureTaskProps(capture, projects));
+        const assembled = await assembleCaptureTask(capture, { addProject, projects, areas, settings });
+        const result = assembled
+            ? await addTask(assembled.title, assembled.props)
+            : await addTask(capture.title, buildPendingCaptureTaskProps(capture, projects));
         if (isFailedResult(result)) continue;
 
         // Delete only after the store write resolved; a crash in between at
