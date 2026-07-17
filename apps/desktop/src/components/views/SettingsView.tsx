@@ -51,9 +51,11 @@ import {
   wrapSettingsOpenImport,
 } from "../../lib/settings-open-diagnostics";
 import {
+  buildNavKeywords,
   getSettingsLabelFallback,
   labelFallback,
   labelKeyOverrides,
+  SETTINGS_PAGE_LABEL_KEYS,
   type SettingsLabels,
 } from "./settings/labels";
 import {
@@ -866,18 +868,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
         id: "main",
         icon: Monitor,
         label: t.general,
-        keywords: [
-          t.appearance,
-          t.density,
-          t.textSize,
-          t.language,
-          t.weekStart,
-          t.dateFormat,
-          t.keybindings,
-          t.windowDecorations,
-          t.closeBehavior,
-          t.showTray,
-          t.launchAtStartup,
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.main, [
           "theme",
           "font size",
           "text size",
@@ -886,13 +877,13 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
           "launch at startup",
           "autostart",
           "login item",
-        ],
+        ]),
       },
       {
         id: "gtd",
         icon: ListChecks,
         label: t.gtd,
-        keywords: [
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.gtd, [
           "auto-archive",
           "priorities",
           "time estimates",
@@ -901,31 +892,38 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
           "inbox processing",
           "2-minute rule",
           "task editor",
-        ],
+        ]),
       },
       {
         id: "manage",
         icon: Layers,
         label: t.manage,
-        keywords: ["areas", "contexts", "tags", "rename", "delete", "reorder"],
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.manage, [
+          "areas",
+          "contexts",
+          "tags",
+          "rename",
+          "delete",
+          "reorder",
+        ]),
       },
       {
         id: "notifications",
         icon: Bell,
         label: t.notifications,
-        keywords: [
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.notifications, [
           "review reminders",
           "weekly review",
           "daily digest",
           "morning",
           "evening",
-        ],
+        ]),
       },
       {
         id: "sync",
         icon: RefreshCw,
         label: t.sync,
-        keywords: [
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.sync, [
           "file sync",
           "WebDAV",
           "cloud",
@@ -936,7 +934,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
           "self-hosted",
           "iCloud",
           "settings sync",
-        ],
+        ]),
       },
       {
         id: "data",
@@ -947,7 +945,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
             : language === "zh-Hant"
               ? "數據"
               : translateText("Data", language),
-        keywords: [
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.data, [
           "backup",
           "restore",
           "import",
@@ -958,26 +956,26 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
           "cleanup",
           "diagnostics",
           "logging",
-        ],
+        ]),
       },
       {
         id: "integrations",
         icon: Link2,
         label: t.integrations,
-        keywords: [
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.integrations, [
           "obsidian",
           "vault",
           "calendar",
           "ICS",
           "apple calendar",
           "integration",
-        ],
+        ]),
       },
       {
         id: "ai",
         icon: Sparkles,
         label: t.ai,
-        keywords: [
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.ai, [
           "OpenAI",
           "Gemini",
           "Anthropic",
@@ -986,13 +984,13 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
           "whisper",
           "copilot",
           "model",
-        ],
+        ]),
       },
       {
         id: "advanced",
         icon: SlidersHorizontal,
         label: t.advanced,
-        keywords: [
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.advanced, [
           "automation",
           "local api",
           "localhost",
@@ -1000,7 +998,7 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
           "mcp",
           "Claude",
           "LLM",
-        ],
+        ]),
       },
       {
         id: "about",
@@ -1008,7 +1006,12 @@ export function SettingsView({ initialPage, onboardingHintPage, onResumeOnboardi
         label: t.about,
         badge: hasUpdateBadge,
         badgeLabel: t.updateAvailable,
-        keywords: ["version", "update", "license", "sponsor"],
+        keywords: buildNavKeywords(t, SETTINGS_PAGE_LABEL_KEYS.about, [
+          "version",
+          "update",
+          "license",
+          "sponsor",
+        ]),
       },
     ],
     [hasUpdateBadge, language, t],

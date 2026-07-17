@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { getSettingsLabelFallback, labelFallback, zhHantLabelOverrides } from './labels';
+import {
+    buildNavKeywords,
+    getSettingsLabelFallback,
+    labelFallback,
+    SETTINGS_PAGE_LABEL_KEYS,
+    zhHantLabelOverrides,
+} from './labels';
 
 const reportedZhHantLabels = {
     searchPlaceholder: '搜索設置…',
@@ -58,5 +64,42 @@ describe('settings label fallbacks', () => {
 
         expect(labels.searchPlaceholder).toBe(labelFallback.zh.searchPlaceholder);
         expect(labels.searchPlaceholder).toBe('搜索设置…');
+    });
+});
+
+describe('settings nav search keywords', () => {
+    it('derives GTD keywords from the translated setting labels it renders', () => {
+        const keywords = buildNavKeywords(labelFallback.en, SETTINGS_PAGE_LABEL_KEYS.gtd, [
+            'auto-archive',
+            'pomodoro',
+        ]);
+
+        // Real setting labels, so "default", "project", "area" and
+        // "time estimate" all surface the GTD page (#884).
+        expect(keywords).toContain('Default project flow');
+        expect(keywords).toContain('Default area for new tasks');
+        expect(keywords).toContain('Time estimate presets');
+        // Hand-curated synonyms still supplement the derived labels.
+        expect(keywords).toContain('auto-archive');
+    });
+
+    it('only lists label keys that exist in the fallback registry', () => {
+        const missing: string[] = [];
+        for (const keys of Object.values(SETTINGS_PAGE_LABEL_KEYS)) {
+            for (const key of keys) {
+                if (!(key in labelFallback.en)) missing.push(key);
+            }
+        }
+        expect(missing).toEqual([]);
+    });
+
+    it('localizes derived keywords and drops duplicates', () => {
+        const zh = getSettingsLabelFallback('zh');
+        const keywords = buildNavKeywords(zh, SETTINGS_PAGE_LABEL_KEYS.gtd, [
+            zh.defaultProjectFlowMode,
+        ]);
+
+        expect(keywords).toContain('默认项目流程');
+        expect(keywords.filter((kw) => kw === '默认项目流程')).toHaveLength(1);
     });
 });

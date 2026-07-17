@@ -101,6 +101,64 @@ describe('SettingsGtdPage', () => {
         });
     });
 
+    it('adds a time estimate preset', async () => {
+        const updateSettings = vi.fn().mockResolvedValue(undefined);
+        const showSaved = vi.fn();
+
+        const { getByRole } = render(
+            <SettingsGtdPage
+                t={labelFallback.en}
+                language="en"
+                settings={{ gtd: { timeEstimatePresets: ['5min', '30min'] } }}
+                updateSettings={updateSettings}
+                showSaved={showSaved}
+                autoArchiveDays={7}
+                areas={[]}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /time estimate presets/i }));
+        // '15min' ('15m') is not in the current presets; clicking it adds it, re-ordered.
+        fireEvent.click(getByRole('button', { name: '15m' }));
+
+        await waitFor(() => {
+            expect(updateSettings).toHaveBeenCalledWith({
+                gtd: {
+                    timeEstimatePresets: ['5min', '15min', '30min'],
+                },
+            });
+        });
+    });
+
+    it('removes a time estimate preset', async () => {
+        const updateSettings = vi.fn().mockResolvedValue(undefined);
+        const showSaved = vi.fn();
+
+        const { getByRole } = render(
+            <SettingsGtdPage
+                t={labelFallback.en}
+                language="en"
+                settings={{ gtd: { timeEstimatePresets: ['5min', '30min'] } }}
+                updateSettings={updateSettings}
+                showSaved={showSaved}
+                autoArchiveDays={7}
+                areas={[]}
+            />
+        );
+
+        fireEvent.click(getByRole('button', { name: /time estimate presets/i }));
+        // '30min' ('30m') is currently selected; clicking it removes it.
+        fireEvent.click(getByRole('button', { name: '30m' }));
+
+        await waitFor(() => {
+            expect(updateSettings).toHaveBeenCalledWith({
+                gtd: {
+                    timeEstimatePresets: ['5min'],
+                },
+            });
+        });
+    });
+
     it('saves the active area mode for new tasks', async () => {
         const updateSettings = vi.fn().mockResolvedValue(undefined);
         const showSaved = vi.fn();
