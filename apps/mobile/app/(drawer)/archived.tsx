@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
 import { getInlineMarkdownPreview, projectMatchesAreaFilter, safeFormatDate, shallow, taskMatchesAreaFilter, tFallback, useTaskStore } from '@mindwtr/core';
 import type { Project, Task } from '@mindwtr/core';
 import { MarkdownInlineText } from '@/components/markdown-text';
@@ -415,7 +415,7 @@ export default function ArchivedScreen() {
         const project = projects.find((item) => item.id === projectId);
         Alert.alert(
             project?.title || t('common.delete') || 'Delete',
-            t('task.deleteConfirmBody') || 'Move this project to Trash?',
+            t('projects.deleteConfirm') || 'Delete this project? Tasks in this project will be kept and moved to unassigned.',
             [
                 { text: t('common.cancel') || 'Cancel', style: 'cancel' },
                 {
@@ -473,11 +473,13 @@ export default function ArchivedScreen() {
                 <View style={styles.segmentRow}>
                     {(['tasks', 'projects'] as ArchiveSegment[]).map((value) => {
                         const selected = segment === value;
+                        const label = value === 'tasks' ? (t('common.tasks') || 'Tasks') : (t('projects.title') || 'Projects');
                         return (
-                            <TouchableOpacity
+                            <Pressable
                                 key={value}
                                 onPress={() => handleSegmentChange(value)}
                                 accessibilityRole="button"
+                                accessibilityLabel={label}
                                 accessibilityState={{ selected }}
                                 style={[
                                     styles.segmentChip,
@@ -485,9 +487,9 @@ export default function ArchivedScreen() {
                                 ]}
                             >
                                 <Text style={[styles.segmentChipText, { color: selected ? tc.onTint : tc.text }]}>
-                                    {value === 'tasks' ? (t('common.tasks') || 'Tasks') : (t('projects.title') || 'Projects')}
+                                    {label}
                                 </Text>
-                            </TouchableOpacity>
+                            </Pressable>
                         );
                     })}
                 </View>

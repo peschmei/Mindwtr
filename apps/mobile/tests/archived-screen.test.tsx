@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => {
   const deleteTask = vi.fn();
   const updateTask = vi.fn();
   const purgeTask = vi.fn();
+  const updateProject = vi.fn();
+  const deleteProject = vi.fn();
   const setHighlightTask = vi.fn();
   return {
     alert,
@@ -19,6 +21,8 @@ const mocks = vi.hoisted(() => {
     deleteTask,
     updateTask,
     purgeTask,
+    updateProject,
+    deleteProject,
     setHighlightTask,
     storeState: {
       _allTasks: [] as any[],
@@ -28,6 +32,8 @@ const mocks = vi.hoisted(() => {
       deleteTask,
       updateTask,
       purgeTask,
+      updateProject,
+      deleteProject,
       highlightTaskId: null as string | null,
       setHighlightTask,
     },
@@ -69,6 +75,7 @@ vi.mock('@mindwtr/core', () => ({
   getInlineMarkdownPreview: vi.fn((markdown: string) => (markdown || '').split('\n')[0] ?? ''),
   safeFormatDate: vi.fn(() => 'May 12, 2026, 8:30 AM'),
   taskMatchesAreaFilter: vi.fn(() => true),
+  projectMatchesAreaFilter: vi.fn(() => true),
   tFallback: (t: (key: string) => string, key: string, fallback: string) => t(key) || fallback,
 }));
 
@@ -100,6 +107,10 @@ vi.mock('../contexts/language-context', () => ({
       'status.done': 'Done',
       'task.deleteConfirmBody': 'Move this task to Trash?',
       'trash.restoreToInbox': 'Restore to Inbox',
+      'projects.title': 'Projects',
+      'projects.deleteConfirm': 'Delete this project? Tasks in this project will be kept and moved to unassigned.',
+      'archived.emptyProjects': 'No archived projects',
+      'archived.emptyProjectsHint': 'Projects you archive will appear here',
     }[key] ?? key),
   }),
 }));
@@ -111,6 +122,10 @@ vi.mock('@/hooks/use-theme-colors', () => ({
     text: '#ffffff',
     secondaryText: '#999999',
     tint: '#3b82f6',
+    onTint: '#ffffff',
+    filterBg: '#1a1a1a',
+    border: '#333333',
+    cardBg: '#0a0a0a',
   }),
 }));
 
@@ -306,5 +321,76 @@ describe('ArchivedScreen', () => {
 
     expect(mocks.batchDeleteTasks).toHaveBeenCalledWith(['task-1']);
     expect(mocks.deleteTask).not.toHaveBeenCalled();
+  });
+
+  const archivedProject = {
+    id: 'project-1',
+    title: 'Archived project',
+    status: 'archived',
+    color: '#6B7280',
+    order: 0,
+    tagIds: [] as string[],
+    createdAt: '2026-05-01T08:30:00.000Z',
+    updatedAt: '2026-05-11T08:30:00.000Z',
+  };
+
+  const switchToProjects = (tree: renderer.ReactTestRenderer) => {
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Projects').props.onPress();
+    });
+  };
+
+  it('renders archived projects when the Projects segment is selected', () => {
+    mocks.storeState.projects = [archivedProject];
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<ArchivedScreen />);
+    });
+
+    expect(hasText(tree, 'Archived project')).toBe(false);
+    switchToProjects(tree);
+    expect(hasText(tree, 'Archived project')).toBe(true);
+  });
+
+  it('restores an archived project through updateProject with active status', () => {
+    mocks.storeState.projects = [archivedProject];
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<ArchivedScreen />);
+    });
+    switchToProjects(tree);
+
+    const swipeable = tree.root.findByType('Swipeable' as unknown as React.ElementType);
+    const restoreAction = swipeable.props.renderLeftActions();
+    renderer.act(() => {
+      restoreAction.props.onPress();
+    });
+
+    expect(mocks.updateProject).toHaveBeenCalledWith('project-1', { status: 'active' });
+    expect(mocks.deleteProject).not.toHaveBeenCalled();
+  });
+
+  it('deletes an archived project only after confirmation', () => {
+    mocks.storeState.projects = [archivedProject];
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<ArchivedScreen />);
+    });
+    switchToProjects(tree);
+
+    const swipeable = tree.root.findByType('Swipeable' as unknown as React.ElementType);
+    const deleteAction = swipeable.props.renderRightActions();
+    renderer.act(() => {
+      deleteAction.props.onPress();
+    });
+
+    expect(mocks.deleteProject).not.toHaveBeenCalled();
+    const alertButtons = mocks.alert.mock.calls[0]?.[2] as { style?: string; onPress?: () => void }[];
+    const confirmButton = alertButtons.find((button) => button.style === 'destructive');
+    renderer.act(() => {
+      confirmButton?.onPress?.();
+    });
+
+    expect(mocks.deleteProject).toHaveBeenCalledWith('project-1');
   });
 });

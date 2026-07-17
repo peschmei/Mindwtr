@@ -415,7 +415,7 @@ export function ArchiveView() {
     const handleDeleteProject = useCallback(async (project: Project) => {
         const confirmed = await requestConfirmation({
             title: project.title,
-            description: t('task.deleteConfirmBody'),
+            description: t('projects.deleteConfirm'),
             confirmLabel: t('common.delete'),
             cancelLabel: t('common.cancel') || 'Cancel',
         });
