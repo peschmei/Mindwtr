@@ -88,7 +88,6 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
     const sortBy = (settings?.taskSortBy ?? 'default') as TaskSortBy;
     const includeFocusStep = settings.gtd?.dailyReview?.includeFocusStep !== false;
     const focusTaskLimit = normalizeFocusTaskLimit(settings.gtd?.focusTaskLimit);
-    const showFutureStarts = settings?.appearance?.showFutureStarts === true;
     const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
 
     const today = useMemo(() => new Date(), []);
@@ -174,9 +173,9 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
         () => activeTasks.filter((task) => (
             task.isFocusedToday
             && task.status !== 'done'
-            && shouldShowTaskForStart(task, { showFutureStarts })
+            && shouldShowTaskForStart(task)
         )),
-        [activeTasks, showFutureStarts],
+        [activeTasks],
     );
 
     const focusCandidates = useMemo(() => {
@@ -187,7 +186,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
             if (!byId.has(task.id)) byId.set(task.id, task);
         };
         activeTasks.forEach((task) => {
-            if (task.isFocusedToday && shouldShowTaskForStart(task, { showFutureStarts })) addCandidate(task);
+            if (task.isFocusedToday && shouldShowTaskForStart(task, { now })) addCandidate(task);
             const due = safeParseDueDate(task.dueDate);
             if (due && (due < now || due.toDateString() === todayStr)) {
                 addCandidate(task);
@@ -196,7 +195,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
             if (task.status === 'next') {
                 // Same deferral rule as Focus: a recurring chore carrying only a
                 // due date is not reviewable until it starts (#843, #867).
-                if (!shouldShowTaskForStart(task, { showFutureStarts, now })) return;
+                if (!shouldShowTaskForStart(task, { now })) return;
                 addCandidate(task);
                 return;
             }
@@ -205,7 +204,7 @@ function DailyReviewFlow({ onClose }: { onClose: () => void }) {
             }
         });
         return sortTasksBy(Array.from(byId.values()), sortBy);
-    }, [activeTasks, showFutureStarts, sortBy]);
+    }, [activeTasks, sortBy]);
 
     const dueTodayTasks = useMemo(() => {
         const dueToday = activeTasks.filter((task) => {

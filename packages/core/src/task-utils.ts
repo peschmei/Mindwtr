@@ -86,7 +86,6 @@ export type TaskFocusEligibilityOptions = {
     tasks: readonly Task[];
     projects: readonly Project[] | Map<string, Project>;
     now?: Date;
-    showFutureStarts?: boolean;
     sequentialProjectIds?: ReadonlySet<string>;
     sectionScopedProjectIds?: ReadonlySet<string>;
 };
@@ -552,10 +551,7 @@ export function getTaskFocusEligibility(
         && sequentialProjectIds.has(task.projectId)
         && !sequentialFirstTaskIds.has(task.id),
     );
-    const isVisibleForStart = shouldShowTaskForStart(task, {
-        now,
-        showFutureStarts: options.showFutureStarts,
-    });
+    const isVisibleForStart = shouldShowTaskForStart(task, { now });
     const isVisibleActiveTask = isTaskInActiveProject(task, projectMap) && isVisibleForStart;
     const isReviewDueEligible = task.status !== 'inbox' && isDueForReview(task.reviewAt, now);
     const eligible = isVisibleActiveTask

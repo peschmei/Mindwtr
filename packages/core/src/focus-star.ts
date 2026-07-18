@@ -20,7 +20,6 @@ export type FocusStarContext = {
     projects: readonly Project[] | Map<string, Project>;
     focusedCount: number;
     focusTaskLimit: number;
-    showFutureStarts?: boolean;
     sequentialProjectIds?: Set<string>;
     sectionScopedProjectIds?: Set<string>;
     now?: Date;
@@ -55,7 +54,6 @@ export function resolveFocusStarAction(task: Task, context: FocusStarContext): F
         tasks: context.tasks,
         projects: context.projects,
         now: context.now,
-        showFutureStarts: context.showFutureStarts,
         sequentialProjectIds: context.sequentialProjectIds,
         sectionScopedProjectIds: context.sectionScopedProjectIds,
     });

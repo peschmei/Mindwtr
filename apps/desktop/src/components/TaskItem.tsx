@@ -260,7 +260,6 @@ export const TaskItem = memo(function TaskItem({
     const timeEstimatesEnabled = settings?.features?.timeEstimates !== false;
     const undoNotificationsEnabled = settings?.undoNotificationsEnabled !== false;
     const showTaskAge = settings?.appearance?.showTaskAge === true;
-    const showFutureStarts = settings?.appearance?.showFutureStarts === true;
     const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
     const isCompact = settings?.appearance?.density === 'compact';
     const isHighlighted = highlightTaskId === task.id;
@@ -310,11 +309,10 @@ export const TaskItem = memo(function TaskItem({
         projects: projectMap,
         focusedCount,
         focusTaskLimit,
-        showFutureStarts,
         sequentialProjectIds,
         sectionScopedProjectIds: sequentialWithinSectionProjectIds,
         allowUnclarified: options?.allowUnclarified,
-    }), [activeTasksByStatus, focusTaskLimit, focusedCount, projectMap, sequentialProjectIds, sequentialWithinSectionProjectIds, showFutureStarts, task]);
+    }), [activeTasksByStatus, focusTaskLimit, focusedCount, projectMap, sequentialProjectIds, sequentialWithinSectionProjectIds, task]);
     const quickActionFocus = useMemo(() => {
         // Also computed while the editor is open: the editor header shows the
         // same focus star (as a draft field there).

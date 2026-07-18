@@ -31,7 +31,6 @@ import type { FilterCriteria, Task, TaskStatus } from '@mindwtr/core';
 import type { BulkOrganizeTaskUpdateInput } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { FutureStartNotice } from './FutureStartNotice';
 import { ListEmptyState } from './list/ListEmptyState';
 import { ListControlsPanel } from './list/ListControlsPanel';
 import { PromptModal } from '../PromptModal';
@@ -184,7 +183,6 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     const { registerTaskListScope } = useKeybindings();
     const sortBy = (settings?.taskSortBy ?? 'default') as TaskSortBy;
     const isCompact = settings?.appearance?.density === 'compact';
-    const showFutureStarts = settings?.appearance?.showFutureStarts === true;
     const densityMode = isCompact ? 'compact' : 'comfortable';
     const resolvedAreaFilter = resolveAreaFilter(settings?.filters?.areaId, areas);
     const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -464,7 +462,6 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         resolvedAreaFilter,
         areaById,
         selectedWaitingPerson,
-        showFutureStarts,
     }), [
         baseTasks,
         statusFilter,
@@ -474,21 +471,16 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         projects,
         sortBy,
         sortByProjectOrder,
-        showFutureStarts,
         resolvedAreaFilter,
         areaById,
         selectedWaitingPerson,
     ]);
     const deferredFilterInputs = useDeferredValue(filterInputs);
 
-    const { tasks: filteredTasks, futureStartCount } = useMemo(() => {
+    const filteredTasks = useMemo(() => {
         perf.trackUseMemo();
         return perf.measure('filteredTasks', () => {
             const now = new Date();
-            const showFutureStartsNow = deferredFilterInputs.showFutureStarts;
-            // Counted inside the same pass as every other filter so the notice
-            // only promises tasks the Show toggle can actually reveal (#856).
-            let futureStarts = 0;
             const allowDeferredProjectTasks =
                 deferredFilterInputs.statusFilter === 'done'
                 || deferredFilterInputs.statusFilter === 'archived';
@@ -535,38 +527,29 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 // tickler item. Deferral is the core predicate, so a recurring
                 // chore that only carries a due date stays hidden here exactly
                 // as it does in Focus, instead of respawning into Next the
-                // moment it is completed (#843, #867).
+                // moment it is completed (#843, #867, #900).
                 if (
                     deferredFilterInputs.statusFilter === 'next'
-                    && !shouldShowTaskForStart(t, { showFutureStarts: false, now })
+                    && !shouldShowTaskForStart(t, { now })
                 ) {
-                    futureStarts += 1;
-                    return showFutureStartsNow;
+                    return false;
                 }
                 return true;
             });
 
             if (deferredFilterInputs.statusFilter === 'next' && deferredFilterInputs.sortBy === 'default') {
-                return { tasks: deferredFilterInputs.sortByProjectOrder(filtered), futureStartCount: futureStarts };
+                return deferredFilterInputs.sortByProjectOrder(filtered);
             }
             if (deferredFilterInputs.statusFilter === 'done' && deferredFilterInputs.sortBy === 'default') {
-                return { tasks: sortDoneTasksForListView(filtered), futureStartCount: futureStarts };
+                return sortDoneTasksForListView(filtered);
             }
 
-            return { tasks: sortTasksBy(filtered, deferredFilterInputs.sortBy), futureStartCount: futureStarts };
+            return sortTasksBy(filtered, deferredFilterInputs.sortBy);
         });
     }, [deferredFilterInputs, normalizedSearchQuery, showViewFilterInput]);
     const resolveText = useCallback((key: string, fallback: string) => {
         return translateTextWithFallback(t, key, fallback);
     }, [t]);
-    const toggleFutureStarts = useCallback(() => {
-        void updateSettings({
-            appearance: {
-                ...(settings.appearance ?? {}),
-                showFutureStarts: !showFutureStarts,
-            },
-        }).catch(() => undefined);
-    }, [settings.appearance, showFutureStarts, updateSettings]);
     const activeNextGroupBy: NextGroupBy = statusFilter !== 'reference' ? nextGroupBy : 'none';
     const activeReferenceGroupBy: ReferenceGroupBy = statusFilter === 'reference' ? (referenceGroupBy ?? 'area') : 'none';
     const activeGroupBy: TaskListGroupBy = statusFilter === 'reference' ? activeReferenceGroupBy : activeNextGroupBy;
@@ -1076,16 +1059,6 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                 {isFiltering && (
                     <div className="px-3 pb-2 text-xs text-muted-foreground">
                         {t('list.filtering') || 'Filtering...'}
-                    </div>
-                )}
-                {futureStartCount > 0 && (
-                    <div className="px-3 pb-3">
-                        <FutureStartNotice
-                            count={futureStartCount}
-                            shown={showFutureStarts}
-                            onToggle={toggleFutureStarts}
-                            resolveText={resolveText}
-                        />
                     </div>
                 )}
                 {showEmptyState ? (

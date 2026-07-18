@@ -495,7 +495,6 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
                 const focusEligibility = getTaskFocusEligibility(focusCandidate, {
                     tasks: [...nextAllTasks, focusCandidate],
                     projects: currentState._allProjects,
-                    showFutureStarts: currentState.settings.appearance?.showFutureStarts,
                 });
                 if (!focusEligibility.eligible || focusedCount >= focusTaskLimit) {
                     newTask.isFocusedToday = false;
@@ -1159,7 +1158,6 @@ export const createTaskActions = ({ set, get, getStorage, debouncedSave, trackIm
             projects: derived.projectMap,
             focusedCount: derived.focusedCount,
             focusTaskLimit: normalizeFocusTaskLimit(state.settings.gtd?.focusTaskLimit),
-            showFutureStarts: state.settings.appearance?.showFutureStarts,
             sequentialProjectIds: derived.sequentialProjectIds,
             sectionScopedProjectIds: derived.sequentialWithinSectionProjectIds,
             allowUnclarified: options?.allowUnclarified,
