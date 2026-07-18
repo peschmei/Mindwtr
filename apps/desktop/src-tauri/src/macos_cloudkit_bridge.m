@@ -320,7 +320,11 @@ static NSDictionary *ck_json_from_record(CKRecord *record) {
                 if ([value isKindOfClass:[NSNumber class]]) result[jsKey] = value;
                 break;
             case MWFieldKindBool:
-                if ([value isKindOfClass:[NSNumber class]]) result[jsKey] = @([value longLongValue] == 1);
+                // `@(expr == 1)` boxes via numberWithInt: (C `==` yields int), so
+                // NSJSONSerialization emits 0/1 numbers, not true/false. Force a real
+                // boolean NSNumber (@YES/@NO) so the JSON matches the JS `boolean` type
+                // core's strict `=== true` sync-merge normalizers expect (#902).
+                if ([value isKindOfClass:[NSNumber class]]) result[jsKey] = ([value longLongValue] == 1) ? @YES : @NO;
                 break;
             case MWFieldKindStringArray:
                 if ([value isKindOfClass:[NSArray class]]) result[jsKey] = value;

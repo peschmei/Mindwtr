@@ -128,6 +128,13 @@ export const normalizeRevisionMetadata = <T extends RevisionMetadata>(item: T): 
     return normalized;
 };
 
+// CloudKit's macOS bridge can box booleans read off iOS-written records as
+// numeric NSNumbers (1/0), which NSJSONSerialization then emits as JSON
+// numbers rather than JSON booleans (see macos_cloudkit_bridge.m,
+// ck_json_from_record). Synced booleans in the merge normalizers below must
+// tolerate that shape so a numeric `true` never gets coerced to `false` (#902).
+const normalizeSyncedBoolean = (value: unknown): boolean => value === true || value === 1;
+
 const normalizeProjectStatusForMerge = (value: unknown): Project['status'] => {
     if (value === 'active' || value === 'someday' || value === 'waiting' || value === 'archived') {
         return value;
@@ -167,11 +174,11 @@ export const normalizeTaskForSyncMerge = (task: Task, nowIso: string): Task => {
         projectId: normalized.projectId,
         sectionId: normalizeOptionalString(normalized.sectionId),
         areaId: normalized.areaId,
-        isFocusedToday: normalized.isFocusedToday === true,
+        isFocusedToday: normalizeSyncedBoolean(normalized.isFocusedToday),
         timeEstimate: normalized.timeEstimate,
         timeSpentMinutes: normalized.timeSpentMinutes,
-        showFutureRecurrence: hasRecurrence && normalized.showFutureRecurrence === true ? true : undefined,
-        suppressMindwtrReminders: normalized.suppressMindwtrReminders === true,
+        showFutureRecurrence: hasRecurrence && normalizeSyncedBoolean(normalized.showFutureRecurrence) ? true : undefined,
+        suppressMindwtrReminders: normalizeSyncedBoolean(normalized.suppressMindwtrReminders),
         repeatReminderMinutes: normalized.repeatReminderMinutes,
         reviewAt: normalized.reviewAt,
         completedAt: normalized.completedAt,
@@ -200,9 +207,9 @@ export const normalizeProjectForSyncMerge = (project: Project): Project => {
         status: normalizeProjectStatusForMerge(project.status),
         color: normalizeOptionalString(project.color) ?? '#6B7280',
         tagIds: normalizeStringArray(project.tagIds),
-        isSequential: project.isSequential === true,
+        isSequential: normalizeSyncedBoolean(project.isSequential),
         sequentialScope: normalizeProjectSequentialScope(project.sequentialScope),
-        isFocused: project.isFocused === true,
+        isFocused: normalizeSyncedBoolean(project.isFocused),
         attachments: normalizeAttachmentsForSyncMerge(project.attachments),
         dueDate: normalizeOptionalString(project.dueDate),
         reviewAt: normalizeOptionalString(project.reviewAt),

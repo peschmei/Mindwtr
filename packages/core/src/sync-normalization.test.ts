@@ -10,6 +10,7 @@ import {
     repairMergedSyncReferences,
     validateMergedSyncData,
 } from './sync-normalization';
+import { normalizeTaskForContentComparison, toComparableSignature } from './sync-signatures';
 import { createMockArea, createMockProject, createMockSection, createMockTask, mockAppData } from './sync-test-utils';
 import type { AppData, Area, Project, Section, Task } from './types';
 
@@ -528,5 +529,156 @@ describe('sync normalization', () => {
             title: 'Restored copy',
             deletedAt: undefined,
         });
+    });
+});
+
+// Regression coverage for #902: the macOS CloudKit bridge could box booleans
+// read off iOS-written records as numeric NSNumbers, which NSJSONSerialization
+// then emits as JSON numbers (1/0) instead of booleans. The sync-merge
+// normalizers must treat `1` as `true` so a numeric boolean never gets
+// coerced to `false` by a strict `=== true` check.
+describe('sync-merge numeric boolean tolerance (#902)', () => {
+    it('treats numeric 1 as true for task synced booleans, mirroring the strict-boolean case', () => {
+        const numeric = normalizeTaskForSyncMerge({
+            ...createMockTask('task-1', NOW),
+            recurrence: 'daily',
+            isFocusedToday: 1,
+            suppressMindwtrReminders: 1,
+            showFutureRecurrence: 1,
+        } as unknown as Task, NOW);
+
+        expect(numeric.isFocusedToday).toBe(true);
+        expect(numeric.suppressMindwtrReminders).toBe(true);
+        expect(numeric.showFutureRecurrence).toBe(true);
+
+        const strict = normalizeTaskForSyncMerge({
+            ...createMockTask('task-1', NOW),
+            recurrence: 'daily',
+            isFocusedToday: true,
+            suppressMindwtrReminders: true,
+            showFutureRecurrence: true,
+        }, NOW);
+
+        expect(numeric).toEqual(strict);
+    });
+
+    it('treats numeric 0 or absent task synced booleans as false/undefined exactly as before', () => {
+        const zero = normalizeTaskForSyncMerge({
+            ...createMockTask('task-1', NOW),
+            recurrence: 'daily',
+            isFocusedToday: 0,
+            suppressMindwtrReminders: 0,
+            showFutureRecurrence: 0,
+        } as unknown as Task, NOW);
+
+        expect(zero.isFocusedToday).toBe(false);
+        expect(zero.suppressMindwtrReminders).toBe(false);
+        expect(zero.showFutureRecurrence).toBeUndefined();
+
+        const absent = normalizeTaskForSyncMerge(createMockTask('task-1', NOW), NOW);
+
+        expect(absent.isFocusedToday).toBe(false);
+        expect(absent.suppressMindwtrReminders).toBe(false);
+        expect(absent.showFutureRecurrence).toBeUndefined();
+    });
+
+    it('treats numeric 1 as true for project synced booleans, mirroring the strict-boolean case', () => {
+        const numeric = normalizeProjectForSyncMerge({
+            ...createMockProject('project-1', NOW),
+            isSequential: 1,
+            isFocused: 1,
+        } as unknown as Project);
+
+        expect(numeric.isSequential).toBe(true);
+        expect(numeric.isFocused).toBe(true);
+
+        const strict = normalizeProjectForSyncMerge({
+            ...createMockProject('project-1', NOW),
+            isSequential: true,
+            isFocused: true,
+        });
+
+        expect(numeric).toEqual(strict);
+    });
+
+    it('treats numeric 0 or absent project synced booleans as false exactly as before', () => {
+        const zero = normalizeProjectForSyncMerge({
+            ...createMockProject('project-1', NOW),
+            isSequential: 0,
+            isFocused: 0,
+        } as unknown as Project);
+
+        expect(zero.isSequential).toBe(false);
+        expect(zero.isFocused).toBe(false);
+
+        const absent = normalizeProjectForSyncMerge(createMockProject('project-1', NOW));
+
+        expect(absent.isSequential).toBe(false);
+        expect(absent.isFocused).toBe(false);
+    });
+
+    it('is idempotent when re-normalizing a numeric-boolean task or project', () => {
+        const task = { ...createMockTask('task-1', NOW), isFocusedToday: 1 } as unknown as Task;
+        const once = normalizeTaskForSyncMerge(task, NOW);
+        const twice = normalizeTaskForSyncMerge(once, NOW);
+        expect(twice).toEqual(once);
+
+        const project = { ...createMockProject('project-1', NOW), isSequential: 1, isFocused: 1 } as unknown as Project;
+        const projectOnce = normalizeProjectForSyncMerge(project);
+        const projectTwice = normalizeProjectForSyncMerge(projectOnce);
+        expect(projectTwice).toEqual(projectOnce);
+    });
+
+    it('resolves the #902 regression: a numeric-boolean remote star wins the merge instead of being coerced to false', () => {
+        const updatedAt = '2026-01-01T00:00:00.000Z';
+        const local = mockAppData([{
+            ...createMockTask('task-1', updatedAt),
+            isFocusedToday: false,
+            rev: 5,
+            revBy: 'macos-device',
+        }]);
+        const incoming = mockAppData([{
+            ...createMockTask('task-1', updatedAt),
+            // Simulates the un-fixed macOS CloudKit bridge reading an iOS-written
+            // record: the boolean arrives as a JSON number, not a JSON boolean.
+            isFocusedToday: 1,
+            rev: 6,
+            revBy: 'ios-device',
+        } as unknown as Task]);
+
+        const merged = mergeAppDataWithStats(local, incoming, { nowIso: NOW });
+
+        expect(merged.data.tasks[0].isFocusedToday).toBe(true);
+    });
+
+    it('produces zero content diff between a numeric-boolean remote copy and a real-boolean local copy at the same rev', () => {
+        const updatedAt = '2026-01-01T00:00:00.000Z';
+        const localTask = {
+            ...createMockTask('task-1', updatedAt),
+            isFocusedToday: true,
+            rev: 4,
+            revBy: 'device-a',
+        } satisfies Task;
+        const remoteTask = {
+            ...createMockTask('task-1', updatedAt),
+            isFocusedToday: 1,
+            rev: 4,
+            revBy: 'device-a',
+        } as unknown as Task;
+
+        const localNormalized = normalizeTaskForSyncMerge(localTask, NOW);
+        const remoteNormalized = normalizeTaskForSyncMerge(remoteTask, NOW);
+
+        const localSignature = toComparableSignature(normalizeTaskForContentComparison(localNormalized));
+        const remoteSignature = toComparableSignature(normalizeTaskForContentComparison(remoteNormalized));
+        expect(remoteSignature).toBe(localSignature);
+
+        const forward = mergeAppDataWithStats(mockAppData([localTask]), mockAppData([remoteTask]), { nowIso: NOW });
+        const reverse = mergeAppDataWithStats(mockAppData([remoteTask]), mockAppData([localTask]), { nowIso: NOW });
+
+        expect(forward.stats.tasks.conflictReasonCounts?.content ?? 0).toBe(0);
+        expect(reverse.stats.tasks.conflictReasonCounts?.content ?? 0).toBe(0);
+        expect(forward.data.tasks[0].isFocusedToday).toBe(true);
+        expect(reverse.data.tasks[0].isFocusedToday).toBe(true);
     });
 });
