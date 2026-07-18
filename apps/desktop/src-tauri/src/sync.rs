@@ -951,6 +951,20 @@ fn is_webdav_mkcol_conflict_error(error: &str) -> bool {
     error.starts_with("WebDAV MKCOL failed (409")
 }
 
+// One-line, size-capped server response excerpt for WebDAV error strings. The
+// strings travel through the JS bridge into the shared log, where the exact
+// method + final URL + status + server body are what distinguish a wrong URL
+// from a server-side refusal (#898: Koofr 405s that manual testing could not
+// reproduce because the failing request was never logged precisely).
+fn webdav_error_body_snippet(body: &str) -> String {
+    let collapsed = body.split_whitespace().collect::<Vec<_>>().join(" ");
+    if collapsed.is_empty() {
+        return String::new();
+    }
+    let snippet: String = collapsed.chars().take(300).collect();
+    format!(": {snippet}")
+}
+
 fn webdav_get_json_blocking(app: &tauri::AppHandle) -> Result<Value, String> {
     let config = read_config(app);
     let url = normalize_webdav_url(&config.webdav_url.unwrap_or_default());
@@ -970,7 +984,7 @@ fn webdav_get_json_blocking(app: &tauri::AppHandle) -> Result<Value, String> {
 
     let client = blocking_http_client(config.proxy_url.as_deref())?;
     let response = client
-        .get(url)
+        .get(url.as_str())
         .basic_auth(username, Some(password))
         .send()
         .map_err(|e| format_reqwest_send_error("WebDAV request failed", &e))?;
@@ -980,7 +994,12 @@ fn webdav_get_json_blocking(app: &tauri::AppHandle) -> Result<Value, String> {
     }
 
     if !response.status().is_success() {
-        return Err(format!("WebDAV error: {}", response.status()));
+        let status = response.status();
+        let body = response.text().unwrap_or_default();
+        return Err(format!(
+            "WebDAV GET failed ({status}) at {url}{}",
+            webdav_error_body_snippet(&body)
+        ));
     }
 
     let body = response
@@ -1049,7 +1068,12 @@ fn webdav_put_json_blocking(
     }
 
     if !response.status().is_success() {
-        return Err(format!("WebDAV error: {}", response.status()));
+        let status = response.status();
+        let body = response.text().unwrap_or_default();
+        return Err(format!(
+            "WebDAV PUT failed ({status}) at {url}{}",
+            webdav_error_body_snippet(&body)
+        ));
     }
     Ok(remote_json_write_result_from_headers(response.headers()))
 }

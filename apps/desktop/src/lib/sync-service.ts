@@ -1201,18 +1201,31 @@ export class SyncService {
                     if (!context.webdavConfig?.url) {
                         throw new Error('WebDAV URL not configured');
                     }
+                    // Error context must carry the file URL the request targets,
+                    // not the configured base folder — a folder-only url field
+                    // made #898 (and #758) logs unreadable for pinpointing the
+                    // failing request.
+                    const normalizedUrl = normalizeWebdavUrl(context.webdavConfig.url);
+                    context.syncUrl = normalizedUrl;
+                    // A "missing" remote on a folder that other devices populate
+                    // means the app is reading the wrong URL or the server hid
+                    // the file; make it visible in shared logs (#898).
+                    const logMissingRemote = (data: AppData | null | undefined): AppData | null => {
+                        if (data == null) {
+                            logSyncInfo('WebDAV remote read returned no data', { url: normalizedUrl });
+                            return null;
+                        }
+                        return data;
+                    };
                     if (isTauriRuntimeEnv()) {
-                        context.syncUrl = context.webdavConfig.url;
-                        return withRetry(
+                        return logMissingRemote(await withRetry(
                             () => tauriInvoke<AppData>('webdav_get_json'),
                             WEBDAV_READ_RETRY_OPTIONS,
-                        );
+                        ));
                     }
                     const webdavConfig = context.webdavConfig;
-                    const normalizedUrl = normalizeWebdavUrl(webdavConfig.url);
-                    context.syncUrl = normalizedUrl;
                     const fetcher = await createFetchWithAbortForContext(context);
-                    return withRetry(
+                    return logMissingRemote(await withRetry(
                         () => webdavGetJson<AppData>(normalizedUrl, {
                             allowInsecureHttp: webdavConfig.allowInsecureHttp,
                             username: webdavConfig.username,
@@ -1220,7 +1233,7 @@ export class SyncService {
                             fetcher,
                         }),
                         WEBDAV_READ_RETRY_OPTIONS,
-                    );
+                    ));
                 }
                 if (context.backend === 'cloud') {
                     if (context.cloudProvider === 'selfhosted') {
@@ -1258,6 +1271,9 @@ export class SyncService {
                     return;
                 }
                 if (context.backend === 'webdav') {
+                    if (context.webdavConfig?.url) {
+                        context.syncUrl = normalizeWebdavUrl(context.webdavConfig.url);
+                    }
                     if (isTauriRuntimeEnv()) {
                         const result = await tauriInvoke<RemoteJsonWriteResult | boolean>('webdav_put_json', { data: sanitized });
                         return normalizeRemoteWriteResult('webdav', result);
@@ -1265,6 +1281,7 @@ export class SyncService {
                     const config = await SyncService.getWebDavConfig();
                     const { url, username, password } = config;
                     const normalizedUrl = normalizeWebdavUrl(url);
+                    context.syncUrl = normalizedUrl;
                     const fetcher = await createFetchWithAbortForContext(context);
                     const result = await webdavPutJson(normalizedUrl, sanitized, {
                         allowInsecureHttp: config.allowInsecureHttp,
