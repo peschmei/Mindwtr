@@ -7,6 +7,7 @@ const {
   applyAlarmPendingIntentPatchToSource,
   applyAlarmDuplicateToastPatchToSource,
   applyAlarmTimingPatchToSource,
+  applyAlarmExactRepeatPatchToSource,
   applyAlarmReminderBehaviorPatchToSource,
   applyAlarmLockScreenPrivacyPatchToSource,
   applyAlarmAudioInterfacePatchToSource,
@@ -111,6 +112,106 @@ describe('patch-alarm-notification-gradle', () => {
     expect(output).toContain('alarm.setId(snoozedAlarmRowId);');
     expect(output).not.toContain('getAlarmDB().update(alarm);');
     expect(output.indexOf('getNotificationManager().cancel(firedNotificationId);')).toBeGreaterThan(output.indexOf('int snoozedAlarmRowId = getAlarmDB().insert(alarm);'));
+  });
+
+  it('schedules repeating alarms as exact one-shots and advances stale boot times by wall clock', () => {
+    const input = `class AlarmUtil {
+    private void setExactOrAllowWhileIdle(AlarmManager alarmManager, long triggerAtMillis, PendingIntent alarmIntent) {
+    }
+
+    void setAlarm(AlarmModel alarm) {
+        Calendar calendar = getCalendarFromAlarm(alarm);
+        int alarmId = alarm.getAlarmId();
+        Intent intent = new Intent(mContext, AlarmReceiver.class);
+        intent.putExtra("PendingId", alarm.getId());
+        PendingIntent alarmIntent = PendingIntent.getBroadcast(mContext, alarmId, intent, getImmutableFlag());
+        AlarmManager alarmManager = this.getAlarmManager();
+        String scheduleType = alarm.getScheduleType();
+
+        if (scheduleType.equals("once")) {
+            setExactOrAllowWhileIdle(alarmManager, calendar.getTimeInMillis(), alarmIntent);
+        } else if (scheduleType.equals("repeat")) {
+            long interval = this.getInterval(alarm.getInterval(), alarm.getIntervalValue());
+
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), interval, alarmIntent);
+        }
+    }
+
+    void snoozeAlarm(AlarmModel alarm) {
+        Calendar calendar = Calendar.getInstance();
+        PendingIntent alarmIntent = null;
+        AlarmManager alarmManager = this.getAlarmManager();
+        String scheduleType = alarm.getScheduleType();
+
+        if (scheduleType.equals("once")) {
+            setExactOrAllowWhileIdle(alarmManager, calendar.getTimeInMillis(), alarmIntent);
+        } else if (scheduleType.equals("repeat")) {
+            long interval = this.getInterval(alarm.getInterval(), alarm.getIntervalValue());
+
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), interval, alarmIntent);
+        }
+    }
+
+    long getInterval(String interval, int value) {
+        return 0;
+    }
+}
+
+class AlarmBootReceiver {
+    void onReceive(ArrayList<AlarmModel> alarms, AlarmUtil alarmUtil) {
+        for (AlarmModel alarm : alarms) {
+            alarmUtil.setAlarm(alarm);
+        }
+    }
+}`;
+
+    const output = applyAlarmExactRepeatPatchToSource(input);
+
+    expect(output).not.toContain('alarmManager.setRepeating(');
+    expect(output.match(/setExactOrAllowWhileIdle\(alarmManager, calendar\.getTimeInMillis\(\), alarmIntent\);/g)).toHaveLength(4);
+    expect(output).toContain('boolean advanced = advanceRepeatingAlarmToFuture(alarm, calendar);');
+    expect(output).toContain('setAlarmFromCalendar(alarm, calendar);');
+    expect(output).toContain('getAlarmDB().update(alarm);');
+    expect(output).toContain('occurrence.add(Calendar.MINUTE, (int) totalAmount);');
+    expect(output).toContain('occurrence.add(Calendar.HOUR_OF_DAY, (int) totalAmount);');
+    expect(output).toContain('occurrence.add(Calendar.DAY_OF_YEAR, occurrenceCount);');
+    expect(output).toContain('occurrence.add(Calendar.WEEK_OF_YEAR, occurrenceCount);');
+    expect(output).toContain('searchSteps < MAX_REPEAT_SEARCH_STEPS');
+    expect(output).toContain('MAX_REPEAT_SEARCH_STEPS = 64');
+    expect(output).toContain('alarmUtil.setAlarm(alarm);');
+    expect(output).toContain('void rescheduleRepeatingAlarm(AlarmModel alarm)');
+    const rescheduleSource = output.slice(
+      output.indexOf('void rescheduleRepeatingAlarm(AlarmModel alarm)'),
+      output.indexOf('void setAlarm(AlarmModel alarm)')
+    );
+    expect(rescheduleSource).toContain('getAlarmDB().update(alarm);');
+    expect(rescheduleSource).toContain('setAlarm(alarm);');
+    expect(rescheduleSource).not.toContain('getAlarmDB().insert(alarm)');
+    expect(rescheduleSource).not.toContain('alarm.setAlarmId(');
+    expect(rescheduleSource).not.toContain('alarm.setId(');
+    expect(output).toContain('int alarmId = alarm.getAlarmId();');
+    expect(output).toContain('intent.putExtra("PendingId", alarm.getId());');
+    expect(output).toContain('PendingIntent.getBroadcast(mContext, alarmId, intent, getImmutableFlag());');
+    expect(applyAlarmExactRepeatPatchToSource(output)).toBe(output);
+  });
+
+  it('re-arms the next repeating occurrence after the receiver fires', () => {
+    const input = `class AlarmReceiver {
+    void onReceive(Context context, Intent intent) {
+        alarm = alarmDB.getAlarm(id);
+
+        alarmUtil.sendNotification(alarm);
+
+        ArrayList<AlarmModel> alarms = alarmDB.getAlarmList(1);
+    }
+}`;
+
+    const output = applyAlarmExactRepeatPatchToSource(input);
+
+    expect(output).toContain('if ("repeat".equals(alarm.getScheduleType())) {');
+    expect(output).toContain('alarmUtil.rescheduleRepeatingAlarm(alarm);');
+    expect(output.indexOf('alarmUtil.rescheduleRepeatingAlarm(alarm);')).toBeGreaterThan(output.indexOf('alarmUtil.sendNotification(alarm);'));
+    expect(applyAlarmExactRepeatPatchToSource(output)).toBe(output);
   });
 
   it('patches AlarmUtil reminder behavior away from alarm semantics', () => {

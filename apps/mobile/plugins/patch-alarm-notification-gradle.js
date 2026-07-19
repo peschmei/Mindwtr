@@ -201,6 +201,165 @@ const applyAlarmTimingPatchToSource = (original) => {
 
 const applyAlarmTimingPatch = (filePath) => patchFile(filePath, applyAlarmTimingPatchToSource);
 
+const applyAlarmExactRepeatPatchToSource = (original) => {
+  let next = original;
+  const alarmUtilMarker = '    void setAlarm(AlarmModel alarm) {';
+  const exactHelperMarker = '    private void setExactOrAllowWhileIdle(';
+  const repeatAdvanceMarker = '    private static final int MAX_REPEAT_SEARCH_STEPS';
+
+  if (next.includes(alarmUtilMarker) && !next.includes(exactHelperMarker)) {
+    throw new Error('Alarm exact repeat patch requires the alarm timing patch to run first');
+  }
+
+  if (next.includes(alarmUtilMarker) && !next.includes(repeatAdvanceMarker)) {
+    next = next.replace(
+      alarmUtilMarker,
+      `    private static final int MAX_REPEAT_SEARCH_STEPS = 64;
+
+    private Calendar getRepeatingOccurrence(AlarmModel alarm, Calendar calendar, int occurrenceCount) {
+        if (occurrenceCount <= 0) {
+            throw new IllegalArgumentException("Repeat occurrence count must be positive");
+        }
+
+        Calendar occurrence = (Calendar) calendar.clone();
+        int intervalValue = alarm.getIntervalValue();
+        long totalAmount;
+
+        switch (alarm.getInterval()) {
+            case "minutely":
+                if (intervalValue <= 0) {
+                    throw new IllegalArgumentException("Repeat interval value must be positive");
+                }
+                totalAmount = (long) intervalValue * occurrenceCount;
+                if (totalAmount > Integer.MAX_VALUE) {
+                    throw new IllegalStateException("Repeat alarm is too stale to advance safely");
+                }
+                occurrence.add(Calendar.MINUTE, (int) totalAmount);
+                break;
+            case "hourly":
+                if (intervalValue <= 0) {
+                    throw new IllegalArgumentException("Repeat interval value must be positive");
+                }
+                totalAmount = (long) intervalValue * occurrenceCount;
+                if (totalAmount > Integer.MAX_VALUE) {
+                    throw new IllegalStateException("Repeat alarm is too stale to advance safely");
+                }
+                occurrence.add(Calendar.HOUR_OF_DAY, (int) totalAmount);
+                break;
+            case "daily":
+                occurrence.add(Calendar.DAY_OF_YEAR, occurrenceCount);
+                break;
+            case "weekly":
+                occurrence.add(Calendar.WEEK_OF_YEAR, occurrenceCount);
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported repeat interval: " + alarm.getInterval());
+        }
+        return occurrence;
+    }
+
+    private boolean advanceRepeatingAlarmToFuture(AlarmModel alarm, Calendar calendar) {
+        Calendar now = Calendar.getInstance();
+        if (calendar.after(now)) {
+            return false;
+        }
+
+        int previousOccurrence = 0;
+        int futureOccurrence = 1;
+        int searchSteps = 0;
+        Calendar future = null;
+
+        while (searchSteps < MAX_REPEAT_SEARCH_STEPS) {
+            future = getRepeatingOccurrence(alarm, calendar, futureOccurrence);
+            searchSteps++;
+            if (future.after(now)) {
+                break;
+            }
+            previousOccurrence = futureOccurrence;
+            if (futureOccurrence > Integer.MAX_VALUE / 2) {
+                throw new IllegalStateException("Repeat alarm is too stale to advance safely");
+            }
+            futureOccurrence *= 2;
+        }
+
+        if (future == null || !future.after(now)) {
+            throw new IllegalStateException("Could not advance repeating alarm into the future");
+        }
+
+        while (previousOccurrence + 1 < futureOccurrence && searchSteps < MAX_REPEAT_SEARCH_STEPS) {
+            int candidateOccurrence = previousOccurrence + (futureOccurrence - previousOccurrence) / 2;
+            Calendar candidate = getRepeatingOccurrence(alarm, calendar, candidateOccurrence);
+            searchSteps++;
+            if (candidate.after(now)) {
+                futureOccurrence = candidateOccurrence;
+                future = candidate;
+            } else {
+                previousOccurrence = candidateOccurrence;
+            }
+        }
+
+        if (previousOccurrence + 1 < futureOccurrence) {
+            throw new IllegalStateException("Could not find the next repeating alarm occurrence");
+        }
+        calendar.setTime(future.getTime());
+        return true;
+    }
+
+    void rescheduleRepeatingAlarm(AlarmModel alarm) {
+        if (!"repeat".equals(alarm.getScheduleType())) {
+            return;
+        }
+
+        Calendar calendar = getCalendarFromAlarm(alarm);
+        calendar.setTime(getRepeatingOccurrence(alarm, calendar, 1).getTime());
+        advanceRepeatingAlarmToFuture(alarm, calendar);
+        setAlarmFromCalendar(alarm, calendar);
+        getAlarmDB().update(alarm);
+
+        // setAlarm reuses the same row id and alarmId-backed PendingIntent.
+        setAlarm(alarm);
+    }
+
+${alarmUtilMarker}`
+    );
+  }
+
+  const inexactRepeatBranch = `        } else if (scheduleType.equals("repeat")) {
+            long interval = this.getInterval(alarm.getInterval(), alarm.getIntervalValue());
+
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), interval, alarmIntent);
+`;
+  const exactRepeatBranch = `        } else if (scheduleType.equals("repeat")) {
+            boolean advanced = advanceRepeatingAlarmToFuture(alarm, calendar);
+            if (advanced) {
+                setAlarmFromCalendar(alarm, calendar);
+                getAlarmDB().update(alarm);
+            }
+            setExactOrAllowWhileIdle(alarmManager, calendar.getTimeInMillis(), alarmIntent);
+`;
+  next = next.split(inexactRepeatBranch).join(exactRepeatBranch);
+
+  if (next.includes(alarmUtilMarker) && next.includes('alarmManager.setRepeating(')) {
+    throw new Error('Alarm exact repeat patch could not replace every setRepeating schedule path');
+  }
+
+  const receiverRearmMarker = 'alarmUtil.rescheduleRepeatingAlarm(alarm);';
+  if (!next.includes(receiverRearmMarker)) {
+    next = next.replace(
+      /^([ \t]*)alarmUtil\.sendNotification\(alarm\);$/m,
+      (_, indentation) => `${indentation}alarmUtil.sendNotification(alarm);
+
+${indentation}if ("repeat".equals(alarm.getScheduleType())) {
+${indentation}    alarmUtil.rescheduleRepeatingAlarm(alarm);
+${indentation}}`
+    );
+  }
+
+  return next;
+};
+
+const applyAlarmExactRepeatPatch = (filePath) => patchFile(filePath, applyAlarmExactRepeatPatchToSource);
+
 const applyAlarmReminderBehaviorPatchToSource = (original) => {
   let next = original;
 
@@ -862,6 +1021,9 @@ function withAlarmNotificationGradlePatch(config) {
         if (applyAlarmTimingPatch(candidate)) {
           logPatchedCandidate('alarm-timing-patch', candidate);
         }
+        if (applyAlarmExactRepeatPatch(candidate)) {
+          logPatchedCandidate('alarm-exact-repeat-patch', candidate);
+        }
         if (applyAlarmReminderBehaviorPatch(candidate)) {
           logPatchedCandidate('alarm-reminder-behavior-patch', candidate);
         }
@@ -889,6 +1051,9 @@ function withAlarmNotificationGradlePatch(config) {
       for (const candidate of alarmReceiverCandidates) {
         if (applyAlarmReceiverPatch(candidate)) {
           logPatchedCandidate('alarm-receiver-patch', candidate);
+        }
+        if (applyAlarmExactRepeatPatch(candidate)) {
+          logPatchedCandidate('alarm-exact-repeat-patch', candidate);
         }
         if (applyAlarmCompleteReceiverPatch(candidate)) {
           logPatchedCandidate('alarm-complete-action-receiver-patch', candidate);
@@ -932,6 +1097,7 @@ module.exports.__testables = {
   applyAlarmPendingIntentPatchToSource,
   applyAlarmDuplicateToastPatchToSource,
   applyAlarmTimingPatchToSource,
+  applyAlarmExactRepeatPatchToSource,
   applyAlarmReminderBehaviorPatchToSource,
   applyAlarmLockScreenPrivacyPatchToSource,
   applyAlarmAudioInterfacePatchToSource,
