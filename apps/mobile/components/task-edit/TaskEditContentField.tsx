@@ -146,6 +146,16 @@ export function TaskEditContentField({
         }
     }, [editedTask.checklist]);
 
+    const pendingChecklistFocusKeyRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+        const key = pendingChecklistFocusKeyRef.current;
+        if (!key) return;
+        const input = checklistInputRefs.current[key];
+        if (!input) return;
+        pendingChecklistFocusKeyRef.current = null;
+        input.focus();
+    }, [editedTask.checklist]);
+
     const getChecklistSelection = React.useCallback((key: string, value: string): MarkdownSelection => (
         checklistSelectionRefs.current[key] ?? { start: value.length, end: value.length }
     ), []);
@@ -186,6 +196,28 @@ export function TaskEditContentField({
             clearPendingSelection();
         }, 300);
     }, []);
+
+    // Return key on a filled checklist item inserts an empty item right after it
+    // and moves focus there, so a list can be typed without tapping "+ Add item"
+    // between entries (matching the desktop editor's Enter). On an empty item the
+    // return key just ends editing.
+    const handleChecklistSubmit = React.useCallback((index: number, key: string) => {
+        const list = editedTask.checklist || [];
+        const current = list[index];
+        if (!current) return;
+        const title = (checklistTitleRefs.current[key] ?? current.title).trim();
+        if (!title) {
+            checklistInputRefs.current[key]?.blur();
+            return;
+        }
+        const nextItem = {
+            id: generateUUID(),
+            title: '',
+            isCompleted: false,
+        };
+        pendingChecklistFocusKeyRef.current = nextItem.id;
+        applyChecklistUpdate([...list.slice(0, index + 1), nextItem, ...list.slice(index + 1)]);
+    }, [applyChecklistUpdate, editedTask.checklist]);
 
     const updateChecklistTitle = React.useCallback((index: number, key: string, title: string) => {
         checklistTitleRefs.current[key] = title;
@@ -659,6 +691,9 @@ export function TaskEditContentField({
                                                 placeholderTextColor={tc.secondaryText}
                                                 accessibilityLabel={`${t('taskEdit.checklist')} ${index + 1}`}
                                                 accessibilityHint={t('taskEdit.itemNamePlaceholder')}
+                                                returnKeyType="next"
+                                                blurOnSubmit={false}
+                                                onSubmitEditing={() => handleChecklistSubmit(index, checklistItemKey)}
                                             />
                                             <TouchableOpacity
                                                 onPress={() => {
@@ -681,6 +716,7 @@ export function TaskEditContentField({
                                             title: '',
                                             isCompleted: false,
                                         };
+                                        pendingChecklistFocusKeyRef.current = nextItem.id;
                                         applyChecklistUpdate([...(editedTask.checklist || []), nextItem]);
                                     }}
                                     testID="mobile-checklist-add-item"

@@ -491,6 +491,67 @@ describe('TaskEditContentField', () => {
     expect(checklist[2].isCompleted).toBe(true);
   });
 
+  it('inserts a new checklist item after the current one when submitting a filled item', () => {
+    const { getState, applyChecklistUpdate, setEditedTask } = createChecklistState([
+      { id: 'check-1', title: 'Item 1', isCompleted: false },
+      { id: 'check-2', title: 'Item 2', isCompleted: false },
+    ]);
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditContentField
+          {...baseProps}
+          fieldId="checklist"
+          editedTask={getState()}
+          applyChecklistUpdate={applyChecklistUpdate}
+          setEditedTask={setEditedTask}
+        />
+      );
+    });
+
+    const input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.checklist 1' });
+    expect(input.props.blurOnSubmit).toBe(false);
+
+    act(() => {
+      input.props.onSubmitEditing();
+    });
+
+    const checklist = getState().checklist;
+    expect(checklist.map((item: any) => item.title)).toEqual(['Item 1', '', 'Item 2']);
+    expect(checklist[1].id).toBeTruthy();
+    expect(checklist[1].id).not.toBe('check-1');
+    expect(checklist[1].id).not.toBe('check-2');
+  });
+
+  it('does not add a checklist item when submitting an empty item', () => {
+    const { getState, applyChecklistUpdate, setEditedTask } = createChecklistState([
+      { id: 'check-1', title: '', isCompleted: false },
+    ]);
+    let tree!: ReturnType<typeof create>;
+
+    act(() => {
+      tree = create(
+        <TaskEditContentField
+          {...baseProps}
+          fieldId="checklist"
+          editedTask={getState()}
+          applyChecklistUpdate={applyChecklistUpdate}
+          setEditedTask={setEditedTask}
+        />
+      );
+    });
+
+    const input = tree.root.findByProps({ accessibilityLabel: 'taskEdit.checklist 1' });
+
+    act(() => {
+      input.props.onSubmitEditing();
+    });
+
+    expect(applyChecklistUpdate).not.toHaveBeenCalled();
+    expect(getState().checklist.map((item: any) => item.title)).toEqual(['']);
+  });
+
   it('leaves checklist typing to native text input when editor assist is disabled', () => {
     useTaskStore.setState({ settings: { markdownEditorAssist: false } });
     const { getState, applyChecklistUpdate, setEditedTask } = createChecklistState();

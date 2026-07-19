@@ -33,7 +33,9 @@ export function TaskEditHeader({
   const [menuVisible, setMenuVisible] = useState(false);
   const createProjectFromTaskLabel = t('task.createProjectFromTask');
   const moreLabel = t('common.more');
-  const doneLabel = t('common.done');
+  // "Save", not "Done": the button commits the draft, and "Done" reads as the
+  // task status one line below it.
+  const saveLabel = t('common.save');
 
   return (
     <>
@@ -54,9 +56,9 @@ export function TaskEditHeader({
             style={[styles.headerActionTouchable, styles.headerActionRight]}
             onPress={onDone}
             accessibilityRole="button"
-            accessibilityLabel={doneLabel}
+            accessibilityLabel={saveLabel}
           >
-            <Text style={[styles.headerBtn, { color: tc.tint }]}>{doneLabel}</Text>
+            <Text style={[styles.headerBtn, { color: tc.tint }]}>{saveLabel}</Text>
           </TouchableOpacity>
         </View>
       </View>
