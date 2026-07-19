@@ -179,7 +179,7 @@ export const deOverrides: Record<string, string> = {
         'status.reference': 'Referenz',
         'status.done': 'Erledigt',
         'status.archived': 'Archiviert',
-        'status.active': 'Aktif',
+        'status.active': 'Aktiv',
         
         // Priority Labels
         'priority.low': 'Niedrig',
