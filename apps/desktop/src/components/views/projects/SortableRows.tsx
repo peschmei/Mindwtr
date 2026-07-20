@@ -124,16 +124,40 @@ export function SortableProjectRow({
     );
 }
 
+// Sequential-project rows read as "one live task, the rest queued": the
+// available next action gets the tinted card, later tasks render muted.
+function getSequenceCuePresentation(
+    sequenceCue: ProjectSequenceTaskCue | undefined,
+    availableSequenceLabel: string,
+    laterSequenceLabel: string,
+): { taskContainerClassName: string; title?: string } {
+    if (sequenceCue === 'available') {
+        return {
+            taskContainerClassName: 'flex-1 min-w-0 -mx-2 -my-1 rounded-lg border border-primary/20 bg-primary/[0.04] px-2 py-1',
+            title: availableSequenceLabel,
+        };
+    }
+    if (sequenceCue === 'later') {
+        return {
+            taskContainerClassName: 'flex-1 min-w-0 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100',
+            title: laterSequenceLabel,
+        };
+    }
+    return { taskContainerClassName: 'flex-1 min-w-0' };
+}
+
 export function SortableProjectTaskRow({
     task,
     project,
     sequenceCue,
     availableSequenceLabel,
+    laterSequenceLabel,
 }: {
     task: Task;
     project: Project;
     sequenceCue?: ProjectSequenceTaskCue;
     availableSequenceLabel: string;
+    laterSequenceLabel: string;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: task.id,
@@ -145,16 +169,17 @@ export function SortableProjectTaskRow({
         opacity: isDragging ? 0.45 : 1,
     };
 
-    const isAvailableNextAction = sequenceCue === 'available';
-    const taskContainerClassName = isAvailableNextAction
-        ? 'flex-1 min-w-0 -mx-2 -my-1 rounded-lg border border-primary/20 bg-primary/[0.04] px-2 py-1'
-        : 'flex-1 min-w-0';
+    const { taskContainerClassName, title } = getSequenceCuePresentation(
+        sequenceCue,
+        availableSequenceLabel,
+        laterSequenceLabel,
+    );
 
     return (
         <div ref={setNodeRef} style={style} className="flex items-start gap-2">
             <div
                 className={taskContainerClassName}
-                title={isAvailableNextAction ? availableSequenceLabel : undefined}
+                title={title}
             >
                 <TaskItem
                     task={task}
@@ -187,26 +212,29 @@ export function DraggableProjectTaskRow({
     project,
     sequenceCue,
     availableSequenceLabel,
+    laterSequenceLabel,
 }: {
     task: Task;
     project: Project;
     sequenceCue?: ProjectSequenceTaskCue;
     availableSequenceLabel: string;
+    laterSequenceLabel: string;
 }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: task.id,
         data: { type: 'task', sortable: false },
     });
-    const isAvailableNextAction = sequenceCue === 'available';
-    const taskContainerClassName = isAvailableNextAction
-        ? 'flex-1 min-w-0 -mx-2 -my-1 rounded-lg border border-primary/20 bg-primary/[0.04] px-2 py-1'
-        : 'flex-1 min-w-0';
+    const { taskContainerClassName, title } = getSequenceCuePresentation(
+        sequenceCue,
+        availableSequenceLabel,
+        laterSequenceLabel,
+    );
 
     return (
         <div ref={setNodeRef} style={{ opacity: isDragging ? 0.45 : 1 }} className="flex items-start gap-2">
             <div
                 className={taskContainerClassName}
-                title={isAvailableNextAction ? availableSequenceLabel : undefined}
+                title={title}
             >
                 <TaskItem
                     task={task}

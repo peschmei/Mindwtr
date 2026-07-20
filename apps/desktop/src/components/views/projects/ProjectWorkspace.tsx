@@ -668,6 +668,7 @@ export function ProjectWorkspace({
         });
     }, [orderedProjectTaskList, projectSections, projectTaskSortBy, selectedProject]);
     const availableSequenceLabel = resolveText('projects.availableNextAction', 'Available next action');
+    const laterSequenceLabel = resolveText('projects.laterInSequence', 'Later in sequence');
     const visibleProjectTaskList = useMemo(() => {
         if (projectSections.length === 0) {
             return completedTasksCollapsed
@@ -1005,6 +1006,7 @@ export function ProjectWorkspace({
                         project={selectedProject!}
                         sequenceCue={projectTaskSequenceCues.get(task.id)}
                         availableSequenceLabel={availableSequenceLabel}
+                        laterSequenceLabel={laterSequenceLabel}
                     />
                 )}
             />
@@ -1023,6 +1025,7 @@ export function ProjectWorkspace({
                     project={selectedProject!}
                     sequenceCue={projectTaskSequenceCues.get(task.id)}
                     availableSequenceLabel={availableSequenceLabel}
+                    laterSequenceLabel={laterSequenceLabel}
                 />
             )}
         />
