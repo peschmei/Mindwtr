@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, within } from '@testing-library/react';
 import { BoardView } from './BoardView';
 import { LanguageProvider } from '../../contexts/language-context';
 import { useTaskStore, type AppData, type Area, type Project, type Task } from '@mindwtr/core';
@@ -175,6 +175,53 @@ describe('BoardView', () => {
 
         expect(getByText('Active project next action')).toBeInTheDocument();
         expect(queryByText('Someday project next action')).not.toBeInTheDocument();
+    });
+
+    it('marks a focused Next task with an always-visible star and keeps other stars hover-only (#908)', () => {
+        setBoardStoreState({
+            tasks: [
+                {
+                    id: 'focused-task',
+                    title: 'Focused next action',
+                    status: 'next',
+                    isFocusedToday: true,
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+                {
+                    id: 'plain-task',
+                    title: 'Plain next action',
+                    status: 'next',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+                {
+                    id: 'inbox-task',
+                    title: 'Inbox thought',
+                    status: 'inbox',
+                    tags: [],
+                    contexts: [],
+                    createdAt: '2026-05-18T12:00:00.000Z',
+                    updatedAt: '2026-05-18T12:00:00.000Z',
+                },
+            ],
+        });
+
+        const { getByRole, getByText } = renderWithProviders();
+
+        const focusedStar = getByRole('button', { name: 'Remove from focus' });
+        expect(focusedStar.className).not.toContain('opacity-0');
+
+        const plainStar = getByRole('button', { name: "Add to today's focus" });
+        expect(plainStar.className).toContain('opacity-0');
+
+        const inboxCard = getByText('Inbox thought').closest('[role="listitem"]') as HTMLElement;
+        expect(within(inboxCard).queryByRole('button', { name: 'Remove from focus' })).not.toBeInTheDocument();
+        expect(within(inboxCard).queryByRole('button', { name: "Add to today's focus" })).not.toBeInTheDocument();
     });
 
     it('orders column tasks by boardOrder ahead of tasks without one', () => {
