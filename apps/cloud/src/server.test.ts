@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { cloudHeadJson, cloudPutJson, type AppData, type Task } from '@mindwtr/core';
+import { CLOUD_SYNC_TOKEN_PATTERN, cloudHeadJson, cloudPutJson, type AppData, type Task } from '@mindwtr/core';
 import {
     getAuthFailureRateKey,
     getAuthFailureTokenRateKey,
@@ -16,6 +16,7 @@ import {
     tokenToKey,
 } from './server-auth';
 import {
+    BEARER_TOKEN_PATTERN,
     corsOrigin,
     createInternalServerErrorResponse,
     errorResponse,
@@ -61,6 +62,13 @@ const makeTestTask = (overrides: Pick<Task, 'id' | 'title'> & Partial<Task>): Ta
 });
 
 describe('cloud server utils', () => {
+    test('BEARER_TOKEN_PATTERN stays identical to core CLOUD_SYNC_TOKEN_PATTERN', () => {
+        // server-config.ts keeps a literal copy because the dependency-free
+        // schema:check CI job imports it without workspace deps installed.
+        expect(BEARER_TOKEN_PATTERN.source).toBe(CLOUD_SYNC_TOKEN_PATTERN.source);
+        expect(BEARER_TOKEN_PATTERN.flags).toBe(CLOUD_SYNC_TOKEN_PATTERN.flags);
+    });
+
     test('parses bearer token and hashes it', () => {
         const req = new Request('http://localhost/v1/data', {
             headers: { Authorization: 'Bearer demo-token-1234567890' },
