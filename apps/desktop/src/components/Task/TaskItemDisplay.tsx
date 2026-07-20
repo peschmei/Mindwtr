@@ -535,6 +535,12 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
             )}
         </div>
     );
+    // Focused Next tasks stay marked while the hover-gated actions cluster is
+    // hidden (it collapses entirely below 560px containers, e.g. board columns),
+    // so the indicator renders inline with the title instead of in the cluster.
+    const showPinnedFocusStar = Boolean(
+        focusToggle && !focusToggle.alwaysVisible && focusToggle.isFocused && task.status === 'next'
+    );
     const overlayDragHandle = actionsOverlay && !!dragHandle;
     const overlayQuickDone = actionsOverlay && showQuickDoneButton;
     const inlineLeftControls = !actionsOverlay && (showQuickDoneButton || dragHandle);
@@ -673,6 +679,14 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                             )}
                         >
                             {task.title}
+                            {showPinnedFocusStar && (
+                                <FocusStarIcon
+                                    filled
+                                    aria-hidden="true"
+                                    data-focus-star-pinned
+                                    className="ms-1 inline-block h-3.5 w-3.5 shrink-0 align-[-2px]"
+                                />
+                            )}
                         </div>
                     </button>
                     )}
@@ -896,7 +910,7 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
                             aria-label={focusToggle.ariaLabel}
                             className={cn(
                                 "p-1.5 rounded-full transition-colors",
-                                !focusToggle.alwaysVisible && !(focusToggle.isFocused && task.status === 'next') && "opacity-0 group-hover:opacity-100 focus:opacity-100",
+                                !focusToggle.alwaysVisible && "opacity-0 group-hover:opacity-100 focus:opacity-100",
                                 focusToggle.isFocused
                                     ? "text-warning hover:bg-warning/10"
                                     : focusToggle.canToggle

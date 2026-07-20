@@ -213,13 +213,17 @@ describe('BoardView', () => {
 
         const { getByRole, getByText } = renderWithProviders();
 
-        const focusedStar = getByRole('button', { name: 'Remove from focus' });
-        expect(focusedStar.className).not.toContain('opacity-0');
+        const focusedCard = getByText('Focused next action').closest('[role="listitem"]') as HTMLElement;
+        expect(focusedCard.querySelector('[data-focus-star-pinned]')).toBeInTheDocument();
+        expect(within(focusedCard).getByRole('button', { name: 'Remove from focus' })).toBeInTheDocument();
 
+        const plainCard = getByText('Plain next action').closest('[role="listitem"]') as HTMLElement;
+        expect(plainCard.querySelector('[data-focus-star-pinned]')).not.toBeInTheDocument();
         const plainStar = getByRole('button', { name: "Add to today's focus" });
         expect(plainStar.className).toContain('opacity-0');
 
         const inboxCard = getByText('Inbox thought').closest('[role="listitem"]') as HTMLElement;
+        expect(inboxCard.querySelector('[data-focus-star-pinned]')).not.toBeInTheDocument();
         expect(within(inboxCard).queryByRole('button', { name: 'Remove from focus' })).not.toBeInTheDocument();
         expect(within(inboxCard).queryByRole('button', { name: "Add to today's focus" })).not.toBeInTheDocument();
     });
