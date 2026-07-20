@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, within } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { BoardView } from './BoardView';
 import { LanguageProvider } from '../../contexts/language-context';
 import { useTaskStore, type AppData, type Area, type Project, type Task } from '@mindwtr/core';
@@ -211,21 +211,20 @@ describe('BoardView', () => {
             ],
         });
 
-        const { getByRole, getByText } = renderWithProviders();
+        const { getByText, queryByRole } = renderWithProviders();
 
         const focusedCard = getByText('Focused next action').closest('[role="listitem"]') as HTMLElement;
         expect(focusedCard.querySelector('[data-focus-star-pinned]')).toBeInTheDocument();
-        expect(within(focusedCard).getByRole('button', { name: 'Remove from focus' })).toBeInTheDocument();
 
         const plainCard = getByText('Plain next action').closest('[role="listitem"]') as HTMLElement;
         expect(plainCard.querySelector('[data-focus-star-pinned]')).not.toBeInTheDocument();
-        const plainStar = getByRole('button', { name: "Add to today's focus" });
-        expect(plainStar.className).toContain('opacity-0');
 
         const inboxCard = getByText('Inbox thought').closest('[role="listitem"]') as HTMLElement;
         expect(inboxCard.querySelector('[data-focus-star-pinned]')).not.toBeInTheDocument();
-        expect(within(inboxCard).queryByRole('button', { name: 'Remove from focus' })).not.toBeInTheDocument();
-        expect(within(inboxCard).queryByRole('button', { name: "Add to today's focus" })).not.toBeInTheDocument();
+
+        // The indicator is not a control: starring stays in the quick-actions menu.
+        expect(queryByRole('button', { name: 'Remove from focus' })).not.toBeInTheDocument();
+        expect(queryByRole('button', { name: "Add to today's focus" })).not.toBeInTheDocument();
     });
 
     it('orders column tasks by boardOrder ahead of tasks without one', () => {

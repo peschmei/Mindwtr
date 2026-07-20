@@ -535,12 +535,13 @@ export const TaskItemDisplay = memo(function TaskItemDisplay({
             )}
         </div>
     );
-    // Focused Next tasks stay marked while the hover-gated actions cluster is
-    // hidden (it collapses entirely below 560px containers, e.g. board columns),
-    // so the indicator renders inline with the title instead of in the cluster.
-    const showPinnedFocusStar = Boolean(
-        focusToggle && !focusToggle.alwaysVisible && focusToggle.isFocused && task.status === 'next'
-    );
+    // Focused Next tasks stay marked even where no toggle renders or the
+    // hover-gated actions cluster is hidden (it collapses entirely below 560px
+    // containers, e.g. board columns), so the indicator rides the title. Views
+    // with an always-visible toggle (Focus page) already show the state.
+    const showPinnedFocusStar = task.isFocusedToday === true
+        && task.status === 'next'
+        && !focusToggle?.alwaysVisible;
     const overlayDragHandle = actionsOverlay && !!dragHandle;
     const overlayQuickDone = actionsOverlay && showQuickDoneButton;
     const inlineLeftControls = !actionsOverlay && (showQuickDoneButton || dragHandle);

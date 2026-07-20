@@ -19,7 +19,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { TaskItem } from '../TaskItem';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { shallow, useTaskStore, sortTasksBy, sortTasksByBoardOrder, safeParseDate, translateWithFallback, isTaskInActiveProject, createTaskFilterPredicate, hasActiveFilterCriteria, getUsedTaskTokens, SAVED_FILTER_NO_PROJECT_ID, normalizeFocusTaskLimit, formatFocusTaskLimitText, getFocusStarBlockedText } from '@mindwtr/core';
+import { shallow, useTaskStore, sortTasksBy, sortTasksByBoardOrder, safeParseDate, translateWithFallback, isTaskInActiveProject, createTaskFilterPredicate, hasActiveFilterCriteria, getUsedTaskTokens, SAVED_FILTER_NO_PROJECT_ID } from '@mindwtr/core';
 import { resolveBoardDragEnd } from './board-view-dnd';
 import type { Task, TaskStatus, FilterCriteria } from '@mindwtr/core';
 import type { TaskSortBy } from '@mindwtr/core';
@@ -71,15 +71,6 @@ const STATUS_BORDER: Record<TaskStatus, string> = {
     archived: 'border-t-[hsl(var(--status-archived))]',
 };
 
-type BoardFocusToggle = {
-    isFocused: boolean;
-    canToggle: boolean;
-    onToggle: () => void;
-    title: string;
-    ariaLabel: string;
-    alwaysVisible?: boolean;
-};
-
 function DroppableColumn({
     id,
     label,
@@ -88,7 +79,6 @@ function DroppableColumn({
     onQuickAdd,
     dragLabel,
     compact,
-    buildFocusToggle,
 }: {
     id: TaskStatus;
     label: string;
@@ -97,7 +87,6 @@ function DroppableColumn({
     onQuickAdd: (status: TaskStatus) => void;
     dragLabel: string;
     compact?: boolean;
-    buildFocusToggle?: (task: Task) => BoardFocusToggle;
 }) {
     const { setNodeRef } = useDroppable({ id });
     const columnPadding = compact ? 'p-2' : 'p-3';
@@ -135,12 +124,7 @@ function DroppableColumn({
                 ) : (
                     <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
                         {tasks.map((task) => (
-                            <DraggableTask
-                                key={task.id}
-                                task={task}
-                                dragLabel={dragLabel}
-                                focusToggle={buildFocusToggle?.(task)}
-                            />
+                            <DraggableTask key={task.id} task={task} dragLabel={dragLabel} />
                         ))}
                     </SortableContext>
                 )}
@@ -149,7 +133,7 @@ function DroppableColumn({
     );
 }
 
-function DraggableTask({ task, dragLabel, focusToggle }: { task: Task; dragLabel: string; focusToggle?: BoardFocusToggle }) {
+function DraggableTask({ task, dragLabel }: { task: Task; dragLabel: string }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: task.id,
         data: { task },
@@ -170,7 +154,6 @@ function DraggableTask({ task, dragLabel, focusToggle }: { task: Task; dragLabel
                     showProjectBadgeInActions={false}
                     actionsOverlay
                     showHoverHint={false}
-                    focusToggle={focusToggle}
                     enableDoubleClickEdit
                     editorPresentation="modal"
                 />
@@ -187,7 +170,6 @@ function DraggableTask({ task, dragLabel, focusToggle }: { task: Task; dragLabel
                 showProjectBadgeInActions={false}
                 actionsOverlay
                 showHoverHint={false}
-                focusToggle={focusToggle}
                 dragHandle={(
                     <button
                         type="button"
@@ -210,12 +192,11 @@ function DraggableTask({ task, dragLabel, focusToggle }: { task: Task; dragLabel
 
 export function BoardView() {
     const perf = usePerformanceMonitor('BoardView');
-    const { tasks, moveTask, reorderBoardTasks, updateTask, settings, projects, areas } = useTaskStore(
+    const { tasks, moveTask, reorderBoardTasks, settings, projects, areas } = useTaskStore(
         (state) => ({
             tasks: state.tasks,
             moveTask: state.moveTask,
             reorderBoardTasks: state.reorderBoardTasks,
-            updateTask: state.updateTask,
             settings: state.settings,
             projects: state.projects,
             areas: state.areas,
@@ -229,35 +210,8 @@ export function BoardView() {
     const [activeTask, setActiveTask] = React.useState<Task | null>(null);
     const [computeSequential, setComputeSequential] = React.useState(false);
     const [searchQuery, setSearchQuery] = React.useState('');
-    const showToast = useUiStore((state) => state.showToast);
     const boardFilters = useUiStore((state) => state.boardFilters);
     const setBoardFilters = useUiStore((state) => state.setBoardFilters);
-    const focusTaskLimit = normalizeFocusTaskLimit(settings?.gtd?.focusTaskLimit);
-    const focusedCount = React.useMemo(
-        () => tasks.reduce((count, task) => (task.isFocusedToday === true ? count + 1 : count), 0),
-        [tasks]
-    );
-    const handleToggleFocus = React.useCallback((task: Task) => {
-        const action = useTaskStore.getState().getFocusStarAction(task);
-        if (!action.canToggle) {
-            const blockedText = getFocusStarBlockedText(t, action, focusTaskLimit);
-            if (blockedText) showToast(blockedText, 'info');
-            return;
-        }
-        updateTask(task.id, action.patch);
-    }, [focusTaskLimit, showToast, t, updateTask]);
-    const buildFocusToggle = React.useCallback((task: Task) => {
-        const isFocused = Boolean(task.isFocusedToday);
-        // Cheap cap-only gate at render time; full eligibility is enforced on
-        // click via the core focus-star module, which toasts the blocked reason.
-        const canToggle = isFocused || focusedCount < focusTaskLimit;
-        const title = isFocused
-            ? t('agenda.removeFromFocus')
-            : focusedCount >= focusTaskLimit
-                ? formatFocusTaskLimitText(t('agenda.maxFocusItems'), focusTaskLimit)
-                : t('agenda.addToFocus');
-        return { isFocused, canToggle, onToggle: () => handleToggleFocus(task), title, ariaLabel: title };
-    }, [focusTaskLimit, focusedCount, handleToggleFocus, t]);
     const [persistedViewState, setPersistedViewState] = usePersistedViewState(
         BOARD_VIEW_STATE_STORAGE_KEY,
         DEFAULT_BOARD_VIEW_STATE,
@@ -737,7 +691,6 @@ export function BoardView() {
                                     onQuickAdd={openQuickAdd}
                                     dragLabel={t('board.dragTask') || 'Drag task'}
                                     compact={isDense}
-                                    buildFocusToggle={col.id === 'next' ? buildFocusToggle : undefined}
                                 />
                             ))}
 
