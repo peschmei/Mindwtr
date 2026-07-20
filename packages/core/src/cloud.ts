@@ -11,6 +11,16 @@ import {
 import type { ClockSkewWarning, MergeStats } from './sync-types';
 import { buildHttpRemoteFileFingerprint, type RemoteFileMetadata, type RemoteJsonWriteResult } from './webdav';
 
+// Single source of truth for the cloud sync bearer-token shape, shared by the
+// cloud server (apps/cloud/src/server-config.ts re-exports it as
+// BEARER_TOKEN_PATTERN) and the desktop/mobile self-hosted settings forms so
+// client and server can never validate a token differently.
+export const CLOUD_SYNC_TOKEN_PATTERN = /^[A-Za-z0-9._~+/=-]{20,512}$/;
+
+export function isValidCloudSyncToken(token: string): boolean {
+    return CLOUD_SYNC_TOKEN_PATTERN.test(token.trim());
+}
+
 export interface CloudOptions {
     token?: string;
     headers?: Record<string, string>;

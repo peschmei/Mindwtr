@@ -750,6 +750,7 @@ export const esOverrides: Record<string, string> = {
         'settings.webdavHint': 'Apunta a una carpeta; Mindwtr guardará data.json dentro.',
         'settings.cloudUrl': 'URL de nube',
         'settings.cloudToken': 'Token de acceso',
+        'settings.cloudTokenInvalid': 'El token de sincronización debe tener entre 20 y 512 caracteres, usando letras, números o . _ ~ + / = -',
         'settings.cloudSave': 'Guardar nube',
         'settings.cloudHint': 'Usa tu endpoint a tu nube (p. ej., https://example.com/v1/data).',
         'settings.importData': 'Importar datos',

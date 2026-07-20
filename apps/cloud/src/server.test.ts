@@ -87,12 +87,46 @@ describe('cloud server utils', () => {
 
     test('parses optional auth token allowlist', () => {
         expect(parseAllowedAuthTokens('')).toBeNull();
-        const tokens = parseAllowedAuthTokens('alpha, beta ,gamma');
+        const tokens = parseAllowedAuthTokens(
+            'token-alpha-1234567890, token-beta-1234567890 ,token-gamma-1234567890'
+        );
         expect(tokens?.size).toBe(3);
         expect(tokens?.digests.every((digest) => digest.length === 32)).toBe(true);
-        expect(isAuthorizedToken('beta', tokens || null)).toBe(true);
-        expect(isAuthorizedToken('delta', tokens || null)).toBe(false);
+        expect(isAuthorizedToken('token-beta-1234567890', tokens || null)).toBe(true);
+        expect(isAuthorizedToken('token-delta-1234567890', tokens || null)).toBe(false);
         expect(isAuthorizedToken('any', null)).toBe(true);
+    });
+
+    test('throws on a configured token that is too short, naming position and length but never the token', () => {
+        expect(() => parseAllowedAuthTokens('token-alpha-1234567890,short8ch')).toThrow(
+            'Configured auth token #2 is invalid: tokens must be 20-512 characters of letters, numbers, or . _ ~ + / = - (got 8 characters).'
+        );
+        try {
+            parseAllowedAuthTokens('short8ch');
+            throw new Error('expected parseAllowedAuthTokens to throw');
+        } catch (error) {
+            const message = (error as Error).message;
+            expect(message).not.toContain('short8ch');
+        }
+    });
+
+    test('accepts the minimum and maximum valid token lengths', () => {
+        const minToken = 'a'.repeat(20);
+        const maxToken = 'a'.repeat(512);
+        const tokens = parseAllowedAuthTokens(`${minToken},${maxToken}`);
+        expect(tokens?.size).toBe(2);
+        expect(isAuthorizedToken(minToken, tokens || null)).toBe(true);
+        expect(isAuthorizedToken(maxToken, tokens || null)).toBe(true);
+    });
+
+    test('rejects a token over the maximum length and tokens with disallowed characters', () => {
+        const tooLongToken = 'a'.repeat(513);
+        expect(() => parseAllowedAuthTokens(tooLongToken)).toThrow(
+            'Configured auth token #1 is invalid'
+        );
+        expect(() => parseAllowedAuthTokens('valid-token-1234567890,not a valid token!!!!')).toThrow(
+            'Configured auth token #2 is invalid'
+        );
     });
 
     test('resolves auth tokens from both current and legacy env var names', () => {
@@ -100,47 +134,47 @@ describe('cloud server utils', () => {
         const authTokensFile = join(tempDir, 'auth-tokens.txt');
         const legacyTokenFile = join(tempDir, 'legacy-token.txt');
         try {
-            writeFileSync(authTokensFile, 'file-alpha,file-beta\n');
-            writeFileSync(legacyTokenFile, 'legacy-file-token\n');
+            writeFileSync(authTokensFile, 'file-alpha-1234567890,file-beta-1234567890\n');
+            writeFileSync(legacyTokenFile, 'legacy-file-token-1234567890\n');
 
             const primaryOnly = resolveAllowedAuthTokensFromEnv({
-                MINDWTR_CLOUD_AUTH_TOKENS: 'alpha,beta',
+                MINDWTR_CLOUD_AUTH_TOKENS: 'primary-alpha-1234567890,primary-beta-1234567890',
             });
             expect(primaryOnly).not.toBeNull();
-            expect(isAuthorizedToken('alpha', primaryOnly)).toBe(true);
-            expect(isAuthorizedToken('beta', primaryOnly)).toBe(true);
+            expect(isAuthorizedToken('primary-alpha-1234567890', primaryOnly)).toBe(true);
+            expect(isAuthorizedToken('primary-beta-1234567890', primaryOnly)).toBe(true);
 
             const legacyOnly = resolveAllowedAuthTokensFromEnv({
-                MINDWTR_CLOUD_TOKEN: 'legacy-token',
+                MINDWTR_CLOUD_TOKEN: 'legacy-token-1234567890',
             });
             expect(legacyOnly).not.toBeNull();
-            expect(isAuthorizedToken('legacy-token', legacyOnly)).toBe(true);
+            expect(isAuthorizedToken('legacy-token-1234567890', legacyOnly)).toBe(true);
 
             const combined = resolveAllowedAuthTokensFromEnv({
-                MINDWTR_CLOUD_AUTH_TOKENS: 'new-token',
-                MINDWTR_CLOUD_TOKEN: 'legacy-token',
+                MINDWTR_CLOUD_AUTH_TOKENS: 'combined-new-1234567890',
+                MINDWTR_CLOUD_TOKEN: 'legacy-token-1234567890',
             });
-            expect(isAuthorizedToken('new-token', combined)).toBe(true);
-            expect(isAuthorizedToken('legacy-token', combined)).toBe(true);
+            expect(isAuthorizedToken('combined-new-1234567890', combined)).toBe(true);
+            expect(isAuthorizedToken('legacy-token-1234567890', combined)).toBe(true);
 
             const fileOnly = resolveAllowedAuthTokensFromEnv({
                 MINDWTR_CLOUD_AUTH_TOKENS_FILE: authTokensFile,
             });
-            expect(isAuthorizedToken('file-alpha', fileOnly)).toBe(true);
-            expect(isAuthorizedToken('file-beta', fileOnly)).toBe(true);
+            expect(isAuthorizedToken('file-alpha-1234567890', fileOnly)).toBe(true);
+            expect(isAuthorizedToken('file-beta-1234567890', fileOnly)).toBe(true);
 
             const legacyFileOnly = resolveAllowedAuthTokensFromEnv({
                 MINDWTR_CLOUD_TOKEN_FILE: legacyTokenFile,
             });
-            expect(isAuthorizedToken('legacy-file-token', legacyFileOnly)).toBe(true);
+            expect(isAuthorizedToken('legacy-file-token-1234567890', legacyFileOnly)).toBe(true);
 
             const mixedWithFile = resolveAllowedAuthTokensFromEnv({
-                MINDWTR_CLOUD_AUTH_TOKENS: 'inline-token',
+                MINDWTR_CLOUD_AUTH_TOKENS: 'inline-token-1234567890',
                 MINDWTR_CLOUD_AUTH_TOKENS_FILE: authTokensFile,
             });
-            expect(isAuthorizedToken('inline-token', mixedWithFile)).toBe(true);
-            expect(isAuthorizedToken('file-alpha', mixedWithFile)).toBe(true);
-            expect(isAuthorizedToken('file-beta', mixedWithFile)).toBe(true);
+            expect(isAuthorizedToken('inline-token-1234567890', mixedWithFile)).toBe(true);
+            expect(isAuthorizedToken('file-alpha-1234567890', mixedWithFile)).toBe(true);
+            expect(isAuthorizedToken('file-beta-1234567890', mixedWithFile)).toBe(true);
 
             const allowAny = resolveAllowedAuthTokensFromEnv({
                 MINDWTR_CLOUD_ALLOW_ANY_TOKEN: 'true',
@@ -150,6 +184,10 @@ describe('cloud server utils', () => {
             expect(() => resolveAllowedAuthTokensFromEnv({})).toThrow(
                 'Cloud auth is not configured.'
             );
+
+            expect(() => resolveAllowedAuthTokensFromEnv({
+                MINDWTR_CLOUD_AUTH_TOKENS: 'too-short',
+            })).toThrow('Configured auth token #1 is invalid');
         } finally {
             rmSync(tempDir, { recursive: true, force: true });
         }

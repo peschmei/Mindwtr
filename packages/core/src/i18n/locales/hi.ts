@@ -786,6 +786,7 @@ export const hiOverrides: Record<string, string> = {
         'settings.webdavSave': 'वेबडीएवी सहेजें',
         'settings.cloudUrl': 'स्व-होस्ट किया गया यूआरएल',
         'settings.cloudToken': 'एक्सेस टोकन',
+        'settings.cloudTokenInvalid': 'सिंक टोकन 20-512 वर्णों का होना चाहिए, जिसमें अक्षर, अंक, या . _ ~ + / = - शामिल हों',
         'settings.cloudSave': 'सेल्फ-होस्टेड सहेजें',
         'settings.cloudHint': 'अपने स्व-होस्ट किए गए एंडपॉइंट यूआरएल का उपयोग करें।',
         'settings.importData': 'डेटा आयात करें',

@@ -36,6 +36,7 @@ const mocked = vi.hoisted(() => ({
             return false;
         }
     }),
+    isValidCloudSyncToken: vi.fn((token: string) => /^[A-Za-z0-9._~+/=-]{20,512}$/.test(token.trim())),
     normalizeCloudUrl: vi.fn((url: string) => `${url.replace(/\/+$/, '')}/v1/data`),
     normalizeWebdavUrl: vi.fn((url: string) => {
         const trimmed = url.replace(/\/+$/, '');
@@ -66,6 +67,7 @@ vi.mock('@mindwtr/core', () => ({
     CLOCK_SKEW_THRESHOLD_MS: 60_000,
     cloudGetJson: mocked.cloudGetJson,
     isConnectionAllowed: mocked.isConnectionAllowed,
+    isValidCloudSyncToken: mocked.isValidCloudSyncToken,
     normalizeCloudUrl: mocked.normalizeCloudUrl,
     normalizeWebdavUrl: mocked.normalizeWebdavUrl,
     SYNC_LOCAL_INSECURE_URL_OPTIONS: { allowLocalHostnames: true, allowPrivateIpRanges: true },
@@ -381,5 +383,56 @@ describe('useSyncSettingsTransportActions', () => {
         expect(mocked.clearMobileSyncConfigCache.mock.invocationCallOrder[0]).toBeLessThan(
             mocked.performMobileSync.mock.invocationCallOrder[0]
         );
+    });
+
+    it('rejects a self-hosted token that is too short and does not persist it', async () => {
+        await renderHarness();
+
+        await act(async () => {
+            await latestHookResult?.handleSaveSelfHostedSettings({
+                allowInsecureHttp: false,
+                token: 'too-short',
+                url: 'https://cloud.example.com',
+            });
+        });
+
+        expect(mocked.asyncStorage.multiSet).not.toHaveBeenCalled();
+        expect(mocked.setSecureConfigValue).not.toHaveBeenCalled();
+        expect(mocked.showSettingsWarning).toHaveBeenCalledWith(
+            'settings.syncMobile.error',
+            'settings.cloudTokenInvalid'
+        );
+    });
+
+    it('saves self-hosted settings with an empty token (no auth configured)', async () => {
+        await renderHarness();
+
+        await act(async () => {
+            await latestHookResult?.handleSaveSelfHostedSettings({
+                allowInsecureHttp: false,
+                token: '',
+                url: 'https://cloud.example.com',
+            });
+        });
+
+        expect(mocked.showSettingsWarning).not.toHaveBeenCalled();
+        expect(mocked.setSecureConfigValue).toHaveBeenCalledWith(CLOUD_TOKEN_KEY, '');
+    });
+
+    it('saves self-hosted settings with a valid token', async () => {
+        await renderHarness();
+        const validToken = 'a'.repeat(24);
+
+        await act(async () => {
+            await latestHookResult?.handleSaveSelfHostedSettings({
+                allowInsecureHttp: false,
+                token: validToken,
+                url: 'https://cloud.example.com',
+            });
+        });
+
+        expect(mocked.showSettingsWarning).not.toHaveBeenCalled();
+        expect(mocked.setSecureConfigValue).toHaveBeenCalledWith(CLOUD_TOKEN_KEY, validToken);
+        expect(mocked.showToast).toHaveBeenCalledWith(expect.objectContaining({ tone: 'success' }));
     });
 });

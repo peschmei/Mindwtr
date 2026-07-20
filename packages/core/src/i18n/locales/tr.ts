@@ -797,6 +797,7 @@ export const trOverrides: Record<string, string> = {
         'settings.webdavHint': 'Bir klasörün üzerine gelin. Mindwtr data.json\'u içinde saklar.',
         'settings.cloudUrl': 'Kendi kendine barındırılan URL',
         'settings.cloudToken': 'Erişim jetonu',
+        'settings.cloudTokenInvalid': 'Senkronizasyon jetonu 20-512 karakter uzunluğunda olmalı ve yalnızca harf, rakam veya . _ ~ + / = - içermelidir',
         'settings.cloudSave': 'Kendi Kendine Barındırılanı Kaydet',
         'settings.cloudHint': 'Şirket içinde barındırılan uç nokta URL\'nizi kullanın.',
         'settings.importData': 'Verileri İçe Aktar',

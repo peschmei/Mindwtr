@@ -930,6 +930,7 @@ export const zhHans: Record<string, string> = {
         'settings.cloudUrl': '自托管地址',
         'settings.cloudUrlPlaceholder': 'https://example.com',
         'settings.cloudToken': '访问令牌',
+        'settings.cloudTokenInvalid': '同步令牌长度必须为 20-512 个字符，只能包含字母、数字或 . _ ~ + / = -',
         'settings.cloudSave': '保存自托管配置',
         'settings.cloudHint': '请输入自托管同步端点 URL。',
         'settings.cloudBaseUrlHint': '填写基础地址，Mindwtr 会自动加上 /v1/data。',

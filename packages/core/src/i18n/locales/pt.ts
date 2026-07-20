@@ -830,6 +830,7 @@ export const ptOverrides: Record<string, string> = {
         'settings.webdavHint': 'Aponte para uma pasta. Mindwtr armazena data.json dentro dele.',
         'settings.cloudUrl': 'URL auto-hospedado',
         'settings.cloudToken': 'Token de acesso',
+        'settings.cloudTokenInvalid': 'O token de sincronização deve ter 20-512 caracteres, usando letras, números ou . _ ~ + / = -',
         'settings.cloudSave': 'Salvar auto-hospedado',
         'settings.cloudHint': 'Use seu URL de endpoint auto-hospedado.',
         'settings.importData': 'Importar dados',

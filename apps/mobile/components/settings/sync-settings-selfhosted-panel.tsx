@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { isValidCloudSyncToken } from '@mindwtr/core';
+
 import type { ThemeColors } from '@/hooks/use-theme-colors';
 
 import { isValidHttpUrl } from './settings.constants';
@@ -59,8 +61,11 @@ export function SyncSelfHostedBackendPanel({
     }, [initialToken]);
 
     const urlError = url.trim() ? !isValidHttpUrl(url.trim()) : false;
+    // An empty token is valid here (self-hosted servers may run without auth);
+    // only a non-empty token that fails the shape check is rejected.
+    const tokenError = token.trim() ? !isValidCloudSyncToken(token.trim()) : false;
     const settings = { allowInsecureHttp, token, url };
-    const canUseActions = url.trim().length > 0 && !urlError;
+    const canUseActions = url.trim().length > 0 && !urlError && !tokenError;
 
     return (
         <>
@@ -107,6 +112,9 @@ export function SyncSelfHostedBackendPanel({
                         secureTextEntry
                         style={[styles.textInput, { backgroundColor: tc.inputBg, borderColor: tc.border, color: tc.text }]}
                     />
+                    {tokenError && (
+                        <Text style={[styles.settingDescription, { color: '#EF4444' }]}>{t('settings.cloudTokenInvalid')}</Text>
+                    )}
                 </View>
                 <TouchableOpacity
                     style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}

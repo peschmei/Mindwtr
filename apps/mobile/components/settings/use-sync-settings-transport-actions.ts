@@ -7,6 +7,7 @@ import {
     CLOCK_SKEW_THRESHOLD_MS,
     cloudGetJson,
     isConnectionAllowed,
+    isValidCloudSyncToken,
     normalizeCloudUrl,
     normalizeWebdavUrl,
     SYNC_LOCAL_INSECURE_URL_OPTIONS,
@@ -206,6 +207,18 @@ export function useSyncSettingsTransportActions({
             );
         }
         return true;
+    }, [tr, showSettingsWarning]);
+
+    // Mobile self-hosted forms hold the real token (unlike desktop's keyring-backed
+    // "empty = unchanged"): an empty token is valid (no auth), but a non-empty token
+    // that fails the shape check must block the save.
+    const validateCloudToken = useCallback((token: string): boolean => {
+        if (!token || isValidCloudSyncToken(token)) return true;
+        showSettingsWarning(
+            tr('settings.syncMobile.error'),
+            tr('settings.cloudTokenInvalid')
+        );
+        return false;
     }, [tr, showSettingsWarning]);
 
     useEffect(() => {
@@ -593,6 +606,9 @@ export function useSyncSettingsTransportActions({
         if (!validateSyncHttpUrl(trimmedUrl, nextSettings.allowInsecureHttp, 'self-hosted')) {
             return;
         }
+        if (!validateCloudToken(nextSettings.token.trim())) {
+            return;
+        }
         try {
             await Promise.all([
                 AsyncStorage.multiSet([
@@ -628,6 +644,7 @@ export function useSyncSettingsTransportActions({
         showSettingsErrorToast,
         showToast,
         t,
+        validateCloudToken,
         validateSyncHttpUrl,
     ]);
 

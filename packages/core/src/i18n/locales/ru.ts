@@ -787,6 +787,7 @@ export const ruOverrides: Record<string, string> = {
         'settings.webdavSave': 'Сохранить WebDAV',
         'settings.cloudUrl': 'Собственный URL-адрес',
         'settings.cloudToken': 'Токен доступа',
+        'settings.cloudTokenInvalid': 'Токен синхронизации должен содержать от 20 до 512 символов: буквы, цифры или . _ ~ + / = -',
         'settings.cloudSave': 'Сохранить',
         'settings.cloudHint': 'Используйте URL-адрес собственной конечной точки.',
         'settings.importData': 'Импортировать данные',

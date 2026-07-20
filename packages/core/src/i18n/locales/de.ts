@@ -826,6 +826,7 @@ export const deOverrides: Record<string, string> = {
         'settings.webdavHint': 'Geben Sie einen Ordner an; Mindwtr speichert darin data.json.',
         'settings.cloudUrl': 'Selbst gehostete URL',
         'settings.cloudToken': 'Zugriffstoken',
+        'settings.cloudTokenInvalid': 'Das Sync-Token muss 20-512 Zeichen lang sein und darf nur Buchstaben, Zahlen oder . _ ~ + / = - enthalten.',
         'settings.cloudSave': 'Selbst gehostet speichern',
         'settings.cloudHint': 'Verwenden Sie Ihren selbst gehosteten Endpunkt (z. B. https://example.com/v1/data).',
         'settings.importData': 'Daten importieren',

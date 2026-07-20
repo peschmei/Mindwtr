@@ -890,6 +890,7 @@ export const itOverrides: Record<string, string> = {
         'settings.cloudUrl': 'URL self-hosted',
         'settings.cloudUrlPlaceholder': 'https://esempio.com',
         'settings.cloudToken': 'Token di accesso',
+        'settings.cloudTokenInvalid': 'Il token di sincronizzazione deve avere 20-512 caratteri, usando lettere, numeri o . _ ~ + / = -',
         'settings.cloudSave': 'Salva self-hosted',
         'settings.cloudHint': 'Usa l\'URL del tuo endpoint self-hosted.',
         'settings.cloudBaseUrlHint': 'Usa l\'URL di base. Mindwtr aggiunge automaticamente /v1/data.',

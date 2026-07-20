@@ -992,6 +992,7 @@ export const frOverrides: Record<string, string> = {
         'settings.cloudUrl': 'URL auto-hébergée',
         'settings.cloudUrlPlaceholder': 'https://example.com',
         'settings.cloudToken': 'Jeton d’accès',
+        'settings.cloudTokenInvalid': 'Le jeton de synchronisation doit comporter entre 20 et 512 caractères : lettres, chiffres ou . _ ~ + / = -',
         'settings.cloudSave': 'Enregistrer auto-hébergé',
         'settings.cloudHint': 'Utilisez l’URL de votre point de terminaison auto-hébergé.',
         'settings.cloudBaseUrlHint': 'Utilisez l’URL de base. Mindwtr ajoutera /api/v1 automatiquement aux requêtes.',

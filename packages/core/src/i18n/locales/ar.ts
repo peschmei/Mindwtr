@@ -838,6 +838,7 @@ export const arOverrides: Record<string, string> = {
         'settings.webdavSave': 'حفظ WebDAV',
         'settings.cloudUrl': 'عنوان URL مستضاف ذاتيًا',
         'settings.cloudToken': 'رمز الوصول',
+        'settings.cloudTokenInvalid': 'يجب أن يتكون رمز المزامنة من 20 إلى 512 حرفًا باستخدام أحرف أو أرقام أو . _ ~ + / = -',
         'settings.cloudSave': 'حفظ الاستضافة الذاتية',
         'settings.cloudHint': 'استخدم عنوان URL لنقطة النهاية المستضافة ذاتيًا.',
         'settings.importData': 'استيراد البيانات',

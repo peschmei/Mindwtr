@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CloudHttpError, cloudDeleteFile, cloudGetFile, cloudGetJson, cloudHeadJson, cloudPutJson, cloudRequestJson } from './cloud';
+import {
+    CLOUD_SYNC_TOKEN_PATTERN,
+    CloudHttpError,
+    cloudDeleteFile,
+    cloudGetFile,
+    cloudGetJson,
+    cloudHeadJson,
+    cloudPutJson,
+    cloudRequestJson,
+    isValidCloudSyncToken,
+} from './cloud';
 
 const okResponse = (text: string) =>
     ({
@@ -236,5 +246,37 @@ describe('cloud sync http helpers', () => {
         await expect(cloudDeleteFile('https://example.com/v1/file', { fetcher })).rejects.toThrow(
             'Cloud DELETE failed (500)',
         );
+    });
+});
+
+describe('isValidCloudSyncToken', () => {
+    it('rejects tokens shorter than 20 characters', () => {
+        expect(isValidCloudSyncToken('short-token')).toBe(false);
+    });
+
+    it('accepts a 20-character token', () => {
+        expect(isValidCloudSyncToken('a'.repeat(20))).toBe(true);
+    });
+
+    it('accepts a 512-character token', () => {
+        expect(isValidCloudSyncToken('a'.repeat(512))).toBe(true);
+    });
+
+    it('rejects a 513-character token', () => {
+        expect(isValidCloudSyncToken('a'.repeat(513))).toBe(false);
+    });
+
+    it('rejects disallowed characters', () => {
+        expect(isValidCloudSyncToken(`${'a'.repeat(19)}!`)).toBe(false);
+        expect(isValidCloudSyncToken(`${'a'.repeat(9)} ${'a'.repeat(10)}`)).toBe(false);
+    });
+
+    it('trims surrounding whitespace before testing', () => {
+        expect(isValidCloudSyncToken(`  ${'a'.repeat(20)}  `)).toBe(true);
+    });
+
+    it('matches the exported pattern directly', () => {
+        expect(CLOUD_SYNC_TOKEN_PATTERN.test('a'.repeat(20))).toBe(true);
+        expect(CLOUD_SYNC_TOKEN_PATTERN.test('a'.repeat(19))).toBe(false);
     });
 });

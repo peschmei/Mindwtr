@@ -975,6 +975,7 @@ export const csOverrides: Record<string, string> = {
         'settings.cloudUrl': 'URL vlastního serveru',
         'settings.cloudUrlPlaceholder': 'https://example.com',
         'settings.cloudToken': 'Přístupový token',
+        'settings.cloudTokenInvalid': 'Synchronizační token musí mít 20 až 512 znaků: písmena, číslice nebo . _ ~ + / = -',
         'settings.cloudSave': 'Uložit vlastní server',
         'settings.cloudHint': 'Použijte URL svého self-hosted endpointu.',
         'settings.cloudBaseUrlHint': 'Zadejte základní URL. Mindwtr automaticky připojí /v1/data.',

@@ -30,6 +30,9 @@ function isAllowedAuthTokens(value: AllowedAuthTokenInput): value is AllowedAuth
     return Boolean(value && typeof value === 'object' && 'digests' in value);
 }
 
+// Intentionally unvalidated: callers of the programmatic serve({ allowedAuthTokens })
+// path (including tests) may pass arbitrary tokens. Only the string-parsing path
+// (env/CLI/config, via parseAllowedAuthTokens) enforces BEARER_TOKEN_PATTERN.
 export function createAllowedAuthTokens(tokens: Iterable<string>): AllowedAuthTokens {
     const uniqueTokens = Array.from(new Set(tokens));
     return {
@@ -149,6 +152,13 @@ export function parseAllowedAuthTokens(rawValue?: string): AllowedAuthTokens | n
         .split(',')
         .map((item) => item.trim())
         .filter((item) => item.length > 0);
+    tokens.forEach((token, index) => {
+        if (!BEARER_TOKEN_PATTERN.test(token)) {
+            throw new Error(
+                `Configured auth token #${index + 1} is invalid: tokens must be 20-512 characters of letters, numbers, or . _ ~ + / = - (got ${token.length} characters).`
+            );
+        }
+    });
     return tokens.length > 0 ? createAllowedAuthTokens(tokens) : null;
 }
 

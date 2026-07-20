@@ -780,6 +780,7 @@ export const koOverrides: Record<string, string> = {
         'settings.webdavSave': 'WebDAV 저장',
         'settings.cloudUrl': '자체 호스팅 URL',
         'settings.cloudToken': '액세스 토큰',
+        'settings.cloudTokenInvalid': '동기화 토큰은 20~512자여야 하며 문자, 숫자 또는 . _ ~ + / = - 를 사용해야 합니다',
         'settings.cloudSave': '자체 호스팅 저장',
         'settings.cloudHint': '자체 호스팅 엔드포인트 URL을 사용하세요.',
         'settings.importData': '데이터 가져오기',

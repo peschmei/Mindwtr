@@ -1,4 +1,4 @@
-import type { Area, Project, Section, Task } from '@mindwtr/core';
+import { CLOUD_SYNC_TOKEN_PATTERN, type Area, type Project, type Section, type Task } from '@mindwtr/core';
 
 type Flags = Record<string, string | boolean>;
 type LogLevel = 'info' | 'warn' | 'error';
@@ -171,7 +171,9 @@ export const CLOUD_AREA_PATCH_ALLOWED_PROP_KEYS = new Set<keyof Area>([
     ...CLOUD_AREA_CREATION_ALLOWED_PROP_KEYS,
 ]);
 export const CLOUD_API_REV_BY = 'cloud';
-export const BEARER_TOKEN_PATTERN = /^[A-Za-z0-9._~+/=-]{20,512}$/;
+// Re-exported from @mindwtr/core so the server and clients can never
+// validate a token differently; keep this name for existing server imports.
+export const BEARER_TOKEN_PATTERN = CLOUD_SYNC_TOKEN_PATTERN;
 
 export function parseArgs(argv: string[]) {
     const flags: Flags = {};

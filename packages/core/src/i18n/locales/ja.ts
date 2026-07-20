@@ -787,6 +787,7 @@ export const jaOverrides: Record<string, string> = {
         'settings.webdavSave': 'WebDAVの保存',
         'settings.cloudUrl': '自己ホスト型 URL',
         'settings.cloudToken': 'アクセストークン',
+        'settings.cloudTokenInvalid': '同期トークンは20〜512文字で、英数字または . _ ~ + / = - のいずれかを使用してください',
         'settings.cloudSave': 'セルフホスト型を保存',
         'settings.cloudHint': 'セルフホスト型エンドポイント URL を使用します。',
         'settings.importData': 'データのインポート',

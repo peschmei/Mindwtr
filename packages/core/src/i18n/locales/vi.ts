@@ -1005,6 +1005,7 @@ export const viOverrides: Record<string, string> = {
         'settings.cloudUrl': 'URL tự lưu trữ',
         'settings.cloudUrlPlaceholder': 'https://example.com',
         'settings.cloudToken': 'Token truy cập',
+        'settings.cloudTokenInvalid': 'Token đồng bộ phải có 20-512 ký tự, sử dụng chữ cái, số, hoặc . _ ~ + / = -',
         'settings.cloudSave': 'Lưu tự lưu trữ',
         'settings.cloudHint': 'Dùng URL điểm cuối tự lưu trữ của bạn.',
         'settings.cloudBaseUrlHint': 'Dùng URL gốc. Mindwtr tự động thêm /v1/data.',

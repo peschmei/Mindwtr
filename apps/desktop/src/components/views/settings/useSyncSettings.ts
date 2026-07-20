@@ -9,6 +9,7 @@ import {
     CLOCK_SKEW_THRESHOLD_MS,
     getInMemoryAppDataSnapshot,
     isConnectionAllowed,
+    isValidCloudSyncToken,
     SYNC_LOCAL_INSECURE_URL_OPTIONS,
     summarizeMergeStats,
     translateWithFallback,
@@ -140,6 +141,19 @@ export const useSyncSettings = ({
         }
         return true;
     }, [isManualInsecureOverride, showToast]);
+
+    // An empty token field means "unchanged, use keyring" (#899) and must never be
+    // validated or blocked; only a non-empty token that fails the shape check is rejected.
+    const validateCloudToken = useCallback((token: string): boolean => {
+        if (!token) return true;
+        if (!isValidCloudSyncToken(token)) {
+            const message = 'Sync token must be 20-512 characters using letters, numbers, or . _ ~ + / = -';
+            setSyncError(message);
+            showToast(message, 'error');
+            return false;
+        }
+        return true;
+    }, [showToast]);
 
     const formatText = useCallback((
         key: string,
@@ -377,15 +391,17 @@ export const useSyncSettings = ({
 
     const handleSaveCloud = useCallback(async () => {
         const trimmedUrl = cloudUrl.trim();
+        const trimmedToken = cloudToken.trim();
         if (trimmedUrl && !validateSyncHttpUrl(trimmedUrl, cloudAllowInsecureHttp)) return;
+        if (!validateCloudToken(trimmedToken)) return;
         await SyncService.setCloudConfig({
             url: trimmedUrl,
-            token: cloudToken.trim(),
+            token: trimmedToken,
             rememberToken: !isTauri && cloudRememberToken,
             allowInsecureHttp: cloudAllowInsecureHttp,
         });
         showSaved();
-    }, [cloudAllowInsecureHttp, cloudRememberToken, cloudUrl, cloudToken, isTauri, showSaved, validateSyncHttpUrl]);
+    }, [cloudAllowInsecureHttp, cloudRememberToken, cloudUrl, cloudToken, isTauri, showSaved, validateCloudToken, validateSyncHttpUrl]);
 
     const handleSetCloudProvider = useCallback(async (provider: CloudProvider) => {
         setCloudProvider(provider);

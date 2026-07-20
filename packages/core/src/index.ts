@@ -884,6 +884,7 @@ export type {
 } from './webdav';
 
 export {
+    CLOUD_SYNC_TOKEN_PATTERN,
     CloudHttpError,
     cloudDeleteFile,
     cloudGetFile,
@@ -892,6 +893,7 @@ export {
     cloudPutFile,
     cloudPutJson,
     cloudRequestJson,
+    isValidCloudSyncToken,
 } from './cloud';
 export type {
     CloudJsonWriteResult,

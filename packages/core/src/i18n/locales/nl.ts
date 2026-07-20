@@ -265,6 +265,7 @@ export const nlOverrides: Record<string, string> = {
         'settings.webdavSave': 'WebDAV opslaan',
         'settings.cloudUrlPlaceholder': 'https://example.com',
         'settings.cloudToken': 'Toegangstoken',
+        'settings.cloudTokenInvalid': 'Synctoken moet 20-512 tekens lang zijn en alleen letters, cijfers of . _ ~ + / = - bevatten',
         'settings.cloudSave': 'Self-hosted opslaan',
         'settings.importData': 'Data importeren',
         'settings.exportData': 'Data exporteren',

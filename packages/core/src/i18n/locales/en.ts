@@ -1013,6 +1013,7 @@ export const en: Record<string, string> = {
         'settings.cloudUrl': 'Self-hosted URL',
         'settings.cloudUrlPlaceholder': 'https://example.com',
         'settings.cloudToken': 'Access token',
+        'settings.cloudTokenInvalid': 'Sync token must be 20-512 characters using letters, numbers, or . _ ~ + / = -',
         'settings.cloudSave': 'Save Self-Hosted',
         'settings.cloudHint': 'Use your self-hosted endpoint URL.',
         'settings.cloudBaseUrlHint': 'Use the base URL. Mindwtr appends /v1/data automatically.',

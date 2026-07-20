@@ -784,6 +784,7 @@ export const plOverrides: Record<string, string> = {
         'settings.webdavHint': 'Wskaż folder. Mindwtr zapisze w nim plik data.json.',
         'settings.cloudUrl': 'Adres własnego serwera',
         'settings.cloudToken': 'Token dostępu',
+        'settings.cloudTokenInvalid': 'Token synchronizacji musi mieć 20-512 znaków: litery, cyfry lub . _ ~ + / = -',
         'settings.cloudSave': 'Zapisz ustawienia self-hosted',
         'settings.cloudHint': 'Użyj adresu URL własnego endpointu self-hosted.',
         'settings.importData': 'Importuj dane',
