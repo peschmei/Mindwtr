@@ -17,6 +17,8 @@ import { normalizeSavedFilter, normalizeSavedFilters } from './saved-filters';
 import { normalizeProjectSequentialScope, normalizeProjectTaskSortBy } from './project-utils';
 import { sleep } from './async-utils';
 import { TASK_SQLITE_COLUMNS, TASK_SQLITE_MIGRATION_COLUMNS } from './task-sync-schema';
+import { PROJECT_SQLITE_COLUMNS, PROJECT_SQLITE_MIGRATION_COLUMNS } from './project-sync-schema';
+import { SECTION_SQLITE_COLUMNS, SECTION_SQLITE_MIGRATION_COLUMNS } from './section-sync-schema';
 
 export interface SqliteClient {
     run(sql: string, params?: unknown[]): Promise<void>;
@@ -206,6 +208,9 @@ const buildSqliteSaveFailureContext = (data: AppData, step: string): Record<stri
 // under their existing names/values for this module's existing consumers
 // (index.ts, apps/mcp-server/src/queries.ts).
 export { TASK_SQLITE_COLUMNS, TASK_SQLITE_MIGRATION_COLUMNS };
+// Same generation story as tasks (see the comment above), for projects and sections.
+export { PROJECT_SQLITE_COLUMNS, PROJECT_SQLITE_MIGRATION_COLUMNS };
+export { SECTION_SQLITE_COLUMNS, SECTION_SQLITE_MIGRATION_COLUMNS };
 
 const TASK_UPSERT_COLUMNS = TASK_SQLITE_COLUMNS;
 
@@ -215,6 +220,20 @@ export const TASK_UPSERT_UPDATE_CLAUSE = `${TASK_SQLITE_COLUMNS
     .map((column) => `${column}=excluded.${column}`)
     .join(',\n')}
 WHERE tasks.rev IS NULL OR tasks.rev <= excluded.rev`;
+
+const PROJECT_UPSERT_COLUMNS = PROJECT_SQLITE_COLUMNS;
+export const PROJECT_UPSERT_UPDATE_CLAUSE = `${PROJECT_SQLITE_COLUMNS
+    .filter((column) => column !== 'id')
+    .map((column) => `${column}=excluded.${column}`)
+    .join(',\n')}
+WHERE projects.rev IS NULL OR projects.rev <= excluded.rev`;
+
+const SECTION_UPSERT_COLUMNS = SECTION_SQLITE_COLUMNS;
+export const SECTION_UPSERT_UPDATE_CLAUSE = `${SECTION_SQLITE_COLUMNS
+    .filter((column) => column !== 'id')
+    .map((column) => `${column}=excluded.${column}`)
+    .join(',\n')}
+WHERE sections.rev IS NULL OR sections.rev <= excluded.rev`;
 
 export const taskToSqliteRow = (task: Task): unknown[] => {
     const taskOrder = Number.isFinite(task.order) ? task.order : task.orderNum;
@@ -724,26 +743,7 @@ export class SqliteAdapter {
     private async ensureProjectColumns() {
         const columns = await this.client.all<{ name?: string }>('PRAGMA table_info(projects)');
         const names = new Set(columns.map((col) => col.name));
-        const definitions: Array<{ name: string; sql: string }> = [
-            { name: 'orderNum', sql: 'ALTER TABLE projects ADD COLUMN orderNum INTEGER' },
-            { name: 'tagIds', sql: 'ALTER TABLE projects ADD COLUMN tagIds TEXT' },
-            { name: 'isSequential', sql: 'ALTER TABLE projects ADD COLUMN isSequential INTEGER' },
-            { name: 'sequentialScope', sql: 'ALTER TABLE projects ADD COLUMN sequentialScope TEXT' },
-            { name: 'taskSortBy', sql: 'ALTER TABLE projects ADD COLUMN taskSortBy TEXT' },
-            { name: 'isFocused', sql: 'ALTER TABLE projects ADD COLUMN isFocused INTEGER' },
-            { name: 'supportNotes', sql: 'ALTER TABLE projects ADD COLUMN supportNotes TEXT' },
-            { name: 'attachments', sql: 'ALTER TABLE projects ADD COLUMN attachments TEXT' },
-            { name: 'dueDate', sql: 'ALTER TABLE projects ADD COLUMN dueDate TEXT' },
-            { name: 'reviewAt', sql: 'ALTER TABLE projects ADD COLUMN reviewAt TEXT' },
-            { name: 'areaId', sql: 'ALTER TABLE projects ADD COLUMN areaId TEXT' },
-            { name: 'areaTitle', sql: 'ALTER TABLE projects ADD COLUMN areaTitle TEXT' },
-            { name: 'rev', sql: 'ALTER TABLE projects ADD COLUMN rev INTEGER' },
-            { name: 'revBy', sql: 'ALTER TABLE projects ADD COLUMN revBy TEXT' },
-            { name: 'createdAt', sql: 'ALTER TABLE projects ADD COLUMN createdAt TEXT' },
-            { name: 'updatedAt', sql: 'ALTER TABLE projects ADD COLUMN updatedAt TEXT' },
-            { name: 'deletedAt', sql: 'ALTER TABLE projects ADD COLUMN deletedAt TEXT' },
-            { name: 'purgedAt', sql: 'ALTER TABLE projects ADD COLUMN purgedAt TEXT' },
-        ];
+        const definitions = PROJECT_SQLITE_MIGRATION_COLUMNS;
         for (const definition of definitions) {
             if (!names.has(definition.name)) {
                 await this.client.run(definition.sql);
@@ -766,18 +766,7 @@ export class SqliteAdapter {
     private async ensureSectionColumns() {
         const columns = await this.client.all<{ name?: string }>('PRAGMA table_info(sections)');
         const names = new Set(columns.map((col) => col.name));
-        const definitions: Array<{ name: string; sql: string }> = [
-            { name: 'description', sql: 'ALTER TABLE sections ADD COLUMN description TEXT' },
-            { name: 'orderNum', sql: 'ALTER TABLE sections ADD COLUMN orderNum INTEGER' },
-            { name: 'isCollapsed', sql: 'ALTER TABLE sections ADD COLUMN isCollapsed INTEGER' },
-            { name: 'rev', sql: 'ALTER TABLE sections ADD COLUMN rev INTEGER' },
-            { name: 'revBy', sql: 'ALTER TABLE sections ADD COLUMN revBy TEXT' },
-            { name: 'createdAt', sql: 'ALTER TABLE sections ADD COLUMN createdAt TEXT' },
-            { name: 'updatedAt', sql: 'ALTER TABLE sections ADD COLUMN updatedAt TEXT' },
-            { name: 'deletedAt', sql: 'ALTER TABLE sections ADD COLUMN deletedAt TEXT' },
-            { name: 'deletedAtBeforeProjectArchive', sql: 'ALTER TABLE sections ADD COLUMN deletedAtBeforeProjectArchive TEXT' },
-            { name: 'projectArchivedAt', sql: 'ALTER TABLE sections ADD COLUMN projectArchivedAt TEXT' },
-        ];
+        const definitions = SECTION_SQLITE_MIGRATION_COLUMNS;
         for (const definition of definitions) {
             if (!names.has(definition.name)) {
                 await this.client.run(definition.sql);
@@ -1452,30 +1441,7 @@ export class SqliteAdapter {
             saveStep = 'projects';
             await upsertBatch(
                 'projects',
-                [
-                    'id',
-                    'title',
-                    'status',
-                    'color',
-                    'orderNum',
-                    'tagIds',
-                    'isSequential',
-                    'sequentialScope',
-                    'taskSortBy',
-                    'isFocused',
-                    'supportNotes',
-                    'attachments',
-                    'dueDate',
-                    'reviewAt',
-                    'areaId',
-                    'areaTitle',
-                    'rev',
-                    'revBy',
-                    'createdAt',
-                    'updatedAt',
-                    'deletedAt',
-                    'purgedAt',
-                ],
+                [...PROJECT_UPSERT_COLUMNS],
                 data.projects.map((project) => [
                     project.id,
                     project.title,
@@ -1500,28 +1466,7 @@ export class SqliteAdapter {
                     project.deletedAt ?? null,
                     project.purgedAt ?? null,
                 ]),
-                `title=excluded.title,
-                 status=excluded.status,
-                 color=excluded.color,
-                 orderNum=excluded.orderNum,
-                 tagIds=excluded.tagIds,
-                 isSequential=excluded.isSequential,
-                 sequentialScope=excluded.sequentialScope,
-                 taskSortBy=excluded.taskSortBy,
-                 isFocused=excluded.isFocused,
-                 supportNotes=excluded.supportNotes,
-                 attachments=excluded.attachments,
-                 dueDate=excluded.dueDate,
-                 reviewAt=excluded.reviewAt,
-                 areaId=excluded.areaId,
-                 areaTitle=excluded.areaTitle,
-                 rev=excluded.rev,
-                 revBy=excluded.revBy,
-                 createdAt=excluded.createdAt,
-                 updatedAt=excluded.updatedAt,
-                 deletedAt=excluded.deletedAt,
-                 purgedAt=excluded.purgedAt
-                 WHERE projects.rev IS NULL OR projects.rev <= excluded.rev`,
+                PROJECT_UPSERT_UPDATE_CLAUSE,
             );
 
             const people = Array.isArray(data.people) ? data.people : [];
@@ -1568,21 +1513,7 @@ export class SqliteAdapter {
             saveStep = 'sections';
             await upsertBatch(
                 'sections',
-                [
-                    'id',
-                    'projectId',
-                    'title',
-                    'description',
-                    'orderNum',
-                    'isCollapsed',
-                    'rev',
-                    'revBy',
-                    'createdAt',
-                    'updatedAt',
-                    'deletedAt',
-                    'deletedAtBeforeProjectArchive',
-                    'projectArchivedAt',
-                ],
+                [...SECTION_UPSERT_COLUMNS],
                 data.sections.map((section) => [
                     section.id,
                     section.projectId,
@@ -1598,19 +1529,7 @@ export class SqliteAdapter {
                     section.deletedAtBeforeProjectArchive ?? null,
                     section.projectArchivedAt ?? null,
                 ]),
-                `projectId=excluded.projectId,
-                 title=excluded.title,
-                 description=excluded.description,
-                 orderNum=excluded.orderNum,
-                 isCollapsed=excluded.isCollapsed,
-                 rev=excluded.rev,
-                 revBy=excluded.revBy,
-                 createdAt=excluded.createdAt,
-                 updatedAt=excluded.updatedAt,
-                 deletedAt=excluded.deletedAt,
-                 deletedAtBeforeProjectArchive=excluded.deletedAtBeforeProjectArchive,
-                 projectArchivedAt=excluded.projectArchivedAt
-                 WHERE sections.rev IS NULL OR sections.rev <= excluded.rev`,
+                SECTION_UPSERT_UPDATE_CLAUSE,
             );
 
             saveStep = 'tasks';

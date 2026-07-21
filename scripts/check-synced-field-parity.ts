@@ -16,6 +16,8 @@ import {
     TASK_SYNC_FIELD_SCHEMA,
     TASK_SYNC_SCHEMA_FIXTURE,
 } from '../packages/core/src/task-sync-schema';
+import { PROJECT_SYNC_FIELD_SCHEMA } from '../packages/core/src/project-sync-schema';
+import { SECTION_SYNC_FIELD_SCHEMA } from '../packages/core/src/section-sync-schema';
 import {
     normalizeTaskForContentComparison,
     TASK_CONTENT_COMPARISON_EXCLUDED_KEYS,
@@ -34,32 +36,28 @@ const expectedTaskSqliteFields = Array.from(new Set(
         .filter((column): column is string => column !== null),
 ));
 
+// Same derivation as the task lists above, generalized: every entity's EXPECTED cloud/sqlite
+// field list comes from its own descriptor module, never a hand-maintained literal here.
+const expectedCloudFields = (schema: readonly { name: string; cloudSynced: boolean }[]): string[] =>
+    schema.filter((field) => field.cloudSynced).map((field) => field.name);
+const expectedSqliteFields = (schema: readonly { sqliteColumn: string | null }[]): string[] => Array.from(new Set(
+    schema
+        .map((field) => field.sqliteColumn)
+        .filter((column): column is string => column !== null),
+));
+
 const EXPECTED: Record<Entity, Record<Surface, string[]>> = {
     task: {
         cloud: expectedTaskCloudFields,
         sqlite: expectedTaskSqliteFields,
     },
     project: {
-        cloud: [
-            'title', 'status', 'color', 'order', 'tagIds', 'isSequential', 'sequentialScope',
-            'taskSortBy', 'isFocused', 'supportNotes', 'attachments', 'dueDate', 'reviewAt', 'areaId', 'areaTitle',
-            'rev', 'revBy', 'createdAt', 'updatedAt', 'deletedAt', 'purgedAt',
-        ],
-        sqlite: [
-            'id', 'title', 'status', 'color', 'orderNum', 'tagIds', 'isSequential', 'sequentialScope',
-            'taskSortBy', 'isFocused', 'supportNotes', 'attachments', 'dueDate', 'reviewAt', 'areaId', 'areaTitle',
-            'rev', 'revBy', 'createdAt', 'updatedAt', 'deletedAt', 'purgedAt',
-        ],
+        cloud: expectedCloudFields(PROJECT_SYNC_FIELD_SCHEMA),
+        sqlite: expectedSqliteFields(PROJECT_SYNC_FIELD_SCHEMA),
     },
     section: {
-        cloud: [
-            'projectId', 'title', 'description', 'order', 'isCollapsed', 'rev', 'revBy', 'createdAt',
-            'updatedAt', 'deletedAt', 'deletedAtBeforeProjectArchive', 'projectArchivedAt',
-        ],
-        sqlite: [
-            'id', 'projectId', 'title', 'description', 'orderNum', 'isCollapsed', 'rev', 'revBy',
-            'createdAt', 'updatedAt', 'deletedAt', 'deletedAtBeforeProjectArchive', 'projectArchivedAt',
-        ],
+        cloud: expectedCloudFields(SECTION_SYNC_FIELD_SCHEMA),
+        sqlite: expectedSqliteFields(SECTION_SYNC_FIELD_SCHEMA),
     },
 };
 

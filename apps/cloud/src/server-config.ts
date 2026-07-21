@@ -4,6 +4,8 @@ import type { Area, Project, Section, Task } from '@mindwtr/core';
 // `bun install` (see BEARER_TOKEN_PATTERN below), so a workspace-package import
 // cannot resolve there. A plain relative path always resolves.
 import { TASK_SYNC_FIELD_SCHEMA } from '../../../packages/core/src/task-sync-schema';
+import { PROJECT_SYNC_FIELD_SCHEMA } from '../../../packages/core/src/project-sync-schema';
+import { SECTION_SYNC_FIELD_SCHEMA } from '../../../packages/core/src/section-sync-schema';
 
 type Flags = Record<string, string | boolean>;
 type LogLevel = 'info' | 'warn' | 'error';
@@ -115,37 +117,29 @@ export const CLOUD_TASK_PATCH_ALLOWED_PROP_KEYS = new Set<keyof Task>(
         .filter((field) => field.cloudWrite === 'create-patch' || field.cloudWrite === 'patch')
         .map((field) => field.name),
 );
-export const CLOUD_PROJECT_CREATION_ALLOWED_PROP_KEYS = new Set<keyof Project>([
-    'status',
-    'color',
-    'order',
-    'tagIds',
-    'isSequential',
-    'taskSortBy',
-    'isFocused',
-    'supportNotes',
-    'attachments',
-    'dueDate',
-    'reviewAt',
-    'areaId',
-    'areaTitle',
-]);
-export const CLOUD_PROJECT_PATCH_ALLOWED_PROP_KEYS = new Set<keyof Project>([
-    'title',
-    'deletedAt',
-    'purgedAt',
-    ...CLOUD_PROJECT_CREATION_ALLOWED_PROP_KEYS,
-]);
-export const CLOUD_SECTION_CREATION_ALLOWED_PROP_KEYS = new Set<keyof Section>([
-    'description',
-    'order',
-    'isCollapsed',
-]);
-export const CLOUD_SECTION_PATCH_ALLOWED_PROP_KEYS = new Set<keyof Section>([
-    'projectId',
-    'title',
-    ...CLOUD_SECTION_CREATION_ALLOWED_PROP_KEYS,
-]);
+// Generated from PROJECT_SYNC_FIELD_SCHEMA / SECTION_SYNC_FIELD_SCHEMA's cloudWrite flag —
+// same generation story as the task allowlists above. server-config.test.ts pins both pairs
+// to their schema with a snapshot test.
+export const CLOUD_PROJECT_CREATION_ALLOWED_PROP_KEYS = new Set<keyof Project>(
+    PROJECT_SYNC_FIELD_SCHEMA
+        .filter((field) => field.cloudWrite === 'create-patch')
+        .map((field) => field.name),
+);
+export const CLOUD_PROJECT_PATCH_ALLOWED_PROP_KEYS = new Set<keyof Project>(
+    PROJECT_SYNC_FIELD_SCHEMA
+        .filter((field) => field.cloudWrite === 'create-patch' || field.cloudWrite === 'patch')
+        .map((field) => field.name),
+);
+export const CLOUD_SECTION_CREATION_ALLOWED_PROP_KEYS = new Set<keyof Section>(
+    SECTION_SYNC_FIELD_SCHEMA
+        .filter((field) => field.cloudWrite === 'create-patch')
+        .map((field) => field.name),
+);
+export const CLOUD_SECTION_PATCH_ALLOWED_PROP_KEYS = new Set<keyof Section>(
+    SECTION_SYNC_FIELD_SCHEMA
+        .filter((field) => field.cloudWrite === 'create-patch' || field.cloudWrite === 'patch')
+        .map((field) => field.name),
+);
 export const CLOUD_AREA_CREATION_ALLOWED_PROP_KEYS = new Set<keyof Area>([
     'color',
     'icon',
