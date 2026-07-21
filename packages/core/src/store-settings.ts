@@ -36,6 +36,7 @@ import { translations } from './i18n/i18n-translations';
 import { isSupportedLanguage } from './i18n/i18n-constants';
 import { getSystemDefaultLanguage } from './i18n/i18n-storage';
 import type { Language } from './i18n/i18n-types';
+import { beginNotifyProfile, endNotifyProfile, type NotifyProfile } from './store-notify-profiler';
 
 const MIGRATION_VERSION = 1;
 // Run auto-archive at most twice a day to keep background work bounded.
@@ -1138,87 +1139,94 @@ export const createSettingsActions = ({
             let visibleTasksReused = false;
             let stateUpdateSkipped = false;
             const setStateStartedAt = Date.now();
-            await measureCoreStartupPhase('core.fetch_data.zustand_set_state', async () => {
-                set((state) => {
-                    const producerStartedAt = Date.now();
-                    if (state.lastDataChangeAt > fetchStartedAt) {
-                        skippedDueToConcurrentLocalChange = true;
+            const notifyProfilingEnabled = nextSettings?.diagnostics?.loggingEnabled === true;
+            let notifyProfile: NotifyProfile | null = null;
+            if (notifyProfilingEnabled) beginNotifyProfile();
+            try {
+                await measureCoreStartupPhase('core.fetch_data.zustand_set_state', async () => {
+                    set((state) => {
+                        const producerStartedAt = Date.now();
+                        if (state.lastDataChangeAt > fetchStartedAt) {
+                            skippedDueToConcurrentLocalChange = true;
+                            setProducerMs = Date.now() - producerStartedAt;
+                            return options?.silent || !state.isLoading ? state : { isLoading: false };
+                        }
+                        const nextTasks = reconcileEntityCollection(state._allTasks, state._tasksById, allTasks);
+                        const nextProjects = reconcileEntityCollection(state._allProjects, state._projectsById, allProjects);
+                        const nextSections = reconcileEntityCollection(state._allSections, state._sectionsById, allSections);
+                        const nextAreas = reconcileEntityCollection(state._allAreas, state._areasById, allAreas);
+                        const nextPeople = reconcileEntityCollection(state._allPeople, state._peopleById, allPeople);
+                        const visibleTasks = reuseArrayIfShallowEqual(state.tasks, selectVisibleTasks(nextTasks.items));
+                        const visibleProjects = reuseArrayIfShallowEqual(state.projects, selectVisibleProjects(nextProjects.items));
+                        const visibleSections = reuseArrayIfShallowEqual(state.sections, selectVisibleSections(nextSections.items));
+                        const visibleAreas = reuseArrayIfShallowEqual(state.areas, selectVisibleAreas(nextAreas.items));
+                        const visiblePeople = reuseArrayIfShallowEqual(state.people, selectVisiblePeople(nextPeople.items));
+                        const settingsForState = reuseSettingsIfEquivalent(state.settings, nextSettings);
+                        tasksReplaced = nextTasks.replacedCount;
+                        projectsReplaced = nextProjects.replacedCount;
+                        settingsReused = settingsForState === state.settings;
+                        visibleTasksReused = visibleTasks === state.tasks;
+                        const nextLastDataChangeAt =
+                            didAutoArchive
+                                || didPromoteScheduled
+                                || didCompleteTasksForArchivedProjects
+                                || didArchiveSectionsForArchivedProjects
+                                || didClearDeletedProjectArchiveMetadata
+                                || didRepairEntityReferences
+                                || didTombstoneCleanup
+                                || didPeopleMigration
+                                ? getNextDataChangeAt(state.lastDataChangeAt)
+                                : state.lastDataChangeAt;
+                        if (
+                            visibleTasks === state.tasks
+                            && visibleProjects === state.projects
+                            && visibleSections === state.sections
+                            && visibleAreas === state.areas
+                            && visiblePeople === state.people
+                            && settingsForState === state.settings
+                            && nextTasks.items === state._allTasks
+                            && nextProjects.items === state._allProjects
+                            && nextSections.items === state._allSections
+                            && nextAreas.items === state._allAreas
+                            && nextPeople.items === state._allPeople
+                            && nextTasks.byId === state._tasksById
+                            && nextProjects.byId === state._projectsById
+                            && nextSections.byId === state._sectionsById
+                            && nextAreas.byId === state._areasById
+                            && nextPeople.byId === state._peopleById
+                            && state.isLoading === false
+                            && nextLastDataChangeAt === state.lastDataChangeAt
+                        ) {
+                            stateUpdateSkipped = true;
+                            setProducerMs = Date.now() - producerStartedAt;
+                            return state;
+                        }
                         setProducerMs = Date.now() - producerStartedAt;
-                        return options?.silent || !state.isLoading ? state : { isLoading: false };
-                    }
-                    const nextTasks = reconcileEntityCollection(state._allTasks, state._tasksById, allTasks);
-                    const nextProjects = reconcileEntityCollection(state._allProjects, state._projectsById, allProjects);
-                    const nextSections = reconcileEntityCollection(state._allSections, state._sectionsById, allSections);
-                    const nextAreas = reconcileEntityCollection(state._allAreas, state._areasById, allAreas);
-                    const nextPeople = reconcileEntityCollection(state._allPeople, state._peopleById, allPeople);
-                    const visibleTasks = reuseArrayIfShallowEqual(state.tasks, selectVisibleTasks(nextTasks.items));
-                    const visibleProjects = reuseArrayIfShallowEqual(state.projects, selectVisibleProjects(nextProjects.items));
-                    const visibleSections = reuseArrayIfShallowEqual(state.sections, selectVisibleSections(nextSections.items));
-                    const visibleAreas = reuseArrayIfShallowEqual(state.areas, selectVisibleAreas(nextAreas.items));
-                    const visiblePeople = reuseArrayIfShallowEqual(state.people, selectVisiblePeople(nextPeople.items));
-                    const settingsForState = reuseSettingsIfEquivalent(state.settings, nextSettings);
-                    tasksReplaced = nextTasks.replacedCount;
-                    projectsReplaced = nextProjects.replacedCount;
-                    settingsReused = settingsForState === state.settings;
-                    visibleTasksReused = visibleTasks === state.tasks;
-                    const nextLastDataChangeAt =
-                        didAutoArchive
-                            || didPromoteScheduled
-                            || didCompleteTasksForArchivedProjects
-                            || didArchiveSectionsForArchivedProjects
-                            || didClearDeletedProjectArchiveMetadata
-                            || didRepairEntityReferences
-                            || didTombstoneCleanup
-                            || didPeopleMigration
-                            ? getNextDataChangeAt(state.lastDataChangeAt)
-                            : state.lastDataChangeAt;
-                    if (
-                        visibleTasks === state.tasks
-                        && visibleProjects === state.projects
-                        && visibleSections === state.sections
-                        && visibleAreas === state.areas
-                        && visiblePeople === state.people
-                        && settingsForState === state.settings
-                        && nextTasks.items === state._allTasks
-                        && nextProjects.items === state._allProjects
-                        && nextSections.items === state._allSections
-                        && nextAreas.items === state._allAreas
-                        && nextPeople.items === state._allPeople
-                        && nextTasks.byId === state._tasksById
-                        && nextProjects.byId === state._projectsById
-                        && nextSections.byId === state._sectionsById
-                        && nextAreas.byId === state._areasById
-                        && nextPeople.byId === state._peopleById
-                        && state.isLoading === false
-                        && nextLastDataChangeAt === state.lastDataChangeAt
-                    ) {
-                        stateUpdateSkipped = true;
-                        setProducerMs = Date.now() - producerStartedAt;
-                        return state;
-                    }
-                    setProducerMs = Date.now() - producerStartedAt;
-                    return {
-                        tasks: visibleTasks,
-                        projects: visibleProjects,
-                        sections: visibleSections,
-                        areas: visibleAreas,
-                        people: visiblePeople,
-                        settings: settingsForState,
-                        _allTasks: nextTasks.items,
-                        _allProjects: nextProjects.items,
-                        _allSections: nextSections.items,
-                        _allAreas: nextAreas.items,
-                        _allPeople: nextPeople.items,
-                        _tasksById: nextTasks.byId,
-                        _projectsById: nextProjects.byId,
-                        _sectionsById: nextSections.byId,
-                        _areasById: nextAreas.byId,
-                        _peopleById: nextPeople.byId,
-                        isLoading: false,
-                        lastDataChangeAt: nextLastDataChangeAt,
-                    };
+                        return {
+                            tasks: visibleTasks,
+                            projects: visibleProjects,
+                            sections: visibleSections,
+                            areas: visibleAreas,
+                            people: visiblePeople,
+                            settings: settingsForState,
+                            _allTasks: nextTasks.items,
+                            _allProjects: nextProjects.items,
+                            _allSections: nextSections.items,
+                            _allAreas: nextAreas.items,
+                            _allPeople: nextPeople.items,
+                            _tasksById: nextTasks.byId,
+                            _projectsById: nextProjects.byId,
+                            _sectionsById: nextSections.byId,
+                            _areasById: nextAreas.byId,
+                            _peopleById: nextPeople.byId,
+                            isLoading: false,
+                            lastDataChangeAt: nextLastDataChangeAt,
+                        };
+                    });
                 });
-            });
+            } finally {
+                if (notifyProfilingEnabled) notifyProfile = endNotifyProfile();
+            }
             setStateMs = Date.now() - setStateStartedAt;
             const totalFetchMs = Date.now() - fetchInvokedAt;
             // Runtime diagnostic for shared beta logs: break the load pipeline down so a
@@ -1244,6 +1252,13 @@ export const createSettingsActions = ({
                         // slow refresh to recompute vs re-render storm (#766).
                         setProducerMs,
                         setNotifyMs: Math.max(0, setStateMs - setProducerMs),
+                        ...(notifyProfile ? {
+                            notifyListenerCount: String(notifyProfile.listenerCount),
+                            notifyTimedCalls: String(notifyProfile.timedCalls),
+                            notifyTimedMs: String(Math.round(notifyProfile.timedTotalMs)),
+                            notifyMaxMs: String(Math.round(notifyProfile.maxMs)),
+                            notifyTop5Ms: notifyProfile.top5Ms.map(Math.round).join(','),
+                        } : {}),
                         tasksReplaced,
                         projectsReplaced,
                         settingsReused,

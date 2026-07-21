@@ -22,6 +22,7 @@ import { createProjectActions } from './store-projects';
 import { createSettingsActions } from './store-settings';
 import { createTaskActions } from './store-tasks';
 import { sleep } from './async-utils';
+import { instrumentStoreSubscribe } from './store-notify-profiler';
 
 export { applyTaskUpdates } from './store-helpers';
 
@@ -486,7 +487,8 @@ export const flushPendingSave = async (): Promise<void> => {
     }
 };
 
-export const useTaskStore = createWithEqualityFn<TaskStore>()(subscribeWithSelector((rawSet, get) => {
+export const useTaskStore = createWithEqualityFn<TaskStore>()(subscribeWithSelector((rawSet, get, api) => {
+    instrumentStoreSubscribe(api);
     const set: typeof rawSet = (partial) => rawSet((state) => {
         const nextState = typeof partial === 'function' ? partial(state) : partial;
         return prepareStoreStateUpdate(state, nextState) as Partial<TaskStore> | TaskStore;
