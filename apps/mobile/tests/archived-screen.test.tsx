@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => {
   const updateProject = vi.fn();
   const deleteProject = vi.fn();
   const setHighlightTask = vi.fn();
+  const showToast = vi.fn();
   return {
     alert,
     batchDeleteTasks,
@@ -28,6 +29,7 @@ const mocks = vi.hoisted(() => {
     updateProject,
     deleteProject,
     setHighlightTask,
+    showToast,
     storeState: {
       _allTasks: [] as any[],
       projects: [] as any[],
@@ -89,7 +91,11 @@ vi.mock('@mindwtr/core', async (importOriginal) => {
 });
 
 vi.mock('@/contexts/toast-context', () => ({
-  useToast: () => ({ showToast: vi.fn(), dismissToast: vi.fn() }),
+  useToast: () => ({ showToast: mocks.showToast, dismissToast: vi.fn() }),
+}));
+
+vi.mock('@/lib/app-log', () => ({
+  logError: vi.fn(),
 }));
 
 vi.mock('@react-native-community/datetimepicker', () => ({
@@ -289,6 +295,27 @@ describe('ArchivedScreen', () => {
 
     expect(mocks.batchMoveTasks).toHaveBeenCalledWith(['task-1', 'task-2'], 'inbox');
     expect(mocks.updateTask).not.toHaveBeenCalledWith('task-1', { status: 'inbox' });
+  });
+
+  it('keeps selection and warns when a bulk restore reports failure', async () => {
+    mocks.batchMoveTasks.mockResolvedValueOnce({ success: false, error: 'Tasks not found: task-1' });
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<ArchivedScreen />);
+    });
+
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Select').props.onPress();
+    });
+    renderer.act(() => {
+      tree.root.find((node) => node.props.accessibilityLabel === 'Select Archived task').props.onPress();
+    });
+    await renderer.act(async () => {
+      await tree.root.find((node) => node.props.accessibilityLabel === 'Restore to Inbox').props.onPress();
+    });
+
+    expect(mocks.showToast).toHaveBeenCalledWith(expect.objectContaining({ tone: 'warning' }));
+    expect(tree.root.findAll((node) => node.props.accessibilityLabel === 'Move to Done')).not.toHaveLength(0);
   });
 
   it('bulk moves selected archived tasks back to Done', async () => {

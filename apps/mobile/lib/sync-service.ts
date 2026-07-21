@@ -899,8 +899,13 @@ class MobileSyncRun {
           fileSyncPath: this.fileSyncPath,
           fetcher: this.fetchWithAbort,
           ensureLocalSnapshotFresh: () => context.ensureLocalSnapshotFresh(),
-          deleteDropboxAttachment: (cloudKey) =>
-            this.runDropboxOperation((accessToken) => deleteDropboxFile(accessToken, cloudKey, this.fetchWithAbort)),
+          deleteDropboxAttachment: (cloudKey, ensureBeforeProviderDelete) =>
+            this.runDropboxOperation((accessToken) => {
+              // Token refresh can yield long enough for a local edit. Guard at
+              // the final provider call, not only before resolving credentials.
+              ensureBeforeProviderDelete();
+              return deleteDropboxFile(accessToken, cloudKey, this.fetchWithAbort);
+            }),
           isRemoteMissingError: (error) => error instanceof DropboxFileNotFoundError,
           logSyncInfo,
           logSyncWarning,

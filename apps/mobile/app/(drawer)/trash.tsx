@@ -1,7 +1,11 @@
 import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
 import { buildTrashTimeline, getInlineMarkdownPreview, projectMatchesAreaFilter, shallow, taskMatchesAreaFilter, tFallback, useTaskStore } from '@mindwtr/core';
-import type { Project, Task } from '@mindwtr/core';
+import type { Project, StoreActionResult, Task } from '@mindwtr/core';
 import { MarkdownInlineText } from '@/components/markdown-text';
+import { assertBulkActionSucceeded } from '@/components/use-task-list-selection';
+import { getBulkActionFailureMessage } from '@/components/task-list-utils';
+import { useToast } from '@/contexts/toast-context';
+import { logError } from '@/lib/app-log';
 import { useTheme } from '../../contexts/theme-context';
 import { useLanguage } from '../../contexts/language-context';
 
@@ -229,6 +233,7 @@ export default function TrashScreen() {
     setHighlightTask: state.setHighlightTask,
   }), shallow);
   const { t } = useLanguage();
+  const { showToast } = useToast();
   useTheme();
   const tc = useThemeColors();
   const { areaById, resolvedAreaFilter } = useMobileAreaFilter();
@@ -279,6 +284,25 @@ export default function TrashScreen() {
     setSelectedProjectIds(new Set());
   }, []);
 
+  const runTrashBulkAction = useCallback(async (
+    label: string,
+    action: () => Promise<(void | StoreActionResult)[]>,
+  ) => {
+    try {
+      const results = await action();
+      results.forEach(assertBulkActionSucceeded);
+      exitSelectionMode();
+    } catch (error) {
+      void logError(error, { scope: 'tasks', extra: { message: `Trash bulk action failed: ${label}` } });
+      showToast({
+        title: t('common.notice'),
+        message: getBulkActionFailureMessage(error, `${label} failed.`),
+        tone: 'warning',
+        durationMs: 4200,
+      });
+    }
+  }, [exitSelectionMode, showToast, t]);
+
   const toggleTaskSelection = useCallback((taskId: string) => {
     setSelectedTaskIds((previous) => {
       const next = new Set(previous);
@@ -306,12 +330,11 @@ export default function TrashScreen() {
     if (selectionCount === 0) return;
     const taskIds = Array.from(selectedTaskIds);
     const projectIds = Array.from(selectedProjectIds);
-    await Promise.all([
-      taskIds.length > 0 ? restoreTasks(taskIds) : Promise.resolve(),
+    await runTrashBulkAction(t('trash.restore'), () => Promise.all([
+      taskIds.length > 0 ? restoreTasks(taskIds) : Promise.resolve(undefined),
       ...projectIds.map((projectId) => restoreProject(projectId)),
-    ]);
-    exitSelectionMode();
-  }, [exitSelectionMode, restoreProject, restoreTasks, selectedProjectIds, selectedTaskIds, selectionCount]);
+    ]));
+  }, [restoreProject, restoreTasks, runTrashBulkAction, selectedProjectIds, selectedTaskIds, selectionCount, t]);
 
   const handleBulkPurge = useCallback(() => {
     if (selectionCount === 0) return;
@@ -326,16 +349,15 @@ export default function TrashScreen() {
           onPress: async () => {
             const taskIds = Array.from(selectedTaskIds);
             const projectIds = Array.from(selectedProjectIds);
-            await Promise.all([
-              taskIds.length > 0 ? purgeTasks(taskIds) : Promise.resolve(),
+            await runTrashBulkAction(t('trash.deletePermanently'), () => Promise.all([
+              taskIds.length > 0 ? purgeTasks(taskIds) : Promise.resolve(undefined),
               ...projectIds.map((projectId) => purgeProject(projectId)),
-            ]);
-            exitSelectionMode();
+            ]));
           },
         },
       ],
     );
-  }, [exitSelectionMode, purgeProject, purgeTasks, selectedProjectIds, selectedTaskIds, selectionCount, t]);
+  }, [purgeProject, purgeTasks, runTrashBulkAction, selectedProjectIds, selectedTaskIds, selectionCount, t]);
 
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {

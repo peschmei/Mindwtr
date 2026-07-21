@@ -37,7 +37,10 @@ type MobileAttachmentCleanupOptions = {
   fileSyncPath: string | null;
   fetcher: typeof fetch;
   ensureLocalSnapshotFresh: () => void;
-  deleteDropboxAttachment: (cloudKey: string) => Promise<void>;
+  deleteDropboxAttachment: (
+    cloudKey: string,
+    ensureBeforeProviderDelete: () => void
+  ) => Promise<void>;
   isRemoteMissingError: (error: unknown) => boolean;
   logSyncInfo: (message: string, extra?: Record<string, string>) => void;
   logSyncWarning: (message: string, error?: unknown) => void;
@@ -59,7 +62,8 @@ const getManagedAttachmentCleanupPrefixes = (): string[] => {
 
 const deleteAttachmentFile = async (
   uri: string | undefined,
-  logSyncWarning: MobileAttachmentCleanupOptions['logSyncWarning']
+  logSyncWarning: MobileAttachmentCleanupOptions['logSyncWarning'],
+  ensureLocalSnapshotFresh: MobileAttachmentCleanupOptions['ensureLocalSnapshotFresh']
 ): Promise<void> => {
   const safeUri = sanitizeAttachmentUriForSyncMerge(uri);
   if (!safeUri) return;
@@ -70,8 +74,10 @@ const deleteAttachmentFile = async (
     return;
   }
   try {
+    ensureLocalSnapshotFresh();
     await FileSystem.deleteAsync(safeUri, { idempotent: true });
   } catch (error) {
+    if (error instanceof Error && error.name === 'LocalSyncAbort') throw error;
     logSyncWarning('Failed to delete attachment file', error);
   }
 };
@@ -99,6 +105,7 @@ export const runMobileAttachmentCleanup = async (
     ? async (target: { cloudKey: string }) => {
       if (isWebdavBackend && options.webdavConfig) {
         const baseSyncUrl = getBaseSyncUrl(options.webdavConfig.url);
+        options.ensureLocalSnapshotFresh();
         await webdavDeleteFile(baseSyncUrl + '/' + target.cloudKey, {
           ...getMobileWebDavRequestOptions(options.webdavConfig.allowInsecureHttp),
           username: options.webdavConfig.username,
@@ -108,6 +115,7 @@ export const runMobileAttachmentCleanup = async (
         });
       } else if (isCloudBackend && options.cloudConfig) {
         const baseSyncUrl = getCloudBaseUrl(options.cloudConfig.url);
+        options.ensureLocalSnapshotFresh();
         await cloudDeleteFile(baseSyncUrl + '/' + target.cloudKey, {
           ...getMobileCloudRequestOptions(options.cloudConfig.allowInsecureHttp),
           token: options.cloudConfig.token,
@@ -115,8 +123,13 @@ export const runMobileAttachmentCleanup = async (
           fetcher: options.fetcher,
         });
       } else if (isDropboxBackend) {
-        await options.deleteDropboxAttachment(target.cloudKey);
+        options.ensureLocalSnapshotFresh();
+        await options.deleteDropboxAttachment(
+          target.cloudKey,
+          options.ensureLocalSnapshotFresh,
+        );
       } else if (fileBaseDir) {
+        options.ensureLocalSnapshotFresh();
         await FileSystem.deleteAsync(fileBaseDir + '/' + target.cloudKey, { idempotent: true });
       }
     }
@@ -126,9 +139,11 @@ export const runMobileAttachmentCleanup = async (
     appData: options.appData,
     maxAttachmentTargets: ATTACHMENT_CLEANUP_BATCH_LIMIT,
     beforeEachAttachment: options.ensureLocalSnapshotFresh,
+    beforeEachRemoteDelete: options.ensureLocalSnapshotFresh,
     deleteLocalAttachment: (attachment) => deleteAttachmentFile(
       attachment.uri,
       options.logSyncWarning,
+      options.ensureLocalSnapshotFresh,
     ),
     deleteRemoteAttachment,
     isRemoteMissingError: options.isRemoteMissingError,

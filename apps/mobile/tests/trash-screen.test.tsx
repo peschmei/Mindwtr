@@ -2,20 +2,22 @@ import React from 'react';
 import { Alert } from 'react-native';
 import renderer from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { StoreActionResult } from '@mindwtr/core';
 
 import TrashScreen from '../app/(drawer)/trash';
 
 const mocks = vi.hoisted(() => ({
+  showToast: vi.fn(),
   storeState: {
     _allTasks: [] as any[],
     _allProjects: [] as any[],
     projects: [] as any[],
     restoreTask: vi.fn(),
-    restoreTasks: vi.fn(async () => ({ success: true })),
-    restoreProject: vi.fn(),
+    restoreTasks: vi.fn(async (): Promise<StoreActionResult> => ({ success: true })),
+    restoreProject: vi.fn(async (): Promise<StoreActionResult> => ({ success: true })),
     purgeTask: vi.fn(),
-    purgeTasks: vi.fn(async () => ({ success: true })),
-    purgeProject: vi.fn(),
+    purgeTasks: vi.fn(async (): Promise<StoreActionResult> => ({ success: true })),
+    purgeProject: vi.fn(async (): Promise<StoreActionResult> => ({ success: true })),
     purgeDeletedTasks: vi.fn(),
     purgeDeletedProjects: vi.fn(),
     highlightTaskId: null as string | null,
@@ -57,6 +59,14 @@ vi.mock('@mindwtr/core', async () => {
 
 vi.mock('@/components/markdown-text', () => ({
   MarkdownInlineText: ({ markdown, ...props }: any) => React.createElement('MarkdownInlineText', props, markdown),
+}));
+
+vi.mock('@/contexts/toast-context', () => ({
+  useToast: () => ({ showToast: mocks.showToast, dismissToast: vi.fn() }),
+}));
+
+vi.mock('@/lib/app-log', () => ({
+  logError: vi.fn(),
 }));
 
 vi.mock('../contexts/theme-context', () => ({
@@ -163,6 +173,23 @@ describe('TrashScreen', () => {
     expect(mocks.storeState.restoreProject).toHaveBeenCalledWith('older-project');
   });
 
+  it('keeps selection and warns when one bulk restore result fails', async () => {
+    mocks.storeState.restoreProject.mockResolvedValueOnce({ success: false, error: 'Project not found' });
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<TrashScreen />);
+    });
+
+    renderer.act(() => { findPressableByLabel(tree, 'Select').props.onPress(); });
+    renderer.act(() => { findPressableByLabel(tree, 'Select all').props.onPress(); });
+    await renderer.act(async () => {
+      await findPressableByLabel(tree, 'trash.restore').props.onPress();
+    });
+
+    expect(mocks.showToast).toHaveBeenCalledWith(expect.objectContaining({ tone: 'warning' }));
+    expect(findPressableByLabel(tree, 'trash.deletePermanently')).toBeTruthy();
+  });
+
   it('bulk purges selected items after confirming the alert', async () => {
     const alertSpy = vi.spyOn(Alert, 'alert');
     let tree!: renderer.ReactTestRenderer;
@@ -183,5 +210,26 @@ describe('TrashScreen', () => {
 
     expect(mocks.storeState.purgeTasks).toHaveBeenCalledWith(['recent-task']);
     expect(mocks.storeState.purgeProject).toHaveBeenCalledWith('older-project');
+  });
+
+  it('keeps selection and warns when one bulk purge result fails', async () => {
+    mocks.storeState.purgeTasks.mockResolvedValueOnce({ success: false, error: 'Tasks not found' });
+    const alertSpy = vi.spyOn(Alert, 'alert');
+    let tree!: renderer.ReactTestRenderer;
+    renderer.act(() => {
+      tree = renderer.create(<TrashScreen />);
+    });
+
+    renderer.act(() => { findPressableByLabel(tree, 'Select').props.onPress(); });
+    renderer.act(() => { findPressableByLabel(tree, 'Select all').props.onPress(); });
+    renderer.act(() => { findPressableByLabel(tree, 'trash.deletePermanently').props.onPress(); });
+    const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
+    const confirmButton = buttons.find((button) => button.style === 'destructive');
+    await renderer.act(async () => {
+      await confirmButton?.onPress?.();
+    });
+
+    expect(mocks.showToast).toHaveBeenCalledWith(expect.objectContaining({ tone: 'warning' }));
+    expect(findPressableByLabel(tree, 'trash.deletePermanently')).toBeTruthy();
   });
 });

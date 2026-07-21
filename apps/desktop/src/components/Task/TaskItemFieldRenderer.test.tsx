@@ -24,6 +24,9 @@ const t = (key: string) => {
     const labels: Record<string, string> = {
         'common.clear': 'Clear',
         'common.none': 'None',
+        'nav.calendar': 'Calendar',
+        'calendar.prevMonth': 'Previous month',
+        'calendar.nextMonth': 'Next month',
         'task.aria.status': 'Task status',
         'taskEdit.startDateLabel': 'Start Date',
         'taskEdit.dueDateLabel': 'Due Date',
@@ -527,19 +530,19 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             fieldId: 'startTime' as const,
             draftValue: { startTime: '2026-04-18' },
             inputLabel: 'Start date',
-            dialogLabel: 'Start Date calendar',
+            dialogLabel: 'Start Date Calendar',
         },
         {
             fieldId: 'dueDate' as const,
             draftValue: { dueDate: '2026-04-19' },
             inputLabel: 'Due date',
-            dialogLabel: 'Due Date calendar',
+            dialogLabel: 'Due Date Calendar',
         },
         {
             fieldId: 'reviewAt' as const,
             draftValue: { reviewAt: '2026-04-20' },
             inputLabel: 'Review date',
-            dialogLabel: 'Review Date calendar',
+            dialogLabel: 'Review Date Calendar',
         },
     ])('closes the $fieldId mini calendar when clicking outside', ({ fieldId, draftValue, dialogLabel }) => {
         const { getByRole, queryByRole } = render(
@@ -567,13 +570,13 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             />
         );
 
-        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
-        const dialog = getByRole('dialog', { name: 'Due Date calendar' });
+        fireEvent.click(getByRole('button', { name: 'Due Date Calendar' }));
+        const dialog = getByRole('dialog', { name: 'Due Date Calendar' });
 
         fireEvent.click(within(dialog).getByRole('button', { name: /April 19, 2026/i }));
 
         expect(setField).toHaveBeenCalledWith('dueDate', '2026-04-19');
-        expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+        expect(queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
         expect(dialog).not.toBeInTheDocument();
     });
 
@@ -589,7 +592,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         // Suggestions now live only inside the fixed calendar popover, so focusing
         // the field must not mount anything that shifts the editor layout (#901).
-        expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+        expect(queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
         expect(queryByRole('button', { name: 'Today' })).not.toBeInTheDocument();
         expect(queryByRole('button', { name: 'Next month' })).not.toBeInTheDocument();
     });
@@ -604,9 +607,9 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         expect(queryByRole('button', { name: 'Today' })).not.toBeInTheDocument();
 
-        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
+        fireEvent.click(getByRole('button', { name: 'Due Date Calendar' }));
 
-        const dialog = getByRole('dialog', { name: 'Due Date calendar' });
+        const dialog = getByRole('dialog', { name: 'Due Date Calendar' });
         expect(within(dialog).getByRole('button', { name: 'Today' })).toBeInTheDocument();
         expect(within(dialog).getByRole('button', { name: '+2 days' })).toBeInTheDocument();
         expect(within(dialog).getByRole('button', { name: 'Next month' })).toBeInTheDocument();
@@ -623,12 +626,12 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             />
         );
 
-        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
-        const dialog = getByRole('dialog', { name: 'Due Date calendar' });
-        const nextMonthButton = within(dialog).getByRole('button', { name: 'Show next month' });
+        fireEvent.click(getByRole('button', { name: 'Due Date Calendar' }));
+        const dialog = getByRole('dialog', { name: 'Due Date Calendar' });
+        const nextMonthButton = within(dialog).getByRole('button', { name: 'Calendar: Next month' });
         fireEvent.click(nextMonthButton);
 
-        const updatedDialog = getByRole('dialog', { name: 'Due Date calendar' });
+        const updatedDialog = getByRole('dialog', { name: 'Due Date Calendar' });
         fireEvent.click(
             within(updatedDialog).getByRole('button', { name: /May 19, 2026/i })
         );
@@ -636,7 +639,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         expect(setField).toHaveBeenCalledWith('dueDate', '2026-05-19');
         await waitFor(() => {
-            expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+            expect(queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
         });
     });
 
@@ -666,8 +669,8 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             />
         );
 
-        fireEvent.click(getByRole('button', { name: `${calendarLabel} calendar` }));
-        const dialog = getByRole('dialog', { name: `${calendarLabel} calendar` });
+        fireEvent.click(getByRole('button', { name: `${calendarLabel} Calendar` }));
+        const dialog = getByRole('dialog', { name: `${calendarLabel} Calendar` });
         const tomorrowButton = within(dialog).getByRole('button', { name: 'Tomorrow' });
         fireEvent.mouseDown(tomorrowButton);
         fireEvent.click(tomorrowButton);
@@ -679,7 +682,7 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
         const expected = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
 
         expect(setField).toHaveBeenCalledWith(draftKey, expected);
-        expect(queryByRole('dialog', { name: `${calendarLabel} calendar` })).not.toBeInTheDocument();
+        expect(queryByRole('dialog', { name: `${calendarLabel} Calendar` })).not.toBeInTheDocument();
     });
 
     it('clears the date when the No date suggestion is chosen from the popover', () => {
@@ -692,14 +695,14 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             />
         );
 
-        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
-        const dialog = getByRole('dialog', { name: 'Due Date calendar' });
+        fireEvent.click(getByRole('button', { name: 'Due Date Calendar' }));
+        const dialog = getByRole('dialog', { name: 'Due Date Calendar' });
         const noDateButton = within(dialog).getByRole('button', { name: 'No date' });
         fireEvent.mouseDown(noDateButton);
         fireEvent.click(noDateButton);
 
         expect(setField).toHaveBeenCalledWith('dueDate', '');
-        expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+        expect(queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
     });
 
     it('closes the calendar popover when a pointer press lands outside the field', async () => {
@@ -710,15 +713,15 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
             />
         );
 
-        fireEvent.click(getByRole('button', { name: 'Due Date calendar' }));
-        expect(getByRole('dialog', { name: 'Due Date calendar' })).toBeInTheDocument();
+        fireEvent.click(getByRole('button', { name: 'Due Date Calendar' }));
+        expect(getByRole('dialog', { name: 'Due Date Calendar' })).toBeInTheDocument();
 
         act(() => {
             document.dispatchEvent(new Event('pointerdown', { bubbles: true }));
         });
 
         await waitFor(() => {
-            expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+            expect(queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
         });
     });
 
@@ -732,13 +735,13 @@ describe('TaskItemFieldRenderer date clear buttons', () => {
 
         fireEvent.focus(getByLabelText('Due date'));
         fireEvent.keyDown(getByLabelText('Due date'), { key: 'ArrowDown' });
-        expect(getByRole('dialog', { name: 'Due Date calendar' })).toBeInTheDocument();
+        expect(getByRole('dialog', { name: 'Due Date Calendar' })).toBeInTheDocument();
 
         // No pointer press is in flight, so the teardown runs on the next-tick
         // timeout rather than waiting for a pointerup that will never come.
         fireEvent.blur(getByLabelText('Due date'));
         await waitFor(() => {
-            expect(queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+            expect(queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
         });
     });
 

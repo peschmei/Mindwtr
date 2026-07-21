@@ -106,7 +106,10 @@ let pendingSelfWrites: Array<{ payload: string; expiresAt: number }> = [];
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let sqliteDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let ignoreDrainTimer: ReturnType<typeof setTimeout> | null = null;
+let sqliteIgnoreDrainTimer: ReturnType<typeof setTimeout> | null = null;
 let hasPendingChangeDuringIgnore = false;
+let hasPendingSqliteChangeDuringSelfWrite = false;
+let pendingSqliteChangePaths: string[] = [];
 let pendingExternalData: PendingExternalData | null = null;
 let mergeInFlight: Promise<void> | null = null;
 let sqliteRefreshInFlight: Promise<void> | null = null;
@@ -279,6 +282,23 @@ const scheduleIgnoreDrain = () => {
     }, remainingMs + IGNORE_DRAIN_PADDING_MS);
 };
 
+const scheduleSqliteIgnoreDrain = () => {
+    if (!hasPendingSqliteChangeDuringSelfWrite) return;
+    if (sqliteIgnoreDrainTimer) {
+        localDataWatcherDependencies.cancelSchedule(sqliteIgnoreDrainTimer);
+        sqliteIgnoreDrainTimer = null;
+    }
+    const remainingMs = Math.max(0, sqliteSelfWriteUntil - localDataWatcherDependencies.now());
+    sqliteIgnoreDrainTimer = localDataWatcherDependencies.schedule(() => {
+        sqliteIgnoreDrainTimer = null;
+        if (!hasPendingSqliteChangeDuringSelfWrite) return;
+        hasPendingSqliteChangeDuringSelfWrite = false;
+        const paths = pendingSqliteChangePaths;
+        pendingSqliteChangePaths = [];
+        void handleSqliteChange({ immediate: true, paths });
+    }, remainingMs + IGNORE_DRAIN_PADDING_MS);
+};
+
 const runPendingMerge = () => {
     if (mergeInFlight) return;
 
@@ -335,6 +355,7 @@ const markSqliteSelfWriteWindow = (): void => {
     extendSqliteIgnoreWindow();
     sqliteSelfWriteUntil = Math.max(sqliteSelfWriteUntil, now + SQLITE_SELF_WRITE_RETENTION_MS);
     lastSqliteSelfWriteAt = now;
+    scheduleSqliteIgnoreDrain();
     localDataWatcherDependencies.logInfo(
         '[local-data-watcher] Marked SQLite self-write',
         buildSqliteWatcherTraceExtra([], {
@@ -428,6 +449,9 @@ async function handleSqliteChange(options: { immediate?: boolean; paths?: string
         if (now < sqliteIgnoreUntil) {
             if (now < sqliteSelfWriteUntil) {
                 sqliteSuppressedSelfWriteEvents += 1;
+                hasPendingSqliteChangeDuringSelfWrite = true;
+                pendingSqliteChangePaths = paths.slice(0, 8);
+                scheduleSqliteIgnoreDrain();
             }
             localDataWatcherDependencies.logInfo(
                 '[local-data-watcher] SQLite event ignored inside write window',
@@ -438,6 +462,9 @@ async function handleSqliteChange(options: { immediate?: boolean; paths?: string
 
         if (now < sqliteSelfWriteUntil) {
             sqliteSuppressedSelfWriteEvents += 1;
+            hasPendingSqliteChangeDuringSelfWrite = true;
+            pendingSqliteChangePaths = paths.slice(0, 8);
+            scheduleSqliteIgnoreDrain();
             localDataWatcherDependencies.logInfo(
                 '[local-data-watcher] SQLite event suppressed as delayed self-write',
                 buildSqliteWatcherTraceExtra(paths),
@@ -628,7 +655,13 @@ export function stop(): void {
         localDataWatcherDependencies.cancelSchedule(ignoreDrainTimer);
         ignoreDrainTimer = null;
     }
+    if (sqliteIgnoreDrainTimer) {
+        localDataWatcherDependencies.cancelSchedule(sqliteIgnoreDrainTimer);
+        sqliteIgnoreDrainTimer = null;
+    }
     hasPendingChangeDuringIgnore = false;
+    hasPendingSqliteChangeDuringSelfWrite = false;
+    pendingSqliteChangePaths = [];
     pendingExternalData = null;
     pendingSelfWrites = [];
     sqliteIgnoreUntil = 0;
@@ -664,6 +697,8 @@ export const __localDataWatcherTestUtils = {
         sqliteSelfWriteUntil = 0;
         lastSqliteSelfWriteAt = 0;
         sqliteSuppressedSelfWriteEvents = 0;
+        hasPendingSqliteChangeDuringSelfWrite = false;
+        pendingSqliteChangePaths = [];
         lastKnownHash = '';
         pendingSelfWrites = [];
         mergeInFlight = null;

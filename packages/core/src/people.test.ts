@@ -4,7 +4,9 @@ import {
     getPersonSuggestionNames,
     normalizePeopleForLoad,
 } from './people';
-import type { Person, Task } from './types';
+import { mergeAppDataWithStats } from './sync';
+import { validateMergedSyncData } from './sync-normalization';
+import type { AppData, Person, Task } from './types';
 
 const task = (overrides: Partial<Task>): Task => ({
     id: overrides.id ?? 'task-1',
@@ -23,6 +25,15 @@ const person = (overrides: Partial<Person>): Person => ({
     createdAt: overrides.createdAt ?? '2026-04-01T00:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-04-01T00:00:00.000Z',
     ...overrides,
+});
+
+const appDataWithPeople = (people: Person[]): AppData => ({
+    tasks: [],
+    projects: [],
+    sections: [],
+    areas: [],
+    people,
+    settings: {},
 });
 
 describe('people helpers', () => {
@@ -108,6 +119,69 @@ describe('people helpers', () => {
         );
         expect(stableReload.didChange).toBe(false);
         expect(stableReload.people).toEqual(result.people);
+    });
+
+    it('tombstones a blank-name person once without dropping its synced identity', () => {
+        const malformedPerson = person({
+            id: 'person-blank',
+            name: '   ',
+            note: ' Preserve this note ',
+            referenceLink: ' https://example.com/blank ',
+            rev: 7,
+            revBy: 'device-remote',
+        });
+        const firstLoad = normalizePeopleForLoad(
+            [malformedPerson],
+            [],
+            '2026-04-05T00:00:00.000Z',
+            'device-local',
+        );
+
+        expect(firstLoad.didChange).toBe(true);
+        expect(firstLoad.people).toEqual([
+            expect.objectContaining({
+                id: 'person-blank',
+                name: '__mindwtr_deleted_person__:person-blank',
+                note: 'Preserve this note',
+                referenceLink: 'https://example.com/blank',
+                deletedAt: '2026-04-05T00:00:00.000Z',
+                updatedAt: '2026-04-05T00:00:00.000Z',
+                rev: 8,
+                revBy: 'device-local',
+            }),
+        ]);
+
+        const stableReload = normalizePeopleForLoad(
+            firstLoad.people,
+            [],
+            '2026-04-06T00:00:00.000Z',
+            'device-local',
+        );
+        expect(stableReload.didChange).toBe(false);
+        expect(stableReload.people).toEqual(firstLoad.people);
+
+        const firstMerge = mergeAppDataWithStats(
+            appDataWithPeople(firstLoad.people),
+            appDataWithPeople([malformedPerson]),
+            { nowIso: '2026-04-06T00:00:00.000Z' },
+        );
+        expect(firstMerge.data.people).toEqual(firstLoad.people);
+        expect(validateMergedSyncData(firstMerge.data)).toEqual([]);
+
+        const peerConvergenceMerge = mergeAppDataWithStats(
+            appDataWithPeople([malformedPerson]),
+            firstMerge.data,
+            { nowIso: '2026-04-06T00:00:00.000Z' },
+        );
+        expect(peerConvergenceMerge.data.people).toEqual(firstLoad.people);
+
+        const stableMerge = mergeAppDataWithStats(
+            firstMerge.data,
+            peerConvergenceMerge.data,
+            { nowIso: '2026-04-06T00:00:00.000Z' },
+        );
+        expect(stableMerge.stats.people?.conflicts).toBe(0);
+        expect(stableMerge.data.people).toEqual(firstLoad.people);
     });
 
     it('converges after one load normalization across people shapes', () => {

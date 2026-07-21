@@ -39,6 +39,12 @@ export type AttachmentCleanupDeps = {
     resolveWebdavPassword: (config: WebDavConfig) => Promise<string>;
 };
 
+export type AttachmentCleanupGuards = {
+    /** Throws LocalSyncAbort when the cleanup snapshot no longer covers the
+     * current store. Call immediately before every irreversible delete. */
+    ensureLocalSnapshotFresh: () => void;
+};
+
 export const cleanupAttachmentTempFiles = async (deps: Pick<AttachmentCleanupDeps, 'isTauriRuntimeEnv' | 'logSyncWarning'>): Promise<void> => {
     if (!deps.isTauriRuntimeEnv()) return;
     try {
@@ -63,6 +69,7 @@ export const cleanupAttachmentTempFiles = async (deps: Pick<AttachmentCleanupDep
 export const deleteAttachmentFile = async (
     attachment: Attachment,
     deps: Pick<AttachmentCleanupDeps, 'logSyncWarning'>,
+    guards: AttachmentCleanupGuards,
 ): Promise<void> => {
     const safeUri = sanitizeAttachmentUriForSyncMerge(attachment.uri);
     if (!safeUri) return;
@@ -77,8 +84,10 @@ export const deleteAttachmentFile = async (
             normalizedRawUri === normalizedAttachmentsDir
             || !normalizedRawUri.startsWith(`${normalizedAttachmentsDir}/`)
         ) return;
+        guards.ensureLocalSnapshotFresh();
         await remove(normalizedRawUri);
     } catch (error) {
+        if (error instanceof Error && error.name === 'LocalSyncAbort') throw error;
         deps.logSyncWarning(`Failed to delete attachment file ${attachment.title}`, error);
     }
 };
@@ -87,6 +96,7 @@ export const cleanupOrphanedAttachments = async (
     appData: AppData,
     backend: SyncBackend,
     deps: AttachmentCleanupDeps,
+    guards: AttachmentCleanupGuards,
 ): Promise<AppData> => {
     const maybeYield = createCooperativeYield(4);
     const resolveRemoteDeleteAttachment = async (): Promise<AttachmentCleanupRemoteDelete | undefined> => {
@@ -132,6 +142,7 @@ export const cleanupOrphanedAttachments = async (
         const deleteDropboxAttachment = async (cloudKey: string): Promise<void> => {
             const run = async (forceRefresh: boolean) => {
                 const token = await resolveDropboxAccessToken(forceRefresh);
+                guards.ensureLocalSnapshotFresh();
                 await deleteDropboxFile(token, cloudKey, dropboxFetcher);
             };
             try {
@@ -148,6 +159,7 @@ export const cleanupOrphanedAttachments = async (
         return async (target) => {
             if (backend === 'webdav' && webdavConfig?.url) {
                 const baseUrl = getBaseSyncUrl(webdavConfig.url);
+                guards.ensureLocalSnapshotFresh();
                 await webdavDeleteFile(baseUrl + '/' + target.cloudKey, {
                     allowInsecureHttp: webdavConfig.allowInsecureHttp,
                     username: webdavConfig.username,
@@ -156,6 +168,7 @@ export const cleanupOrphanedAttachments = async (
                 });
             } else if (backend === 'cloud' && cloudProvider === 'selfhosted' && cloudConfig?.url) {
                 const baseUrl = getCloudBaseUrl(cloudConfig.url);
+                guards.ensureLocalSnapshotFresh();
                 await cloudDeleteFile(baseUrl + '/' + target.cloudKey, {
                     allowInsecureHttp: cloudConfig.allowInsecureHttp,
                     token: cloudConfig.token,
@@ -167,16 +180,22 @@ export const cleanupOrphanedAttachments = async (
                 const { remove } = await import('@tauri-apps/plugin-fs');
                 const { join } = await import('@tauri-apps/api/path');
                 const targetPath = await resolveFileBackendPath(join, fileBaseDir, target.cloudKey);
+                guards.ensureLocalSnapshotFresh();
                 await remove(targetPath);
             }
         };
     };
 
+    const yieldThenEnsureFresh = async (): Promise<void> => {
+        await maybeYield();
+        guards.ensureLocalSnapshotFresh();
+    };
+
     const result = await runAttachmentCleanupLifecycle({
         appData,
-        beforeEachAttachment: maybeYield,
-        beforeEachRemoteDelete: maybeYield,
-        deleteLocalAttachment: (attachment) => deleteAttachmentFile(attachment, deps),
+        beforeEachAttachment: yieldThenEnsureFresh,
+        beforeEachRemoteDelete: yieldThenEnsureFresh,
+        deleteLocalAttachment: (attachment) => deleteAttachmentFile(attachment, deps, guards),
         resolveRemoteDeleteAttachment,
         isRemoteMissingError: (error) => error instanceof DropboxFileNotFoundError,
         onRemoteAttachmentMissing: (target) => {

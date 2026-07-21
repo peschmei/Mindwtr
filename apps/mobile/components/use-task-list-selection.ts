@@ -140,8 +140,9 @@ export function useTaskListSelection({
                 tone: 'success',
                 actionLabel: restoreActionLabel,
                 onAction: () => {
-                  deletedIds.forEach((id) => {
-                    void restoreTask(id);
+                  void runBulkAction(restoreActionLabel, async () => {
+                    const results = await Promise.all(deletedIds.map((id) => restoreTask(id)));
+                    results.forEach(assertBulkActionSucceeded);
                   });
                 },
               });

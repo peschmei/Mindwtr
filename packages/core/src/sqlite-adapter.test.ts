@@ -482,6 +482,112 @@ describeSqlite('SqliteAdapter', () => {
         });
     });
 
+    it('does not let a stale snapshot delete a row added by another adapter', async () => {
+        const now = '2026-07-21T08:00:00.000Z';
+        const original: AppData = {
+            tasks: [{
+                id: 'task-original',
+                title: 'Original',
+                status: 'next',
+                tags: [],
+                contexts: [],
+                createdAt: now,
+                updatedAt: now,
+                rev: 1,
+                revBy: 'device-a',
+            }],
+            projects: [],
+            sections: [],
+            areas: [],
+            people: [],
+            settings: {},
+        };
+        await adapter.saveData(original);
+
+        const staleAdapter = new SqliteAdapter(createClient(db));
+        const staleSnapshot = await staleAdapter.getData();
+        const otherAdapter = new SqliteAdapter(createClient(db));
+        await otherAdapter.saveTask({
+            id: 'task-concurrent',
+            title: 'Concurrent',
+            status: 'inbox',
+            tags: [],
+            contexts: [],
+            createdAt: now,
+            updatedAt: now,
+            rev: 1,
+            revBy: 'device-b',
+        });
+
+        await staleAdapter.saveData(staleSnapshot);
+
+        expect(allSql<{ id: string }>(db, 'SELECT id FROM tasks ORDER BY id')).toEqual([
+            { id: 'task-concurrent' },
+            { id: 'task-original' },
+        ]);
+    });
+
+    it('uses the observed row version when pruning after another adapter advances it', async () => {
+        const now = '2026-07-21T08:00:00.000Z';
+        const data: AppData = {
+            tasks: [
+                {
+                    id: 'task-keep',
+                    title: 'Keep',
+                    status: 'next',
+                    tags: [],
+                    contexts: [],
+                    createdAt: now,
+                    updatedAt: now,
+                    rev: 1,
+                    revBy: 'device-a',
+                },
+                {
+                    id: 'task-remove',
+                    title: 'Original',
+                    status: 'next',
+                    tags: [],
+                    contexts: [],
+                    createdAt: now,
+                    updatedAt: now,
+                    rev: 1,
+                    revBy: 'device-a',
+                },
+            ],
+            projects: [],
+            sections: [],
+            areas: [],
+            people: [],
+            settings: {},
+        };
+        await adapter.saveData(data);
+
+        const staleAdapter = new SqliteAdapter(createClient(db));
+        const staleSnapshot = await staleAdapter.getData();
+        const otherAdapter = new SqliteAdapter(createClient(db));
+        await otherAdapter.saveTask({
+            ...data.tasks[1],
+            title: 'Advanced elsewhere',
+            updatedAt: '2026-07-21T09:00:00.000Z',
+            rev: 2,
+            revBy: 'device-b',
+        });
+
+        await staleAdapter.saveData({
+            ...staleSnapshot,
+            tasks: staleSnapshot.tasks.filter((task) => task.id !== 'task-remove'),
+        });
+        expect(getSql<{ title: string; rev: number }>(db, 'SELECT title, rev FROM tasks WHERE id = ?', ['task-remove']))
+            .toEqual({ title: 'Advanced elsewhere', rev: 2 });
+
+        const refreshed = await staleAdapter.getData();
+        await staleAdapter.saveData({
+            ...refreshed,
+            tasks: refreshed.tasks.filter((task) => task.id !== 'task-remove'),
+        });
+        expect(getSql(db, 'SELECT id FROM tasks WHERE id = ?', ['task-remove'])).toBeUndefined();
+    });
+
     it('allows equal-revision task upserts for unchanged ordering semantics', async () => {
         const task = {
             id: 'task-1',
@@ -1331,15 +1437,25 @@ describeSqlite('SqliteAdapter incremental saveData', () => {
         });
     });
 
-    it('removes dropped rows with targeted deletes instead of temp-table scans', async () => {
+    it('removes dropped rows only when their observed database version still matches', async () => {
         const data = baseData();
         await adapter.saveData(data);
         statements = [];
         await adapter.saveData({ ...data, tasks: [data.tasks[0]] });
         const deletes = statements.filter(({ sql }) => sql.startsWith('DELETE FROM tasks'));
         expect(deletes).toHaveLength(1);
-        expect(deletes[0].params).toEqual(['task-2']);
-        expect(statements.filter(({ sql }) => sql.startsWith('CREATE TEMP TABLE'))).toEqual([]);
+        expect(deletes[0].sql).toContain('known.rev IS tasks.rev');
+        expect(deletes[0].sql).toContain('known.updatedAt IS tasks.updatedAt');
+        expect(deletes[0].sql).not.toContain('NOT IN');
+        const versionInsert = statements.find(({ sql }) =>
+            sql.startsWith('INSERT OR IGNORE INTO temp_tasks_ids_')
+        );
+        expect(versionInsert?.params).toEqual([
+            'task-2',
+            null,
+            1,
+            '2026-07-01T08:00:00.000Z',
+        ]);
         const rows = allSql<{ id: string }>(db, 'SELECT id FROM tasks');
         expect(rows).toEqual([{ id: 'task-1' }]);
     });
@@ -1388,7 +1504,7 @@ describeSqlite('SqliteAdapter incremental saveData', () => {
 });
 
 describe('SqliteAdapter saveData pruning', () => {
-    it('batches temp id table inserts and uses unique temp names', async () => {
+    it('does not run complement deletes when the adapter has no read or write baseline', async () => {
         const run = vi.fn().mockResolvedValue(undefined);
         const client: SqliteClient = {
             run,
@@ -1420,15 +1536,16 @@ describe('SqliteAdapter saveData pruning', () => {
         const tempCreateCalls = run.mock.calls
             .map(([sql]) => String(sql))
             .filter((sql) => sql.startsWith('CREATE TEMP TABLE temp_'));
-        const tempNames = tempCreateCalls.map((sql) => sql.match(/CREATE TEMP TABLE (temp_[a-z0-9_]+)/)?.[1]);
-        expect(new Set(tempNames).size).toBe(6);
-        expect(tempNames.some((name) => name?.startsWith('temp_people_ids_'))).toBe(true);
-
-        const tempAreaInsertCalls = run.mock.calls.filter(([sql]) =>
-            String(sql).startsWith('INSERT OR IGNORE INTO temp_areas_ids_')
-        );
-        expect(tempAreaInsertCalls).toHaveLength(3);
-        expect(tempAreaInsertCalls.map(([, params]) => (params as unknown[]).length)).toEqual([500, 500, 201]);
+        expect(tempCreateCalls).toEqual([]);
+        expect(run.mock.calls
+            .map(([sql]) => String(sql))
+            .filter((sql) => sql.startsWith('DELETE FROM tasks')
+                || sql.startsWith('DELETE FROM projects')
+                || sql.startsWith('DELETE FROM sections')
+                || sql.startsWith('DELETE FROM areas')
+                || sql.startsWith('DELETE FROM people')
+                || sql.startsWith('DELETE FROM saved_filters'))
+        ).toEqual([]);
     });
 });
 

@@ -261,9 +261,10 @@ export interface SyncRunPlatformHooks {
     /** Delete stale attachment temp files after the post-merge phase. */
     cleanupAttachmentTempFiles?(): Promise<void>;
     /** Periodic orphaned-attachment cleanup. The machine owns the interval
-     *  gate and persists the returned data; implementations own the scan,
-     *  remote deletes, and their own pre-persist freshness checks. Return
-     *  null when there is nothing to persist. */
+     *  gate and rechecks freshness before persisting the returned data;
+     *  implementations own the scan and must use the context guard immediately
+     *  before every destructive local/remote operation. Return null when there
+     *  is nothing to persist. */
     runAttachmentCleanup?(
         data: AppData,
         context: SyncRunAttachmentCleanupContext,

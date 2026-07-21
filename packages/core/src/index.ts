@@ -1129,6 +1129,10 @@ export {
 } from './sqlite-schema';
 
 export {
+    PROJECT_SQLITE_COLUMNS,
+} from './project-sync-schema';
+
+export {
     mapSqliteTaskRow,
     splitSqlStatements,
     SqliteAdapter,

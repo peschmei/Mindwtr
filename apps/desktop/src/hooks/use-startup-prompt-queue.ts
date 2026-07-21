@@ -40,9 +40,11 @@ export interface StartupPromptDescriptor {
     /**
      * Invoked after `delayMs`. Resolve truthy to actually open the prompt, falsy
      * to decline (the descriptor is then retired and the next candidate tried).
-     * May be async. A throw retires the descriptor for the session.
+     * May be async. A throw retires the descriptor for the session. The signal is
+     * aborted when the presentation times out or the selection is cancelled;
+     * implementations must check it before committing late side effects.
      */
-    present: () => boolean | void | Promise<boolean | void>;
+    present: (signal: AbortSignal) => boolean | void | Promise<boolean | void>;
     /**
      * Optional ceiling on how long an async `present()` may run before it is
      * treated as a decline. Prevents a hung `present()` (e.g. a network call with
@@ -149,14 +151,18 @@ export function useStartupPromptQueue(options: UseStartupPromptQueueOptions): St
         pendingRef.current = candidate.id;
         let cancelled = false;
         let presentTimeoutId: number | undefined;
+        const presentAbortController = new AbortController();
         const timer = window.setTimeout(() => {
-            const presented = Promise.resolve().then(() => candidate.present());
+            const presented = Promise.resolve().then(() => candidate.present(presentAbortController.signal));
             const raced = candidate.presentTimeoutMs === undefined
                 ? presented
                 : Promise.race<boolean | void>([
                     presented,
                     new Promise<false>((resolve) => {
-                        presentTimeoutId = window.setTimeout(() => resolve(false), candidate.presentTimeoutMs);
+                        presentTimeoutId = window.setTimeout(() => {
+                            presentAbortController.abort();
+                            resolve(false);
+                        }, candidate.presentTimeoutMs);
                     }),
                 ]);
             raced
@@ -184,6 +190,7 @@ export function useStartupPromptQueue(options: UseStartupPromptQueueOptions): St
 
         return () => {
             cancelled = true;
+            presentAbortController.abort();
             window.clearTimeout(timer);
             if (presentTimeoutId !== undefined) window.clearTimeout(presentTimeoutId);
             pendingRef.current = null;

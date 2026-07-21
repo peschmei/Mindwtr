@@ -96,6 +96,10 @@ export type AttachmentCleanupLifecycleResult = {
     shouldInvalidateFastSyncState: boolean;
 };
 
+const isLocalSyncAbortError = (error: unknown): boolean => (
+    error instanceof Error && error.name === 'LocalSyncAbort'
+);
+
 export function normalizeAttachmentCleanupUri(uri?: string): string | undefined {
     if (!uri) return undefined;
     if (/^https?:\/\//i.test(uri) || uri.startsWith('content://')) return undefined;
@@ -327,6 +331,10 @@ export async function runAttachmentCleanupLifecycle(
         try {
             await deleteRemoteAttachment(target);
         } catch (error) {
+            // Freshness guards deliberately throw this sentinel. It must abort
+            // the whole cycle rather than being converted into a retryable
+            // provider failure/pending delete.
+            if (isLocalSyncAbortError(error)) throw error;
             if (getErrorStatus(error) === 404 || options.isRemoteMissingError?.(error)) {
                 options.onRemoteAttachmentMissing?.(target);
                 continue;

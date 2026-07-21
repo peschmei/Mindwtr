@@ -720,6 +720,11 @@ class SharedSyncRunMachine {
                 ensureLocalSnapshotFresh: (expectedData) => this.ensureLocalSnapshotFresh(expectedData),
                 ensureNetworkStillAvailable: () => this.ensureNetwork(),
             });
+            // Cleanup may resolve credentials, remote targets, and provider IO
+            // before returning. Recheck the pre-cleanup snapshot here so a
+            // local edit made anywhere in that window is requeued instead of
+            // being overwritten by the returned full-data snapshot.
+            this.ensureLocalSnapshotFresh(mergedData);
             if (cleanupResult) {
                 mergedData = cleanupResult.data;
                 if (cleanupResult.invalidateFastSyncState) {

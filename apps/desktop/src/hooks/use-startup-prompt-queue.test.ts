@@ -193,6 +193,47 @@ describe('useStartupPromptQueue', () => {
         expect(donationPresent).toHaveBeenCalledTimes(1);
     });
 
+    it('aborts a timed-out present() so late work cannot commit side effects', async () => {
+        let resolvePresent: (() => void) | undefined;
+        let presentationSignal: AbortSignal | undefined;
+        const lateSideEffect = vi.fn();
+        const { result } = renderQueue({
+            descriptors: [
+                makeDescriptor({
+                    id: 'update',
+                    priority: 20,
+                    delayMs: 100,
+                    presentTimeoutMs: 1000,
+                    present: async (signal) => {
+                        presentationSignal = signal;
+                        await new Promise<void>((resolve) => {
+                            resolvePresent = resolve;
+                        });
+                        if (signal.aborted) return false;
+                        lateSideEffect();
+                        return true;
+                    },
+                }),
+                makeDescriptor({ id: 'donation', priority: 10, delayMs: 100 }),
+            ],
+        });
+
+        await flush(100);
+        expect(presentationSignal?.aborted).toBe(false);
+
+        await flush(1000);
+        expect(presentationSignal?.aborted).toBe(true);
+        await flush(100);
+        expect(result.current.openId).toBe('donation');
+
+        await act(async () => {
+            resolvePresent?.();
+            await Promise.resolve();
+        });
+        expect(lateSideEffect).not.toHaveBeenCalled();
+        expect(result.current.openId).toBe('donation');
+    });
+
     it('does not time out other descriptors that omit presentTimeoutMs', async () => {
         let resolvePresent: ((value: boolean) => void) | undefined;
         const { result } = renderQueue({

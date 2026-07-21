@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppData } from '@mindwtr/core';
+import { LocalSyncAbort, type AppData } from '@mindwtr/core';
 
 import * as FileSystem from './file-system';
 import { runMobileAttachmentCleanup } from './sync-attachment-cleanup';
@@ -73,6 +73,12 @@ const buildCleanupOptions = (appData: AppData) => ({
   logSyncWarning: vi.fn(),
 });
 
+const buildOrphanOnlyData = (): AppData => {
+  const data = buildData();
+  data.tasks = [data.tasks[0]];
+  return data;
+};
+
 describe('runMobileAttachmentCleanup', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -113,5 +119,79 @@ describe('runMobileAttachmentCleanup', () => {
 
     expect(deleteAsync).not.toHaveBeenCalled();
     expect(result.appData.settings.attachments?.pendingRemoteDeletes).toBeUndefined();
+  });
+
+  it('aborts before a remote delete when the snapshot becomes stale after target selection', async () => {
+    const deleteAsync = vi.spyOn(FileSystem, 'deleteAsync').mockResolvedValue(undefined);
+    const deleteDropboxAttachment = vi.fn(async () => undefined);
+    let freshnessChecks = 0;
+    const ensureLocalSnapshotFresh = vi.fn(() => {
+      freshnessChecks += 1;
+      if (freshnessChecks === 2) throw new LocalSyncAbort();
+    });
+
+    await expect(runMobileAttachmentCleanup({
+      ...buildCleanupOptions(buildOrphanOnlyData()),
+      backend: 'cloud',
+      cloudProvider: 'dropbox',
+      ensureLocalSnapshotFresh,
+      deleteDropboxAttachment,
+    })).rejects.toBeInstanceOf(LocalSyncAbort);
+
+    expect(deleteDropboxAttachment).not.toHaveBeenCalled();
+    expect(deleteAsync).not.toHaveBeenCalled();
+  });
+
+  it('rechecks freshness after Dropbox credential resolution and before provider deletion', async () => {
+    const data = buildOrphanOnlyData();
+    let stale = false;
+    const providerDelete = vi.fn(async () => undefined);
+    const ensureLocalSnapshotFresh = vi.fn(() => {
+      if (stale) throw new LocalSyncAbort();
+    });
+    const deleteDropboxAttachment = vi.fn(async (
+      _cloudKey: string,
+      ensureBeforeProviderDelete: () => void,
+    ) => {
+      await Promise.resolve();
+      stale = true;
+      ensureBeforeProviderDelete();
+      await providerDelete();
+    });
+
+    await expect(runMobileAttachmentCleanup({
+      ...buildCleanupOptions(data),
+      backend: 'cloud',
+      cloudProvider: 'dropbox',
+      ensureLocalSnapshotFresh,
+      deleteDropboxAttachment,
+    })).rejects.toBeInstanceOf(LocalSyncAbort);
+
+    expect(deleteDropboxAttachment).toHaveBeenCalled();
+    expect(providerDelete).not.toHaveBeenCalled();
+  });
+
+  it('does not swallow a stale-snapshot abort at the final local-file guard', async () => {
+    const deleteAsync = vi.spyOn(FileSystem, 'deleteAsync').mockResolvedValue(undefined);
+    const data = buildOrphanOnlyData();
+    const attachment = data.tasks[0].attachments?.[0];
+    const managedBase = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+    expect(managedBase).toBeTruthy();
+    if (!attachment || !managedBase) throw new Error('Test attachment directory unavailable');
+    attachment.cloudKey = undefined;
+    attachment.uri = `${managedBase.endsWith('/') ? managedBase : `${managedBase}/`}attachments/orphan.pdf`;
+    let freshnessChecks = 0;
+    const ensureLocalSnapshotFresh = vi.fn(() => {
+      freshnessChecks += 1;
+      if (freshnessChecks === 2) throw new LocalSyncAbort();
+    });
+
+    await expect(runMobileAttachmentCleanup({
+      ...buildCleanupOptions(data),
+      backend: 'off',
+      ensureLocalSnapshotFresh,
+    })).rejects.toBeInstanceOf(LocalSyncAbort);
+
+    expect(deleteAsync).not.toHaveBeenCalled();
   });
 });

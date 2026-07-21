@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { getPerson, listPeople, listTasks, parseQuickAdd, type ProjectRef } from './queries.js';
+import {
+    getPerson,
+    getProject,
+    getTask,
+    listPeople,
+    listProjects,
+    listTasks,
+    parseQuickAdd,
+    type ProjectRef,
+} from './queries.js';
 import type { DbClient } from './db.js';
 
 const createMockDb = (
@@ -39,6 +48,33 @@ const createMockDb = (
                         { name: 'timeEstimate' },
                         { name: 'reviewAt' },
                         { name: 'completedAt' },
+                        { name: 'createdAt' },
+                        { name: 'updatedAt' },
+                        { name: 'deletedAt' },
+                        { name: 'purgedAt' },
+                        { name: 'focusOrder' },
+                    ];
+                }
+                if (sql.startsWith('PRAGMA table_info(projects)')) {
+                    return [
+                        { name: 'id' },
+                        { name: 'title' },
+                        { name: 'status' },
+                        { name: 'color' },
+                        { name: 'orderNum' },
+                        { name: 'tagIds' },
+                        { name: 'isSequential' },
+                        { name: 'sequentialScope' },
+                        { name: 'taskSortBy' },
+                        { name: 'isFocused' },
+                        { name: 'supportNotes' },
+                        { name: 'attachments' },
+                        { name: 'dueDate' },
+                        { name: 'reviewAt' },
+                        { name: 'areaId' },
+                        { name: 'areaTitle' },
+                        { name: 'rev' },
+                        { name: 'revBy' },
                         { name: 'createdAt' },
                         { name: 'updatedAt' },
                         { name: 'deletedAt' },
@@ -244,6 +280,53 @@ describe('mcp queries', () => {
         expect(task.projectId).toBe('p1');
         expect(task.sectionId).toBe('s1');
         expect(task.areaId).toBe('a1');
+    });
+
+    test('listTasks and getTask preserve focusOrder from sqlite', () => {
+        const now = '2026-02-01T00:00:00.000Z';
+        const { db, calls } = createMockDb([
+            {
+                id: 't1',
+                title: 'Focused task',
+                status: 'next',
+                isFocusedToday: 1,
+                focusOrder: 4,
+                createdAt: now,
+                updatedAt: now,
+            },
+        ]);
+
+        expect(listTasks(db, { includeDeleted: false })[0]?.focusOrder).toBe(4);
+        expect(getTask(db, { id: 't1' }).focusOrder).toBe(4);
+
+        const taskSelects = calls.filter((call) => call.sql.startsWith('SELECT') && call.sql.includes('FROM tasks'));
+        expect(taskSelects).toHaveLength(2);
+        expect(taskSelects.every((call) => call.sql.includes('focusOrder'))).toBe(true);
+    });
+
+    test('listProjects and getProject preserve taskSortBy from sqlite', () => {
+        const now = '2026-02-01T00:00:00.000Z';
+        const { db, calls } = createMockDb([
+            {
+                id: 'p1',
+                title: 'Release',
+                status: 'active',
+                color: '#3B82F6',
+                orderNum: 0,
+                tagIds: '[]',
+                isSequential: 0,
+                taskSortBy: 'due',
+                createdAt: now,
+                updatedAt: now,
+            },
+        ]);
+
+        expect(listProjects(db)[0]?.taskSortBy).toBe('due');
+        expect(getProject(db, { id: 'p1' }).taskSortBy).toBe('due');
+
+        const projectSelects = calls.filter((call) => call.sql.startsWith('SELECT') && call.sql.includes('FROM projects'));
+        expect(projectSelects).toHaveLength(2);
+        expect(projectSelects.every((call) => call.sql.includes('taskSortBy'))).toBe(true);
     });
 
     test('listPeople maps active managed people from sqlite rows', () => {

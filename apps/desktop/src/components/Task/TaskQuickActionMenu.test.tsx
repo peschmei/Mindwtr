@@ -21,11 +21,14 @@ const task: Task = {
 const t = (key: string) => ({
     'areas.create': 'Create area',
     'areas.search': 'Search areas',
+    'calendar.nextMonth': 'Next month',
+    'calendar.prevMonth': 'Previous month',
     'common.cancel': 'Cancel',
     'common.clear': 'Clear',
     'common.delete': 'Delete',
     'common.noMatches': 'No matches',
     'common.save': 'Save',
+    'nav.calendar': 'Calendar',
     'projects.duplicate': 'Duplicate',
     'review.markReviewed': 'Mark reviewed',
     'task.convertToReference': 'Convert to Reference',
@@ -164,12 +167,12 @@ describe('TaskQuickActionMenu', () => {
 
         const panel = screen.getByRole('dialog', { name: 'Due Date' });
         fireEvent.focus(within(panel).getByLabelText('Due Date'));
-        fireEvent.click(within(panel).getByRole('button', { name: 'Due Date calendar' }));
-        expect(screen.getByRole('dialog', { name: 'Due Date calendar' })).toBeInTheDocument();
+        fireEvent.click(within(panel).getByRole('button', { name: 'Due Date Calendar' }));
+        expect(screen.getByRole('dialog', { name: 'Due Date Calendar' })).toBeInTheDocument();
 
         fireEvent.pointerDown(within(panel).getByRole('button', { name: 'Cancel' }));
 
-        expect(screen.queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
         expect(props.onClose).not.toHaveBeenCalled();
     });
 
@@ -179,12 +182,12 @@ describe('TaskQuickActionMenu', () => {
         await user.click(screen.getByRole('menuitem', { name: 'Due Date…' }));
 
         const panel = screen.getByRole('dialog', { name: 'Due Date' });
-        await user.click(within(panel).getByRole('button', { name: 'Due Date calendar' }));
-        const calendar = screen.getByRole('dialog', { name: 'Due Date calendar' });
+        await user.click(within(panel).getByRole('button', { name: 'Due Date Calendar' }));
+        const calendar = screen.getByRole('dialog', { name: 'Due Date Calendar' });
         await user.click(within(calendar).getByRole('button', { name: 'Tomorrow' }));
 
         // Picking a suggestion applies to the draft and closes the popover.
-        expect(screen.queryByRole('dialog', { name: 'Due Date calendar' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Due Date Calendar' })).not.toBeInTheDocument();
 
         await user.click(within(panel).getByRole('button', { name: 'Cancel' }));
 
@@ -199,8 +202,8 @@ describe('TaskQuickActionMenu', () => {
         await user.click(screen.getByRole('menuitem', { name: 'Due Date…' }));
 
         const panel = screen.getByRole('dialog', { name: 'Due Date' });
-        await user.click(within(panel).getByRole('button', { name: 'Due Date calendar' }));
-        const calendar = screen.getByRole('dialog', { name: 'Due Date calendar' });
+        await user.click(within(panel).getByRole('button', { name: 'Due Date Calendar' }));
+        const calendar = screen.getByRole('dialog', { name: 'Due Date Calendar' });
         await user.click(within(calendar).getByRole('button', { name: 'Tomorrow' }));
 
         await user.click(within(panel).getByRole('button', { name: 'Save' }));
@@ -247,7 +250,7 @@ describe('TaskQuickActionMenu', () => {
         fireEvent.click(screen.getByRole('menuitem', { name: 'Due Date…' }));
         const panel = screen.getByRole('dialog', { name: 'Due Date' });
         fireEvent.focus(within(panel).getByLabelText('Due Date'));
-        fireEvent.click(within(panel).getByRole('button', { name: 'Due Date calendar' }));
+        fireEvent.click(within(panel).getByRole('button', { name: 'Due Date Calendar' }));
 
         const calendarDay = screen.getByRole('button', { name: /April 19, 2026/i });
         fireEvent.pointerDown(calendarDay);

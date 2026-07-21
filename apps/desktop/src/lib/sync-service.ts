@@ -36,6 +36,7 @@ import {
     formatSyncErrorMessage,
     getInMemoryAppDataSnapshot,
     createAbortableFetch,
+    ensureFreshLocalSyncSnapshot,
     getTranslationsSync,
     isSupportedLanguage,
     LEGACY_SYNC_FILE_NAME,
@@ -1648,9 +1649,25 @@ export class SyncService {
 
     static async cleanupAttachmentsNow(): Promise<void> {
         if (!isTauriRuntimeEnv()) return;
+        await syncServiceDependencies.flushPendingSave();
+        const localSnapshotChangeAt = getStoreState().lastDataChangeAt;
+        const ensureLocalSnapshotFresh = () => {
+            ensureFreshLocalSyncSnapshot({
+                localSnapshotChangeAt,
+                getCurrentChangeAt: () => getStoreState().lastDataChangeAt,
+                requestFollowUp: () => SyncService.requestQueuedSyncRun(),
+            });
+        };
         const backend = await SyncService.getSyncBackend();
         const data = await tauriInvoke<AppData>('get_data');
-        const cleaned = await cleanupOrphanedAttachments(data, backend, getAttachmentCleanupDeps());
+        ensureLocalSnapshotFresh();
+        const cleaned = await cleanupOrphanedAttachments(
+            data,
+            backend,
+            getAttachmentCleanupDeps(),
+            { ensureLocalSnapshotFresh },
+        );
+        ensureLocalSnapshotFresh();
         await persistLocalDataForSync(cleaned);
         await getStoreState().fetchData({ silent: true });
     }
@@ -1797,7 +1814,13 @@ export class SyncService {
                         await yieldToRenderer();
                         cleanupContext.ensureLocalSnapshotFresh(data);
                         await cleanupContext.ensureNetworkStillAvailable();
-                        const cleanedData = await cleanupOrphanedAttachments(data, context.backend, getAttachmentCleanupDeps());
+                        const ensureLocalSnapshotFresh = () => cleanupContext.ensureLocalSnapshotFresh(data);
+                        const cleanedData = await cleanupOrphanedAttachments(
+                            data,
+                            context.backend,
+                            getAttachmentCleanupDeps(),
+                            { ensureLocalSnapshotFresh },
+                        );
                         return {
                             data: cleanedData,
                             invalidateFastSyncState: orphanedAttachments.length > 0,

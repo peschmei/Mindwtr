@@ -461,7 +461,7 @@ export function ReviewModal({ visible, onClose }: ReviewModalProps) {
                     </>,
                     <View style={styles.emptyState}>
                         <CheckCircle2 size={48} color={tc.secondaryText} strokeWidth={1.5} style={styles.emptyIcon} />
-                        <Text style={[styles.emptyText, { color: tc.secondaryText }]}> 
+                        <Text style={[styles.emptyText, { color: tc.secondaryText }]}>
                             {labels.inboxEmpty}
                         </Text>
                     </View>,

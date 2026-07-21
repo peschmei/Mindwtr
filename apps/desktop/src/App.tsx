@@ -340,11 +340,12 @@ function App() {
             onSelect: () => {
                 updateLocalUserPromptState((state) => recordUpdateReminderChecked(state, Date.now()));
             },
-            present: async () => {
+            present: async (signal) => {
                 if (!desktopInstallSource) return false;
                 const { getVersion } = await import('@tauri-apps/api/app');
                 const currentVersion = await getVersion();
                 const info = await checkForUpdates(currentVersion, { installSource: desktopInstallSource });
+                if (signal.aborted) return false;
                 if (!info.hasUpdate) return false;
                 if (!isUpdateReminderVersionTrusted(desktopInstallSource, info.source)) return false;
                 const latestPromptState = readLocalUserPromptState();
@@ -358,6 +359,7 @@ function App() {
                 })) {
                     return false;
                 }
+                if (signal.aborted) return false;
                 updateLocalUserPromptState((state) => recordUpdateReminderShown(state, Date.now()));
                 const updateTarget = getDesktopUpdateTarget(desktopInstallSource);
                 setUpdateReminderInfo({

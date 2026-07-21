@@ -13,6 +13,11 @@ const normalizeOptionalString = (value: unknown): string | undefined => {
     return trimmed || undefined;
 };
 
+const getBlankPersonTombstoneName = (id: unknown): string => {
+    const stableId = typeof id === 'string' ? id.trim() : '';
+    return `__mindwtr_deleted_person__:${stableId || 'invalid-id'}`;
+};
+
 export const normalizePersonName = (value: unknown): string => (
     typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
 );
@@ -48,13 +53,25 @@ export function normalizePeopleForLoad(
 
     for (const person of Array.isArray(people) ? people : []) {
         const name = normalizePersonName(person?.name);
+        const createdAt = normalizeOptionalString(person.createdAt) ?? normalizeOptionalString(person.updatedAt) ?? nowIso;
+        const updatedAt = normalizeOptionalString(person.updatedAt) ?? createdAt;
         if (!name) {
+            const normalizedBlankPerson: Person = {
+                ...person,
+                name: getBlankPersonTombstoneName(person.id),
+                note: normalizePersonNote(person.note),
+                referenceLink: normalizePersonReferenceLink(person.referenceLink),
+                createdAt,
+                updatedAt: nowIso,
+                deletedAt: person.deletedAt ?? nowIso,
+                rev: nextRevision(person.rev),
+                ...(deviceId ? { revBy: deviceId } : {}),
+            };
+            normalizedPeople.push(normalizedBlankPerson);
             didChange = true;
             continue;
         }
         const key = getPersonNameKey(name);
-        const createdAt = normalizeOptionalString(person.createdAt) ?? normalizeOptionalString(person.updatedAt) ?? nowIso;
-        const updatedAt = normalizeOptionalString(person.updatedAt) ?? createdAt;
         const normalized: Person = {
             ...person,
             name,

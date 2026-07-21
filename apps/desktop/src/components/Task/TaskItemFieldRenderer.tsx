@@ -298,6 +298,12 @@ export function DateField({
     );
     const clearText = tFallback(t, 'common.clear', 'Clear');
     const dateOnlyText = t('taskEdit.dateOnly');
+    const calendarText = t('nav.calendar');
+    const previousMonthText = t('calendar.prevMonth');
+    const nextMonthText = t('calendar.nextMonth');
+    const calendarAriaLabel = `${label} ${calendarText}`;
+    const previousMonthAriaLabel = `${calendarText}: ${previousMonthText}`;
+    const nextMonthAriaLabel = `${calendarText}: ${nextMonthText}`;
     const dateInputOrder = calendarSystem === 'jalali'
         ? 'ymd'
         : getDateInputOrder(dateFormatSetting, nativeDateInputLocale);
@@ -448,7 +454,7 @@ export function DateField({
                     />
                     <button
                         type="button"
-                        aria-label={`${label} calendar`}
+                        aria-label={calendarAriaLabel}
                         aria-haspopup="dialog"
                         aria-expanded={isCalendarOpen}
                         onClick={openCalendar}
@@ -489,7 +495,7 @@ export function DateField({
                 <div
                     ref={calendarRef}
                     role="dialog"
-                    aria-label={`${label} calendar`}
+                    aria-label={calendarAriaLabel}
                     className="fixed z-50 flex rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
                     style={{ top: calendarPosition.top, left: calendarPosition.left }}
                 >
@@ -497,7 +503,7 @@ export function DateField({
                         <div className="mb-2 flex items-center justify-between gap-2">
                             <button
                                 type="button"
-                                aria-label="Show previous month"
+                                aria-label={previousMonthAriaLabel}
                                 onClick={() => setCalendarMonth((current) => addCalendarMonths(current, -1, calendarSystem))}
                                 className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                             >
@@ -508,7 +514,7 @@ export function DateField({
                             </div>
                             <button
                                 type="button"
-                                aria-label="Show next month"
+                                aria-label={nextMonthAriaLabel}
                                 onClick={() => setCalendarMonth((current) => addCalendarMonths(current, 1, calendarSystem))}
                                 className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                             >

@@ -113,4 +113,29 @@ describe('useTaskListSelection handleBatchDelete', () => {
     expect(hookRef.selectionMode).toBe(false);
     expect(hookRef.hasSelection).toBe(false);
   });
+
+  it('shows a warning when the Undo restore reports a fulfilled failure', async () => {
+    const restoreTask = vi.fn(async () => ({ success: false, error: 'Task not found: a' } as StoreActionResult));
+    renderer.act(() => {
+      renderer.create(<Harness {...baseParams({ restoreTask })} />);
+    });
+    renderer.act(() => {
+      hookRef.toggleMultiSelect('a');
+    });
+
+    await confirmDelete();
+    const successToast = mocks.showToast.mock.calls
+      .map((call) => call[0])
+      .find((toast) => toast.tone === 'success');
+
+    await renderer.act(async () => {
+      successToast?.onAction?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(restoreTask).toHaveBeenCalledWith('a');
+    const toasts = mocks.showToast.mock.calls.map((call) => call[0]);
+    expect(toasts.some((toast) => toast.tone === 'warning')).toBe(true);
+  });
 });

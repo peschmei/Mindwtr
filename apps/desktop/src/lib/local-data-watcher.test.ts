@@ -203,7 +203,7 @@ describe('local-data-watcher', () => {
         expect(refreshStorageData).toHaveBeenCalledTimes(1);
     });
 
-    it('ignores SQLite watcher events caused by local SQLite writes', async () => {
+    it('defers SQLite events during a local-write window and refreshes once after it drains', async () => {
         const watchers: Array<{ path: string; callback: (event: { path?: string; paths?: string[] }) => void }> = [];
         const refreshStorageData = vi.fn();
 
@@ -219,20 +219,17 @@ describe('local-data-watcher', () => {
 
         markLocalSqliteWrite();
         watchers[1]?.callback({ paths: ['/tmp/mindwtr/mindwtr.db-wal'] });
-        await flushScheduledTimers();
-
         expect(refreshStorageData).not.toHaveBeenCalled();
 
         nowMs = 2100;
         watchers[1]?.callback({ paths: ['/tmp/mindwtr/mindwtr.db-wal'] });
-        await flushScheduledTimers();
-
         expect(refreshStorageData).not.toHaveBeenCalled();
 
         nowMs = 15100;
-        watchers[1]?.callback({ paths: ['/tmp/mindwtr/mindwtr.db-wal'] });
         await flushScheduledTimers();
 
+        expect(refreshStorageData).toHaveBeenCalledTimes(1);
+        await flushScheduledTimers();
         expect(refreshStorageData).toHaveBeenCalledTimes(1);
     });
 

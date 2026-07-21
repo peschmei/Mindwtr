@@ -1,7 +1,9 @@
 import {
   DEFAULT_PROJECT_COLOR,
+  PROJECT_SQLITE_COLUMNS,
   TASK_SQLITE_COLUMNS,
   mapSqliteTaskRow,
+  normalizeProjectTaskSortBy,
   parseQuickAdd as parseQuickAddCore,
   type Area as CoreArea,
   type Person as CorePerson,
@@ -77,6 +79,7 @@ type ProjectSqliteRow = Record<string, unknown> & {
   tagIds?: unknown;
   isSequential?: number | null;
   sequentialScope?: string | null;
+  taskSortBy?: string | null;
   isFocused?: number | null;
   supportNotes?: string | null;
   attachments?: unknown;
@@ -84,9 +87,12 @@ type ProjectSqliteRow = Record<string, unknown> & {
   reviewAt?: string | null;
   areaId?: string | null;
   areaTitle?: string | null;
+  rev?: number | null;
+  revBy?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+  purgedAt?: string | null;
 };
 type SectionSqliteRow = Record<string, unknown> & {
   id: string;
@@ -127,38 +133,7 @@ type PersonSqliteRow = Record<string, unknown> & {
 // kept as direct SQL so list/search tools stay fast and read-only. Row mapping
 // is delegated to core; keep this projection in sync with core SQLite columns
 // whenever task columns are added or renamed.
-const BASE_TASK_COLUMNS = [
-  'id',
-  'title',
-  'status',
-  'priority',
-  'energyLevel',
-  'assignedTo',
-  'taskMode',
-  'startTime',
-  'dueDate',
-  'recurrence',
-  'pushCount',
-  'tags',
-  'contexts',
-  'checklist',
-  'description',
-  'textDirection',
-  'attachments',
-  'location',
-  'projectId',
-  'sectionId',
-  'areaId',
-  'orderNum',
-  'isFocusedToday',
-  'timeEstimate',
-  'reviewAt',
-  'completedAt',
-  'createdAt',
-  'updatedAt',
-  'deletedAt',
-  'purgedAt',
-];
+const BASE_TASK_COLUMNS = [...TASK_SQLITE_COLUMNS];
 
 const taskColumnsCache = new WeakMap<DbClient, { hasOrderNum: boolean; insertColumns: string[]; selectColumns: string[] }>();
 const tasksFtsCache = new WeakMap<DbClient, boolean>();
@@ -289,26 +264,7 @@ export function getTask(db: DbClient, input: GetTaskInput): TaskRow {
   return mapTaskRow(row);
 }
 
-const BASE_PROJECT_COLUMNS = [
-  'id',
-  'title',
-  'status',
-  'areaId',
-  'areaTitle',
-  'color',
-  'orderNum',
-  'tagIds',
-  'isSequential',
-  'sequentialScope',
-  'isFocused',
-  'supportNotes',
-  'attachments',
-  'dueDate',
-  'reviewAt',
-  'createdAt',
-  'updatedAt',
-  'deletedAt',
-];
+const BASE_PROJECT_COLUMNS = [...PROJECT_SQLITE_COLUMNS];
 
 const projectColumnsCache = new WeakMap<DbClient, { hasOrderNum: boolean; selectColumns: string[] }>();
 
@@ -351,6 +307,7 @@ const mapProjectRow = (row: ProjectSqliteRow): Project => ({
   sequentialScope: row.sequentialScope === 'section' || row.sequentialScope === 'project'
     ? row.sequentialScope
     : undefined,
+  taskSortBy: normalizeProjectTaskSortBy(row.taskSortBy),
   isFocused: row.isFocused === 1,
   supportNotes: row.supportNotes ?? undefined,
   attachments: parseJson(row.attachments, []),
@@ -358,9 +315,12 @@ const mapProjectRow = (row: ProjectSqliteRow): Project => ({
   reviewAt: row.reviewAt ?? undefined,
   areaId: row.areaId ?? undefined,
   areaTitle: row.areaTitle ?? undefined,
+  rev: row.rev ?? undefined,
+  revBy: row.revBy ?? undefined,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
   deletedAt: row.deletedAt ?? undefined,
+  purgedAt: row.purgedAt ?? undefined,
 });
 
 export type GetProjectInput = { id: string; includeDeleted?: boolean };

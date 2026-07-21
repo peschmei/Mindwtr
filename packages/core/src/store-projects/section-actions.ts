@@ -133,6 +133,7 @@ export const createSectionActions = ({
                 missingSection = true;
                 return state;
             }
+            if (section.deletedAt) return state;
             const deviceState = ensureDeviceId(state.settings);
             const newAllSections = allSections.map((item) =>
                 item.id === id

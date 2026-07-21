@@ -735,6 +735,31 @@ describe('runAttachmentCleanupLifecycle', () => {
         }]);
     });
 
+    it('propagates LocalSyncAbort from the final remote-delete freshness guard', async () => {
+        const data = buildData();
+        data.settings.attachments = {
+            pendingRemoteDeletes: [{
+                cloudKey: 'attachments/stale.pdf',
+                title: 'stale',
+            }],
+        };
+        const abort = new Error('Local changes detected during sync');
+        abort.name = 'LocalSyncAbort';
+        const onRemoteDeleteError = vi.fn();
+
+        await expect(runAttachmentCleanupLifecycle({
+            appData: data,
+            now: () => now,
+            deleteLocalAttachment: vi.fn(async () => undefined),
+            deleteRemoteAttachment: vi.fn(async () => {
+                throw abort;
+            }),
+            onRemoteDeleteError,
+        })).rejects.toBe(abort);
+
+        expect(onRemoteDeleteError).not.toHaveBeenCalled();
+    });
+
     it('applies only the processed orphaned metadata when the batch limit is reached', async () => {
         const data = buildData();
         data.tasks.push({

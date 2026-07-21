@@ -305,7 +305,7 @@ const getTaskRowEntry = (task: Task): TaskRowEntry => {
 const READ_PAGE_SIZE = 1000;
 const FTS_LOCK_TTL_MS = 5 * 60 * 1000;
 const FTS_LOCK_REFRESH_INTERVAL_MS = Math.max(15_000, Math.floor(FTS_LOCK_TTL_MS / 3));
-const SQLITE_ID_INSERT_BATCH_SIZE = 500;
+const SQLITE_ROW_VERSION_INSERT_BATCH_SIZE = 200;
 const SEARCH_TASK_SELECT = [
     't.id AS id',
     't.title AS title',
@@ -330,7 +330,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 let tempIdTableCounter = 0;
 
-const createTempIdTableName = (table: 'tasks' | 'projects' | 'sections' | 'areas' | 'people' | 'saved_filters'): string => {
+type SqliteEntityTable = 'tasks' | 'projects' | 'sections' | 'areas' | 'people' | 'saved_filters';
+
+type SqliteKnownRowVersion = {
+    rowId: number | null;
+    rev: number | null;
+    updatedAt: string | null;
+};
+
+const createTempIdTableName = (table: SqliteEntityTable): string => {
     tempIdTableCounter = (tempIdTableCounter + 1) % Number.MAX_SAFE_INTEGER;
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).slice(2, 10) || '0';
@@ -478,12 +486,16 @@ export type SqliteSaveDataStats = {
 export class SqliteAdapter {
     private client: SqliteClient;
     private schemaReadyPromise: Promise<void> | null = null;
-    // Fingerprints of every row as of the last committed save. Valid only because
-    // this adapter is the database's sole entity-table writer: a row whose bound
-    // values are byte-identical to the last committed save can be skipped without
-    // changing what the rev-guarded upsert would have produced. Must be nulled
-    // whenever a transaction fails, and only repopulated after a successful COMMIT.
+    // Fingerprints of rows submitted by this adapter's last committed save.
+    // Revision-guarded upserts make it safe for another process to advance a row;
+    // this cache is nulled whenever a transaction fails, and only repopulated
+    // after a successful COMMIT.
     private lastSavedFingerprints: { tables: Map<string, Map<string, string>>; settingsJson: string | null } | null = null;
+    // Rows this adapter has actually observed or successfully written. Snapshot
+    // omission may physically delete only one of these rows, and only while its
+    // database version still matches. This keeps a stale full snapshot from
+    // deleting rows added or advanced by another process between read and save.
+    private lastKnownRowVersions: Map<SqliteEntityTable, Map<string, SqliteKnownRowVersion>> | null = null;
     private lastSaveDataStats: SqliteSaveDataStats | null = null;
 
     constructor(client: SqliteClient) {
@@ -527,6 +539,20 @@ export class SqliteAdapter {
             offset += READ_PAGE_SIZE;
         }
         return rows;
+    }
+
+    private knownRowVersionsFromRows(rows: Record<string, unknown>[]): Map<string, SqliteKnownRowVersion> {
+        const versions = new Map<string, SqliteKnownRowVersion>();
+        for (const row of rows) {
+            const rawRev = row.rev;
+            const parsedRev = rawRev === null || rawRev === undefined ? null : Number(rawRev);
+            versions.set(String(row.id), {
+                rowId: typeof row._rowid === 'number' ? row._rowid : null,
+                rev: parsedRev !== null && Number.isFinite(parsedRev) ? parsedRev : null,
+                updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : null,
+            });
+        }
+        return versions;
     }
 
     private async acquireFtsLock(): Promise<string | null> {
@@ -1081,7 +1107,7 @@ export class SqliteAdapter {
             this.loadAllRows('areas'),
             this.loadAllRows('people'),
             this.client.get<Record<string, unknown>>('SELECT data FROM settings WHERE id = 1'),
-            this.client.all<Record<string, unknown>>('SELECT * FROM saved_filters ORDER BY createdAt, name'),
+            this.client.all<Record<string, unknown>>('SELECT rowid as _rowid, * FROM saved_filters ORDER BY createdAt, name'),
         ]);
 
         const tasks: Task[] = tasksRows.map((row) => this.mapTaskRow(row));
@@ -1142,6 +1168,17 @@ export class SqliteAdapter {
         } else if (Array.isArray(settings.savedFilters)) {
             settings.savedFilters = normalizeSavedFilters(settings.savedFilters);
         }
+
+        // A read is the deletion baseline for this adapter. Retain exact row
+        // versions so later snapshot omissions can use compare-and-swap deletion.
+        this.lastKnownRowVersions = new Map<SqliteEntityTable, Map<string, SqliteKnownRowVersion>>([
+            ['tasks', this.knownRowVersionsFromRows(tasksRows)],
+            ['projects', this.knownRowVersionsFromRows(projectsRows)],
+            ['sections', this.knownRowVersionsFromRows(sectionsRows)],
+            ['areas', this.knownRowVersionsFromRows(areasRows)],
+            ['people', this.knownRowVersionsFromRows(peopleRows)],
+            ['saved_filters', this.knownRowVersionsFromRows(savedFilterRows)],
+        ]);
 
         return { tasks, projects, sections, areas, people, settings };
     }
@@ -1245,6 +1282,19 @@ export class SqliteAdapter {
             );
             await this.client.run('COMMIT');
             this.lastSavedFingerprints?.tables.get('tasks')?.set(String(entry.row[0]), entry.fingerprint);
+            const knownTables = new Map(this.lastKnownRowVersions ?? []);
+            const knownTasks = new Map(knownTables.get('tasks') ?? []);
+            const previousVersion = knownTasks.get(task.id);
+            const rawRev = entry.row[TASK_UPSERT_COLUMNS.indexOf('rev')];
+            const parsedRev = rawRev === null || rawRev === undefined ? null : Number(rawRev);
+            const rawUpdatedAt = entry.row[TASK_UPSERT_COLUMNS.indexOf('updatedAt')];
+            knownTasks.set(task.id, {
+                rowId: previousVersion?.rowId ?? null,
+                rev: parsedRev !== null && Number.isFinite(parsedRev) ? parsedRev : null,
+                updatedAt: typeof rawUpdatedAt === 'string' ? rawUpdatedAt : null,
+            });
+            knownTables.set('tasks', knownTasks);
+            this.lastKnownRowVersions = knownTables;
         } catch (error) {
             this.lastSavedFingerprints = null;
             await this.client.run('ROLLBACK').catch(() => undefined);
@@ -1276,10 +1326,12 @@ export class SqliteAdapter {
             }
         }
         const previousSave = this.lastSavedFingerprints;
+        const previousKnownRows = this.lastKnownRowVersions;
         const nextSave: { tables: Map<string, Map<string, string>>; settingsJson: string | null } = {
             tables: new Map(),
             settingsJson: null,
         };
+        const nextKnownRows = new Map<SqliteEntityTable, Map<string, SqliteKnownRowVersion>>();
         const stats: SqliteSaveDataStats = {
             incremental: previousSave !== null,
             writtenRows: 0,
@@ -1316,26 +1368,40 @@ export class SqliteAdapter {
             };
 
             const upsertBatch = async (
-                table: string,
+                table: SqliteEntityTable,
                 columns: string[],
                 rows: unknown[][],
                 updateClause: string,
                 chunkSize = 200,
                 precomputedFingerprints?: string[],
+                versionColumns?: { rev?: number; updatedAt: number },
             ) => {
                 const previousRows = previousSave?.tables.get(table);
+                const previousVersions = previousKnownRows?.get(table);
                 const fingerprints = new Map<string, string>();
+                const knownVersions = new Map<string, SqliteKnownRowVersion>();
                 const changedRows: unknown[][] = [];
                 for (let i = 0; i < rows.length; i += 1) {
                     const row = rows[i];
                     const id = String(row[0]);
                     const fingerprint = precomputedFingerprints?.[i] ?? JSON.stringify(row);
                     fingerprints.set(id, fingerprint);
+                    if (versionColumns) {
+                        const rawRev = versionColumns.rev === undefined ? null : row[versionColumns.rev];
+                        const parsedRev = rawRev === null || rawRev === undefined ? null : Number(rawRev);
+                        const rawUpdatedAt = row[versionColumns.updatedAt];
+                        knownVersions.set(id, {
+                            rowId: previousVersions?.get(id)?.rowId ?? null,
+                            rev: parsedRev !== null && Number.isFinite(parsedRev) ? parsedRev : null,
+                            updatedAt: typeof rawUpdatedAt === 'string' ? rawUpdatedAt : null,
+                        });
+                    }
                     if (previousRows?.get(id) !== fingerprint) {
                         changedRows.push(row);
                     }
                 }
                 nextSave.tables.set(table, fingerprints);
+                nextKnownRows.set(table, knownVersions);
                 stats.totalRows += rows.length;
                 stats.writtenRows += changedRows.length;
                 if (changedRows.length === 0) return;
@@ -1356,32 +1422,41 @@ export class SqliteAdapter {
                 }
             };
 
-            const syncIds = async (table: 'tasks' | 'projects' | 'sections' | 'areas' | 'people' | 'saved_filters', ids: string[]) => {
-                const previousRows = previousSave?.tables.get(table);
-                if (previousRows) {
-                    const keptIds = new Set(ids);
-                    const removedIds: string[] = [];
-                    for (const id of previousRows.keys()) {
-                        if (!keptIds.has(id)) removedIds.push(id);
+            const syncIds = async (table: SqliteEntityTable, ids: string[]) => {
+                const knownRows = previousKnownRows?.get(table);
+                if (!knownRows) return;
+                const keptIds = new Set(ids);
+                const removedRows: Array<[string, number | null, number | null, string | null]> = [];
+                for (const [id, version] of knownRows) {
+                    if (!keptIds.has(id)) {
+                        removedRows.push([id, version.rowId, version.rev, version.updatedAt]);
                     }
-                    stats.removedRows += removedIds.length;
-                    for (const batch of chunkArray(removedIds, SQLITE_ID_INSERT_BATCH_SIZE)) {
-                        const placeholders = batch.map(() => '?').join(', ');
-                        await runTimed(`DELETE FROM ${table} WHERE id IN (${placeholders})`, batch);
-                    }
-                    return;
                 }
+                if (removedRows.length === 0) return;
+                stats.removedRows += removedRows.length;
                 const tempTable = createTempIdTableName(table);
                 try {
-                    await runTimed(`CREATE TEMP TABLE ${tempTable} (id TEXT PRIMARY KEY)`);
-                    for (const batch of chunkArray(ids, SQLITE_ID_INSERT_BATCH_SIZE)) {
-                        const placeholders = batch.map(() => '(?)').join(', ');
+                    await runTimed(`CREATE TEMP TABLE ${tempTable} (id TEXT PRIMARY KEY, rowId INTEGER, rev INTEGER, updatedAt TEXT)`);
+                    for (const batch of chunkArray(removedRows, SQLITE_ROW_VERSION_INSERT_BATCH_SIZE)) {
+                        const placeholders = batch.map(() => '(?, ?, ?, ?)').join(', ');
                         await runTimed(
-                            `INSERT OR IGNORE INTO ${tempTable} (id) VALUES ${placeholders}`,
-                            batch
+                            `INSERT OR IGNORE INTO ${tempTable} (id, rowId, rev, updatedAt) VALUES ${placeholders}`,
+                            batch.flat()
                         );
                     }
-                    await runTimed(`DELETE FROM ${table} WHERE id NOT IN (SELECT id FROM ${tempTable})`);
+                    const revGuard = table === 'saved_filters'
+                        ? ''
+                        : `AND known.rev IS ${table}.rev`;
+                    await runTimed(
+                        `DELETE FROM ${table}
+                         WHERE EXISTS (
+                           SELECT 1 FROM ${tempTable} known
+                           WHERE known.id = ${table}.id
+                             AND (known.rowId IS NULL OR known.rowId = ${table}.rowid)
+                             ${revGuard}
+                             AND known.updatedAt IS ${table}.updatedAt
+                         )`
+                    );
                 } finally {
                     try {
                         await runTimed(`DROP TABLE ${tempTable}`);
@@ -1436,6 +1511,9 @@ export class SqliteAdapter {
                  updatedAt=excluded.updatedAt,
                  deletedAt=excluded.deletedAt
                  WHERE areas.rev IS NULL OR areas.rev <= excluded.rev`,
+                200,
+                undefined,
+                { rev: 5, updatedAt: 8 },
             );
 
             saveStep = 'projects';
@@ -1467,6 +1545,12 @@ export class SqliteAdapter {
                     project.purgedAt ?? null,
                 ]),
                 PROJECT_UPSERT_UPDATE_CLAUSE,
+                200,
+                undefined,
+                {
+                    rev: PROJECT_UPSERT_COLUMNS.indexOf('rev'),
+                    updatedAt: PROJECT_UPSERT_COLUMNS.indexOf('updatedAt'),
+                },
             );
 
             const people = Array.isArray(data.people) ? data.people : [];
@@ -1508,6 +1592,9 @@ export class SqliteAdapter {
                  updatedAt=excluded.updatedAt,
                  deletedAt=excluded.deletedAt
                  WHERE people.rev IS NULL OR people.rev <= excluded.rev`,
+                200,
+                undefined,
+                { rev: 4, updatedAt: 7 },
             );
 
             saveStep = 'sections';
@@ -1530,6 +1617,12 @@ export class SqliteAdapter {
                     section.projectArchivedAt ?? null,
                 ]),
                 SECTION_UPSERT_UPDATE_CLAUSE,
+                200,
+                undefined,
+                {
+                    rev: SECTION_UPSERT_COLUMNS.indexOf('rev'),
+                    updatedAt: SECTION_UPSERT_COLUMNS.indexOf('updatedAt'),
+                },
             );
 
             saveStep = 'tasks';
@@ -1541,6 +1634,10 @@ export class SqliteAdapter {
                 TASK_UPSERT_UPDATE_CLAUSE,
                 200,
                 taskRowEntries.map((entry) => entry.fingerprint),
+                {
+                    rev: TASK_UPSERT_COLUMNS.indexOf('rev'),
+                    updatedAt: TASK_UPSERT_COLUMNS.indexOf('updatedAt'),
+                },
             );
 
             saveStep = 'sync-task-ids';
@@ -1595,6 +1692,9 @@ export class SqliteAdapter {
                  createdAt=excluded.createdAt,
                  updatedAt=excluded.updatedAt,
                  deletedAt=excluded.deletedAt`,
+                200,
+                undefined,
+                { updatedAt: 9 },
             );
             saveStep = 'sync-saved-filter-ids';
             await syncIds('saved_filters', savedFilters.map((filter) => filter.id));
@@ -1622,6 +1722,7 @@ export class SqliteAdapter {
             await runTimed('COMMIT');
             stats.commitMs = Date.now() - commitStartedAt;
             this.lastSavedFingerprints = nextSave;
+            this.lastKnownRowVersions = nextKnownRows;
             this.lastSaveDataStats = stats;
         } catch (error) {
             await this.client.run('ROLLBACK').catch((rollbackError) => {

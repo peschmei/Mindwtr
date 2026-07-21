@@ -11,7 +11,7 @@ import type { ThemeColors } from '@/hooks/use-theme-colors';
 import { openContextsScreen, openProjectScreen } from '@/lib/task-meta-navigation';
 import { TaskEditModal } from '@/components/task-edit-modal';
 import { CompletedAtPicker } from '@/components/completed-at-picker';
-import { useTaskListSelection } from '@/components/use-task-list-selection';
+import { assertBulkActionSucceeded, useTaskListSelection } from '@/components/use-task-list-selection';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Archive } from 'lucide-react-native';
 
@@ -302,6 +302,7 @@ export default function ArchivedScreen() {
         exitSelectionMode,
         handleBatchDelete,
         multiSelectedIds,
+        runBulkAction,
         selectedIdsArray,
         selectionMode,
         setMultiSelectedIds,
@@ -371,15 +372,19 @@ export default function ArchivedScreen() {
 
     const handleBulkRestore = useCallback(async () => {
         if (selectedIdsArray.length === 0) return;
-        await batchMoveTasks(selectedIdsArray, 'inbox');
-        exitSelectionMode();
-    }, [batchMoveTasks, exitSelectionMode, selectedIdsArray]);
+        await runBulkAction(restoreActionLabel, async () => {
+            assertBulkActionSucceeded(await batchMoveTasks(selectedIdsArray, 'inbox'));
+            exitSelectionMode();
+        });
+    }, [batchMoveTasks, exitSelectionMode, restoreActionLabel, runBulkAction, selectedIdsArray]);
 
     const handleBulkMoveToDone = useCallback(async () => {
         if (selectedIdsArray.length === 0) return;
-        await batchMoveTasks(selectedIdsArray, 'done');
-        exitSelectionMode();
-    }, [batchMoveTasks, exitSelectionMode, selectedIdsArray]);
+        await runBulkAction(t('status.done'), async () => {
+            assertBulkActionSucceeded(await batchMoveTasks(selectedIdsArray, 'done'));
+            exitSelectionMode();
+        });
+    }, [batchMoveTasks, exitSelectionMode, runBulkAction, selectedIdsArray, t]);
 
     const [completedAtTaskId, setCompletedAtTaskId] = useState<string | null>(null);
     const completedAtTask = useMemo(

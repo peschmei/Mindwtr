@@ -278,13 +278,9 @@ const sqliteHasAnyData = async (client: SqliteClient): Promise<boolean> => {
         const row = await client.get<{ count?: number }>(`SELECT COUNT(*) as count FROM ${table}`);
         return Number(row?.count ?? 0);
     };
-    const [tasks, projects, areas, settings] = await Promise.all([
-        count('tasks'),
-        count('projects'),
-        count('areas'),
-        count('settings'),
-    ]);
-    return tasks > 0 || projects > 0 || areas > 0 || settings > 0;
+    const tables = ['tasks', 'projects', 'sections', 'areas', 'people', 'saved_filters', 'settings'];
+    const counts = await Promise.all(tables.map((table) => count(table)));
+    return counts.some((value) => value > 0);
 };
 
 const getLegacyJson = async (AsyncStorage: any): Promise<string | null> => {
@@ -595,7 +591,10 @@ export const getMobileStartupSnapshotFromBackup = async (): Promise<AppData | nu
 // tombstone-safe). Never blocks startup: any failure is logged and retried next launch.
 const SQLITE_JSON_RECONCILE_KEY = `${DATA_KEY}:sqlite-json-reconcile-v1`;
 
-const reconcileJsonBackupIntoSqlite = async (adapter: SqliteAdapter): Promise<void> => {
+const reconcileJsonBackupIntoSqlite = async (
+    adapter: SqliteAdapter,
+    currentSnapshot?: AppData,
+): Promise<void> => {
     if (await AsyncStorage.getItem(SQLITE_JSON_RECONCILE_KEY) != null) return;
     const backupVersion = await AsyncStorage.getItem(STARTUP_BACKUP_VERSION_KEY);
     if (backupVersion !== STARTUP_BACKUP_VERSION) {
@@ -624,7 +623,7 @@ const reconcileJsonBackupIntoSqlite = async (adapter: SqliteAdapter): Promise<vo
             await AsyncStorage.setItem(SQLITE_JSON_RECONCILE_KEY, '1');
             return;
         }
-        const current = await adapter.getData();
+        const current = currentSnapshot ?? await adapter.getData();
         const { data: merged, stats } = mergeAppDataWithStats(current, backup);
         await adapter.saveData(merged);
         logStorageInfo('[Storage] Reconciled JSON backup into SQLite', {
@@ -635,6 +634,60 @@ const reconcileJsonBackupIntoSqlite = async (adapter: SqliteAdapter): Promise<vo
         });
     }
     await AsyncStorage.setItem(SQLITE_JSON_RECONCILE_KEY, '1');
+};
+
+const prepareSqliteData = async (adapter: SqliteAdapter, client: SqliteClient): Promise<void> => {
+    let readableSnapshot: AppData | undefined;
+    let hasData: boolean;
+    try {
+        hasData = await measureStartupPhase('mobile.storage.sqlite_init.has_any_data', async () =>
+            sqliteHasAnyData(client)
+        );
+    } catch (error) {
+        // A failed count means unknown, never empty. If the full read still works,
+        // use that authoritative snapshot to classify and reconcile safely.
+        if (__DEV__) {
+            logStorageWarn('[Storage] SQLite availability check failed; using full read', error);
+        }
+        readableSnapshot = await adapter.getData();
+        hasData = (readableSnapshot.tasks?.length ?? 0) > 0
+            || (readableSnapshot.projects?.length ?? 0) > 0
+            || (readableSnapshot.sections?.length ?? 0) > 0
+            || (readableSnapshot.areas?.length ?? 0) > 0
+            || (readableSnapshot.people?.length ?? 0) > 0
+            || Object.keys(readableSnapshot.settings ?? {}).length > 0;
+    }
+    if (hasData) {
+        try {
+            await measureStartupPhase('mobile.storage.sqlite_init.reconcile_json_backup', async () =>
+                reconcileJsonBackupIntoSqlite(adapter, readableSnapshot)
+            );
+        } catch (error) {
+            logStorageWarn('[Storage] Failed to reconcile JSON backup into SQLite', error);
+        }
+        return;
+    }
+
+    const jsonValue = await measureStartupPhase('mobile.storage.sqlite_init.read_legacy_json', async () =>
+        getLegacyJson(AsyncStorage)
+    );
+    if (jsonValue == null) return;
+    try {
+        const backup = parseStoredAppDataJson(jsonValue);
+        // Re-read after the emptiness probe and merge even on first migration.
+        // A second process may have inserted rows between the two operations;
+        // promoting the JSON snapshot directly would make those rows omissions.
+        const current = readableSnapshot ?? await adapter.getData();
+        const { data: merged } = mergeAppDataWithStats(current, backup);
+        // Ensure fallback stays consistent before attempting the SQLite write.
+        await saveStartupJsonBackup(AsyncStorage, merged, 'mobile.storage.sqlite_init.migrate');
+        await measureStartupPhase('mobile.storage.sqlite_init.migrate_json_to_sqlite', async () =>
+            adapter.saveData(merged)
+        );
+        await AsyncStorage.setItem(SQLITE_JSON_RECONCILE_KEY, '1');
+    } catch (error) {
+        logStorageWarn('[Storage] Failed to migrate JSON data to SQLite', error);
+    }
 };
 
 const initSqliteState = async (): Promise<SqliteState> => {
@@ -659,38 +712,13 @@ const initSqliteState = async (): Promise<SqliteState> => {
     } catch (error) {
         logStorageWarn('[Storage] Failed to read SQLite journal mode', error);
     }
-    let hasData = false;
     try {
-        hasData = await measureStartupPhase('mobile.storage.sqlite_init.has_any_data', async () => sqliteHasAnyData(client));
+        await prepareSqliteData(adapter, client);
     } catch (error) {
         if (__DEV__) {
             logStorageWarn('[Storage] SQLite availability check failed', error);
         }
-        hasData = false;
-    }
-    if (!hasData) {
-        const jsonValue = await measureStartupPhase('mobile.storage.sqlite_init.read_legacy_json', async () => getLegacyJson(AsyncStorage));
-        if (jsonValue != null) {
-            try {
-                const data = JSON.parse(jsonValue) as AppData;
-                data.areas = Array.isArray(data.areas) ? data.areas : [];
-                // Ensure JSON backup is updated before SQLite migration so fallback stays consistent.
-                await saveStartupJsonBackup(AsyncStorage, data, 'mobile.storage.sqlite_init.migrate');
-                await measureStartupPhase('mobile.storage.sqlite_init.migrate_json_to_sqlite', async () => adapter.saveData(data));
-                // A full migration already lands the whole backup in SQLite.
-                await AsyncStorage.setItem(SQLITE_JSON_RECONCILE_KEY, '1');
-            } catch (error) {
-                logStorageWarn('[Storage] Failed to migrate JSON data to SQLite', error);
-            }
-        }
-    } else {
-        try {
-            await measureStartupPhase('mobile.storage.sqlite_init.reconcile_json_backup', async () =>
-                reconcileJsonBackupIntoSqlite(adapter)
-            );
-        } catch (error) {
-            logStorageWarn('[Storage] Failed to reconcile JSON backup into SQLite', error);
-        }
+        throw error;
     }
     markStartupPhase('mobile.storage.sqlite_init.end');
     return { adapter, client };
@@ -1063,7 +1091,9 @@ export const __mobileStorageTestUtils = {
     createOpSqliteClientForTests: createOpSqliteClient,
     flushPendingStartupJsonBackup,
     flushPendingWidgetRefresh,
+    prepareSqliteDataForTests: prepareSqliteData,
     reconcileJsonBackupIntoSqliteForTests: reconcileJsonBackupIntoSqlite,
+    sqliteHasAnyDataForTests: sqliteHasAnyData,
     reset: () => {
         saveQueue = Promise.resolve();
         sqliteStatePromise = null;

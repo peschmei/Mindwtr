@@ -956,6 +956,133 @@ describe('mobile storage adapter', () => {
     expect(saveData).toHaveBeenCalledTimes(1);
   }, 10_000);
 
+  it('treats a one-shot count failure as unknown and preserves newer SQLite rows', async () => {
+    const makeTask = (id: string, title: string, rev: number, revBy: string): Task => ({
+      id,
+      title,
+      status: 'next',
+      tags: [],
+      contexts: [],
+      createdAt: '2026-07-21T00:00:00.000Z',
+      updatedAt: `2026-07-21T00:00:0${rev}.000Z`,
+      rev,
+      revBy,
+    });
+    const backup: AppData = {
+      tasks: [makeTask('shared', 'Stale backup title', 1, 'backup-device')],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    };
+    let sqliteData: AppData = {
+      tasks: [
+        makeTask('shared', 'Newer SQLite title', 2, 'sqlite-device'),
+        makeTask('sqlite-only', 'SQLite only', 1, 'sqlite-device'),
+      ],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    };
+    const stored = new Map<string, string>([
+      ['mindwtr-data', JSON.stringify(backup)],
+      ['mindwtr-data:startup-backup-version', '2'],
+    ]);
+    asyncStorageMock.getItem.mockImplementation(async (key: string) => stored.get(key) ?? null);
+    asyncStorageMock.setItem.mockImplementation(async (key: string, value: string) => {
+      stored.set(key, value);
+    });
+    let failNextCount = true;
+    const client = {
+      get: vi.fn(async (sql: string) => {
+        if (failNextCount && sql.includes('COUNT(*)')) {
+          failNextCount = false;
+          throw new Error('one-shot count failure');
+        }
+        return { count: sql.includes('FROM tasks') ? sqliteData.tasks.length : 0 };
+      }),
+    };
+    const adapter = {
+      getData: vi.fn(async () => sqliteData),
+      saveData: vi.fn(async (data: AppData) => {
+        sqliteData = data;
+      }),
+    };
+
+    const { __mobileStorageTestUtils } = await import('./storage-adapter');
+    await __mobileStorageTestUtils.prepareSqliteDataForTests(
+      adapter as never,
+      client as never,
+    );
+    expect(adapter.getData).toHaveBeenCalledTimes(1);
+    expect(adapter.saveData).toHaveBeenCalledTimes(1);
+    expect(sqliteData.tasks.map((task) => task.id).sort()).toEqual(['shared', 'sqlite-only']);
+    expect(sqliteData.tasks.find((task) => task.id === 'shared')?.title).toBe('Newer SQLite title');
+  }, 10_000);
+
+  it('merges a legacy backup with a fresh SQLite read before first migration', async () => {
+    const makeTask = (id: string, title: string): Task => ({
+      id,
+      title,
+      status: 'next',
+      tags: [],
+      contexts: [],
+      createdAt: '2026-07-21T00:00:00.000Z',
+      updatedAt: '2026-07-21T00:00:00.000Z',
+      rev: 1,
+      revBy: 'device-a',
+    });
+    const backup: AppData = {
+      tasks: [makeTask('backup-only', 'Backup only')],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    };
+    const current: AppData = {
+      tasks: [makeTask('concurrent-sqlite', 'Inserted after probe')],
+      projects: [],
+      sections: [],
+      areas: [],
+      people: [],
+      settings: {},
+    };
+    const stored = new Map<string, string>([['mindwtr-data', JSON.stringify(backup)]]);
+    asyncStorageMock.getItem.mockImplementation(async (key: string) => stored.get(key) ?? null);
+    asyncStorageMock.setItem.mockImplementation(async (key: string, value: string) => {
+      stored.set(key, value);
+    });
+    const client = { get: vi.fn().mockResolvedValue({ count: 0 }) };
+    const saveData = vi.fn().mockResolvedValue(undefined);
+
+    const { __mobileStorageTestUtils } = await import('./storage-adapter');
+    await __mobileStorageTestUtils.prepareSqliteDataForTests({
+      getData: vi.fn().mockResolvedValue(current),
+      saveData,
+    } as never, client as never);
+
+    const migrated = saveData.mock.calls[0]?.[0] as AppData;
+    expect(migrated.tasks.map((task) => task.id).sort()).toEqual(['backup-only', 'concurrent-sqlite']);
+    expect(JSON.parse(stored.get('mindwtr-data') ?? '{}').tasks.map((task: Task) => task.id).sort())
+      .toEqual(['backup-only', 'concurrent-sqlite']);
+  }, 10_000);
+
+  it.each(['sections', 'people', 'saved_filters'])(
+    'recognizes a %s-only SQLite store as non-empty',
+    async (populatedTable) => {
+      const client = {
+        get: vi.fn(async (sql: string) => ({ count: sql.includes(`FROM ${populatedTable}`) ? 1 : 0 })),
+      };
+      const { __mobileStorageTestUtils } = await import('./storage-adapter');
+
+      await expect(__mobileStorageTestUtils.sqliteHasAnyDataForTests(client as never)).resolves.toBe(true);
+    },
+  );
+
   it('does not mark JSON reconciliation complete until the merged SQLite save succeeds', async () => {
     const stored = new Map<string, string>([
       ['mindwtr-data', JSON.stringify({

@@ -593,6 +593,46 @@ describe('runSharedSyncCycle', () => {
         expect(harness.fastStates.size).toBe(0);
     });
 
+    it('requeues instead of persisting a cleanup snapshot when local data changes inside the hook', async () => {
+        const previousCleanupAt = '2026-01-01T00:00:00.000Z';
+        const local = createData([createTask('t-local', 'Local task')], {
+            attachments: { lastCleanupAt: previousCleanupAt },
+        });
+        const cleaned = createData([createTask('t-local', 'Local task')], {
+            attachments: { lastCleanupAt: NOW.toISOString() },
+        });
+        let mutateLocalData: () => void = () => {
+            throw new Error('Harness mutation was not initialized');
+        };
+        const runAttachmentCleanup = vi.fn(async () => {
+            mutateLocalData();
+            return { data: cloneAppData(cleaned), invalidateFastSyncState: true };
+        });
+        const { harness, hooks, storage, run } = createHarness({
+            local,
+            remote: createData([createTask('t-remote', 'Remote task')]),
+            hooks: { runAttachmentCleanup },
+        });
+        mutateLocalData = () => {
+            harness.inMemory.tasks[0] = {
+                ...harness.inMemory.tasks[0],
+                title: 'Edited during cleanup',
+                updatedAt: '2026-07-13T10:00:01.000Z',
+            };
+            harness.lastDataChangeAt += 1;
+        };
+
+        const result = await run();
+
+        expect(result).toMatchObject({ success: true, skipped: 'requeued' });
+        expect(hooks.requestFollowUp).toHaveBeenCalled();
+        expect(hooks.finalizeSuccess).not.toHaveBeenCalled();
+        expect(vi.mocked(storage.persistLocal).mock.calls.some(
+            ([data]) => data.settings.attachments?.lastCleanupAt === NOW.toISOString(),
+        )).toBe(false);
+        expect(harness.inMemory.tasks[0]?.title).toBe('Edited during cleanup');
+    });
+
     it('skips the attachment cleanup inside the interval window', async () => {
         const local = createData([createTask('t-local', 'Local task')], {
             attachments: { lastCleanupAt: new Date(Date.now() - 60_000).toISOString() },

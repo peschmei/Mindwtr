@@ -3468,6 +3468,28 @@ describe('TaskStore', () => {
             expect(useTaskStore.getState().error).toBe('Section not found');
         });
 
+        it('treats repeated deleteSection calls as a successful no-op', async () => {
+            const { addProject, addSection, deleteSection } = useTaskStore.getState();
+            const project = await addProject('Replay-safe sections', '#123456');
+            expect(project).not.toBeNull();
+            if (!project) return;
+
+            const section = await addSection(project.id, 'Delete once');
+            expect(section).not.toBeNull();
+            if (!section) return;
+
+            await deleteSection(section.id);
+            const tombstoneAfterFirstDelete = useTaskStore.getState()._allSections.find((item) => item.id === section.id);
+            const changeAtAfterFirstDelete = useTaskStore.getState().lastDataChangeAt;
+
+            const replayResult = await deleteSection(section.id);
+
+            expect(replayResult).toEqual({ success: true });
+            expect(useTaskStore.getState()._allSections.find((item) => item.id === section.id))
+                .toEqual(tombstoneAfterFirstDelete);
+            expect(useTaskStore.getState().lastDataChangeAt).toBe(changeAtAfterFirstDelete);
+        });
+
         it('reorders sections within one project without changing other projects', async () => {
             const { addProject, addSection, reorderSections } = useTaskStore.getState();
             const project = await addProject('Section Order Project', '#123456');
