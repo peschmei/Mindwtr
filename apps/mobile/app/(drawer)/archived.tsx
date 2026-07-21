@@ -93,7 +93,7 @@ function ArchivedTaskItem({
                 onPress={selectionMode ? onToggleSelect : onOpen}
                 style={({ pressed }) => [
                     styles.taskItem,
-                    { backgroundColor: tc.taskItemBg },
+                    { backgroundColor: tc.taskItemBg, borderColor: tc.border },
                     pressed && styles.taskItemPressed,
                     isHighlighted && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
                     selectionMode && isSelected && { borderWidth: 2, borderColor: tc.tint },
@@ -209,7 +209,7 @@ function ArchivedProjectItem({
                 onPress={onOpen}
                 style={({ pressed }) => [
                     styles.taskItem,
-                    { backgroundColor: tc.taskItemBg },
+                    { backgroundColor: tc.taskItemBg, borderColor: tc.border },
                     pressed && styles.taskItemPressed,
                 ]}
             >
@@ -750,11 +750,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        borderWidth: 1,
     },
     taskItemPressed: {
         opacity: 0.85,

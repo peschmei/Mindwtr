@@ -120,7 +120,7 @@ function TrashTaskItem({
         accessibilityState={selectionMode ? { selected: isSelected } : undefined}
         style={[
           styles.taskItem,
-          { backgroundColor: tc.taskItemBg },
+          { backgroundColor: tc.taskItemBg, borderColor: tc.border },
           isHighlighted && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
           selectionMode && isSelected && { borderWidth: 2, borderColor: tc.tint },
         ]}
@@ -184,7 +184,7 @@ function TrashProjectItem({
         accessibilityState={selectionMode ? { selected: isSelected } : undefined}
         style={[
           styles.taskItem,
-          { backgroundColor: tc.taskItemBg },
+          { backgroundColor: tc.taskItemBg, borderColor: tc.border },
           selectionMode && isSelected && { borderWidth: 2, borderColor: tc.tint },
         ]}
       >
@@ -659,11 +659,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
   },
   taskContent: {
     flex: 1,

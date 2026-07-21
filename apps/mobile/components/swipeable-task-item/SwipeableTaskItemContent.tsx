@@ -1,5 +1,5 @@
 import React, { type ReactNode, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { CircleDot, History, ListChecks, Repeat } from 'lucide-react-native';
 import { useThemeTokens } from '../../hooks/use-theme-tokens';
 import { useStatusColors } from '../../hooks/use-status-colors';
@@ -441,17 +441,10 @@ export function SwipeableTaskItemContent({
                 styles.taskItem,
                 isMaterial ? { borderRadius: shape.large } : undefined,
                 { backgroundColor: tc.taskItemBg },
-                { borderWidth: StyleSheet.hairlineWidth, borderColor: tc.border },
+                { borderWidth: 1, borderColor: tc.border },
                 isAvailableNextAction && !selectionMode && {
                     backgroundColor: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
                     borderColor: isDark ? 'rgba(59, 130, 246, 0.34)' : 'rgba(59, 130, 246, 0.24)',
-                },
-                !isDark && {
-                    shadowColor: '#0F172A',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.06,
-                    shadowRadius: 6,
-                    elevation: 2,
                 },
                 showFocusHighlight && canShowFocusToggle && task.isFocusedToday && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
                 isHighlighted && !selectionMode && { borderWidth: 2, borderColor: tc.tint },
