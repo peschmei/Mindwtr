@@ -75,6 +75,7 @@ Run all commands from the repository root.
 - Git
 - Rust toolchain (required for Tauri desktop build/dev)
 - System webview dependencies for Tauri on your OS
+- On Windows: the Visual Studio 2022 C++ build tools. The 2026 toolchain currently fails to link the `whisper-rs` transcription bindings (LNK1120 unresolved C-runtime externals), so pin the MSVC v143 toolset until that is fixed upstream.
 - Expo tooling for mobile development
 - Android SDK and/or Xcode if building mobile natively
 
