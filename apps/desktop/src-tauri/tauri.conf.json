@@ -20,7 +20,8 @@
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
-        "zoomHotkeysEnabled": false
+        "zoomHotkeysEnabled": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,AutofillServerCommunication,Translate --autoplay-policy=no-user-gesture-required --disable-background-networking --disable-component-update --disable-domain-reliability --no-pings"
       }
     ],
     "security": {
