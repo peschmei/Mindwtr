@@ -14,7 +14,7 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { shallow, useTaskStore, TaskPriority, TimeEstimate, applyFilter, buildAdvancedFilterCriteriaChips, compareProjectsByOrder, criteriaFromSelections, removeAdvancedFilterCriteriaChip, selectionsFromCriteria, formatFocusTaskLimitText,
-    getFocusStarBlockedText, formatTimeEstimateLabel, generateUUID, getUsedTaskTokens, getFocusSequentialFirstTaskIds, getProjectDeadlineBoosts, getTaskMetadataFilterVisibility, hasActiveFilterCriteria, markSavedFilterDeleted, normalizeFocusTaskLimit, safeParseDate, safeParseDueDate, isDueForReview, isTaskInActiveProject, SAVED_FILTER_NO_PROJECT_ID, shouldShowTaskForStart, sortFocusNextActions, sortTasksByFocusOrder, sortTasksBySavedPreference, translateWithFallback } from '@mindwtr/core';
+    getFocusStarBlockedText, formatTimeEstimateLabel, generateUUID, getUsedTaskTokens, getFocusSequentialFirstTaskIds, getProjectDeadlineBoosts, getProjectDeadlineBoostLabel, getTaskMetadataFilterVisibility, hasActiveFilterCriteria, markSavedFilterDeleted, normalizeFocusTaskLimit, safeParseDate, safeParseDueDate, isDueForReview, isTaskInActiveProject, SAVED_FILTER_NO_PROJECT_ID, shouldShowTaskForStart, sortFocusNextActions, sortTasksByFocusOrder, sortTasksBySavedPreference, translateWithFallback } from '@mindwtr/core';
 import type { FilterCriteria, FocusGroupBy, MultiValueFilterMatchMode, ProjectDeadlineBoost, SavedFilter, SortField, Task, TaskEnergyLevel } from '@mindwtr/core';
 import { useLanguage } from '../../contexts/language-context';
 import { cn } from '../../lib/utils';
@@ -126,16 +126,6 @@ function getAgendaScrollMargin(containerElement: HTMLDivElement, scrollElement: 
     const containerRect = containerElement.getBoundingClientRect();
     const scrollRect = scrollElement.getBoundingClientRect();
     return containerRect.top - scrollRect.top + scrollElement.scrollTop;
-}
-
-function getProjectDeadlineBoostLabel(
-    boost: ProjectDeadlineBoost | undefined,
-    resolveText: (key: string, fallback: string) => string,
-): string | undefined {
-    if (!boost) return undefined;
-    return boost.isOverdue
-        ? resolveText('focus.projectOverdue', 'Project overdue')
-        : resolveText('focus.projectDueToday', 'Project due today');
 }
 
 function getSavedFilterDefaultName(chips: AgendaActiveFilterChip[], fallback: string): string {

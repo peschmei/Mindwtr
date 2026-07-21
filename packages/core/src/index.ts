@@ -1323,5 +1323,6 @@ export {
 } from './mind-sweep';
 
 export * from './focus-star';
+export * from './focus-grouping';
 export * from './capture';
 export * from './session-restore';

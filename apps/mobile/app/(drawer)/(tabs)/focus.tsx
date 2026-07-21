@@ -30,6 +30,8 @@ import DraggableFlatList, {
 import {
   applyFilter,
   buildAdvancedFilterCriteriaChips,
+  buildFocusTaskGroups,
+  getProjectDeadlineBoostLabel,
   countActiveFilterCriteria,
   criteriaFromSelections,
   removeAdvancedFilterCriteriaChip,
@@ -84,8 +86,6 @@ import { PomodoroPanel } from '@/components/pomodoro-panel';
 import {
   formatFocusTimeEstimateLabel,
   getFocusTokenOptions,
-  groupFocusTasksByContext,
-  groupFocusTasksByTag,
   splitFocusedTasks,
 } from '@/lib/focus-screen-utils';
 import { useMobileAreaFilter } from '@/hooks/use-mobile-area-filter';
@@ -115,15 +115,6 @@ function resolveTaskRouteTab(value?: string | string[]): TaskEditTab {
   return routeValue === 'task' ? 'task' : 'view';
 }
 
-function getProjectDeadlineBoostLabel(
-  boost: ProjectDeadlineBoost | undefined,
-  resolveText: (key: string, fallback: string) => string,
-): string | undefined {
-  if (!boost) return undefined;
-  return boost.isOverdue
-    ? resolveText('focus.projectOverdue', 'Project overdue')
-    : resolveText('focus.projectDueToday', 'Project due today');
-}
 const FOCUS_VIEW_STATE_STORAGE_KEY = 'mindwtr:view:focus:v1';
 const FOCUS_REORDER_ITEM_HEIGHT = 80;
 const FOCUS_LIST_INITIAL_RENDER_COUNT = 12;
@@ -160,14 +151,6 @@ type FocusFilterChip = {
 };
 
 type FocusSectionType = 'focus' | 'schedule' | 'next' | 'reviewDue' | 'reviewProjects';
-
-type FocusTaskGroup = {
-  id: string;
-  title: string;
-  tasks: Task[];
-  muted?: boolean;
-  sortOrder?: number;
-};
 
 type FocusListItem =
   | { type: 'task'; task: Task; grouped?: boolean }
@@ -215,29 +198,6 @@ function normalizeFocusGroupBy(value: unknown): FocusGroupBy {
   return FOCUS_GROUP_BY_OPTIONS.includes(value as FocusGroupBy) ? value as FocusGroupBy : 'none';
 }
 
-function buildFocusTaskGroups(
-  tasks: Task[],
-  resolveGroup: (task: Task) => Omit<FocusTaskGroup, 'tasks'>,
-): FocusTaskGroup[] {
-  const groups = new Map<string, FocusTaskGroup>();
-  tasks.forEach((task) => {
-    const descriptor = resolveGroup(task);
-    const group = groups.get(descriptor.id);
-    if (group) {
-      group.tasks.push(task);
-      return;
-    }
-    groups.set(descriptor.id, { ...descriptor, tasks: [task] });
-  });
-
-  return Array.from(groups.values()).sort((left, right) => {
-    const leftOrder = Number.isFinite(left.sortOrder) ? left.sortOrder as number : Number.POSITIVE_INFINITY;
-    const rightOrder = Number.isFinite(right.sortOrder) ? right.sortOrder as number : Number.POSITIVE_INFINITY;
-    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
-    return left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
-  });
-}
-
 const readPersistedFocusExpandedSections = (raw: string | null): Partial<FocusExpandedSections> | null => {
   if (!raw) return null;
   try {
@@ -282,9 +242,10 @@ const serializeFocusViewState = (expandedSections: FocusExpandedSections): strin
 export default function FocusScreen() {
   const { taskId, openToken, taskTab } = useLocalSearchParams<{ taskId?: string; openToken?: string; taskTab?: string }>();
   const insets = useSafeAreaInsets();
-  const { tasks, projects, settings, updateTask, deleteTask, reorderFocusedTasks, updateSettings, highlightTaskId, setHighlightTask } = useTaskStore((state) => ({
+  const { tasks, projects, areas, settings, updateTask, deleteTask, reorderFocusedTasks, updateSettings, highlightTaskId, setHighlightTask } = useTaskStore((state) => ({
     tasks: state.tasks,
     projects: state.projects,
+    areas: state.areas,
     settings: state.settings,
     updateTask: state.updateTask,
     deleteTask: state.deleteTask,
@@ -1128,91 +1089,24 @@ export default function FocusScreen() {
     const buildProjectItems = (items: Project[]): FocusListItem[] => (
       items.map((project) => ({ type: 'project' as const, project }))
     );
-    const getEnergySortOrder = (energyLevel: TaskEnergyLevel | undefined): number => {
-      if (energyLevel === 'high') return 0;
-      if (energyLevel === 'medium') return 1;
-      if (energyLevel === 'low') return 2;
-      return 3;
-    };
-    const getPrioritySortOrder = (priority: TaskPriority | undefined): number => {
-      if (priority === 'urgent') return 0;
-      if (priority === 'high') return 1;
-      if (priority === 'medium') return 2;
-      if (priority === 'low') return 3;
-      return 4;
-    };
-    const buildNextActionGroups = (): FocusTaskGroup[] => {
-      switch (effectiveFocusGroupBy) {
-        case 'context':
-          return groupFocusTasksByContext(nextActions, resolveText('contexts.none', 'No context'));
-        case 'project':
-          return buildFocusTaskGroups(nextActions, (task) => {
-            const project = task.projectId ? projectById.get(task.projectId) : undefined;
-            const order = project && Number.isFinite(project.order) ? project.order : Number.POSITIVE_INFINITY;
-            return project
-              ? { id: `project:${project.id}`, title: project.title, sortOrder: order }
-              : { id: 'project:none', title: resolveText('taskEdit.noProjectOption', 'No project'), muted: true, sortOrder: -1 };
-          });
-        case 'area':
-          return buildFocusTaskGroups(nextActions, (task) => {
-            const project = task.projectId ? projectById.get(task.projectId) : undefined;
-            const areaId = project?.areaId ?? task.areaId;
-            const area = areaId ? areaById.get(areaId) : undefined;
-            const order = area && Number.isFinite(area.order) ? area.order : Number.POSITIVE_INFINITY;
-            return areaId
-              ? {
-                id: `area:${areaId}`,
-                title: area?.name ?? project?.areaTitle ?? resolveText('taskEdit.noAreaOption', 'No area'),
-                sortOrder: order,
-              }
-              : { id: 'area:none', title: resolveText('taskEdit.noAreaOption', 'No area'), muted: true, sortOrder: -1 };
-          });
-        case 'energy':
-          return buildFocusTaskGroups(nextActions, (task) => (
-            task.energyLevel
-              ? {
-                id: `energy:${task.energyLevel}`,
-                title: t(`energyLevel.${task.energyLevel}`),
-                sortOrder: getEnergySortOrder(task.energyLevel),
-              }
-              : { id: 'energy:none', title: resolveText('focus.group.noEnergy', 'No energy'), muted: true, sortOrder: getEnergySortOrder(undefined) }
-          ));
-        case 'priority':
-          return buildFocusTaskGroups(nextActions, (task) => (
-            task.priority
-              ? {
-                id: `priority:${task.priority}`,
-                title: t(`priority.${task.priority}`),
-                sortOrder: getPrioritySortOrder(task.priority),
-              }
-              : { id: 'priority:none', title: resolveText('focus.group.noPriority', 'No priority'), muted: true, sortOrder: getPrioritySortOrder(undefined) }
-          ));
-        case 'person':
-          return buildFocusTaskGroups(nextActions, (task) => {
-            const name = task.assignedTo?.trim();
-            return name
-              ? { id: `person:${name.toLowerCase()}`, title: name }
-              : { id: 'person:none', title: resolveText('people.unassigned', 'Unassigned'), muted: true, sortOrder: Number.POSITIVE_INFINITY };
-          });
-        case 'tag':
-          return groupFocusTasksByTag(nextActions, resolveText('projects.noTags', 'No tags'));
-        case 'none':
-        default:
-          return [];
-      }
-    };
     const buildGroupedNextItems = (): FocusListItem[] => {
       if (!expandedSections.next) return [];
       if (effectiveFocusGroupBy === 'none') {
         return buildTaskItems(nextActions);
       }
-      const groups = buildNextActionGroups();
+      const groups = buildFocusTaskGroups({
+        groupBy: effectiveFocusGroupBy,
+        tasks: nextActions,
+        projects,
+        areas,
+        resolveText,
+      });
       return groups
         .flatMap((group) => [
           {
             type: 'groupHeader' as const,
-            id: group.id,
-            title: group.title,
+            id: group.key,
+            title: group.label,
             count: group.tasks.length,
             muted: group.muted,
           },
@@ -1264,7 +1158,7 @@ export default function FocusScreen() {
 
     return nextSections;
   }, [
-    areaById,
+    areas,
     effectiveFocusGroupBy,
     expandedSections.focus,
     expandedSections.next,
@@ -1274,7 +1168,7 @@ export default function FocusScreen() {
     expandedSections.schedule,
     focusedTasks,
     nextActions,
-    projectById,
+    projects,
     resolveText,
     reviewDue,
     reviewDueProjects,
