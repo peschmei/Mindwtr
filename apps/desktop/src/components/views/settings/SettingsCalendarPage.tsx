@@ -7,6 +7,7 @@ import {
 import { ExternalLink } from 'lucide-react';
 
 import { cn } from '../../../lib/utils';
+import { Switch } from '../../ui/Switch';
 
 const CALENDAR_INTEGRATION_GUIDE_URL = 'https://docs.mindwtr.app/use/calendar-integration';
 
@@ -128,27 +129,12 @@ export function SettingsCalendarPage({
                                 <div className="text-sm font-medium">{t.calendarPushTitle}</div>
                                 <p className="text-xs text-muted-foreground">{t.calendarPushDesc}</p>
                             </div>
-                            <button
-                                type="button"
-                                role="switch"
+                            <Switch
                                 aria-label={t.calendarPushTitle}
-                                aria-checked={calendarPushEnabled}
+                                checked={calendarPushEnabled}
                                 disabled={calendarPushLoading}
-                                onClick={() => onToggleCalendarPush(!calendarPushEnabled)}
-                                className={cn(
-                                    "relative h-6 w-11 shrink-0 rounded-full border transition-colors",
-                                    calendarPushEnabled ? "border-primary bg-primary" : "border-border bg-muted/50",
-                                    calendarPushLoading && "opacity-60 cursor-wait"
-                                )}
-                            >
-                                <span
-                                    className={cn(
-                                        "absolute top-1 h-4 w-4 rounded-full bg-background shadow-sm transition-transform",
-                                        calendarPushEnabled ? "translate-x-5" : "translate-x-1"
-                                    )}
-                                />
-                                <span className="sr-only">{t.calendarPushEnable}</span>
-                            </button>
+                                onCheckedChange={onToggleCalendarPush}
+                            />
                         </div>
 
                         {calendarPushEnabled && systemCalendarPermission === 'granted' && (

@@ -5,6 +5,7 @@ import { FEEDBACK_CATEGORIES, type FeedbackCategory } from '@mindwtr/core';
 import { cn } from '../../../lib/utils';
 import { ModalPortal } from '../../ModalPortal';
 import { Button } from '../../ui/Button';
+import { Switch } from '../../ui/Switch';
 
 type Labels = {
     feedback: string;
@@ -323,25 +324,12 @@ export function SettingsFeedbackModal({
                                         {t.feedbackIncludeDiagnosticsDesc}
                                     </span>
                                 </div>
-                                <button
-                                    type="button"
-                                    role="switch"
+                                <Switch
                                     aria-label={t.feedbackIncludeDiagnostics}
                                     aria-describedby={diagnosticsDescriptionId}
-                                    aria-checked={includeDiagnostics}
-                                    onClick={() => setIncludeDiagnostics((next) => !next)}
-                                    className={cn(
-                                        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                        includeDiagnostics ? 'bg-primary border-primary' : 'bg-muted/50 border-border',
-                                    )}
-                                >
-                                    <span
-                                        className={cn(
-                                            'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                            includeDiagnostics ? 'translate-x-4' : 'translate-x-1',
-                                        )}
-                                    />
-                                </button>
+                                    checked={includeDiagnostics}
+                                    onCheckedChange={setIncludeDiagnostics}
+                                />
                             </div>
                         )}
 

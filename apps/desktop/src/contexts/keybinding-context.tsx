@@ -4,6 +4,7 @@ import { useLanguage } from './language-context';
 import { KeybindingHelpModal } from '../components/KeybindingHelpModal';
 import { isFlatpakRuntime, isTauriRuntime } from '../lib/runtime';
 import { reportError } from '../lib/report-error';
+import { nextDensityMode } from '../lib/density';
 import { registerUndoableAction, takeUndoableAction } from '../lib/undo-registry';
 import { undoTaskCompletion } from '../lib/undo-task-completion';
 import { logWarn } from '../lib/app-log';
@@ -251,13 +252,7 @@ export function KeybindingProvider({
         setListOptions({ showDetails: true });
     }, [collapseAllTaskDetails, listOptions.showDetails, setListOptions]);
     const toggleDensity = useCallback(() => {
-        const currentDensity = settings.appearance?.density ?? 'comfortable';
-        const nextDensity = currentDensity === 'comfortable'
-            ? 'compact'
-            : currentDensity === 'compact'
-                ? 'condensed'
-                : 'comfortable';
-        updateSettings({ appearance: { density: nextDensity } })
+        updateSettings({ appearance: { density: nextDensityMode(settings.appearance?.density) } })
             .catch((error) => reportError('Failed to update density', error));
     }, [settings.appearance?.density, updateSettings]);
     const applyAreaFilterShortcut = useCallback((key: string): boolean => {

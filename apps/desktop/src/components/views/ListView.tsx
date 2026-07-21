@@ -47,6 +47,7 @@ import { useListViewOptimizations } from '../../hooks/useListViewOptimizations';
 import { usePersistedViewState } from '../../hooks/usePersistedViewState';
 import { dispatchNavigateEvent } from '../../lib/navigation-events';
 import { reportError } from '../../lib/report-error';
+import { nextDensityMode } from '../../lib/density';
 import { AREA_FILTER_ALL, AREA_FILTER_NONE, projectMatchesAreaFilter, resolveAreaFilter, taskMatchesAreaFilter } from '@mindwtr/core';
 import { cn } from '../../lib/utils';
 import { sortDoneTasksForListView } from './list/done-sort';
@@ -914,14 +915,9 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                     onToggleDetails={handleToggleDetails}
                     densityMode={densityMode}
                     onToggleDensity={() => {
-                        const nextDensity = densityMode === 'comfortable'
-                            ? 'compact'
-                            : densityMode === 'compact'
-                                ? 'condensed'
-                                : 'comfortable';
                         void updateSettings({
                             appearance: {
-                                density: nextDensity,
+                                density: nextDensityMode(densityMode),
                             },
                         });
                     }}

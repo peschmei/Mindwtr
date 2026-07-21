@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { listMergeConflictSamples, safeFormatDate, summarizeMergeStats, useTaskStore } from '@mindwtr/core';
 import { ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
+import { Switch } from '../../../ui/Switch';
 import { ConfirmModal } from '../../../ConfirmModal';
 import { formatClockSkew } from './sync-page-utils';
 import type { SettingsSyncPageProps, SyncPreferences } from './types';
@@ -48,24 +49,11 @@ function SyncPreferenceToggle({
                 <p className="text-sm font-medium">{label}</p>
                 {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
             </div>
-            <button
-                type="button"
-                role="switch"
+            <Switch
                 aria-label={label}
-                aria-checked={checked}
-                onClick={onClick}
-                className={cn(
-                    'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                    checked ? 'bg-primary border-primary' : 'bg-muted/50 border-border',
-                )}
-            >
-                <span
-                    className={cn(
-                        'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                        checked ? 'translate-x-4' : 'translate-x-1',
-                    )}
-                />
-            </button>
+                checked={checked}
+                onCheckedChange={onClick}
+            />
         </div>
     );
 }

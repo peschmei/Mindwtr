@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { ConfirmModal } from '../../ConfirmModal';
+import { Switch } from '../../ui/Switch';
 
 type Labels = {
     aiEnable: string;
@@ -278,24 +279,11 @@ export function SettingsAiPage({
                         </div>
                         {aiOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                     </button>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.aiEnable}
-                        aria-checked={aiEnabled}
-                        onClick={handleAiToggle}
-                        className={cn(
-                            "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
-                            aiEnabled ? "bg-primary border-primary" : "bg-muted/50 border-border"
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                "inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform",
-                                aiEnabled ? "translate-x-4" : "translate-x-1"
-                            )}
-                        />
-                    </button>
+                        checked={aiEnabled}
+                        onCheckedChange={handleAiToggle}
+                    />
                 </div>
 
                 {aiOpen && (
@@ -457,24 +445,11 @@ export function SettingsAiPage({
                                             <div className="text-sm font-medium">{t.aiThinkingEnable}</div>
                                             <div className="text-xs text-muted-foreground">{t.aiThinkingEnableDesc}</div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            role="switch"
+                                        <Switch
                                             aria-label={t.aiThinkingEnable}
-                                            aria-checked={anthropicThinkingEnabled}
-                                            onClick={onToggleAnthropicThinking}
-                                            className={cn(
-                                                "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
-                                                anthropicThinkingEnabled ? "bg-primary border-primary" : "bg-muted/50 border-border"
-                                            )}
-                                        >
-                                            <span
-                                                className={cn(
-                                                    "inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform",
-                                                    anthropicThinkingEnabled ? "translate-x-4" : "translate-x-1"
-                                                )}
-                                            />
-                                        </button>
+                                            checked={anthropicThinkingEnabled}
+                                            onCheckedChange={onToggleAnthropicThinking}
+                                        />
                                     </div>
                                     {anthropicThinkingEnabled && (
                                         <div className="flex items-center justify-between gap-4">
@@ -549,24 +524,11 @@ export function SettingsAiPage({
                         </div>
                         {speechOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                     </button>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.speechTitle}
-                        aria-checked={speechEnabled}
-                        onClick={() => onUpdateSpeechSettings({ enabled: !speechEnabled })}
-                        className={cn(
-                            "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
-                            speechEnabled ? "bg-primary border-primary" : "bg-muted/50 border-border"
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                "inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform",
-                                speechEnabled ? "translate-x-4" : "translate-x-1"
-                            )}
-                        />
-                    </button>
+                        checked={speechEnabled}
+                        onCheckedChange={(checked) => onUpdateSpeechSettings({ enabled: checked })}
+                    />
                 </div>
 
                 {speechOpen && (

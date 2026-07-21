@@ -28,6 +28,7 @@ import {
     getTaskEditorSectionOpenDefaults,
     isTaskEditorSectionableField,
 } from '../../Task/task-item-helpers';
+import { Switch } from '../../ui/Switch';
 
 type Labels = {
     gtdDesc: string;
@@ -708,12 +709,10 @@ export function SettingsGtdPage({
                         <div className="text-sm font-medium">{t.featurePomodoro}</div>
                         <div className="text-xs text-muted-foreground mt-1">{t.featurePomodoroDesc}</div>
                     </div>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.featurePomodoro}
-                        aria-checked={pomodoroEnabled}
-                        onClick={() => {
+                        checked={pomodoroEnabled}
+                        onCheckedChange={() => {
                             updateSettings({
                                 features: {
                                     ...(safeSettings.features ?? {}),
@@ -721,18 +720,7 @@ export function SettingsGtdPage({
                                 },
                             }).then(showSaved).catch((error) => reportError('Failed to update feature flags', error));
                         }}
-                        className={cn(
-                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                            pomodoroEnabled ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                pomodoroEnabled ? 'translate-x-4' : 'translate-x-1'
-                            )}
-                        />
-                    </button>
+                    />
                 </div>
                 {pomodoroEnabled && (
                     <div className="p-4 space-y-3">
@@ -784,78 +772,39 @@ export function SettingsGtdPage({
                                     <div className="text-sm font-medium">{t.pomodoroLinkTask}</div>
                                     <div className="text-xs text-muted-foreground mt-1">{t.pomodoroLinkTaskDesc}</div>
                                 </div>
-                                <button
-                                    type="button"
-                                    role="switch"
+                                <Switch
                                     aria-label={t.pomodoroLinkTask}
-                                    aria-checked={pomodoroLinkTask}
-                                    onClick={() => updatePomodoroSettings({ linkTask: !pomodoroLinkTask })}
-                                    className={cn(
-                                        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                        pomodoroLinkTask ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                                    )}
-                                >
-                                    <span
-                                        className={cn(
-                                            'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                            pomodoroLinkTask ? 'translate-x-4' : 'translate-x-1'
-                                        )}
-                                    />
-                                </button>
+                                    checked={pomodoroLinkTask}
+                                    onCheckedChange={() => updatePomodoroSettings({ linkTask: !pomodoroLinkTask })}
+                                />
                             </div>
                             <div className="p-3 flex items-center justify-between gap-6">
                                 <div className="min-w-0">
                                     <div className="text-sm font-medium">{t.pomodoroAutoStartBreaks}</div>
                                     <div className="text-xs text-muted-foreground mt-1">{t.pomodoroAutoStartBreaksDesc}</div>
                                 </div>
-                                <button
-                                    type="button"
-                                    role="switch"
+                                <Switch
                                     aria-label={t.pomodoroAutoStartBreaks}
-                                    aria-checked={pomodoroAutoStartBreaks}
-                                    onClick={() => updatePomodoroSettings(
+                                    checked={pomodoroAutoStartBreaks}
+                                    onCheckedChange={() => updatePomodoroSettings(
                                         { autoStartBreaks: !pomodoroAutoStartBreaks },
                                         { showAutoStartNotice: !pomodoroAutoStartBreaks }
                                     )}
-                                    className={cn(
-                                        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                        pomodoroAutoStartBreaks ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                                    )}
-                                >
-                                    <span
-                                        className={cn(
-                                            'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                            pomodoroAutoStartBreaks ? 'translate-x-4' : 'translate-x-1'
-                                        )}
-                                    />
-                                </button>
+                                />
                             </div>
                             <div className="p-3 flex items-center justify-between gap-6">
                                 <div className="min-w-0">
                                     <div className="text-sm font-medium">{t.pomodoroAutoStartFocus}</div>
                                     <div className="text-xs text-muted-foreground mt-1">{t.pomodoroAutoStartFocusDesc}</div>
                                 </div>
-                                <button
-                                    type="button"
-                                    role="switch"
+                                <Switch
                                     aria-label={t.pomodoroAutoStartFocus}
-                                    aria-checked={pomodoroAutoStartFocus}
-                                    onClick={() => updatePomodoroSettings(
+                                    checked={pomodoroAutoStartFocus}
+                                    onCheckedChange={() => updatePomodoroSettings(
                                         { autoStartFocus: !pomodoroAutoStartFocus },
                                         { showAutoStartNotice: !pomodoroAutoStartFocus }
                                     )}
-                                    className={cn(
-                                        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                        pomodoroAutoStartFocus ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                                    )}
-                                >
-                                    <span
-                                        className={cn(
-                                            'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                            pomodoroAutoStartFocus ? 'translate-x-4' : 'translate-x-1'
-                                        )}
-                                    />
-                                </button>
+                                />
                             </div>
                         </div>
                     </div>
@@ -994,12 +943,10 @@ export function SettingsGtdPage({
                             <div className="text-sm font-medium">{t.captureSaveAudio}</div>
                             <div className="text-xs text-muted-foreground mt-1">{t.captureSaveAudioDesc}</div>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
+                        <Switch
                             aria-label={t.captureSaveAudio}
-                            aria-checked={saveAudioAttachments}
-                            onClick={() => {
+                            checked={saveAudioAttachments}
+                            onCheckedChange={() => {
                                 updateSettings({
                                     gtd: {
                                         ...(safeSettings.gtd ?? {}),
@@ -1007,18 +954,7 @@ export function SettingsGtdPage({
                                     },
                                 }).then(showSaved).catch((error) => reportError('Failed to update audio capture settings', error));
                             }}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                saveAudioAttachments ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                    saveAudioAttachments ? 'translate-x-4' : 'translate-x-1'
-                                )}
-                            />
-                        </button>
+                        />
                     </div>
                 ) : null}
                 <div className="p-4 flex items-center justify-between gap-6">
@@ -1026,40 +962,25 @@ export function SettingsGtdPage({
                         <div className="text-sm font-medium">{t.quickAddAutoClean}</div>
                         <div className="text-xs text-muted-foreground mt-1">{t.quickAddAutoCleanDesc}</div>
                     </div>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.quickAddAutoClean}
-                        aria-checked={quickAddAutoClean}
-                        onClick={() => {
+                        checked={quickAddAutoClean}
+                        onCheckedChange={() => {
                             updateSettings({ quickAddAutoClean: !quickAddAutoClean })
                                 .then(showSaved)
                                 .catch((error) => reportError('Failed to update quick add settings', error));
                         }}
-                        className={cn(
-                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                            quickAddAutoClean ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                quickAddAutoClean ? 'translate-x-4' : 'translate-x-1'
-                            )}
-                        />
-                    </button>
+                    />
                 </div>
                 <div className="p-4 flex items-center justify-between gap-6">
                     <div className="min-w-0">
                         <div className="text-sm font-medium">{t.naturalLanguageDates}</div>
                         <div className="text-xs text-muted-foreground mt-1">{t.naturalLanguageDatesDesc}</div>
                     </div>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.naturalLanguageDates}
-                        aria-checked={naturalLanguageDates}
-                        onClick={() => {
+                        checked={naturalLanguageDates}
+                        onCheckedChange={() => {
                             updateSettings({
                                 gtd: {
                                     ...(safeSettings.gtd ?? {}),
@@ -1069,46 +990,22 @@ export function SettingsGtdPage({
                                 .then(showSaved)
                                 .catch((error) => reportError('Failed to update quick add settings', error));
                         }}
-                        className={cn(
-                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                            naturalLanguageDates ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                naturalLanguageDates ? 'translate-x-4' : 'translate-x-1'
-                            )}
-                        />
-                    </button>
+                    />
                 </div>
                 <div className="p-4 flex items-center justify-between gap-6">
                     <div className="min-w-0">
                         <div className="text-sm font-medium">{t.markdownEditorAssist}</div>
                         <div className="text-xs text-muted-foreground mt-1">{t.markdownEditorAssistDesc}</div>
                     </div>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.markdownEditorAssist}
-                        aria-checked={markdownEditorAssist}
-                        onClick={() => {
+                        checked={markdownEditorAssist}
+                        onCheckedChange={() => {
                             updateSettings({ markdownEditorAssist: !markdownEditorAssist })
                                 .then(showSaved)
                                 .catch((error) => reportError('Failed to update editor settings', error));
                         }}
-                        className={cn(
-                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                            markdownEditorAssist ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                markdownEditorAssist ? 'translate-x-4' : 'translate-x-1'
-                            )}
-                        />
-                    </button>
+                    />
                 </div>
             </SettingsDisclosureCard>
             <SettingsDisclosureCard
@@ -1122,24 +1019,11 @@ export function SettingsGtdPage({
                         <div className="text-sm font-medium">{t.weeklyReviewIncludeContextsStep}</div>
                         <div className="text-xs text-muted-foreground mt-1">{t.weeklyReviewIncludeContextsStepDesc}</div>
                     </div>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.weeklyReviewIncludeContextsStep}
-                        aria-checked={includeContextStep}
-                        onClick={() => updateWeeklyReviewConfig({ includeContextStep: !includeContextStep })}
-                        className={cn(
-                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                            includeContextStep ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                includeContextStep ? 'translate-x-4' : 'translate-x-1'
-                            )}
-                        />
-                    </button>
+                        checked={includeContextStep}
+                        onCheckedChange={() => updateWeeklyReviewConfig({ includeContextStep: !includeContextStep })}
+                    />
                 </div>
             </SettingsDisclosureCard>
             <div className="bg-card border border-border rounded-lg">
@@ -1189,118 +1073,52 @@ export function SettingsGtdPage({
                         <div className="min-w-0">
                             <div className="text-sm font-medium">{t.inboxTwoMinuteEnabled}</div>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
+                        <Switch
                             aria-label={t.inboxTwoMinuteEnabled}
-                            aria-checked={inboxTwoMinuteEnabled}
-                            onClick={() => updateInboxProcessing({ twoMinuteEnabled: !inboxTwoMinuteEnabled })}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                inboxTwoMinuteEnabled ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                    inboxTwoMinuteEnabled ? 'translate-x-4' : 'translate-x-1'
-                                )}
-                            />
-                        </button>
+                            checked={inboxTwoMinuteEnabled}
+                            onCheckedChange={() => updateInboxProcessing({ twoMinuteEnabled: !inboxTwoMinuteEnabled })}
+                        />
                     </div>
                     <div className="p-4 flex items-center justify-between gap-6">
                         <div className="min-w-0">
                             <div className="text-sm font-medium">{t.inboxTwoMinuteFirst}</div>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
+                        <Switch
                             aria-label={t.inboxTwoMinuteFirst}
-                            aria-checked={inboxTwoMinuteFirst}
+                            checked={inboxTwoMinuteFirst}
                             disabled={!inboxTwoMinuteEnabled}
-                            onClick={() => updateInboxProcessing({ twoMinuteFirst: !inboxTwoMinuteFirst })}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                inboxTwoMinuteFirst ? 'bg-primary border-primary' : 'bg-muted/50 border-border',
-                                !inboxTwoMinuteEnabled && 'opacity-50 cursor-not-allowed'
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                    inboxTwoMinuteFirst ? 'translate-x-4' : 'translate-x-1'
-                                )}
-                            />
-                        </button>
+                            onCheckedChange={() => updateInboxProcessing({ twoMinuteFirst: !inboxTwoMinuteFirst })}
+                        />
                     </div>
                     <div className="p-4 flex items-center justify-between gap-6">
                         <div className="min-w-0">
                             <div className="text-sm font-medium">{t.inboxProjectFirst}</div>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
+                        <Switch
                             aria-label={t.inboxProjectFirst}
-                            aria-checked={inboxProjectFirst}
-                            onClick={() => updateInboxProcessing({ projectFirst: !inboxProjectFirst })}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                inboxProjectFirst ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                    inboxProjectFirst ? 'translate-x-4' : 'translate-x-1'
-                                )}
-                            />
-                        </button>
+                            checked={inboxProjectFirst}
+                            onCheckedChange={() => updateInboxProcessing({ projectFirst: !inboxProjectFirst })}
+                        />
                     </div>
                     <div className="p-4 flex items-center justify-between gap-6">
                         <div className="min-w-0">
                             <div className="text-sm font-medium">{t.inboxContextStepEnabled}</div>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
+                        <Switch
                             aria-label={t.inboxContextStepEnabled}
-                            aria-checked={inboxContextStepEnabled}
-                            onClick={() => updateInboxProcessing({ contextStepEnabled: !inboxContextStepEnabled })}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                inboxContextStepEnabled ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                    inboxContextStepEnabled ? 'translate-x-4' : 'translate-x-1'
-                                )}
-                            />
-                        </button>
+                            checked={inboxContextStepEnabled}
+                            onCheckedChange={() => updateInboxProcessing({ contextStepEnabled: !inboxContextStepEnabled })}
+                        />
                     </div>
                     <div className="p-4 flex items-center justify-between gap-6">
                         <div className="min-w-0">
                             <div className="text-sm font-medium">{t.inboxScheduleEnabled}</div>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
+                        <Switch
                             aria-label={t.inboxScheduleEnabled}
-                            aria-checked={inboxScheduleEnabled}
-                            onClick={() => updateInboxProcessing({ scheduleEnabled: !inboxScheduleEnabled })}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                inboxScheduleEnabled ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                    inboxScheduleEnabled ? 'translate-x-4' : 'translate-x-1'
-                                )}
-                            />
-                        </button>
+                            checked={inboxScheduleEnabled}
+                            onCheckedChange={() => updateInboxProcessing({ scheduleEnabled: !inboxScheduleEnabled })}
+                        />
                     </div>
                 </div>}
             </div>
@@ -1397,24 +1215,11 @@ export function SettingsGtdPage({
                                             <span className="text-[11px] text-muted-foreground">
                                                 {t.taskEditorOpenByDefault}
                                             </span>
-                                            <button
-                                                type="button"
-                                                role="switch"
-                                                aria-checked={isOpenByDefault}
+                                            <Switch
                                                 aria-label={`${group.title}: ${t.taskEditorOpenByDefault}`}
-                                                onClick={() => updateSectionOpenDefault(sectionOpenSectionId, !isOpenByDefault)}
-                                                className={cn(
-                                                    'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                                    isOpenByDefault ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                                                )}
-                                            >
-                                                <span
-                                                    className={cn(
-                                                        'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                                        isOpenByDefault ? 'translate-x-4' : 'translate-x-1'
-                                                    )}
-                                                />
-                                            </button>
+                                                checked={isOpenByDefault}
+                                                onCheckedChange={() => updateSectionOpenDefault(sectionOpenSectionId, !isOpenByDefault)}
+                                            />
                                         </div>
                                     )}
                                 </div>

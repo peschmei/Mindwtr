@@ -1,5 +1,5 @@
 import { Info } from 'lucide-react';
-import { cn } from '../../../../lib/utils';
+import { Switch } from '../../../ui/Switch';
 import type { SettingsSyncPageProps } from './types';
 
 type DiagnosticsSectionProps = Pick<
@@ -44,24 +44,11 @@ export function DiagnosticsSection({
                             <p className="text-sm font-medium">{t.analyticsHeartbeat}</p>
                             <p className="text-xs text-muted-foreground">{t.analyticsHeartbeatDesc}</p>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
+                        <Switch
                             aria-label={t.analyticsHeartbeat}
-                            aria-checked={analyticsHeartbeatOptedOut}
-                            onClick={toggleAnalyticsHeartbeatOptOut}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                                analyticsHeartbeatOptedOut ? 'bg-muted border-border' : 'bg-muted/50 border-border'
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                    analyticsHeartbeatOptedOut ? 'translate-x-4' : 'translate-x-1'
-                                )}
-                            />
-                        </button>
+                            checked={analyticsHeartbeatOptedOut}
+                            onCheckedChange={toggleAnalyticsHeartbeatOptOut}
+                        />
                     </div>
                 )}
                 <div className="flex items-start justify-between gap-4">
@@ -69,24 +56,11 @@ export function DiagnosticsSection({
                         <p className="text-sm font-medium">{t.debugLogging}</p>
                         <p className="text-xs text-muted-foreground">{t.debugLoggingDesc}</p>
                     </div>
-                    <button
-                        type="button"
-                        role="switch"
+                    <Switch
                         aria-label={t.debugLogging}
-                        aria-checked={loggingEnabled}
-                        onClick={onToggleLogging}
-                        className={cn(
-                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors',
-                            loggingEnabled ? 'bg-primary border-primary' : 'bg-muted/50 border-border'
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform',
-                                loggingEnabled ? 'translate-x-4' : 'translate-x-1'
-                            )}
-                        />
-                    </button>
+                        checked={loggingEnabled}
+                        onCheckedChange={onToggleLogging}
+                    />
                 </div>
                 {loggingEnabled && logPath && (
                     <div className="text-xs text-muted-foreground">
