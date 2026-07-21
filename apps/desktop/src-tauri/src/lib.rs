@@ -1308,21 +1308,6 @@ pub fn run() {
                     let _ = std::fs::create_dir_all(&webview_dir);
                     main_window_builder = main_window_builder.data_directory(webview_dir);
                 }
-                // The rc.3 hardened browser args wedged large IPC payloads on
-                // Windows (#913), so flag sets are bisected via this launch
-                // override instead of shipping them blind. Passing args here
-                // REPLACES wry's defaults — any test string must re-include
-                // --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection
-                // and --autoplay-policy=no-user-gesture-required (#909).
-                #[cfg(target_os = "windows")]
-                if let Ok(extra_args) = std::env::var("MINDWTR_WEBVIEW_ARGS") {
-                    let extra_args = extra_args.trim().to_string();
-                    if !extra_args.is_empty() {
-                        log::info!("Overriding WebView2 browser args from MINDWTR_WEBVIEW_ARGS");
-                        main_window_builder =
-                            main_window_builder.additional_browser_args(&extra_args);
-                    }
-                }
                 main_window_builder.build()?;
             }
 
