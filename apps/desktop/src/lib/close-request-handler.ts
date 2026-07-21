@@ -10,6 +10,7 @@ type HandleDesktopCloseRequestOptions = {
     getWindowSettings: () => WindowSettings | undefined;
     hideToTray: () => Promise<void>;
     isFlatpak: boolean;
+    logStep?: (step: string) => void;
     promptOpenRef: ClosePromptRef;
     quitApp: () => Promise<void>;
     reportCloseError: (label: string, error: unknown) => void;
@@ -21,6 +22,7 @@ export async function handleDesktopCloseRequest({
     getWindowSettings,
     hideToTray,
     isFlatpak,
+    logStep,
     promptOpenRef,
     quitApp,
     reportCloseError,
@@ -33,6 +35,7 @@ export async function handleDesktopCloseRequest({
         windowSettings?.showTray,
         isFlatpak,
     );
+    logStep?.(`close action resolved to ${closeAction}`);
 
     if (closeAction === 'quit') {
         await quitApp().catch((error) => reportCloseError('Quit failed', error));

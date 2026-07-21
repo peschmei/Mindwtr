@@ -333,7 +333,11 @@ pub(crate) fn set_global_quick_add_shortcut(
 
 #[tauri::command]
 pub(crate) fn quit_app(app: tauri::AppHandle) {
+    // Close trace (#913): confirms the quit command reached native code; if
+    // the process survives past this line, app.exit itself failed to exit.
+    log::info!("Close trace: quit_app command invoked, calling app.exit(0)");
     app.exit(0);
+    log::info!("Close trace: app.exit(0) returned without terminating");
 }
 
 #[tauri::command]

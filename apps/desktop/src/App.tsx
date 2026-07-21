@@ -641,7 +641,11 @@ function App() {
 
     const quitApp = useCallback(async () => {
         const { invoke } = await import('@tauri-apps/api/core');
+        void logInfo('Close trace: invoking quit_app', { scope: 'app', force: true });
         await invoke('quit_app');
+        // app.exit(0) should tear the process down before this resolves; if
+        // this line ever logs, the native exit call returned without exiting (#913).
+        void logInfo('Close trace: quit_app invoke returned without exit', { scope: 'app', force: true });
     }, []);
 
     useEffect(() => {
@@ -689,11 +693,16 @@ function App() {
                         if (closingPromise || isClosing) return;
                         isClosing = true;
                         event.preventDefault();
+                        // Forced close-path trace: #913 reports the quit chain dying
+                        // silently on Windows, so each hop logs even with
+                        // diagnostics off — a stuck run's log then names the hop.
+                        void logInfo('Close trace: flush before close started', { scope: 'app', force: true });
                         closingPromise = flushPendingSave()
                             .catch((error) => reportError('Save failed', error))
                             .finally(() => {
                                 closingPromise = null;
                                 isClosing = false;
+                                void logInfo('Close trace: flush before close settled', { scope: 'app', force: true });
                             });
                         await closingPromise;
                     });
@@ -881,10 +890,15 @@ function App() {
             const { listen } = await import('@tauri-apps/api/event');
             const { invoke } = await import('@tauri-apps/api/core');
             const nextUnlisten = await listen('close-requested', async () => {
+                void logInfo('Close trace: close-requested event received', { scope: 'app', force: true });
                 await invoke('acknowledge_close_request').catch((error) => {
                     void logError(error, { scope: 'app', step: 'acknowledgeCloseRequest' });
                 });
+                void logInfo('Close trace: close request acknowledged', { scope: 'app', force: true });
                 await handleDesktopCloseRequest({
+                    logStep: (step) => {
+                        void logInfo(`Close trace: ${step}`, { scope: 'app', force: true });
+                    },
                     getWindowSettings: () => useTaskStore.getState().settings?.window,
                     hideToTray,
                     isFlatpak,
