@@ -43,6 +43,13 @@ export interface StartupPromptDescriptor {
      * May be async. A throw retires the descriptor for the session.
      */
     present: () => boolean | void | Promise<boolean | void>;
+    /**
+     * Optional ceiling on how long an async `present()` may run before it is
+     * treated as a decline. Prevents a hung `present()` (e.g. a network call with
+     * no timeout) from holding the single slot for the session and starving
+     * lower-priority prompts. Omit for no timeout (the default).
+     */
+    presentTimeoutMs?: number;
     /** Called on any thrown error, for logging. The queue handles retirement itself. */
     onError?: (error: unknown, phase: 'eligible' | 'select' | 'present') => void;
 }
@@ -141,10 +148,20 @@ export function useStartupPromptQueue(options: UseStartupPromptQueueOptions): St
 
         pendingRef.current = candidate.id;
         let cancelled = false;
+        let presentTimeoutId: number | undefined;
         const timer = window.setTimeout(() => {
-            Promise.resolve()
-                .then(() => candidate.present())
+            const presented = Promise.resolve().then(() => candidate.present());
+            const raced = candidate.presentTimeoutMs === undefined
+                ? presented
+                : Promise.race<boolean | void>([
+                    presented,
+                    new Promise<false>((resolve) => {
+                        presentTimeoutId = window.setTimeout(() => resolve(false), candidate.presentTimeoutMs);
+                    }),
+                ]);
+            raced
                 .then((opened) => {
+                    if (presentTimeoutId !== undefined) window.clearTimeout(presentTimeoutId);
                     pendingRef.current = null;
                     if (cancelled) return;
                     if (opened) {
@@ -155,6 +172,7 @@ export function useStartupPromptQueue(options: UseStartupPromptQueueOptions): St
                     }
                 })
                 .catch((error) => {
+                    if (presentTimeoutId !== undefined) window.clearTimeout(presentTimeoutId);
                     if (cancelled) {
                         pendingRef.current = null;
                         return;
@@ -167,6 +185,7 @@ export function useStartupPromptQueue(options: UseStartupPromptQueueOptions): St
         return () => {
             cancelled = true;
             window.clearTimeout(timer);
+            if (presentTimeoutId !== undefined) window.clearTimeout(presentTimeoutId);
             pendingRef.current = null;
         };
     }, [enabled, gateOpen, openId, revision, selectCandidate, retire, bumpRevision, ...(signals ?? [])]);

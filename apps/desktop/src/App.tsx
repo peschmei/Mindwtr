@@ -326,6 +326,10 @@ function App() {
             id: 'update-reminder',
             priority: 20,
             delayMs: 1750,
+            // checkForUpdates is a plain fetch with no timeout; cap present() so a
+            // hung network never holds the single slot and starves the donation
+            // prompt for the whole session.
+            presentTimeoutMs: 15000,
             isEligible: () => {
                 if (!desktopInstallSource) return false;
                 if (!isDesktopUpdateReminderAllowed(desktopInstallSource)) return false;

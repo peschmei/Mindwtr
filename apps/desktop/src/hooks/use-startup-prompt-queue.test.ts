@@ -167,6 +167,58 @@ describe('useStartupPromptQueue', () => {
         expect(result.current.openId).toBe('donation');
     });
 
+    it('times out a hung present() and falls through to the next prompt', async () => {
+        const donationPresent = vi.fn(() => true);
+        const { result } = renderQueue({
+            descriptors: [
+                makeDescriptor({
+                    id: 'update',
+                    priority: 20,
+                    delayMs: 100,
+                    presentTimeoutMs: 1000,
+                    present: () => new Promise<boolean>(() => {
+                        // never resolves — simulates a hung network call
+                    }),
+                }),
+                makeDescriptor({ id: 'donation', priority: 10, delayMs: 100, present: donationPresent }),
+            ],
+        });
+
+        await flush(100); // update's delay elapses, present() hangs
+        expect(result.current.openId).toBeNull();
+
+        await flush(1000); // present() times out → update retired
+        await flush(100); // donation's delay elapses
+        expect(result.current.openId).toBe('donation');
+        expect(donationPresent).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not time out other descriptors that omit presentTimeoutMs', async () => {
+        let resolvePresent: ((value: boolean) => void) | undefined;
+        const { result } = renderQueue({
+            descriptors: [
+                makeDescriptor({
+                    id: 'slow',
+                    priority: 10,
+                    delayMs: 100,
+                    present: () => new Promise<boolean>((resolve) => {
+                        resolvePresent = resolve;
+                    }),
+                }),
+            ],
+        });
+
+        await flush(100);
+        await flush(5000); // no timeout configured → still pending, not retired
+        expect(result.current.openId).toBeNull();
+
+        await act(async () => {
+            resolvePresent?.(true);
+            await Promise.resolve();
+        });
+        expect(result.current.openId).toBe('slow');
+    });
+
     it('treats a throwing isEligible as ineligible and retires it', async () => {
         const onLog = vi.fn();
         const { result } = renderQueue({
