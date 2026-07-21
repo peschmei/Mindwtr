@@ -37,6 +37,7 @@ import {
     sendMobileAnalyticsOptOut,
 } from '@/lib/analytics-heartbeat';
 
+import { SettingRow } from './setting-row';
 import { MobileExtraConfig } from './settings.constants';
 import { AppleRemindersImportSection } from './apple-reminders-import-section';
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
@@ -880,15 +881,10 @@ function SyncSettingsView({
                         />
 
                         <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 16 }]}>
-                            <View style={styles.settingRow}>
-                                <View style={styles.settingInfo}>
-                                    <Text style={[styles.settingLabel, { color: tc.text }]}>
-                                        {tr('settings.syncMobile.pendingRemoteDeletes')}
-                                    </Text>
-                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                        {pendingRemoteDeleteCount}
-                                    </Text>
-                                </View>
+                            <SettingRow
+                                label={tr('settings.syncMobile.pendingRemoteDeletes')}
+                                description={String(pendingRemoteDeleteCount)}
+                            >
                                 <TouchableOpacity
                                     disabled={pendingRemoteDeleteCount === 0}
                                     onPress={handleClearPendingRemoteDeletes}
@@ -901,7 +897,7 @@ function SyncSettingsView({
                                         {tr('filters.clear')}
                                     </CompactText>
                                 </TouchableOpacity>
-                            </View>
+                            </SettingRow>
                         </View>
 
                         <SyncDiagnosticsCard

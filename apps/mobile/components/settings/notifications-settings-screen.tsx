@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +20,7 @@ import {
 } from '@/lib/persistent-capture-notification';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
+import { SettingRow, SettingToggleRow } from './setting-row';
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
 import { SettingsTopBar } from './settings.shell';
 import { styles } from './settings.styles';
@@ -177,157 +178,113 @@ export function NotificationsSettingsScreen() {
             <SettingsTopBar title={t('settings.notifications')} />
             <ScrollView style={styles.scrollView} contentContainerStyle={scrollContentStyle}>
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
-                    <View style={styles.settingRow}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.notificationsEnable')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.notificationsDesc')}</Text>
-                        </View>
-                        <Switch
-                            value={notificationsEnabled}
-                            onValueChange={(value) => {
-                                if (!value) {
-                                    updateSettings({ notificationsEnabled: false }).catch(console.error);
-                                    return;
-                                }
-                                ensureNotificationsPermission()
-                                    .then((granted) => {
-                                        if (!granted) return;
-                                        updateSettings({ notificationsEnabled: true }).catch(console.error);
-                                    })
-                                    .catch(console.error);
-                            }}
-                            trackColor={{ false: '#767577', true: '#3B82F6' }}
-                        />
-                    </View>
+                    <SettingToggleRow
+                        label={t('settings.notificationsEnable')}
+                        description={t('settings.notificationsDesc')}
+                        value={notificationsEnabled}
+                        onChange={(value) => {
+                            if (!value) {
+                                updateSettings({ notificationsEnabled: false }).catch(console.error);
+                                return;
+                            }
+                            ensureNotificationsPermission()
+                                .then((granted) => {
+                                    if (!granted) return;
+                                    updateSettings({ notificationsEnabled: true }).catch(console.error);
+                                })
+                                .catch(console.error);
+                        }}
+                    />
 
-                    <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text, opacity: notificationsEnabled ? 1 : 0.5 }]}>
-                                {t('settings.startDateNotifications')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText, opacity: notificationsEnabled ? 1 : 0.5 }]}>
-                                {t('settings.startDateNotificationsDesc')}
-                            </Text>
-                        </View>
-                        <Switch
-                            value={startDateNotificationsEnabled}
-                            disabled={!notificationsEnabled}
-                            onValueChange={(value) => {
-                                if (!value) {
-                                    updateSettings({ startDateNotificationsEnabled: false }).catch(console.error);
-                                    return;
-                                }
-                                ensureNotificationsPermission()
-                                    .then((granted) => {
-                                        if (!granted) return;
-                                        updateSettings({ startDateNotificationsEnabled: true }).catch(console.error);
-                                    })
-                                    .catch(console.error);
-                            }}
-                            trackColor={{ false: '#767577', true: '#3B82F6' }}
-                        />
-                    </View>
+                    <SettingToggleRow
+                        divider
+                        dimmed={!notificationsEnabled}
+                        label={t('settings.startDateNotifications')}
+                        description={t('settings.startDateNotificationsDesc')}
+                        value={startDateNotificationsEnabled}
+                        disabled={!notificationsEnabled}
+                        onChange={(value) => {
+                            if (!value) {
+                                updateSettings({ startDateNotificationsEnabled: false }).catch(console.error);
+                                return;
+                            }
+                            ensureNotificationsPermission()
+                                .then((granted) => {
+                                    if (!granted) return;
+                                    updateSettings({ startDateNotificationsEnabled: true }).catch(console.error);
+                                })
+                                .catch(console.error);
+                        }}
+                    />
 
-                    <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text, opacity: notificationsEnabled ? 1 : 0.5 }]}>
-                                {t('settings.dueDateNotifications')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText, opacity: notificationsEnabled ? 1 : 0.5 }]}>
-                                {t('settings.dueDateNotificationsDesc')}
-                            </Text>
-                        </View>
-                        <Switch
-                            value={dueDateNotificationsEnabled}
-                            disabled={!notificationsEnabled}
-                            onValueChange={(value) => {
-                                if (!value) {
-                                    updateSettings({ dueDateNotificationsEnabled: false }).catch(console.error);
-                                    return;
-                                }
-                                ensureNotificationsPermission()
-                                    .then((granted) => {
-                                        if (!granted) return;
-                                        updateSettings({ dueDateNotificationsEnabled: true }).catch(console.error);
-                                    })
-                                    .catch(console.error);
-                            }}
-                            trackColor={{ false: '#767577', true: '#3B82F6' }}
-                        />
-                    </View>
+                    <SettingToggleRow
+                        divider
+                        dimmed={!notificationsEnabled}
+                        label={t('settings.dueDateNotifications')}
+                        description={t('settings.dueDateNotificationsDesc')}
+                        value={dueDateNotificationsEnabled}
+                        disabled={!notificationsEnabled}
+                        onChange={(value) => {
+                            if (!value) {
+                                updateSettings({ dueDateNotificationsEnabled: false }).catch(console.error);
+                                return;
+                            }
+                            ensureNotificationsPermission()
+                                .then((granted) => {
+                                    if (!granted) return;
+                                    updateSettings({ dueDateNotificationsEnabled: true }).catch(console.error);
+                                })
+                                .catch(console.error);
+                        }}
+                    />
 
                     {isPersistentCaptureSupported() && (
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>
-                                    {t('settings.persistentCaptureLabel')}
-                                </Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                    {t('settings.persistentCaptureDesc')}
-                                </Text>
-                            </View>
-                            <Switch
-                                value={persistentCaptureEnabled}
-                                onValueChange={togglePersistentCapture}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
+                        <SettingToggleRow
+                            divider
+                            label={t('settings.persistentCaptureLabel')}
+                            description={t('settings.persistentCaptureDesc')}
+                            value={persistentCaptureEnabled}
+                            onChange={togglePersistentCapture}
+                        />
                     )}
                 </View>
 
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}>
-                    <View style={styles.settingRow}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.weeklyReview')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.weeklyReviewDesc')}</Text>
-                        </View>
-                        <Switch
-                            value={weeklyReviewEnabled}
-                            onValueChange={(value) => {
-                                if (!value) {
-                                    updateSettings({ weeklyReviewEnabled: false }).catch(console.error);
-                                    return;
-                                }
-                                ensureNotificationsPermission()
-                                    .then((granted) => {
-                                        if (!granted) return;
-                                        updateSettings({ weeklyReviewEnabled: true }).catch(console.error);
-                                    })
-                                    .catch(console.error);
-                            }}
-                            trackColor={{ false: '#767577', true: '#3B82F6' }}
-                        />
-                    </View>
+                    <SettingToggleRow
+                        label={t('settings.weeklyReview')}
+                        description={t('settings.weeklyReviewDesc')}
+                        value={weeklyReviewEnabled}
+                        onChange={(value) => {
+                            if (!value) {
+                                updateSettings({ weeklyReviewEnabled: false }).catch(console.error);
+                                return;
+                            }
+                            ensureNotificationsPermission()
+                                .then((granted) => {
+                                    if (!granted) return;
+                                    updateSettings({ weeklyReviewEnabled: true }).catch(console.error);
+                                })
+                                .catch(console.error);
+                        }}
+                    />
 
-                    <TouchableOpacity
-                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
+                    <SettingRow
+                        divider
+                        dimmed={!weeklyReviewEnabled}
                         onPress={() => setWeeklyReviewDayPickerOpen(true)}
                         disabled={!weeklyReviewEnabled}
-                    >
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text, opacity: weeklyReviewEnabled ? 1 : 0.5 }]}>
-                                {t('settings.weeklyReviewDay')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText, opacity: weeklyReviewEnabled ? 1 : 0.5 }]}>
-                                {getWeekdayLabel(weeklyReviewDay)}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
+                        label={t('settings.weeklyReviewDay')}
+                        description={getWeekdayLabel(weeklyReviewDay)}
+                    />
 
-                    <TouchableOpacity
-                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
+                    <SettingRow
+                        divider
+                        dimmed={!weeklyReviewEnabled}
                         onPress={openWeeklyReviewTimePicker}
                         disabled={!weeklyReviewEnabled}
-                    >
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text, opacity: weeklyReviewEnabled ? 1 : 0.5 }]}>
-                                {t('settings.weeklyReviewTime')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText, opacity: weeklyReviewEnabled ? 1 : 0.5 }]}>
-                                {formatTime(weeklyReviewTime)}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
+                        label={t('settings.weeklyReviewTime')}
+                        description={formatTime(weeklyReviewTime)}
+                    />
                 </View>
 
                 <Modal
@@ -371,92 +328,66 @@ export function NotificationsSettingsScreen() {
                 </Modal>
 
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}>
-                    <View style={styles.settingRow}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.dailyDigest')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.dailyDigestDesc')}</Text>
-                        </View>
-                    </View>
+                    <SettingRow
+                        label={t('settings.dailyDigest')}
+                        description={t('settings.dailyDigestDesc')}
+                    />
 
-                    <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.dailyDigestMorning')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                {t('settings.dailyDigestMorningTime')}: {formatTime(dailyDigestMorningTime)}
-                            </Text>
-                        </View>
-                        <Switch
-                            value={dailyDigestMorningEnabled}
-                            onValueChange={(value) => {
-                                if (!value) {
-                                    updateSettings({ dailyDigestMorningEnabled: false }).catch(console.error);
-                                    return;
-                                }
-                                ensureNotificationsPermission()
-                                    .then((granted) => {
-                                        if (!granted) return;
-                                        updateSettings({ dailyDigestMorningEnabled: true }).catch(console.error);
-                                    })
-                                    .catch(console.error);
-                            }}
-                            trackColor={{ false: '#767577', true: '#3B82F6' }}
-                        />
-                    </View>
+                    <SettingToggleRow
+                        divider
+                        label={t('settings.dailyDigestMorning')}
+                        description={`${t('settings.dailyDigestMorningTime')}: ${formatTime(dailyDigestMorningTime)}`}
+                        value={dailyDigestMorningEnabled}
+                        onChange={(value) => {
+                            if (!value) {
+                                updateSettings({ dailyDigestMorningEnabled: false }).catch(console.error);
+                                return;
+                            }
+                            ensureNotificationsPermission()
+                                .then((granted) => {
+                                    if (!granted) return;
+                                    updateSettings({ dailyDigestMorningEnabled: true }).catch(console.error);
+                                })
+                                .catch(console.error);
+                        }}
+                    />
 
-                    <TouchableOpacity
-                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
+                    <SettingRow
+                        divider
+                        dimmed={!dailyDigestMorningEnabled}
                         onPress={() => openDigestTimePicker('morning')}
                         disabled={!dailyDigestMorningEnabled}
-                    >
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text, opacity: dailyDigestMorningEnabled ? 1 : 0.5 }]}>
-                                {t('settings.dailyDigestMorningTime')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText, opacity: dailyDigestMorningEnabled ? 1 : 0.5 }]}>
-                                {formatTime(dailyDigestMorningTime)}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
+                        label={t('settings.dailyDigestMorningTime')}
+                        description={formatTime(dailyDigestMorningTime)}
+                    />
 
-                    <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.dailyDigestEvening')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                {t('settings.dailyDigestEveningTime')}: {formatTime(dailyDigestEveningTime)}
-                            </Text>
-                        </View>
-                        <Switch
-                            value={dailyDigestEveningEnabled}
-                            onValueChange={(value) => {
-                                if (!value) {
-                                    updateSettings({ dailyDigestEveningEnabled: false }).catch(console.error);
-                                    return;
-                                }
-                                ensureNotificationsPermission()
-                                    .then((granted) => {
-                                        if (!granted) return;
-                                        updateSettings({ dailyDigestEveningEnabled: true }).catch(console.error);
-                                    })
-                                    .catch(console.error);
-                            }}
-                            trackColor={{ false: '#767577', true: '#3B82F6' }}
-                        />
-                    </View>
+                    <SettingToggleRow
+                        divider
+                        label={t('settings.dailyDigestEvening')}
+                        description={`${t('settings.dailyDigestEveningTime')}: ${formatTime(dailyDigestEveningTime)}`}
+                        value={dailyDigestEveningEnabled}
+                        onChange={(value) => {
+                            if (!value) {
+                                updateSettings({ dailyDigestEveningEnabled: false }).catch(console.error);
+                                return;
+                            }
+                            ensureNotificationsPermission()
+                                .then((granted) => {
+                                    if (!granted) return;
+                                    updateSettings({ dailyDigestEveningEnabled: true }).catch(console.error);
+                                })
+                                .catch(console.error);
+                        }}
+                    />
 
-                    <TouchableOpacity
-                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
+                    <SettingRow
+                        divider
+                        dimmed={!dailyDigestEveningEnabled}
                         onPress={() => openDigestTimePicker('evening')}
                         disabled={!dailyDigestEveningEnabled}
-                    >
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text, opacity: dailyDigestEveningEnabled ? 1 : 0.5 }]}>
-                                {t('settings.dailyDigestEveningTime')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText, opacity: dailyDigestEveningEnabled ? 1 : 0.5 }]}>
-                                {formatTime(dailyDigestEveningTime)}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
+                        label={t('settings.dailyDigestEveningTime')}
+                        description={formatTime(dailyDigestEveningTime)}
+                    />
                 </View>
 
                 {digestTimePicker && Platform.OS === 'ios' && (

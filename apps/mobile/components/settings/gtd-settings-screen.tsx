@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,6 +41,7 @@ import {
     useTaskStore,
 } from '@mindwtr/core';
 
+import { SettingRow, SettingToggleRow } from './setting-row';
 import type { SettingsScreen } from './settings.constants';
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
 import { SettingsTopBar } from './settings.shell';
@@ -439,23 +440,17 @@ export function GtdSettingsScreen({
                 <ScrollView style={styles.scrollView} contentContainerStyle={scrollContentStyle}>
                     <Text style={[styles.description, { color: tc.secondaryText }]}>{t('settings.gtdDesc')}</Text>
                     <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginBottom: 12 }]}>
-                        <View style={styles.settingRow}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.features')}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.featuresDesc')}</Text>
-                            </View>
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{featurePomodoroLabel}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{featurePomodoroDesc}</Text>
-                            </View>
-                            <Switch
-                                value={pomodoroEnabled}
-                                onValueChange={(value) => updateFeatureFlags({ pomodoro: value })}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
+                        <SettingRow
+                            label={t('settings.features')}
+                            description={t('settings.featuresDesc')}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={featurePomodoroLabel}
+                            description={featurePomodoroDesc}
+                            value={pomodoroEnabled}
+                            onChange={(value) => updateFeatureFlags({ pomodoro: value })}
+                        />
                         {pomodoroEnabled && renderGtdNavigationRow(
                             pomodoroSettingsLabel,
                             tr('settings.gtdMobile.customPresetTaskLinkingAndAutoStartBehavior'),
@@ -465,11 +460,10 @@ export function GtdSettingsScreen({
                     </View>
 
                     <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}>
-                        <View style={styles.settingRow}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{defaultScheduleTimeLabel}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{defaultScheduleTimeDesc}</Text>
-                            </View>
+                        <SettingRow
+                            label={defaultScheduleTimeLabel}
+                            description={defaultScheduleTimeDesc}
+                        >
                             <TextInput
                                 value={defaultScheduleTimeDraft}
                                 onChangeText={setDefaultScheduleTimeDraft}
@@ -484,7 +478,7 @@ export function GtdSettingsScreen({
                                     { backgroundColor: tc.bg, borderColor: tc.border, color: tc.text },
                                 ]}
                             />
-                        </View>
+                        </SettingRow>
                         <View style={[styles.settingRowColumn, { borderTopWidth: 1, borderTopColor: tc.border, gap: 12 }]}>
                             <View>
                                 <Text style={[styles.settingLabel, { color: tc.text }]}>{focusTaskLimitLabel}</Text>
@@ -664,45 +658,33 @@ export function GtdSettingsScreen({
                                     </View>
                                 </View>
                             </View>
-                            <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                                <View style={styles.settingInfo}>
-                                    <Text style={[styles.settingLabel, { color: tc.text }]}>{pomodoroLinkTaskLabel}</Text>
-                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{pomodoroLinkTaskDesc}</Text>
-                                </View>
-                                <Switch
-                                    value={pomodoroLinkTask}
-                                    onValueChange={(value) => updatePomodoroSettings({ linkTask: value })}
-                                    trackColor={{ false: '#767577', true: '#3B82F6' }}
-                                />
-                            </View>
-                            <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                                <View style={styles.settingInfo}>
-                                    <Text style={[styles.settingLabel, { color: tc.text }]}>{pomodoroAutoStartBreaksLabel}</Text>
-                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{pomodoroAutoStartBreaksDesc}</Text>
-                                </View>
-                                <Switch
-                                    value={pomodoroAutoStartBreaks}
-                                    onValueChange={(value) => updatePomodoroSettings(
-                                        { autoStartBreaks: value },
-                                        { showAutoStartNotice: value && !pomodoroAutoStartBreaks }
-                                    )}
-                                    trackColor={{ false: '#767577', true: '#3B82F6' }}
-                                />
-                            </View>
-                            <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                                <View style={styles.settingInfo}>
-                                    <Text style={[styles.settingLabel, { color: tc.text }]}>{pomodoroAutoStartFocusLabel}</Text>
-                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{pomodoroAutoStartFocusDesc}</Text>
-                                </View>
-                                <Switch
-                                    value={pomodoroAutoStartFocus}
-                                    onValueChange={(value) => updatePomodoroSettings(
-                                        { autoStartFocus: value },
-                                        { showAutoStartNotice: value && !pomodoroAutoStartFocus }
-                                    )}
-                                    trackColor={{ false: '#767577', true: '#3B82F6' }}
-                                />
-                            </View>
+                            <SettingToggleRow
+                                divider
+                                label={pomodoroLinkTaskLabel}
+                                description={pomodoroLinkTaskDesc}
+                                value={pomodoroLinkTask}
+                                onChange={(value) => updatePomodoroSettings({ linkTask: value })}
+                            />
+                            <SettingToggleRow
+                                divider
+                                label={pomodoroAutoStartBreaksLabel}
+                                description={pomodoroAutoStartBreaksDesc}
+                                value={pomodoroAutoStartBreaks}
+                                onChange={(value) => updatePomodoroSettings(
+                                    { autoStartBreaks: value },
+                                    { showAutoStartNotice: value && !pomodoroAutoStartBreaks }
+                                )}
+                            />
+                            <SettingToggleRow
+                                divider
+                                label={pomodoroAutoStartFocusLabel}
+                                description={pomodoroAutoStartFocusDesc}
+                                value={pomodoroAutoStartFocus}
+                                onChange={(value) => updatePomodoroSettings(
+                                    { autoStartFocus: value },
+                                    { showAutoStartNotice: value && !pomodoroAutoStartFocus }
+                                )}
+                            />
                         </View>
                     )}
                 </ScrollView>
@@ -717,12 +699,10 @@ export function GtdSettingsScreen({
                 <ScrollView style={styles.scrollView} contentContainerStyle={scrollContentStyle}>
                     <Text style={[styles.description, { color: tc.secondaryText }]}>{t('settings.captureDefaultDesc')}</Text>
                     <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
-                        <View style={styles.settingRow}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.captureDefault')}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.captureDefaultDesc')}</Text>
-                            </View>
-                        </View>
+                        <SettingRow
+                            label={t('settings.captureDefault')}
+                            description={t('settings.captureDefaultDesc')}
+                        />
                         <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
                             <View style={[styles.gtdSegmentedControl, { backgroundColor: tc.bg, borderColor: tc.border }]}>
                                 {captureMethodOptions.map((option) => {
@@ -778,69 +758,53 @@ export function GtdSettingsScreen({
                             </View>
                         </TouchableOpacity>
                         {defaultCaptureMethod === 'audio' ? (
-                            <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                                <View style={styles.settingInfo}>
-                                    <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.captureSaveAudio')}</Text>
-                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.captureSaveAudioDesc')}</Text>
-                                </View>
-                                <Switch
-                                    value={saveAudioAttachments}
-                                    onValueChange={(value) => {
-                                        updateSettings({
-                                            gtd: {
-                                                ...(settings.gtd ?? {}),
-                                                saveAudioAttachments: value,
-                                            },
-                                        }).catch(logSettingsError);
-                                    }}
-                                    trackColor={{ false: '#767577', true: '#3B82F6' }}
-                                />
-                            </View>
-                        ) : null}
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{quickAddAutoCleanLabel}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{quickAddAutoCleanDesc}</Text>
-                            </View>
-                            <Switch
-                                value={quickAddAutoClean}
-                                onValueChange={(value) => {
-                                    updateSettings({ quickAddAutoClean: value }).catch(logSettingsError);
-                                }}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{naturalLanguageDatesLabel}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{naturalLanguageDatesDesc}</Text>
-                            </View>
-                            <Switch
-                                value={naturalLanguageDates}
-                                onValueChange={(value) => {
+                            <SettingToggleRow
+                                divider
+                                label={t('settings.captureSaveAudio')}
+                                description={t('settings.captureSaveAudioDesc')}
+                                value={saveAudioAttachments}
+                                onChange={(value) => {
                                     updateSettings({
                                         gtd: {
                                             ...(settings.gtd ?? {}),
-                                            naturalLanguageDates: value,
+                                            saveAudioAttachments: value,
                                         },
                                     }).catch(logSettingsError);
                                 }}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
                             />
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{markdownEditorAssistLabel}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{markdownEditorAssistDesc}</Text>
-                            </View>
-                            <Switch
-                                value={markdownEditorAssist}
-                                onValueChange={(value) => {
-                                    updateSettings({ markdownEditorAssist: value }).catch(logSettingsError);
-                                }}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
+                        ) : null}
+                        <SettingToggleRow
+                            divider
+                            label={quickAddAutoCleanLabel}
+                            description={quickAddAutoCleanDesc}
+                            value={quickAddAutoClean}
+                            onChange={(value) => {
+                                updateSettings({ quickAddAutoClean: value }).catch(logSettingsError);
+                            }}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={naturalLanguageDatesLabel}
+                            description={naturalLanguageDatesDesc}
+                            value={naturalLanguageDates}
+                            onChange={(value) => {
+                                updateSettings({
+                                    gtd: {
+                                        ...(settings.gtd ?? {}),
+                                        naturalLanguageDates: value,
+                                    },
+                                }).catch(logSettingsError);
+                            }}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={markdownEditorAssistLabel}
+                            description={markdownEditorAssistDesc}
+                            value={markdownEditorAssist}
+                            onChange={(value) => {
+                                updateSettings({ markdownEditorAssist: value }).catch(logSettingsError);
+                            }}
+                        />
                     </View>
                 </ScrollView>
                 <Modal
@@ -901,44 +865,29 @@ export function GtdSettingsScreen({
                         {tr('settings.gtdMobile.chooseWhichOptionalStepsAppearInDailyAndWeeklyReview')}
                     </Text>
                     <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
-                        <View style={styles.settingRow}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.dailyReviewConfig')}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.dailyReviewConfigDesc')}</Text>
-                            </View>
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.dailyReviewIncludeFocusStep')}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                    {t('settings.dailyReviewIncludeFocusStepDesc')}
-                                </Text>
-                            </View>
-                            <Switch
-                                value={includeDailyFocusStep}
-                                onValueChange={(value) => updateDailyReviewConfig({ includeFocusStep: value })}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.weeklyReviewConfig')}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{t('settings.weeklyReviewConfigDesc')}</Text>
-                            </View>
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.weeklyReviewIncludeContextsStep')}</Text>
-                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                    {t('settings.weeklyReviewIncludeContextsStepDesc')}
-                                </Text>
-                            </View>
-                            <Switch
-                                value={includeContextStep}
-                                onValueChange={(value) => updateWeeklyReviewConfig({ includeContextStep: value })}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
+                        <SettingRow
+                            label={t('settings.dailyReviewConfig')}
+                            description={t('settings.dailyReviewConfigDesc')}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={t('settings.dailyReviewIncludeFocusStep')}
+                            description={t('settings.dailyReviewIncludeFocusStepDesc')}
+                            value={includeDailyFocusStep}
+                            onChange={(value) => updateDailyReviewConfig({ includeFocusStep: value })}
+                        />
+                        <SettingRow
+                            divider
+                            label={t('settings.weeklyReviewConfig')}
+                            description={t('settings.weeklyReviewConfigDesc')}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={t('settings.weeklyReviewIncludeContextsStep')}
+                            description={t('settings.weeklyReviewIncludeContextsStepDesc')}
+                            value={includeContextStep}
+                            onChange={(value) => updateWeeklyReviewConfig({ includeContextStep: value })}
+                        />
                     </View>
                 </ScrollView>
             </SafeAreaView>
@@ -952,46 +901,29 @@ export function GtdSettingsScreen({
                 <ScrollView style={styles.scrollView} contentContainerStyle={scrollContentStyle}>
                     <Text style={[styles.description, { color: tc.secondaryText }]}>{t('settings.inboxProcessingDesc')}</Text>
                     <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
-                        <View style={styles.settingRow}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.inboxTwoMinuteEnabled')}</Text>
-                            </View>
-                            <Switch
-                                value={inboxTwoMinuteEnabled}
-                                onValueChange={(value) => updateInboxProcessing({ twoMinuteEnabled: value })}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.inboxProjectFirst')}</Text>
-                            </View>
-                            <Switch
-                                value={inboxProjectFirst}
-                                onValueChange={(value) => updateInboxProcessing({ projectFirst: value })}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.inboxContextStepEnabled')}</Text>
-                            </View>
-                            <Switch
-                                value={inboxContextStepEnabled}
-                                onValueChange={(value) => updateInboxProcessing({ contextStepEnabled: value })}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
-                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                            <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.inboxScheduleEnabled')}</Text>
-                            </View>
-                            <Switch
-                                value={inboxScheduleEnabled}
-                                onValueChange={(value) => updateInboxProcessing({ scheduleEnabled: value })}
-                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                            />
-                        </View>
+                        <SettingToggleRow
+                            label={t('settings.inboxTwoMinuteEnabled')}
+                            value={inboxTwoMinuteEnabled}
+                            onChange={(value) => updateInboxProcessing({ twoMinuteEnabled: value })}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={t('settings.inboxProjectFirst')}
+                            value={inboxProjectFirst}
+                            onChange={(value) => updateInboxProcessing({ projectFirst: value })}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={t('settings.inboxContextStepEnabled')}
+                            value={inboxContextStepEnabled}
+                            onChange={(value) => updateInboxProcessing({ contextStepEnabled: value })}
+                        />
+                        <SettingToggleRow
+                            divider
+                            label={t('settings.inboxScheduleEnabled')}
+                            value={inboxScheduleEnabled}
+                            onChange={(value) => updateInboxProcessing({ scheduleEnabled: value })}
+                        />
                     </View>
                 </ScrollView>
             </SafeAreaView>
@@ -1449,17 +1381,13 @@ export function GtdSettingsScreen({
                             {expanded && (
                                 <>
                                     {group.id !== 'basic' && (
-                                        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                                            <View style={styles.settingInfo}>
-                                                <Text style={[styles.settingLabel, { color: tc.text }]}>{resolvedTaskEditorDefaultOpenLabel}</Text>
-                                                <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{taskEditorKeepOpenLabel}</Text>
-                                            </View>
-                                            <Switch
-                                                value={taskEditorSectionOpen[group.id]}
-                                                onValueChange={(value) => updateSectionOpenDefault(group.id as Exclude<TaskEditorSectionId, 'basic'>, value)}
-                                                trackColor={{ false: '#767577', true: '#3B82F6' }}
-                                            />
-                                        </View>
+                                        <SettingToggleRow
+                                            divider
+                                            label={resolvedTaskEditorDefaultOpenLabel}
+                                            description={taskEditorKeepOpenLabel}
+                                            value={taskEditorSectionOpen[group.id]}
+                                            onChange={(value) => updateSectionOpenDefault(group.id as Exclude<TaskEditorSectionId, 'basic'>, value)}
+                                        />
                                     )}
                                     {groupOrder.map((fieldId, index) => (
                                         <TaskEditorFieldRow
@@ -1531,16 +1459,12 @@ export function GtdSettingsScreen({
                                     )}
                                 </View>
 
-                                <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                                    <View style={styles.settingInfo}>
-                                        <Text style={[styles.settingLabel, { color: tc.text }]}>{showInEditorLabel}</Text>
-                                    </View>
-                                    <Switch
-                                        value={selectedFieldVisible}
-                                        onValueChange={() => toggleFieldVisibility(selectedFieldId)}
-                                        trackColor={{ false: '#767577', true: '#3B82F6' }}
-                                    />
-                                </View>
+                                <SettingToggleRow
+                                    divider
+                                    label={showInEditorLabel}
+                                    value={selectedFieldVisible}
+                                    onChange={() => toggleFieldVisibility(selectedFieldId)}
+                                />
 
                                 {selectedFieldSectionable && (
                                     <View style={[styles.settingRowColumn, { borderTopWidth: 1, borderTopColor: tc.border }]}>

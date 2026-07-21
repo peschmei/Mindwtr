@@ -21,6 +21,7 @@ import {
 } from '@/lib/mobile-quick-access-view';
 import { authenticateWithDeviceLock, getMobileAppLockErrorKey } from '@/lib/mobile-app-lock';
 
+import { SettingRow, SettingToggleRow } from './setting-row';
 import { LANGUAGES } from './settings.constants';
 import { useSettingsLocalization, useSettingsScrollContent } from './settings.hooks';
 import { SettingsTopBar } from './settings.shell';
@@ -147,49 +148,36 @@ export function GeneralSettingsScreen() {
             <ScrollView style={styles.scrollView} contentContainerStyle={scrollContentStyle}>
                 <Text style={[styles.sectionTitle, { color: tc.secondaryText }]}>{t('settings.appearance')}</Text>
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
-                    <TouchableOpacity style={styles.settingRow} onPress={() => setThemePickerOpen(true)}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.theme')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{currentThemeLabel}</Text>
-                        </View>
-                        <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
-                    </TouchableOpacity>
-                    <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>
-                                {tr('settings.mobile.showTaskAge')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                {tr('settings.mobile.displayHowLongAgoATaskWasCreatedInTask')}
-                            </Text>
-                        </View>
-                        <Switch
-                            value={showTaskAge}
-                            onValueChange={(value) => {
-                                updateSettings({
-                                    appearance: {
-                                        ...(settings.appearance ?? {}),
-                                        showTaskAge: value,
-                                    },
-                                }).catch(console.error);
-                            }}
-                            trackColor={{ false: tc.secondaryText, true: tc.tint }}
-                        />
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
-                        onPress={() => setQuickAccessPickerOpen(true)}
+                    <SettingRow
+                        onPress={() => setThemePickerOpen(true)}
+                        label={t('settings.theme')}
+                        description={currentThemeLabel}
                     >
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>
-                                {tr('settings.mobile.quickAccessView')}
-                            </Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                {currentQuickAccessLabel}
-                            </Text>
-                        </View>
                         <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
-                    </TouchableOpacity>
+                    </SettingRow>
+                    <SettingToggleRow
+                        divider
+                        label={tr('settings.mobile.showTaskAge')}
+                        description={tr('settings.mobile.displayHowLongAgoATaskWasCreatedInTask')}
+                        value={showTaskAge}
+                        onChange={(value) => {
+                            updateSettings({
+                                appearance: {
+                                    ...(settings.appearance ?? {}),
+                                    showTaskAge: value,
+                                },
+                            }).catch(console.error);
+                        }}
+                        trackColor={{ false: tc.secondaryText, true: tc.tint }}
+                    />
+                    <SettingRow
+                        divider
+                        onPress={() => setQuickAccessPickerOpen(true)}
+                        label={tr('settings.mobile.quickAccessView')}
+                        description={currentQuickAccessLabel}
+                    >
+                        <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
+                    </SettingRow>
                 </View>
 
                 <Text style={[styles.sectionTitle, { color: tc.secondaryText, marginTop: 16 }]}>{tr('settings.privacy')}</Text>
@@ -328,15 +316,13 @@ export function GeneralSettingsScreen() {
                 <Text style={[styles.sectionTitle, { color: tc.secondaryText, marginTop: 16 }]}>{t('settings.language')}</Text>
                 <Text style={[styles.description, { color: tc.secondaryText }]}>{t('settings.selectLang')}</Text>
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg }]}>
-                    <TouchableOpacity style={styles.settingRow} onPress={() => setLanguagePickerOpen(true)}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.language')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
-                                {LANGUAGES.find((lang) => lang.id === language)?.native ?? language}
-                            </Text>
-                        </View>
+                    <SettingRow
+                        onPress={() => setLanguagePickerOpen(true)}
+                        label={t('settings.language')}
+                        description={LANGUAGES.find((lang) => lang.id === language)?.native ?? language}
+                    >
                         <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
-                    </TouchableOpacity>
+                    </SettingRow>
                 </View>
                 <Modal
                     transparent
@@ -379,13 +365,13 @@ export function GeneralSettingsScreen() {
                 </Modal>
 
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}>
-                    <TouchableOpacity style={styles.settingRow} onPress={() => setWeekStartPickerOpen(true)}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.weekStart')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{currentWeekStartLabel}</Text>
-                        </View>
+                    <SettingRow
+                        onPress={() => setWeekStartPickerOpen(true)}
+                        label={t('settings.weekStart')}
+                        description={currentWeekStartLabel}
+                    >
                         <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
-                    </TouchableOpacity>
+                    </SettingRow>
                 </View>
                 <Modal
                     transparent
@@ -427,13 +413,13 @@ export function GeneralSettingsScreen() {
                 </Modal>
 
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}>
-                    <TouchableOpacity style={styles.settingRow} onPress={() => setDateFormatPickerOpen(true)}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.dateFormat')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{currentDateFormatLabel}</Text>
-                        </View>
+                    <SettingRow
+                        onPress={() => setDateFormatPickerOpen(true)}
+                        label={t('settings.dateFormat')}
+                        description={currentDateFormatLabel}
+                    >
                         <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
-                    </TouchableOpacity>
+                    </SettingRow>
                 </View>
                 <Modal
                     transparent
@@ -477,13 +463,13 @@ export function GeneralSettingsScreen() {
                 {showCalendarSystem && (
                     <>
                         <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}>
-                            <TouchableOpacity style={styles.settingRow} onPress={() => setCalendarSystemPickerOpen(true)}>
-                                <View style={styles.settingInfo}>
-                                    <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.calendarSystem')}</Text>
-                                    <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{currentCalendarSystemLabel}</Text>
-                                </View>
+                            <SettingRow
+                                onPress={() => setCalendarSystemPickerOpen(true)}
+                                label={t('settings.calendarSystem')}
+                                description={currentCalendarSystemLabel}
+                            >
                                 <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
-                            </TouchableOpacity>
+                            </SettingRow>
                         </View>
                         <Modal
                             transparent
@@ -527,13 +513,13 @@ export function GeneralSettingsScreen() {
                 )}
 
                 <View style={[styles.settingCard, { backgroundColor: tc.cardBg, marginTop: 12 }]}>
-                    <TouchableOpacity style={styles.settingRow} onPress={() => setTimeFormatPickerOpen(true)}>
-                        <View style={styles.settingInfo}>
-                            <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.timeFormat')}</Text>
-                            <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>{currentTimeFormatLabel}</Text>
-                        </View>
+                    <SettingRow
+                        onPress={() => setTimeFormatPickerOpen(true)}
+                        label={t('settings.timeFormat')}
+                        description={currentTimeFormatLabel}
+                    >
                         <Ionicons color={tc.secondaryText} name="chevron-down" size={18} />
-                    </TouchableOpacity>
+                    </SettingRow>
                 </View>
                 <Modal
                     transparent
