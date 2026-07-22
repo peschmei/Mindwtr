@@ -15,8 +15,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-    expose:
-      - "8787"
+    ports:
+      - "8787:8787"
     environment:
       - MINDWTR_CLOUD_AUTH_TOKENS=${MINDWTR_CLOUD_AUTH_TOKENS:?MINDWTR_CLOUD_AUTH_TOKENS must be set}
       - MINDWTR_CLOUD_CORS_ORIGIN=${MINDWTR_CLOUD_CORS_ORIGIN:?MINDWTR_CLOUD_CORS_ORIGIN must be set}
