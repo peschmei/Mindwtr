@@ -31,7 +31,7 @@ services:
       - npm
 
   mindwtr-app:
-    image: ghcr.io/dongdongbh/mindwtr-app:<version>
+    image: ghcr.io/dongdongbh/mindwtr-app:1.3.3
     container_name: mindwtr-app
     hostname: mindwtr-app
     restart: unless-stopped
