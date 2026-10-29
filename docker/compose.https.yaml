@@ -48,5 +48,5 @@ services:
 
 networks:
   npm:
-    name: nginx_default
+    name: zoraxy_default
     external: true
